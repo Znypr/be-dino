@@ -518,10 +518,14 @@ render=function(name: string)
         local buyY=cardsHeight-targetHeight-10
         if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
         if require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab) then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
+        -- BD-532 (docs/115 EG1): the server refuses random crystal items under this exact rule (Shared/PaidRandomGate); the egg and the condition
+        -- upgrade are greyed out "Coming soon" BEFORE the tap instead of answering "Not available yet" after it. The policy gate is not loosened.
+        local PaidRandomGate=require(Shared.PaidRandomGate)
+        local randomBlocked=PaidRandomGate.blocked(Config.DeveloperProducts,Config.PaidRandomItemsEnabled,require(script.Parent.PrivateState).get("PaidRandomEligible"))
         local ShopTiles=require(script.Parent.ShopTiles) -- BD-047: tab icons, green-spotted egg, landing tiles; each shows only when its image id exists
         local shopTabs=require(Shared.FtueP1).shopTabs(num("AccountLevel"))
         if ShopTiles.landing then
-            ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals")),
+            ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals"),randomBlocked),
                 onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end})
             return
         end
@@ -535,7 +539,12 @@ render=function(name: string)
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
-            button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
+            if randomBlocked then -- BD-532: greyed out, no confirm, nothing to tap
+                local soon=button(body,string.upper(PaidRandomGate.ComingSoon),270,cardsY+targetHeight+130,535,targetHeight,C.card,function() end)
+                soon.Name,soon.AutoButtonColor,soon.TextTransparency="BuyEggComingSoon",false,.15
+            else
+                button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end).Name="BuyEggButton"
+            end
             -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
             if Config.FastTravelPerk and Config.CaveHub and require(Shared.FtueP1).fastTravelEntryShown(num("AccountLevel"),type(p.perks)=="table" and p.perks.fastTravel==true) then -- BD-447
                 local owned=type(p.perks)=="table" and p.perks.fastTravel==true
@@ -567,6 +576,7 @@ render=function(name: string)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+210,155,34,24,C.blue)
             end
             local upgradeText,upgradeOk=require(Shared.FtueP1).upgradeButton(upgrade,num("AccountLevel"),num("Crystals")) -- BD-372: grey with the reason, never green over a lock
+            if randomBlocked then upgradeText,upgradeOk=PaidRandomGate.ComingSoon,false end -- BD-532: the server refuses upgradeCondition under the same rule
             local upgradeButton=button(body,upgradeText,142,cardsY+254,540,targetHeight,if upgradeOk then C.accent else C.card,function() if upgradeOk and upgrade then open("conditionConfirm") end end)
             upgradeButton.TextSize=20
             upgradeButton.Name=if upgradeOk then "UpgradeButton" else "UpgradeLocked"
@@ -977,7 +987,7 @@ render=function(name: string)
         local version=modalVersion
         refreshEggs=EggsScreen.render({
             body=body,C=C,label=label,box=box,button=button,art=art,queue=queue,str=str,num=num,nestList=nestList,
-            rarityNames=rarityNames,rarityColors=rarityColors,scale=viewportScale,notify=notify,
+            rarityNames=rarityNames,rarityColors=rarityColors,scale=viewportScale,notify=notify,bodyH=require(script.Parent.ModalCompact).bodyHeight(),bodyScale=require(script.Parent.ModalCompact).bodyScale(), -- BD-531: phone canvas = fit the visible body, no scroll
             openNest=function(id) Sfx.play("shop_buy") claimNestRemote:FireServer(id) end,
             openEgg=function()
                 if hatchPending then return end
@@ -1105,19 +1115,24 @@ render=function(name: string)
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Go home?",C.red
-        art(body,"home",36,28,214)
-        label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
+        -- BD-531: on a phone-landscape canvas the body is only ~270-330 px tall: a smaller picture, tighter lines and buttons at the bottom of the
+        -- VISIBLE body (ModalCompact.bodyHeight), so GO HOME and CANCEL need no scroll. Desktop (402) keeps today's numbers.
+        local visibleH=require(script.Parent.ModalCompact).bodyHeight()
+        local X=require(Shared.PhoneScale).exitLayout(visibleH,require(script.Parent.ModalCompact).bodyScale()) -- only read when visibleH<402 (numbers asserted in tools/verify_phone_scale.py)
+        art(body,"home",36,if visibleH<402 then X.artY else 28,if visibleH<402 then X.artSize else 214)
+        label(body,require(Shared.FtueCopy).homeConfirmLine,300,if visibleH<402 then X.lineY else 8,500,if visibleH<402 then X.lineH else 100,if visibleH<402 then 26 else 28,C.gold)
         local character=player.Character
         local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
-        label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
-        local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
-        button(body,"GO HOME",300,396-buttonHeight,244,buttonHeight,C.accent,function()
+        label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,if visibleH<402 then X.totalsY else 116,500,if visibleH<402 then X.totalsH else 60,22)
+        local buttonHeight=if visibleH<402 then X.buttonH elseif touchMode() then math.max(68,46/viewportScale()) else 68
+        local buttonsY=if visibleH<402 then X.buttonsY else 396-buttonHeight
+        button(body,"GO HOME",300,buttonsY,244,buttonHeight,C.accent,function()
             local current=player.Character
             close()
             if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Going home...",C.gold) end
         end)
-        button(body,"CANCEL",556,396-buttonHeight,244,buttonHeight,C.blue,close)
+        button(body,"CANCEL",556,buttonsY,244,buttonHeight,C.blue,close)
     elseif name=="crystalReveal" then
         heading.Text,header.BackgroundColor3="Run Crystal Box",C.gold
         local version=modalVersion
@@ -1396,7 +1411,8 @@ local function scales()
     local touch=touchMode()
     local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
-        jump=if touch then coreTouchRect("JumpButton") else nil})
+        jump=if touch then coreTouchRect("JumpButton") else nil,
+        goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active")}) -- BD-531: the hub Goals header takes space under the goal line
     local function place(object: GuiObject,uiScale: UIScale,entry)
         object.AnchorPoint,object.Position,object.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
         uiScale.Scale=entry.scale
@@ -1444,6 +1460,8 @@ local function scales()
     foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,(if touch then layout.hud.y else math.min(layout.hud.y,layout.feedback.y))-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts); BD-507: and above the Tell us! button
     require(script.Parent.HudV2).layout(layout)
     gui:SetAttribute("FeedbackRect",Rect.new(layout.feedback.x,layout.feedback.y,layout.feedback.x+layout.feedback.w,layout.feedback.y+layout.feedback.h)) -- BD-507: FeedbackClient puts its Tell us! button here, clear of the egg plate
+    gui:SetAttribute("GoalsRect",if layout.goals then Rect.new(layout.goals.x,layout.goals.y,layout.goals.x+layout.goals.w,layout.goals.y+layout.goals.h) else nil) -- BD-531: GoalsPanel sits on the reserved spot (nil = its own desktop formula)
+    gui:SetAttribute("AdminRect",Rect.new(layout.admin.x,layout.admin.y,layout.admin.x+layout.admin.w,layout.admin.y+layout.admin.h)) -- BD-531: AdminPanel puts its Admin button here (phone: not on the egg plate)
     toastScale.Scale=layout.toastScale
     local wallet=TouchLayout.walletPlates(layout) -- BD-378: the toast stack keeps clear of the Crystals plate and the goal line under it
     toastLayer:SetAttribute("WalletRect",Rect.new(wallet.x,wallet.y,wallet.x+wallet.w,wallet.y+wallet.h))
@@ -1478,6 +1496,12 @@ player:WaitForChild("PlayerGui").DescendantAdded:Connect(function(descendant)
     end
 end)
 pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueLayout) end)
+goalHUD:GetPropertyChangedSignal("Visible"):Connect(queueLayout) -- BD-531: the Goals header appears after the first egg
+do -- BD-531: ... and is hidden during a run, so the right-hand column re-lays out when the run starts or ends
+    local function watch(character: Model) character:GetAttributeChangedSignal("RunState"):Connect(queueLayout) end
+    player.CharacterAdded:Connect(watch)
+    if player.Character then watch(player.Character) end
+end
 scales()
 gui:SetAttribute("Ready",true)
 local elapsed=0

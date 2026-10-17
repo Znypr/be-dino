@@ -78,7 +78,7 @@ function P.subtitle(tab: string, info: {[string]: number}): string
         local n = info.trails or 0
         return if n > 0 then n .. " yours" else "Leave a trail"
     elseif tab == "eggs" then
-        return (info.eggPrice or 0) .. " Crystals"
+        return if info.randomBlocked == 1 then "Coming soon" else (info.eggPrice or 0) .. " Crystals" -- BD-532: PaidRandomGate says the random egg cannot be bought
     elseif tab == "conditions" then
         return "Better eggs"
     elseif tab == "crystals" then

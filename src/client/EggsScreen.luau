@@ -23,6 +23,7 @@ local FxUi = require(Shared.FxUi)
 local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
 local Copy = require(Shared.FtueP1)
+local PhoneScale = require(Shared.PhoneScale)
 
 local EggsScreen = {}
 
@@ -41,7 +42,13 @@ function EggsScreen.render(ctx: any)
     local capacity = Config.NestStorageCapacity
     local duration = Config.NestIncubationSeconds
     local touchH = math.clamp(45 / ctx.scale(), 64, 120)
-    local nestH = math.clamp(touchH + 8, 96, 118)
+    -- BD-531: on a phone-landscape canvas (ModalCompact.bodyHeight < 402) the whole screen is laid out inside the visible body height, so the
+    -- OPEN button and AUTO never need a scroll. Desktop (402) keeps every number below exactly as before.
+    local bodyH: number = ctx.bodyH or 402
+    local compact = bodyH < 402
+    local L = PhoneScale.eggsLayout(bodyH, false, ctx.bodyScale or 1) -- only read when compact (numbers asserted in tools/verify_phone_scale.py)
+    local slotY = if compact then L.slotY else 32
+    local nestH = if compact then L.nestH else math.clamp(touchH + 8, 96, 118)
 
     local nestList = ctx.nestList
     local function projected() return NestQueue.project(nestList, math.floor(workspace:GetServerTimeNow()), duration) end
@@ -68,24 +75,24 @@ function EggsScreen.render(ctx: any)
     local slotViews = {}
     for i = 1, capacity do
         local x = (i - 1) * (slotW + gap)
-        local slot = button(body, "", x, 32, slotW, nestH, C.card, function()
+        local slot = button(body, "", x, slotY, slotW, nestH, C.card, function()
             local info = slotViews[i].info
             if info and info.state == "ready" then ctx.openNest(info.id)
             elseif info and info.state == "empty" then ctx.notify("Finish a run to earn a nest!", C.gold)
             elseif info then ctx.notify("Still growing. Hang tight!", C.gold) end
         end)
         slot.Name = "NestSlot" .. i
-        local iconSize = nestH - 52
-        local icon = box(slot, (slotW - iconSize) // 2, 4, iconSize, iconSize, C.card, slot.ZIndex + 1)
+        local iconSize = if compact then nestH - 40 else nestH - 52
+        local icon = box(slot, (slotW - iconSize) // 2, if compact then 2 else 4, iconSize, iconSize, C.card, slot.ZIndex + 1)
         icon.BackgroundTransparency = 1
         art(icon, "egg_nest_single", 0, 0, iconSize)
-        local chip, text = pill(slot, "", C.outline, 14, nestH - 40, slotW - 28, 32, 18)
+        local chip, text = pill(slot, "", C.outline, 14, if compact then nestH - 34 else nestH - 40, slotW - 28, if compact then 30 else 32, 18)
         slotViews[i] = {slot = slot, icon = icon, text = text, chip = chip}
     end
 
     -- Hero card: big egg on the tile floor, chips on the egg, waiting count, OPEN and AUTO.
-    local cardY = 32 + nestH + 8
-    local cardH = 402 - cardY
+    local cardY = if compact then L.cardY else slotY + nestH + 8
+    local cardH = if compact then L.cardH else 402 - cardY
     local card = box(body, 0, cardY, 824, cardH, C.card, 24)
     local queue = ctx.queue()
     local nextId = ctx.str("NextChestId")
@@ -115,7 +122,7 @@ function EggsScreen.render(ctx: any)
             egg = official.egg
             if not entry then (egg :: ImageLabel).ImageTransparency = .6 end
         else
-            local eggSize = math.clamp(side - 70, 110, 190) -- stage only: today's tinted egg standing on the pedestal
+            local eggSize = if compact then math.clamp(side - 64, 60, 190) else math.clamp(side - 70, 110, 190) -- stage only: today's tinted egg standing on the pedestal
             egg = EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)
             egg.Position = UDim2.fromOffset((side - eggSize) // 2, math.max(4, math.floor(side * .76) - eggSize))
             if not entry then dim(egg, .6) end
@@ -123,9 +130,9 @@ function EggsScreen.render(ctx: any)
     else
         stage = EggPicture.stage(card, stageW, stageH, accent)
         stage.Position = UDim2.fromOffset(10, 10)
-        local eggSize = math.clamp(stageH - 70, 110, 190)
+        local eggSize = if compact then math.clamp(stageH - 64, 60, 190) else math.clamp(stageH - 70, 110, 190)
         egg = EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)
-        egg.Position = UDim2.fromOffset((stageW - eggSize) // 2, 14)
+        egg.Position = UDim2.fromOffset((stageW - eggSize) // 2, if compact then 6 else 14)
         if not entry then dim(egg, .6) end
     end
 
@@ -164,25 +171,34 @@ function EggsScreen.render(ctx: any)
     local infoX = stageW + 30
     local infoW = 824 - infoX - 14
     local waitingText = Copy.waitingText(ctx.num("ActiveChestCount"), waiting) -- BD-369: counts the card egg; hidden at 0
+    -- BD-531 compact: row 1 holds the waiting count and the status pill side by side; the OPEN button takes the height left above AUTO.
+    local rowH = if compact then L.rowH else 38
+    local pillX, pillW = infoX, if entry then math.min(280, infoW) else infoW
+    local pillY = if compact then 8 else 54
     if waitingText then
-        local waitingLabel = label(card, waitingText, infoX, 10, infoW, 38, 30, C.gold)
+        local waitingLabel = label(card, waitingText, infoX, if compact then 8 else 10, if compact then 248 else infoW, rowH, if compact then 26 else 30, C.gold)
         waitingLabel.Name = "EggsWaiting"
         waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
+        if compact then pillX, pillW = infoX + 256, infoW - 256 end
     end
-    local timerChip, timer = pill(card, statusText, if state.canOpen then C.accent else C.blue, infoX, 54, if entry then math.min(280, infoW) else infoW, 38, 22)
+    local timerChip, timer = pill(card, statusText, if state.canOpen then C.accent else C.blue, pillX, pillY, pillW, rowH, if compact then 20 else 22)
     timerChip.Name = "EggStatusPill"
     -- BD-369: after the safe first eggs, say once in one short line that an egg can crack.
     local hintShown = entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true)
-    local hintH = if hintShown then 24 else 0
+    L = PhoneScale.eggsLayout(bodyH, hintShown, ctx.bodyScale or 1)
+    local hintH = if compact then L.hintH elseif hintShown then 24 else 0
+    local hintY = if compact then L.hintY else 94
     if hintShown then
-        local crackedHint = label(card, Copy.CrackedHint, infoX, 94, infoW, 22, 19, C.gold)
+        local crackedHint = label(card, Copy.CrackedHint, infoX, hintY, infoW, 22, 19, C.gold)
         crackedHint.Name = "CrackedHint"
         crackedHint.TextXAlignment = Enum.TextXAlignment.Left
     end
 
-    local gearH = math.max(touchH * .6, 52)
-    local openH = math.clamp(cardH - 106 - hintH - 14 - gearH - 14, 64, 96)
-    local openButton = button(card, buttonText, infoX, 106 + hintH, infoW, openH, if state.canOpen or state.kind == "empty" then C.accent else C.outline, function()
+    local gearH = if compact then L.gearH else math.max(touchH * .6, 52)
+    local openY = if compact then L.openY else 106 + hintH
+    local gearY = if compact then L.gearY else cardH - 14 - gearH
+    local openH = if compact then L.openH else math.clamp(cardH - 106 - hintH - 14 - gearH - 14, 64, 96)
+    local openButton = button(card, buttonText, infoX, openY, infoW, openH, if state.canOpen or state.kind == "empty" then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
         elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
@@ -190,11 +206,11 @@ function EggsScreen.render(ctx: any)
         else ctx.notify("Eggs are on the way!", C.gold) end
     end)
     openButton.Name = "OpenEggButton"
-    openButton.TextSize = 36
-    local gear = button(card, "AUTO", infoX, cardH - 14 - gearH, 130, gearH, C.blue, function() ctx.openSettings() end)
+    openButton.TextSize = if compact then 30 else 36
+    local gear = button(card, "AUTO", infoX, gearY, 130, gearH, C.blue, function() ctx.openSettings() end)
     gear.Name = "AutoOpenSettingsButton"
     gear.TextSize = 22
-    local autoLine = label(card, ctx.autoOpenText(), infoX + 142, cardH - 14 - gearH, infoW - 142, gearH, 17, C.text)
+    local autoLine = label(card, ctx.autoOpenText(), infoX + 142, gearY, infoW - 142, gearH, 17, C.text)
     autoLine.TextXAlignment = Enum.TextXAlignment.Left
 
     local function refresh()

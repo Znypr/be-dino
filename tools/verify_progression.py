@@ -109,7 +109,7 @@ local mutableConfig=table.clone(GameConfig)
 mutableConfig.WriteBudgetEnabled=false -- BD-358: these offline tests run hundreds of claims in zero time; the write budget is proven in verify_multiplayer_sim
 mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel",PaidRandomGate="PaidRandomGate"}}
 local datastores={GetDataStore=function()return store end}
 local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] end}
@@ -133,7 +133,7 @@ local require=function(id)
  if id=="Cosmetic" then return COSMETIC_OWNERSHIP_MODULE end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
- if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="FtueRules" then return FtueRules elseif id=="SettingsModel" then return SettingsModel end
+ if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="FtueRules" then return FtueRules elseif id=="SettingsModel" then return SettingsModel elseif id=="PaidRandomGate" then return PAID_RANDOM_GATE_MODULE end -- BD-532: pure, no top-level local (the harness is at the register limit)
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
@@ -923,7 +923,7 @@ blocked=false
 leapNow=300 h.FloorMaterial="air" local before=user.attrs.LeapReadyAt activate(user) assert(user.attrs.LeapReadyAt==before,"no leap from the air")
 print("Leap handler passed: client-owned leap (no ownership change, no server velocity), envelope distance/height/speed/lift, wall rollback, 30s penalty, cooldown and air rejection")
 """
- return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('PAID_RANDOM_GATE_MODULE',module('src/shared/PaidRandomGate.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:
