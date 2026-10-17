@@ -78,6 +78,32 @@ local list = Instance.new("UIListLayout")
 list.Padding, list.SortOrder = UDim.new(0, 8), Enum.SortOrder.LayoutOrder
 list.Parent = scroll
 
+-- BD-452 (docs/134 s5): the Gift page. The server creates AdminGiftAction only when GiftClaimEnabled, AdminGiftsEnabled and AdminPanelEnabled are
+-- all on (pinned off), so with the flags off there is no remote here, no tab row, no page and the layout above is exactly as before.
+do
+    local folder = adminRemote.Parent
+    local giftRemote = if folder then folder:FindFirstChild("AdminGiftAction") else nil
+    if giftRemote and giftRemote:IsA("RemoteFunction") then
+        local tabTop = 64
+        scroll.Position, scroll.Size = UDim2.fromOffset(10, tabTop), UDim2.new(1, -20, 1, -(tabTop + 8))
+        local giftPage = require(script.Parent:WaitForChild("AdminGiftPage")).build(panel, giftRemote, tabTop)
+        local tabs = Instance.new("Frame")
+        tabs.Name, tabs.BackgroundTransparency, tabs.Position, tabs.Size, tabs.Parent = "AdminTabs", 1, UDim2.fromOffset(10, 8), UDim2.new(1, -20, 0, 48), panel
+        local tabLayout = Instance.new("UIListLayout")
+        tabLayout.FillDirection, tabLayout.Padding = Enum.FillDirection.Horizontal, UDim.new(0, 8)
+        tabLayout.Parent = tabs
+        local toolsTab = button(tabs, "Tools", C.accent, UDim2.new(0.5, -4, 1, 0))
+        local giftTab = button(tabs, "Gift", C.card, UDim2.new(0.5, -4, 1, 0))
+        local function showPage(gifts: boolean)
+            scroll.Visible, giftPage.Visible = not gifts, gifts
+            toolsTab.BackgroundColor3 = if gifts then C.card else C.accent
+            giftTab.BackgroundColor3 = if gifts then C.accent else C.card
+        end
+        toolsTab.Activated:Connect(function() showPage(false) end)
+        giftTab.Activated:Connect(function() showPage(true) end)
+    end
+end
+
 local order = 0
 local function place<T>(object: T): T
     order += 1

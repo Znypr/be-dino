@@ -191,6 +191,16 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 - BD-451 grows (recipient setting, block/mute, never-played inbox, audit, revoke), stays P2. BD-452 stays P2 and gains offline-by-username. BD-453 stays P3, now also gated by the docs/134 s12 go-live review. Dependencies unchanged.
 - Open for the owner (3): see the PR description; none blocks BD-451 or BD-452.
 
+## LEAD decisions 2026-10-17 (owner delegated): admin Gift page (BD-452)
+| # | Decision | Why | Enable needs owner go-ahead? |
+|---|---|---|---|
+| GF18 | **LEAD:** the Gift page sends only to a person the admin picked (online list) or looked up (username) AND confirmed with "Yes, that's them"; the server enforces it (`pick`/`lookup` then `confirm`, `send` must name the confirmed UserId). Owner's "display name plus avatar confirm before send" | a typo in a username must not gift a stranger | yes (flags) |
+| GF19 | **LEAD:** a crystal amount outside 1 to 50,000 is REFUSED (`bad_amount`), not clamped; the page offers chips and a typed amount | an admin should never get a different amount than typed | no |
+| GF20 | **LEAD:** the admin audit view shows the audit reason codes (for example `blocked`) to admins only; the sender of an admin gift gets only the one public code `cant_receive`. Admin gifts bypass the recipient setting and mute, not a Roblox block (owner 2026-10-17) | the team needs to answer "why did my gift not arrive"; players and buyers still cannot probe blocks | no |
+
+### Task effects (2026-10-17, admin Gift page)
+- BD-452 moves Backlog -> Review / test (built offline, flags unchanged). New BD-579 (Studio pass of the Gift page, P2, depends on BD-452).
+
 ## LEAD decision 2026-10-17 (owner delegated): admin Mutation chance is per player
 | # | Decision | Why | Source |
 |---|---|---|---|

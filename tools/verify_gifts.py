@@ -98,6 +98,83 @@ def static_errors() -> list[str]:
     for path in ('src/server/GiftService.luau', 'src/client/GiftPopup.client.luau'):
         if re.search(r'SetAttribute\(\s*"GiftNotice', (ROOT / path).read_text(encoding='utf-8')):
             errors.append(f'{path} must not publish the gift notice as a Player attribute')
+    errors.extend(admin_page_errors())
+    return errors
+
+
+def admin_page_errors() -> list[str]:
+    """BD-452: the admin Gift page. Static rules that keep the first-line admin check, the flag-off identity and the UI rules honest."""
+    errors: list[str] = []
+    server = strip_comments((ROOT / 'src/server/AdminGifts.luau').read_text(encoding='utf-8'))
+    handle = re.search(r'function AdminGifts\.handle\(.*?\n(.*?)\nend\n', server, flags=re.S)
+    lines = [line for line in (handle.group(1).splitlines() if handle else []) if line.strip()]
+    if not lines or 'isAdmin' not in lines[0] or 'not_admin' not in lines[0]:
+        errors.append('AdminGifts.handle must refuse non-admins on its FIRST line (the AdminRules.isAdmin result), before the flag, the shape or any store access')
+    elif not any('giftsOn()' in line for line in lines[1:3]):
+        errors.append('AdminGifts.handle must test the flags right after the admin check')
+    start = re.search(r'function AdminGifts\.start\(.*?\n(.*?)\nend\n', server, flags=re.S)
+    start_lines = [line for line in (start.group(1).splitlines() if start else []) if line.strip()]
+    if not start_lines or 'if not giftsOn() then return nil end' not in start_lines[0]:
+        errors.append('AdminGifts.start must return nil on its first line while a flag is off (no remote, no page)')
+    for word in ('DataStore', 'ProfileRepository', 'PrivateState', 'UpdateAsync', 'GetAsync', 'SetAsync', 'MarketplaceService', 'PromptProductPurchase',
+                 'TextService', 'FilterStringAsync', 'HttpService', 'ProcessReceipt'):
+        if word in server:
+            errors.append(f'AdminGifts must go through GiftService only, found {word}')
+    for needle in ('GiftService.send(', 'GiftService.revoke(', 'GiftService.auditFor(', 'GiftService.allowLookup('):
+        if needle not in server:
+            errors.append(f'AdminGifts must call {needle[:-1]}')
+    if 'source = "admin"' not in server or 'from = admin.UserId' not in server:
+        errors.append("AdminGifts must send with source 'admin' and the caller's own UserId")
+    if re.search(r'label', server.replace('label = GiftRules.TeamLine', '')):
+        errors.append('AdminGifts must not take or build a label: the fixed GiftRules.TeamLine is the only one')
+    service = strip_comments((ROOT / 'src/server/AdminService.luau').read_text(encoding='utf-8'))
+    call = service.find('AdminGifts.start(')
+    if service.count('AdminGifts.start(') != 1 or 'admins[player] == true' not in service[call:call + 200]:
+        errors.append('AdminService must start AdminGifts exactly once with the server admin list (admins[player] == true)')
+    elif not (service.index('if not Config.AdminPanelEnabled then return end') < call < service.index('remote.Name = "AdminAction"')):
+        errors.append('AdminService must start AdminGifts after the AdminPanelEnabled check and before it creates AdminAction')
+    boot = (ROOT / 'src/server/Bootstrap.server.luau').read_text(encoding='utf-8')
+    if 'AdminGifts' in boot:
+        errors.append('Bootstrap does not start AdminGifts: AdminService does (flag-off identity of the admin panel)')
+    rules = strip_comments((ROOT / 'src/shared/AdminGiftRules.luau').read_text(encoding='utf-8'))
+    for word in ('Instance.new', 'game:GetService', 'GetService(', 'os.time', 'os.clock', 'os.date', 'DataStore', 'RemoteFunction', 'task.'):
+        if word in rules:
+            errors.append(f'src/shared/AdminGiftRules.luau must stay pure, found {word}')
+    remote_name = re.search(r'RemoteName = "(\w+)"', rules)
+    block = re.search(r'local messages: [^\n]*= \{(.*?)\n\}', rules, flags=re.S)
+    known = set(re.findall(r'^\s+(\w+) = "', block.group(1), flags=re.M)) if block else set()
+    for code in sorted(set(re.findall(r'fail\("(\w+)"\)', server))):
+        if code not in known:
+            errors.append(f'AdminGiftRules.Messages has no copy for the code {code!r} that AdminGifts returns')
+    for code in ('rate_limited', 'cant_receive', 'try_again', 'lookup_minute', 'lookup_day', 'lookup_server', 'store_corrupt', 'bad_sender', 'profile_not_loaded'):
+        if code not in known:
+            errors.append(f'AdminGiftRules.Messages has no copy for the GiftService code {code!r}')
+    panel = (ROOT / 'src/client/AdminPanel.client.luau').read_text(encoding='utf-8')
+    page = strip_comments((ROOT / 'src/client/AdminGiftPage.luau').read_text(encoding='utf-8'))
+    branch = 'if giftRemote and giftRemote:IsA("RemoteFunction") then'
+    if not remote_name or f'FindFirstChild("{remote_name.group(1)}")' not in panel or branch not in panel:
+        errors.append('AdminPanel must look for the Gift remote by the name AdminGiftRules.RemoteName')
+    else:
+        if panel.count('AdminGiftPage') != 1 or panel.index('AdminGiftPage') < panel.index(branch):
+            errors.append('AdminPanel may load AdminGiftPage only inside the "remote exists" branch (flag-off: no page)')
+        if panel.count('AdminTabs') != 1 or panel.index('AdminTabs') < panel.index(branch):
+            errors.append('the Tools/Gift tab row may only exist inside the "remote exists" branch (flag-off: layout unchanged)')
+    if 'GiftRules.TeamLine' not in page:
+        errors.append('the Gift page must show the fixed GiftRules.TeamLine label')
+    for word in ('MarketplaceService', 'rbxassetid', 'ImageId', 'ImageIds', 'PromptProductPurchase', 'HttpService', 'ProfileRepository'):
+        if word in page:
+            errors.append(f'AdminGiftPage is plain UITheme UI with no new art or Robux, found {word}')
+    sizes = [int(n) for n in re.findall(r'TextSize\s*=\s*(\d+)', page)] + [int(n) for n in re.findall(r'\blabel\(\w+, [^,\n]+, (\d+), \d+\)', page)]
+    if not sizes or min(sizes) < 14:
+        errors.append(f'AdminGiftPage text must be at least 14 px, found {min(sizes) if sizes else "none"}')
+    heights = [int(n) for n in re.findall(r'\b(?:grid|row)\((\d+)\)', page)]
+    heights += [int(n) for n in re.findall(r'(?:button|box)\([^\n]*UDim2\.new\([^)\n]*, 0, (\d+)\)\)', page)]
+    if not heights or min(heights) < 44:
+        errors.append(f'AdminGiftPage buttons and fields must be at least 44 px high, found {min(heights) if heights else "none"}')
+    if len(re.findall(r'\bbox\(', page)) != 6:  # the helper + username, amount, gift id, player id, history player id
+        errors.append('AdminGiftPage may have only the username, amount, gift id and player id fields: no free-text message box (presets only)')
+    if 'msg = selectedMsg' not in page or 'selectedMsg = preset.id' not in page:
+        errors.append('AdminGiftPage must send a preset id, never typed text, as the message')
     return errors
 
 
@@ -862,6 +939,312 @@ end
 print("Audit and privacy passed: UserIds and codes only; no display name, message text or UI copy in any store")
 '''
 
+ADMIN = r'''
+------------------------------------------------------------------ (E) BD-452 AdminGifts: the admin Gift page, server side, on the REAL GiftService
+do
+ GameConfig.GiftClaimEnabled=true GameConfig.AdminGiftsEnabled=true GameConfig.AdminPanelEnabled=true GameConfig.GiftingEnabled=false
+ local AdminRulesMod=@@ADMIN_RULES@@
+ local function mockPlayer(id,display,name) return {UserId=id,DisplayName=display or ("Display"..id),Name=name or ("user"..id)} end
+ local roster=setmetatable({},{__index=function(t,id)
+  if type(id)=="number" and id>=9000 and id<9400 then local p=mockPlayer(id) rawset(t,id,p) return p end
+  return nil
+ end})
+ local ADMIN2=101
+ local admin,admin2,rando,negative,zero=mockPlayer(ADMIN,"Boss","boss"),mockPlayer(ADMIN2,"Boss Two","boss2"),mockPlayer(555),mockPlayer(-1),mockPlayer(0)
+ -- The server's admin test: AdminRules.isAdmin over the UserId allow-list (no creator match, not Studio).
+ local function isAdminFor(cfg) return function(p)
+  return AdminRulesMod.isAdmin({userId=p.UserId,creatorType="User",creatorId=0,groupRank=nil,adminIds={ADMIN,ADMIN2},unpublishedStudio=false,enabled=cfg.AdminPanelEnabled})
+ end end
+ -- Public profiles the default resolver finds (Players:GetUserIdFromNameAsync + UserService).
+ local directory={never_played={id=9100,display="Pat",user="never_played",info=true},offline_olly={id=9101,display="Olly",user="offline_olly",info=true},
+  broken_info={id=9102,display="x",user="broken_info",info=false},blocker_bob={id=9301,display="Bob",user="blocker_bob",info=true}}
+ local ACLOCK=1000
+ local function makeAdmin(cfg,S)
+  local world={instances=0,printed={},lookups=0}
+  local rs={children={},Shared={Config="Config",GiftRules="GiftRules",AdminGiftRules="AdminGiftRules"}}
+  function rs:FindFirstChild(n) return self.children[n] end
+  local Instance={new=function(class)
+   world.instances+=1
+   local o={ClassName=class,Name=class,children={}}
+   return setmetatable(o,{__newindex=function(t,k,v) rawset(t,k,v) if k=="Parent" and v then v.children[rawget(t,"Name")]=t end end})
+  end}
+  local services={
+   Players={GetPlayerByUserId=function(_,id) return roster[id] end,
+    GetUserIdFromNameAsync=function(_,name) world.lookups+=1 local entry=directory[name] if not entry then error("HTTP 400 (not found)") end return entry.id end},
+   UserService={GetUserInfosByUserIdsAsync=function(_,ids)
+    for _,entry in directory do
+     if entry.id==ids[1] then return if entry.info then {{DisplayName=entry.display,Username=entry.user}} else {} end
+    end
+    return {}
+   end},
+   ReplicatedStorage=rs,
+  }
+  local game={GetService=function(_,n) return services[n] or error("service "..n.." is not modelled") end}
+  local script={Parent={GiftService="GiftService",GiftRules="GiftRules"}}
+  local PageRules
+  local require=function(id)
+   if id=="Config" then return cfg elseif id=="GiftRules" then return GiftRules elseif id=="AdminGiftRules" then return PageRules elseif id=="GiftService" then return S end
+   error("unexpected module "..tostring(id))
+  end
+  local print=function(s) table.insert(world.printed,s) end
+  PageRules=@@ADMIN_GIFT_RULES@@
+  local Module=@@ADMIN_GIFTS@@
+  Module.setClock(function() return ACLOCK end)
+  return Module,world,PageRules
+ end
+ local function asText(value,words)
+  local found
+  local function walk(v) if type(v)=="string" then for _,w in words do if string.find(v,w,1,true) then found=w end end elseif type(v)=="table" then for k,x in v do walk(k) walk(x) end end end
+  walk(value) return found
+ end
+
+ ---------------------------------------------------------------- flag-off identity: no page (no remote), no work
+ for label,mutate in {claim=function(c) c.GiftClaimEnabled=false end,adminGifts=function(c) c.AdminGiftsEnabled=false end,panel=function(c) c.AdminPanelEnabled=false end} do
+  local cfg=table.clone(GameConfig) mutate(cfg)
+  local S0=server(cfg)
+  local M0,W0=makeAdmin(cfg,S0)
+  local folder0={children={}}
+  local r0=g.requests
+  check(M0.start(folder0,isAdminFor(cfg))==nil and W0.instances==0 and next(folder0.children)==nil,"flag off ("..label.."): start() creates no remote, no page for the client to find")
+  local r=M0.handle(admin,{action="pick",userId=9201}) check(r.ok==false,"flag off ("..label.."): the handler refuses")
+  local r2=M0.handle(admin,{action="audit",userId=9201}) check(r2.ok==false and (r2.reason=="disabled" or r2.reason=="not_admin"),"flag off ("..label.."): answers disabled")
+  check(g.requests==r0 and W0.lookups==0 and #W0.printed==0 and W0.instances==0,"flag off ("..label.."): no store request, no lookup, no log, no instance")
+ end
+
+ ---------------------------------------------------------------- non-admins are refused BEFORE any store access
+ local S,SW=server()
+ local M,W,PageRules=makeAdmin(GameConfig,S)
+ local folder={children={}}
+ local remote=M.start(folder,isAdminFor(GameConfig))
+ check(remote and remote.ClassName=="RemoteFunction" and remote.Name=="AdminGiftAction" and folder.children.AdminGiftAction==remote and type(remote.OnServerInvoke)=="function","flags on: the AdminGiftAction remote exists")
+ local function call(p,req) ACLOCK+=1 return remote.OnServerInvoke(p,req) end
+ local function sendTo(p,id,item,extra)
+  local r=call(p,{action="pick",userId=id}) if not r.ok then return r end
+  r=call(p,{action="confirm",userId=id}) if not r.ok then return r end
+  local req={action="send",to=id,item=item or "skin_plush"} for k,v in extra or {} do req[k]=v end
+  return call(p,req)
+ end
+ do
+  local r0,l0,p0,s0=g.requests,W.lookups,#W.printed,#SW.printed
+  local requests={{action="pick",userId=9201},{action="lookup",name="never_played"},{action="confirm",userId=9201},{action="send",to=9201,item="skin_plush"},
+   {action="revoke",to=9201,giftId="Aabc"},{action="audit",userId=9201},"junk",5,{action="nope"},{}}
+  for _,who in {rando,negative,zero,mockPlayer(ADMIN+7)} do
+   for _,req in requests do
+    local r=call(who,req) check(r.ok==false and r.reason=="not_admin","non-admin "..who.UserId.." refused first: "..tostring(type(req)=="table" and req.action or req))
+   end
+  end
+  check(remote.OnServerInvoke(rando,{action="audit",userId=1},"extra").reason=="not_admin","a non-admin is refused before the argument check")
+  check(g.requests==r0 and W.lookups==l0 and #W.printed==p0 and #SW.printed==s0,"non-admin: ZERO store requests, no lookup, no log line")
+  check(not isAdminFor(GameConfig)(rando) and isAdminFor(GameConfig)(admin) and isAdminFor(GameConfig)(admin2),"the allow-list is AdminRules.isAdmin over Config.AdminUserIds")
+  local r=call(admin,{action="send",to=9201,item="skin_plush"}) check(r.ok==false and r.reason=="not_confirmed","no target without pick and Yes")
+  check(remote.OnServerInvoke(admin,{action="audit",userId=7771},"extra").reason=="bad_request","extra arguments are rejected for an admin")
+  check(g.requests==r0,"...and still no store request")
+ end
+
+ ---------------------------------------------------------------- send to an online player: pick, Yes, send; label fixed; stored gift is ids only
+ local firstGift
+ do
+  local r=call(admin,{action="pick",userId=9201}) check(r.ok and r.userId==9201 and r.displayName=="Display9201" and r.username=="user9201","pick an online player")
+  r=call(admin,{action="send",to=9201,item="skin_plush"}) check(not r.ok and r.reason=="not_confirmed" and pending(9201)==0,"picked but not confirmed: nothing sent")
+  r=call(admin,{action="confirm",userId=9999}) check(not r.ok and r.reason=="not_confirmed","Yes for somebody else is refused")
+  r=call(admin,{action="confirm",userId=9201}) check(r.ok and r.displayName=="Display9201","Yes confirms the picked player")
+  r=call(admin,{action="send",to=9202,item="skin_plush"}) check(not r.ok and r.reason=="not_confirmed","only the confirmed player can be sent a gift")
+  r=call(admin2,{action="send",to=9201,item="skin_plush"}) check(not r.ok and r.reason=="not_confirmed","another admin's confirmation is not mine")
+  r=call(admin,{action="send",to=9201,item="skin_plush",msg="have_fun"})
+  check(r.ok and r.status=="queued" and string.sub(r.giftId,1,1)=="A" and r.label==GiftRules.TeamLine and r.label=="A gift from the Be Dino team!","sent through GiftService.send, label fixed")
+  firstGift=r.giftId
+  local entry=inbox(9201).gifts[firstGift]
+  local keys={} for k in entry do table.insert(keys,k) end table.sort(keys)
+  check(table.concat(keys,",")=="at,from,id,item,msg,source" and entry.source=="admin" and entry.from==ADMIN and entry.item=="skin_plush" and entry.msg=="have_fun","stored: ids only, source admin, the caller's own UserId, no label field")
+  r=call(admin,{action="send",to=9201,item="skin_clay"}) check(r.ok,"the confirmed player can get a second gift")
+  r=call(admin,{action="pick",userId=9202}) r=call(admin,{action="send",to=9201,item="skin_clay"}) check(not r.ok and r.reason=="not_confirmed","picking somebody else clears the confirmation")
+  r=call(admin,{action="pick",userId=7}) check(not r.ok and r.reason=="not_here","a player who is not here")
+  for _,bad in {-1,0,1.5,"x",0/0,true} do r=call(admin,{action="pick",userId=bad}) check(not r.ok and r.reason=="bad_request","bad pick id "..tostring(bad)) end
+ end
+
+ ---------------------------------------------------------------- offline and never-played users by username (display name confirm), one claim at first join
+ do
+  local r=call(admin,{action="lookup",name="never_played"})
+  check(r.ok and r.userId==9100 and r.displayName=="Pat" and r.username=="never_played","username lookup returns display name and @username for the confirm card")
+  r=call(admin,{action="send",to=9100,item="crystals_custom",crystals=250}) check(not r.ok and r.reason=="not_confirmed","a looked-up user must be confirmed first")
+  r=call(admin,{action="confirm",userId=9100}) check(r.ok,"Yes")
+  r=call(admin,{action="send",to=9100,item="crystals_custom",crystals=250,msg="thank_you"}) check(r.ok and r.status=="queued","sent to a user who never played")
+  check(data["u:9100"]==nil and inbox(9100).gifts[r.giftId].crystals==250,"never-played recipient: the gift waits in the inbox, no profile is written")
+  local u=user(9100) assert(Repository.load(u))
+  local w0=wallet(u)
+  local okc,status,summary=S.claim(u)
+  check(okc and summary.applied==1 and wallet(u)==w0+250,"first join: granted once")
+  check(noticeOf(u).line=="A gift from the Be Dino team!" and noticeOf(u).message=="Thank you!" and noticeOf(u).canMute==false,"popup: the fixed team label, no admin name")
+  Repository.release(u)
+  local l0=W.lookups
+  for _,name in {"ab","a b c",string.rep("x",21),"","bad-name!",5,"semi;colon"} do
+   r=call(admin,{action="lookup",name=name}) check(not r.ok and r.reason=="bad_name","bad username refused: "..tostring(name))
+  end
+  check(W.lookups==l0,"a bad username never reaches Roblox")
+  r=call(admin,{action="lookup",name="no_such_user"}) check(not r.ok and r.reason=="not_found","unknown username: not found")
+  r=call(admin,{action="lookup",name="broken_info"}) check(not r.ok and r.reason=="try_again","public profile unavailable: try again")
+  r=call(admin,{action="lookup",name="offline_olly"}) check(r.ok and r.userId==9101,"another offline user")
+ end
+
+ ---------------------------------------------------------------- items, amounts, messages are validated by the server (no silent clamping)
+ do
+  call(admin,{action="pick",userId=9205}) call(admin,{action="confirm",userId=9205})
+  local r0=g.requests
+  for _,bad in {0,50001,1.5,"5",0/0,math.huge,-3,1e9,true} do
+   local r=call(admin,{action="send",to=9205,item="crystals_custom",crystals=bad}) check(not r.ok and r.reason=="bad_amount","crystal amount refused: "..tostring(bad))
+  end
+  check(call(admin,{action="send",to=9205,item="crystals_custom"}).reason=="bad_amount","the custom crystals item needs an amount")
+  check(call(admin,{action="send",to=9205,item="skin_plush",crystals=5}).reason=="bad_amount","a skin takes no amount")
+  check(call(admin,{action="send",to=9205,item="crystals_100",crystals=100}).reason=="bad_amount","a fixed pack takes no amount either")
+  for _,bad in {"egg","",5,"skin_unknown","dino","crystals_custom "} do check(call(admin,{action="send",to=9205,item=bad}).reason=="unknown_item","unknown item refused: "..tostring(bad)) end
+  for _,bad in {"hello there","Have fun!","",5,true} do check(call(admin,{action="send",to=9205,item="skin_plush",msg=bad}).reason=="bad_message","free text refused: "..tostring(bad)) end
+  check(g.requests==r0,"refused requests made no store request")
+  local r=call(admin,{action="send",to=9205,item="crystals_custom",crystals=50000}) check(r.ok and inbox(9205).gifts[r.giftId].crystals==50000,"the cap itself is allowed")
+  check(PageRules.amountOk(1) and PageRules.amountOk(50000) and not PageRules.amountOk(50001) and not PageRules.amountOk(0),"amountOk")
+ end
+
+ ---------------------------------------------------------------- the label (and the sender) can never come from the request
+ do
+  call(admin,{action="pick",userId=9206}) call(admin,{action="confirm",userId=9206})
+  local base={action="send",to=9206,item="skin_plush"}
+  for _,extra in {{label="From Boss!"},{from=1},{source="robux"},{giftId="Rfake"},{name="Boss"},{text="hi"},{isFriend=true},{at=1}} do
+   local req=table.clone(base) for k,v in extra do req[k]=v end
+   local r=call(admin,req) check(not r.ok and r.reason=="bad_request","extra key refused: "..next(extra))
+  end
+  check(pending(9206)==0,"nothing was sent by the rejected requests")
+  local r=call(admin,base) check(r.ok and r.label==GiftRules.TeamLine,"the plain request works and carries the fixed label")
+  check(GiftRules.noticeLine("admin","Boss")==GiftRules.TeamLine and GiftRules.noticeLine("admin",nil)==GiftRules.TeamLine and GiftRules.TeamLine=="A gift from the Be Dino team!","popup text for an admin gift is the team line")
+  for id,held in giftsData do
+   local owner=tonumber(string.match(id,"^inbox_(%d+)$"))
+   if owner and owner>=9000 and owner<9400 then -- the recipients this section used
+    for _,gift in held.gifts do
+     check(gift.label==nil and gift.name==nil and (gift.from==ADMIN or gift.from==ADMIN2),"admin gift has no label or name field and the caller's own id: "..id)
+    end
+   end
+  end
+ end
+
+ ---------------------------------------------------------------- revoke by gift id: pending, claimed, idempotent, bad input
+ local revokedPending,revokedClaimed
+ do
+  NOW+=61
+  local r=sendTo(admin,9203,"skin_clay") check(r.ok,"gift to revoke") revokedPending=r.giftId
+  r=call(admin,{action="revoke",to=9203,giftId=revokedPending}) check(r.ok and r.status=="revoked_pending" and pending(9203)==0 and giftsData["inbox_9203"].revoked[revokedPending]=="skin_clay","revoke before they open it")
+  r=call(admin,{action="revoke",to=9203,giftId=revokedPending}) check(r.ok and r.status=="already_revoked","revoke is idempotent")
+  r=sendTo(admin,9204,"skin_bricks") check(r.ok,"gift to revoke after claim") revokedClaimed=r.giftId
+  local u=user(9204) assert(Repository.load(u)) S.claim(u)
+  check(data[key(u)].ownedSkins.Bricks==true,"claimed")
+  r=call(admin,{action="revoke",to=9204,giftId=revokedClaimed,item="skin_bricks"}) check(r.ok and r.status=="revoked","revoke after claim writes the tombstone")
+  S.claim(u)
+  check(data[key(u)].ownedSkins.Bricks==nil and data[key(u)].claimedGifts[revokedClaimed]=="revoked","the next claim takes the skin back and tombstones the id")
+  Repository.release(u)
+  for _,bad in {{to=9203,giftId="bad id"},{to=0,giftId="Aabc"},{to=9203,giftId="Aabc",item="egg"},{to=9203},{giftId="Aabc"},{to=1.5,giftId="Aabc"},{to=9203,giftId=5}} do
+   local req={action="revoke"} for k,v in bad do req[k]=v end
+   local rr=call(admin,req) check(not rr.ok and rr.reason=="bad_request","revoke refuses bad input")
+  end
+ end
+
+ ---------------------------------------------------------------- audit view by UserId: whitelisted ids and codes only
+ do
+  local r=call(admin,{action="audit",userId=9203})
+  check(r.ok and #r.events>=2,"audit returns the user's events")
+  local seenAdmin,seenRevoked,last=false,false,math.huge
+  local FIELDS={at=true,ev=true,from=true,to=true,item=true,giftId=true,purchaseId=true,code=true}
+  for _,event in r.events do
+   check(event.at<=last,"newest first") last=event.at
+   for field in event do check(FIELDS[field]==true,"audit field is whitelisted: "..field) end
+   if event.ev=="admin" then seenAdmin=true end if event.ev=="revoked" then seenRevoked=true end
+  end
+  check(seenAdmin and seenRevoked,"the send and the revoke are both in the trail")
+  check(asText(r,{"Display9203","user9203","Boss","Have fun"})==nil,"the audit answer holds no name and no text")
+  check(call(admin,{action="audit",userId=0}).reason=="bad_request" and call(admin,{action="audit",userId=-4}).reason=="bad_request" and call(admin,{action="audit"}).reason=="bad_request","audit needs a valid UserId")
+  local empty=call(admin,{action="audit",userId=9390}) check(empty.ok and #empty.events==0,"nothing recorded: an empty list")
+  local line=PageRules.historyLine(r.events[1]) check(type(line)=="string" and #line>3 and not string.find(line,"Display",1,true),"history lines are ids and codes")
+ end
+
+ ---------------------------------------------------------------- Roblox blocks beat admin gifts; the recipient setting and mute do not
+ do
+  NOW+=61
+  S.reportBlocked(9300,{ADMIN})
+  local r=sendTo(admin,9300,"skin_plush") check(not r.ok and r.reason=="cant_receive" and pending(9300)==0,"a user who blocked the admin account is refused with the one public code")
+  r=call(admin,{action="lookup",name="blocker_bob"}) check(r.ok,"offline lookup of a blocker")
+  S.reportBlocked(9301,{ADMIN})
+  call(admin,{action="confirm",userId=9301})
+  r=call(admin,{action="send",to=9301,item="skin_clay"}) check(not r.ok and r.reason=="cant_receive" and pending(9301)==0,"...also by username")
+  r=sendTo(admin2,9300,"skin_plush") check(r.ok and pending(9300)==1,"a block is per account: another admin can still send")
+  S.setFrom(9302,"nobody") S.mute(9302,ADMIN)
+  r=sendTo(admin,9302,"skin_plush") check(r.ok,"admin gifts bypass Nobody and mute")
+  S.setFrom(9303,"friends")
+  r=sendTo(admin,9303,"skin_plush") check(r.ok,"admin gifts bypass Friends")
+  local trail=call(admin,{action="audit",userId=9300})
+  local refused=false for _,event in trail.events do if event.ev=="refused" and event.code=="blocked" then refused=true end end
+  check(refused,"the refusal is in the audit trail (the team can see why; the player never sees a reason)")
+ end
+
+ ---------------------------------------------------------------- admin rate limit: 10 a minute, per admin
+ do
+  local S2=server() local M2=makeAdmin(GameConfig,S2)
+  local f2={children={}} local remote2=M2.start(f2,isAdminFor(GameConfig))
+  NOW+=61
+  local function call2(p,req) ACLOCK+=1 return remote2.OnServerInvoke(p,req) end
+  local function send2(p,id) call2(p,{action="pick",userId=id}) call2(p,{action="confirm",userId=id}) return call2(p,{action="send",to=id,item="skin_plush"}) end
+  for i=1,L.AdminGrantsPerMinute do check(send2(admin,9210+i).ok,"admin gift "..i) end
+  local r=send2(admin,9230) check(not r.ok and r.reason=="rate_limited" and pending(9230)==0,"the 11th gift in a minute is refused")
+  check(send2(admin2,9231).ok,"another admin has their own budget")
+  NOW+=61 check(send2(admin,9230).ok,"a new minute opens")
+  -- username lookups share GiftService's budget (10 a minute per player)
+  NOW+=61
+  local look=server() local M3=makeAdmin(GameConfig,look) local f3={children={}} local remote3=M3.start(f3,isAdminFor(GameConfig))
+  local ok,why=0,nil
+  for i=1,L.LookupsPerMinute+2 do ACLOCK+=1 local rr=remote3.OnServerInvoke(admin,{action="lookup",name="offline_olly"}) if rr.ok then ok+=1 else why=rr.reason end end
+  check(ok==L.LookupsPerMinute and why=="lookup_minute","10 lookups a minute, then 'slow down': "..ok.." "..tostring(why))
+ end
+
+ ---------------------------------------------------------------- logs, throttle, thrown errors
+ do
+  local sawServer,sawPage,sawRevoke=false,false,false
+  for _,line in SW.printed do if string.find(line,"[BD-GIFT] admin from=100 to=9201 item=skin_plush id=A",1,true) then sawServer=true end end
+  for _,line in W.printed do
+   if string.find(line,"[BD-GIFT] admin-page send admin=100 to=9201 item=skin_plush result=queued",1,true) then sawPage=true end
+   if string.find(line,"[BD-GIFT] admin-page revoke admin=100 to=9203",1,true) then sawRevoke=true end
+  end
+  check(sawServer and sawPage and sawRevoke,"[BD-GIFT] log lines for the send (service + page) and the revoke")
+  check(asText(SW.printed,{"Display","Boss","user9","Pat"})==nil and asText(W.printed,{"Display","Boss","user9","Pat","Have fun"})==nil,"log lines hold UserIds, item ids and codes, never names or text")
+  check(giftsData["audituser_9201"][1].ev=="admin" and giftsData["audituser_9201"][1].from==ADMIN,"an audit record exists for the send")
+  ACLOCK+=1
+  local t1=remote.OnServerInvoke(admin,{action="audit",userId=9201}) local t2=remote.OnServerInvoke(admin,{action="audit",userId=9201})
+  check(t1.ok==true and t2.ok==false and t2.reason=="busy","two requests inside 0.15 s: the second is 'busy'")
+  ACLOCK+=1
+  M.setLookup(function() error("boom") end)
+  local r=remote.OnServerInvoke(admin,{action="lookup",name="never_played"}) check(r.ok==false and r.reason=="error","a thrown error answers a table, not a throw")
+  M.setLookup(nil)
+  ACLOCK+=1
+ end
+
+ ---------------------------------------------------------------- pure page rules
+ do
+  check(PageRules.shapeOk({action="pick",userId=1})=="pick" and PageRules.shapeOk({action="send",to=1,item="x",crystals=2,msg="y"})=="send" and PageRules.shapeOk({action="audit",userId=1})=="audit","shapes")
+  for _,bad in {5,"x",{},{action=5},{action="nope"},{action="pick",userId=1,extra=true},{action="send",label="x"},{action="lookup",userId=1},{[1]=1,action="pick"}} do check(PageRules.shapeOk(bad)==nil,"bad shape") end
+  check(PageRules.validName("abc") and PageRules.validName("a_b_c_1") and not PageRules.validName("ab") and not PageRules.validName("a b") and not PageRules.validName(string.rep("a",21)) and not PageRules.validName(nil),"usernames")
+  check(PageRules.parseAmount("1,000")==1000 and PageRules.parseAmount(" 50 000 ")==50000 and PageRules.parseAmount("50,001")==nil and PageRules.parseAmount("0")==nil and PageRules.parseAmount("12a")==nil
+   and PageRules.parseAmount("")==nil and PageRules.parseAmount("99999999")==nil and PageRules.parseAmount("1.5")==nil and PageRules.parseAmount(5)==nil and PageRules.parseAmount("-5")==nil,"typed amounts")
+  local choices=PageRules.choices()
+  check(#choices==5 and choices[5].id==GiftRules.CustomCrystalsId and choices[5].kind=="crystals","the page offers the four skins and a crystal amount")
+  for _,c in choices do check((GiftRules.itemAllowed(c.id,"admin")) and #c.label>=3 and (c.kind=="skin")==(GiftRules.ById[c.id].kind=="skin"),"choice is a catalogue item: "..c.id) end
+  for _,chip in PageRules.CrystalChips do check(PageRules.amountOk(chip),"chip within the cap: "..chip) end
+  check(PageRules.explain("cant_receive")=="They can't get gifts right now." and PageRules.explain("zzz_unknown")=="Failed: zzz unknown" and PageRules.explain(nil)~=nil,"explain")
+  check(PageRules.stamp(0)=="01-01 00:00" and PageRules.stamp(951782400+3600*13+120)=="02-29 13:02","stamps")
+  local events={} for i=1,60 do events[i]={at=i,ev="admin",from=5,to=6,item="skin_plush",giftId="A"..i} end
+  table.insert(events,{at=99,ev="admin",from="Sam",to=6}) table.insert(events,"junk") table.insert(events,{at=98,ev="claimed",from=5,to=6,item="skin_plush",giftId="Rhas space"})
+  local clean=PageRules.cleanHistory(events)
+  check(#clean==PageRules.HistoryMax and clean[1].at==60 and clean[#clean].at==60-PageRules.HistoryMax+1,"history: junk dropped, newest 50, newest first")
+  check(PageRules.historyLine(clean[1])==PageRules.stamp(60).."  Sent by the team  Plushy skin  5 to 6\nid A60","history line")
+ end
+end
+print("Admin gifts (BD-452) passed: flag-off identity, non-admin refused before any store access, pick/lookup + Yes, send/revoke/audit on the real GiftService, rate limits, block refusal, fixed label")
+print("Admin gifts verified")
+'''
+
 OLD = r'''
 ------------------------------------------------------------------ (D) migration and rollback rule RB1 against the frozen Build 020 reader
 do
@@ -964,6 +1347,9 @@ def fill(text: str) -> str:
         ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@GIFT_RULES@@', 'src/shared/GiftRules.luau'),
         ('@@GIFT_SERVICE@@', 'src/server/GiftService.luau'),
+        ('@@ADMIN_RULES@@', 'src/shared/AdminRules.luau'),
+        ('@@ADMIN_GIFT_RULES@@', 'src/shared/AdminGiftRules.luau'),
+        ('@@ADMIN_GIFTS@@', 'src/server/AdminGifts.luau'),
         ('@@OLD_CONFIG@@', FIXTURE + 'Config.luau'),
         ('@@OLD_PROGRESSION_CONFIG@@', FIXTURE + 'ProgressionConfig.luau'),
         ('@@OLD_GENETICS@@', FIXTURE + 'EggGenetics.luau'),
@@ -979,7 +1365,7 @@ def fill(text: str) -> str:
 
 def script() -> str:
     prefix = verify_rewards.HARNESS.split('local function user(id)')[0]
-    return fill(prefix + '\n' + PURE + '\n' + REPO + '\n' + SERVICE + '\n' + OLD)
+    return fill(prefix + '\n' + PURE + '\n' + REPO + '\n' + SERVICE + '\n' + ADMIN + '\n' + OLD)
 
 
 def main(argv=None) -> int:
@@ -999,8 +1385,8 @@ def main(argv=None) -> int:
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         print(result.stderr, end='')
-        if result.returncode == 0 and 'Gifting core verified' in result.stdout:
-            print('Gifting verification passed (BD-451).')
+        if result.returncode == 0 and 'Gifting core verified' in result.stdout and 'Admin gifts verified' in result.stdout:
+            print('Gifting verification passed (BD-451, BD-452).')
             return 0
         return result.returncode or 1
 

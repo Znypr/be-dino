@@ -13,6 +13,14 @@ Owner request 2026-10-14: an admin panel only for the owner, for private playtes
 - **Reset sliders** puts all three back to x1.
 - All changes except Mutation chance affect every player on that server and last until the server shuts down. Mutation chance is per player (the admin who set it) and is cleared when that admin leaves. Nothing is saved to profiles as a setting; what players earn while it is on (eggs, growth) is saved as normal.
 
+## Gift page (BD-452, [134](134-gifting-spec.md) s13.1)
+Only when `GiftClaimEnabled`, `AdminGiftsEnabled` and `AdminPanelEnabled` are all on (the first two are pinned off in every release profile). Then the panel gets a **Tools / Gift** tab row; with the flags off there is no tab row and no page.
+- **Who:** tap an online player, or type a username and tap Find (display name, @username and the avatar head shot show on a card), then **Yes, that's them**. Offline and never-played users work: the gift waits in their inbox.
+- **Gift:** a skin, or Crystals with an amount (1 to 50,000; chips for 100, 500, 2000, 10000, 50000) and an optional preset message. **Send free gift** always carries "A gift from the Be Dino team!".
+- **Take back a gift:** gift id + player id, two taps. **Gift history:** a player id shows the last 50 events; tap a line to fill the take-back boxes.
+- Server: one more `RemoteFunction` `AdminGiftAction`, served by `src/server/AdminGifts.luau`. The first line of the handler is the admin test, then the flags, the exact request shape, a 0.15 s throttle. It calls `GiftService.send / revoke / auditFor / allowLookup` and nothing else: **`AdminService` itself still never touches profiles or stores** (`verify_admin` and `verify_gifts` check it). Gifts are admin 10 per minute, lookups 10 per minute. Every action logs `[BD-GIFT] admin-page ...` (UserIds and codes only).
+- Evidence: `python tools/verify_gifts.py --runner luau` (section E). Studio pass: BD-579.
+
 ## Who is an admin (server side)
 `src/shared/AdminRules.luau` `isAdmin`, checked by `src/server/AdminService.luau` when a player joins:
 - the user who owns the experience (`game.CreatorId`, user-owned), or
