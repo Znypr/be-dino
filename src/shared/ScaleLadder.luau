@@ -8,16 +8,18 @@
 --   WorldGeneratedMeshes, CaveTerrainRules) because many harnesses load it without a require. The verifier recomputes the value
 --   from that module and fails if it differs from this table.
 -- Labels: CODE = what the source does today, MEASURED = a Studio bounding box (docs/07-kanban.md BD-329/BD-337, docs/108),
--- ESTIMATE = arithmetic on CODE, can be 30% off. BD-471 still has to measure the unmeasured species in Studio (Dino.species[..].measured).
+-- ESTIMATE = arithmetic on CODE, can be 30% off. BD-471 measured all 22 species in Studio (Dino.species[..].measured, all true).
 local ScaleLadder = {}
 ScaleLadder.Version = 1
 ScaleLadder.Unit = "studs"
 
 -- ---------------------------------------------------------------- dinosaurs
 -- height = bounding-box height in studs at scale 1 of the LOW-POLY model (Config.LowPolyDinos, the playtest profile); scale = the
--- LowPolyDinoAssets clone-time scale (MIRRORED, CODE). measured = true: a Studio bounding box (Compy 3.5 x 6.6 x 7.7 BD-329,
--- Gallimimus 1.8 x 4.9 x 5.8 BD-329/BD-337, Tyrannosaurus 5.6 x 10.3 x 11.3 docs/108). measured = false: ESTIMATE = scale x
--- heightPerScaleEstimate (docs/139 s3.1 planning value: Brachiosaurus 3.87 -> 11 studs; measured rows run 1.69 to 3.0 per unit).
+-- LowPolyDinoAssets clone-time scale (MIRRORED, CODE). measured = true for ALL 22 species since BD-471 (2026-10-17): Studio bounding box
+-- height of LowPolyDinos.clone(species) after ScaleTo(1), the exact model DinosaurVisual.render draws at scale 1 (template pose, wings and
+-- necks as authored; the earlier BD-329/BD-337/docs/108 numbers Compy 6.6, Gallimimus 4.9, T-Rex 10.3 agree within 0.1). Full boxes
+-- (width x height x length) are in docs/evidence/2026-10-17-bd471/measurements.md. measured = false would mean ESTIMATE = scale x
+-- heightPerScaleEstimate; the 19 estimates were off by -64% to +40% (shape factors differ a lot), so do not use the estimate rule for a new species.
 -- The legacy (non-low-poly) Compy is about 5.5 studs (docs/68); only the low-poly rows are in this table.
 ScaleLadder.HeightPerScaleEstimate = 2.84
 ScaleLadder.Dino = {
@@ -38,27 +40,27 @@ ScaleLadder.Dino = {
     order = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"}, -- Config.SpeciesOrder
     species = {
         compy = {scale = 2.2, height = 6.6, measured = true},
-        triceratops = {scale = 3.0, height = 8.5, measured = false},
-        tyrannosaurus = {scale = 3.66, height = 10.3, measured = true},
-        raptor = {scale = 2.1, height = 6.0, measured = false},
-        stegosaurus = {scale = 2.64, height = 7.5, measured = false},
-        ankylosaurus = {scale = 2.66, height = 7.6, measured = false},
-        archaeopteryx = {scale = 1.76, height = 5.0, measured = false},
-        baryonyx = {scale = 2.42, height = 6.9, measured = false},
-        brachiosaurus = {scale = 3.87, height = 11.0, measured = false},
-        dimorphodon = {scale = 1.9, height = 5.4, measured = false},
-        elasmosaurus = {scale = 2.66, height = 7.6, measured = false},
-        gallimimus = {scale = 2.9, height = 4.9, measured = true},
-        ichthyosaurus = {scale = 2.3, height = 6.5, measured = false},
-        microraptor = {scale = 1.7, height = 4.8, measured = false},
-        mosasaurus = {scale = 3.22, height = 9.1, measured = false},
-        pachycephalosaurus = {scale = 1.98, height = 5.6, measured = false},
-        parasaurolophus = {scale = 2.31, height = 6.6, measured = false},
-        plesiosaurus = {scale = 2.42, height = 6.9, measured = false},
-        pteranodon = {scale = 2.31, height = 6.6, measured = false},
-        quetzalcoatlus = {scale = 2.8, height = 8.0, measured = false},
-        spinosaurus = {scale = 3.51, height = 10.0, measured = false},
-        therizinosaurus = {scale = 3.19, height = 9.1, measured = false},
+        triceratops = {scale = 3.0, height = 8.39, measured = true},
+        tyrannosaurus = {scale = 3.66, height = 10.2, measured = true},
+        raptor = {scale = 2.1, height = 8.4, measured = true},
+        stegosaurus = {scale = 2.64, height = 4.91, measured = true},
+        ankylosaurus = {scale = 2.66, height = 6.49, measured = true},
+        archaeopteryx = {scale = 1.76, height = 5.28, measured = true},
+        baryonyx = {scale = 2.42, height = 6.22, measured = true},
+        brachiosaurus = {scale = 3.87, height = 10.63, measured = true},
+        dimorphodon = {scale = 1.9, height = 5.7, measured = true},
+        elasmosaurus = {scale = 2.66, height = 6.52, measured = true},
+        gallimimus = {scale = 2.9, height = 4.92, measured = true},
+        ichthyosaurus = {scale = 2.3, height = 3.45, measured = true},
+        microraptor = {scale = 1.7, height = 5.1, measured = true},
+        mosasaurus = {scale = 3.22, height = 3.29, measured = true},
+        pachycephalosaurus = {scale = 1.98, height = 5.11, measured = true},
+        parasaurolophus = {scale = 2.31, height = 5.54, measured = true},
+        plesiosaurus = {scale = 2.42, height = 6.73, measured = true},
+        pteranodon = {scale = 2.31, height = 6.93, measured = true},
+        quetzalcoatlus = {scale = 2.8, height = 8.4, measured = true},
+        spinosaurus = {scale = 3.51, height = 8.43, measured = true},
+        therizinosaurus = {scale = 3.19, height = 10.93, measured = true},
     },
 }
 

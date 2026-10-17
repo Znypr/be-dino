@@ -145,32 +145,32 @@ Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated fro
 <!-- scale-ladder:begin -->
 All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
 
-**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED for three species and an ESTIMATE for the other 19 until BD-471 measures them in Studio).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).
+**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED in Studio for 22 of 22 species, BD-471, 2026-10-17).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).
 
 | Species | Model scale | Height at 1 | Source | run x1.52 | mid x2 | long x3 | max x4 | bigMax x4.8 |
 | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| compy | 2.2 | 6.6 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
-| triceratops | 3 | 8.5 | ESTIMATE | 12.9 | 17.0 | 25.5 | 34.0 | 40.8 |
-| tyrannosaurus | 3.66 | 10.3 | MEASURED | 15.7 | 20.6 | 30.9 | 41.2 | 49.4 |
-| raptor | 2.1 | 6.0 | ESTIMATE | 9.1 | 12.0 | 18.0 | 24.0 | 28.8 |
-| stegosaurus | 2.64 | 7.5 | ESTIMATE | 11.4 | 15.0 | 22.5 | 30.0 | 36.0 |
-| ankylosaurus | 2.66 | 7.6 | ESTIMATE | 11.6 | 15.2 | 22.8 | 30.4 | 36.5 |
-| archaeopteryx | 1.76 | 5.0 | ESTIMATE | 7.6 | 10.0 | 15.0 | 20.0 | 24.0 |
-| baryonyx | 2.42 | 6.9 | ESTIMATE | 10.5 | 13.8 | 20.7 | 27.6 | 33.1 |
-| brachiosaurus | 3.87 | 11.0 | ESTIMATE | 16.7 | 22.0 | 33.0 | 44.0 | 52.8 |
-| dimorphodon | 1.9 | 5.4 | ESTIMATE | 8.2 | 10.8 | 16.2 | 21.6 | 25.9 |
-| elasmosaurus | 2.66 | 7.6 | ESTIMATE | 11.6 | 15.2 | 22.8 | 30.4 | 36.5 |
-| gallimimus | 2.9 | 4.9 | MEASURED | 7.4 | 9.8 | 14.7 | 19.6 | 23.5 |
-| ichthyosaurus | 2.3 | 6.5 | ESTIMATE | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
-| microraptor | 1.7 | 4.8 | ESTIMATE | 7.3 | 9.6 | 14.4 | 19.2 | 23.0 |
-| mosasaurus | 3.22 | 9.1 | ESTIMATE | 13.8 | 18.2 | 27.3 | 36.4 | 43.7 |
-| pachycephalosaurus | 1.98 | 5.6 | ESTIMATE | 8.5 | 11.2 | 16.8 | 22.4 | 26.9 |
-| parasaurolophus | 2.31 | 6.6 | ESTIMATE | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
-| plesiosaurus | 2.42 | 6.9 | ESTIMATE | 10.5 | 13.8 | 20.7 | 27.6 | 33.1 |
-| pteranodon | 2.31 | 6.6 | ESTIMATE | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
-| quetzalcoatlus | 2.8 | 8.0 | ESTIMATE | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
-| spinosaurus | 3.51 | 10.0 | ESTIMATE | 15.2 | 20.0 | 30.0 | 40.0 | 48.0 |
-| therizinosaurus | 3.19 | 9.1 | ESTIMATE | 13.8 | 18.2 | 27.3 | 36.4 | 43.7 |
+| compy | 2.2 | 6.60 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| triceratops | 3 | 8.39 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| tyrannosaurus | 3.66 | 10.20 | MEASURED | 15.5 | 20.4 | 30.6 | 40.8 | 49.0 |
+| raptor | 2.1 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| stegosaurus | 2.64 | 4.91 | MEASURED | 7.5 | 9.8 | 14.7 | 19.6 | 23.6 |
+| ankylosaurus | 2.66 | 6.49 | MEASURED | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
+| archaeopteryx | 1.76 | 5.28 | MEASURED | 8.0 | 10.6 | 15.8 | 21.1 | 25.3 |
+| baryonyx | 2.42 | 6.22 | MEASURED | 9.5 | 12.4 | 18.7 | 24.9 | 29.9 |
+| brachiosaurus | 3.87 | 10.63 | MEASURED | 16.2 | 21.3 | 31.9 | 42.5 | 51.0 |
+| dimorphodon | 1.9 | 5.70 | MEASURED | 8.7 | 11.4 | 17.1 | 22.8 | 27.4 |
+| elasmosaurus | 2.66 | 6.52 | MEASURED | 9.9 | 13.0 | 19.6 | 26.1 | 31.3 |
+| gallimimus | 2.9 | 4.92 | MEASURED | 7.5 | 9.8 | 14.8 | 19.7 | 23.6 |
+| ichthyosaurus | 2.3 | 3.45 | MEASURED | 5.2 | 6.9 | 10.4 | 13.8 | 16.6 |
+| microraptor | 1.7 | 5.10 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
+| mosasaurus | 3.22 | 3.29 | MEASURED | 5.0 | 6.6 | 9.9 | 13.2 | 15.8 |
+| pachycephalosaurus | 1.98 | 5.11 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
+| parasaurolophus | 2.31 | 5.54 | MEASURED | 8.4 | 11.1 | 16.6 | 22.2 | 26.6 |
+| plesiosaurus | 2.42 | 6.73 | MEASURED | 10.2 | 13.5 | 20.2 | 26.9 | 32.3 |
+| pteranodon | 2.31 | 6.93 | MEASURED | 10.5 | 13.9 | 20.8 | 27.7 | 33.3 |
+| quetzalcoatlus | 2.8 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| spinosaurus | 3.51 | 8.43 | MEASURED | 12.8 | 16.9 | 25.3 | 33.7 | 40.5 |
+| therizinosaurus | 3.19 | 10.93 | MEASURED | 16.6 | 21.9 | 32.8 | 43.7 | 52.5 |
 
 Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Estimate rule: model scale x 2.84.
 
