@@ -53,6 +53,8 @@ jobs:
           python tools/bind_worldkit_meshes.py --check
           python tools/verify_asset_slots.py
           python tools/verify_sources.py --compiler /tmp/luau/luau-compile
+          python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile
+          python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile --selftest
           python tools/verify_luau.py --runner /tmp/luau/luau
           python tools/verify_world_art.py --runner /tmp/luau/luau
           python tools/verify_gameplay.py --runner /tmp/luau/luau

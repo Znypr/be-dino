@@ -861,6 +861,7 @@ local function showTitle(id:string,name:string,soft:boolean?)
     if Theme.MotionEnabled and not soft then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
     task.delay(if soft then 1.8 else 3.2,function()
         if mine~=titleToken then return end
+        titleBig=false -- the card is fading out: a later softenTitle() (walking into the cave) must not bring the faded RAIN! back (BD-541 walk, step 8 capture)
         local info=TweenInfo.new(.8)
         TweenService:Create(title,info,{TextTransparency=1}):Play() TweenService:Create(stroke,info,{Transparency=1}):Play()
         TweenService:Create(sub,info,{TextTransparency=1}):Play() TweenService:Create(subStroke,info,{Transparency=1}):Play()

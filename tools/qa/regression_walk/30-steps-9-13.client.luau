@@ -12,17 +12,23 @@ local add = W.add
 local function shopAct(action, id, replace) -- ProgressionAction -> ProgressionResult, exactly as Bootstrap's transact() does
     local remote, result = W.remote("ProgressionAction"), W.remote("ProgressionResult")
     if not remote or not result then return nil end
-    local token, got = HttpService:GenerateGUID(false), nil
-    local conn = result.OnClientEvent:Connect(function(t, ok, status) if t == token then got = {ok = ok, status = status} end end)
-    remote:FireServer(action, id, token, replace == true)
-    W.wait(function() return got end, 6)
-    conn:Disconnect()
+    local got
+    for _ = 1, 3 do -- the server answers "busy" to a second action within 0.4 s (ProgressionService rate limit): a player cannot click that fast, so wait and retry
+        local token = HttpService:GenerateGUID(false)
+        got = nil
+        local conn = result.OnClientEvent:Connect(function(t, ok, status) if t == token then got = {ok = ok, status = status} end end)
+        remote:FireServer(action, id, token, replace == true)
+        W.wait(function() return got end, 6)
+        conn:Disconnect()
+        if not got or got.status ~= "busy" then break end
+        task.wait(0.6)
+    end
     return got
 end
 W.steps[9] = function(ctx)
     local c = {}
     local name = "Potion buy and use"
-    if W.modalOpen() then W.closeModal() end
+    if W.modalOpen() and not W.modalOpen("Potion Shop") then W.closeModal() end -- keep it when a hand click already opened it (NEEDS flow)
     if not add(c, W.rs() == "Sanctuary", "at home (RunState " .. tostring(W.rs()) .. ")") then return name, c end
     local Rules, PC = W.mod("Shared.ProgressionRules"), W.mod("Shared.ProgressionConfig")
     local ok, why = W.ensure(function() return W.modalOpen("Potion Shop") end, function() return W.rail("potions") end, "POTIONS", 7)
@@ -44,8 +50,11 @@ W.steps[9] = function(ctx)
     add(c, W.wait(function() return ((W.json("ProgressionJson") or {}).potions or {})[pick.id] == owned0 + 1 end, 4) ~= nil, "owned " .. pick.id .. " went " .. owned0 .. " -> " .. tostring((((W.json("ProgressionJson") or {}).potions or {})[pick.id])))
     local crystals1 = W.num("Crystals")
     local preview = string.find(tostring(player:GetAttribute("ProfileMode")), "preview", 1, true) ~= nil
-    add(c, if crystals1 == crystals0 - pick.price then true elseif preview and crystals1 == crystals0 then nil else false, string.format("crystals %d -> %d (price %d)%s", crystals0, crystals1, pick.price, if preview then " [Studio test wallet resets to a fixed amount]" else ""))
+    local Config = W.mod("Shared.Config")
+    local resetTo = if preview and Config then Config.StudioTestCrystals else nil -- ProfileRepository sets the wallet to StudioTestCrystals on every action in a Studio preview
+    add(c, if crystals1 == crystals0 - pick.price then true elseif preview and (crystals1 == crystals0 or crystals1 == resetTo) then nil else false, string.format("crystals %d -> %d (price %d)%s", crystals0, crystals1, pick.price, if preview then " [Studio test wallet resets to a fixed amount]" else ""))
     local active = (((W.json("ProgressionJson") or {}).buffs or {})[pick.kind])
+    task.wait(0.5)
     local use = shopAct("usePotion", pick.id, active ~= nil and active.expiresAt > workspace:GetServerTimeNow())
     add(c, use ~= nil and use.ok == true, "use answered " .. (if use then tostring(use.ok) .. "/" .. tostring(use.status) else "nothing"))
     local buff = W.wait(function() local b = ((W.json("ProgressionJson") or {}).buffs or {})[pick.kind] return b and b.expiresAt > workspace:GetServerTimeNow() and b end, 4)
@@ -60,7 +69,7 @@ end
 W.steps[10] = function(ctx)
     local c = {}
     local name = "Crystal Shop tabs"
-    if W.modalOpen() then W.closeModal() end
+    if W.modalOpen() and not W.modalOpen("Crystal Shops") then W.closeModal() end -- keep it when a hand click already opened it (NEEDS flow)
     if not add(c, W.rs() == "Sanctuary", "at home (RunState " .. tostring(W.rs()) .. ")") then return name, c end
     local Ftue, Theme = W.mod("Shared.FtueP1"), W.mod("Shared.UITheme")
     local ok, why = W.ensure(function() return W.modalOpen("Crystal Shops") end, function() return W.rail("auras") end, "SHOP", 7)
@@ -74,20 +83,27 @@ W.steps[10] = function(ctx)
     local level = player:GetAttribute("AccountLevel") or 1
     local tabs = Ftue.shopTabs(level)
     add(c, (W.btn(s, "CONDITIONS") ~= nil) == (level >= Ftue.ConditionsTabLevel), string.format("CONDITIONS tab %s at level %d", if W.btn(s, "CONDITIONS") then "shown" else "hidden", level))
-    local seen = {}
+    -- W.keep.shop survives a hand-click re-run (a NEEDS stop returns the step, which clears its own memory): tabs already checked are
+    -- skipped, so clicking the printed tab and re-running walks one tab further each time. A finished walk clears it.
+    W.keep.shop = W.keep.shop or {seen = {}, done = {}}
+    local seen, done = W.keep.shop.seen, W.keep.shop.done
     for _, tab in tabs do
         local label = string.upper(tab)
-        local function onTab() local b = W.btn(s, label) return b ~= nil and b.BackgroundColor3 == Theme.Colors.blue end
-        local ok2, why2 = W.ensure(onTab, function() return W.btn(s, label) end, label .. " tab")
-        if not add(c, if ok2 then true else nil, if ok2 then label .. " tab opens" else why2) then return name, c end
-        task.wait(0.3)
-        local snap = table.concat(W.texts(s), "\n")
-        add(c, seen[snap] == nil, label .. " page differs from the others")
-        seen[snap] = tab
-        if tab == "eggs" then add(c, W.hasMatch(s, "Random Egg") ~= nil and (W.btn(s, "BUY EGG") ~= nil or W.btn(s, "NEED", true) ~= nil), "Eggs tab: Random Egg and a buy button") end
-        if tab == "crystals" then add(c, W.hasMatch(s, "You have") ~= nil, "Crystals tab: balance line") end
-        if tab == "conditions" then add(c, W.hasMatch(s, "never Cracked") ~= nil or W.hasMatch(s, "%%") ~= nil, "Conditions tab: percentages") end
+        if not done[tab] then
+            local function onTab() local b = W.btn(s, label) return b ~= nil and b.BackgroundColor3 == Theme.Colors.blue end
+            local ok2, why2 = W.ensure(onTab, function() return W.btn(s, label) end, label .. " tab")
+            if not add(c, if ok2 then true else nil, if ok2 then label .. " tab opens" else why2) then return name, c end
+            task.wait(0.3)
+            local snap = table.concat(W.texts(s), "\n")
+            add(c, seen[snap] == nil, label .. " page differs from the others")
+            seen[snap] = tab
+            if tab == "eggs" then add(c, W.hasMatch(s, "Random Egg") ~= nil and (W.btn(s, "BUY EGG") ~= nil or W.btn(s, "NEED", true) ~= nil or W.btn(s, "COMING SOON") ~= nil), "Eggs tab: Random Egg and a buy button (or COMING SOON, BD-532 / EG1)") end
+            if tab == "crystals" then add(c, W.hasMatch(s, "You have") ~= nil, "Crystals tab: balance line") end
+            if tab == "conditions" then add(c, W.hasMatch(s, "never Cracked") ~= nil or W.hasMatch(s, "%%") ~= nil, "Conditions tab: percentages") end
+            done[tab] = true
+        end
     end
+    W.keep.shop = nil
     return name, c, "the Crystal Shops page on its last tab; repeat on the others if a tab looked odd"
 end
 
@@ -125,10 +141,11 @@ W.steps[11] = function(ctx)
             add(c, if compact then nil else clear, string.format("panel starts at x=%.0f, rail ends at x=%.0f%s", panel.AbsolutePosition.X, rail.AbsolutePosition.X + rail.AbsoluteSize.X, if compact then " (phone-size window: not judged)" else ""))
         end
     end
-    local Fusion = W.mod("Client.FusionMenu")
-    if Fusion then Fusion.close() end -- the menu's own X button calls exactly this
-    add(c, W.wait(function() return not up() end, 2) ~= nil, "the menu closes again")
-    W.ensure(up, function() return W.rail("fusion") end, "FUSION", 7) -- left open for the capture; step 12 closes it
+    -- Close with the menu's own X button. NOT through require(Client.FusionMenu).close(): this script runs in its own Lua VM, so that module is a
+    -- second instance whose "open" state is not the game's (2026-10-17 run: close() did nothing and the check failed).
+    local okc, whyc = W.ensure(function() return not up() end, function() return W.btn(fusion(), "X") end, "Fusion menu X")
+    add(c, if okc then true else nil, if okc then "the menu closes again (its own X button)" else whyc)
+    if okc then W.ensure(up, function() return W.rail("fusion") end, "FUSION", 7) end -- left open for the capture; step 12 closes it
     return name, c, "the Fusion menu is OPEN: capture now (nothing was fused)"
 end
 
@@ -136,27 +153,40 @@ end
 W.steps[12] = function(ctx)
     local c = {}
     local name = "Settings tabs and Reduce Motion"
-    local Fusion = W.mod("Client.FusionMenu")
-    if Fusion and Fusion.isOpen() then Fusion.close() end
-    if W.modalOpen() then W.closeModal() end
+    -- NOTE: require(Client.SettingsMenu / Shared.SettingsModel / Shared.UITheme) from this script gives a SECOND module instance (own Lua VM), whose
+    -- tab(), calm() and MotionEnabled are not the game's. So everything here is read from what the player sees (page markers, the toggle's text)
+    -- and from the saved SettingsJson, which is the server's truth.
+    local fgui = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("BeDinoFusionUI") -- close the Fusion menu by its own X (see step 11)
+    if fgui and fgui.Enabled then W.ensure(function() return not fgui.Enabled end, function() return W.btn(fgui, "X") end, "Fusion menu X") end
+    if W.modalOpen() and not W.modalOpen("Settings") then W.closeModal() end -- keep it when a hand click already opened it (NEEDS flow)
     if not add(c, W.rs() == "Sanctuary", "at home (RunState " .. tostring(W.rs()) .. ")") then return name, c end
-    local Menu, Model, Theme = W.mod("Client.SettingsMenu"), W.mod("Shared.SettingsModel"), W.mod("Shared.UITheme")
     local ok, why = W.ensure(function() return W.modalOpen("Settings") end, function() return W.rail("settings") end, "SETTINGS", 7)
     if not add(c, if ok then true else nil, if ok then "Settings opened" else why) then return name, c end
+    -- W.keep.settings survives a hand-click re-run (a NEEDS stop returns the step): tabs already checked are skipped, their lines are kept.
+    local keep = W.keep.settings or {done = {}, lines = {}}
+    W.keep.settings = keep
+    for _, l in keep.lines do table.insert(c, l) end
     local marker = {sound = "Hatch sound", look = "Calm motion", controls = "Camera", help = "HOW TO PLAY"}
     for _, id in {"sound", "look", "controls", "help"} do
-        local s = W.scrim()
-        local ok2, why2 = W.ensure(function() return Menu ~= nil and Menu.tab() == id and W.hasExact(W.scrim(), marker[id]) end, function() return s:FindFirstChild("Tab_" .. id, true) end, id .. " tab")
-        if not add(c, if ok2 then true else nil, if ok2 then id .. " tab shows '" .. marker[id] .. "'" else why2) then return name, c end
+        if not keep.done[id] then
+            local s = W.scrim()
+            local ok2, why2 = W.ensure(function() return W.hasExact(W.scrim(), marker[id]) end, function() return s:FindFirstChild("Tab_" .. id, true) end, id .. " tab")
+            if not add(c, if ok2 then true else nil, if ok2 then id .. " tab shows '" .. marker[id] .. "'" else why2) then return name, c end
+            keep.done[id] = true
+            table.insert(keep.lines, {true, id .. " tab shows '" .. marker[id] .. "'"})
+        end
     end
-    ok, why = W.ensure(function() return Menu.tab() == "look" and W.hasExact(W.scrim(), "Calm motion") end, function() return W.scrim():FindFirstChild("Tab_look", true) end, "look tab")
-    ok, why = W.ensure(function() return Model.calm() end, function() return W.scrim():FindFirstChild("Toggle_Calm motion", true) end, "Calm motion toggle")
+    local function calmOn() local j = W.json("SettingsJson") return j ~= nil and j.calm == true end
+    local function toggle() return W.scrim() and W.scrim():FindFirstChild("Toggle_Calm motion", true) end
+    ok, why = W.ensure(function() return W.hasExact(W.scrim(), "Calm motion") end, function() return W.scrim():FindFirstChild("Tab_look", true) end, "look tab")
+    ok, why = W.ensure(function() local t = toggle() return t ~= nil and t.Text == "ON" end, toggle, "Calm motion toggle")
     if not add(c, if ok then true else nil, if ok then "Calm motion (Reduce Motion) switched ON" else why) then return name, c end
-    add(c, Theme.MotionEnabled == false, "UITheme.MotionEnabled is " .. tostring(Theme.MotionEnabled))
-    local toggle = W.scrim() and W.scrim():FindFirstChild("Toggle_Calm motion", true)
-    add(c, toggle ~= nil and toggle.Text == "ON", "the toggle reads " .. (toggle and toggle.Text or "(missing)"))
-    add(c, W.wait(function() local j = W.json("SettingsJson") return j and j.calm == true end, 6) ~= nil, "the server saved calm=true (SettingsJson)")
+    local Theme = W.mod("Shared.UITheme") -- in Studio this is the script's own copy and still says true: ODD, not a verdict on the game
+    add(c, if Theme and Theme.MotionEnabled == false then true else nil, if Theme and Theme.MotionEnabled == false then "UITheme.MotionEnabled is false" else "UITheme.MotionEnabled cannot be read from this script (its own module copy); the saved setting below is the check")
+    add(c, toggle() ~= nil and toggle().Text == "ON", "the toggle reads " .. (toggle() and toggle().Text or "(missing)"))
+    add(c, W.wait(calmOn, 6) ~= nil, "the server saved calm=true (SettingsJson)")
     W.keep.calmOn = true
+    W.keep.settings = nil
     return name, c, "Reduce Motion is ON now (left on for this capture; step 13 turns it off first)"
 end
 
@@ -177,16 +207,18 @@ W.steps[13] = function(ctx)
         return "DONE"
     end
     if m.ph == "calm" then
-        local Model = W.mod("Shared.SettingsModel")
-        if Model and Model.calm() then
-            if W.modalOpen() then W.closeModal() end
-            local ok = W.ensure(function() return W.modalOpen("Settings") end, function() return W.rail("settings") end, "SETTINGS", 7)
-            if ok then ok = W.ensure(function() return W.hasExact(W.scrim(), "Calm motion") end, function() return W.scrim():FindFirstChild("Tab_look", true) end, "look tab") end
-            if ok then ok = W.ensure(function() return not Model.calm() end, function() return W.scrim():FindFirstChild("Toggle_Calm motion", true) end, "Calm motion toggle") end
-            if not ok then Model.set("calm", false) add(c, nil, "could not tap Reduce Motion off; set it off through SettingsModel (what the toggle calls)") end
+        -- read and set Reduce Motion through what the player sees (the toggle) and the saved SettingsJson, not through a module copy (see step 12)
+        local function calmOn() local j = W.json("SettingsJson") return j ~= nil and j.calm == true end
+        if calmOn() then
+            if W.modalOpen() and not W.modalOpen("Settings") then W.closeModal() end
+            local function toggle() return W.scrim() and W.scrim():FindFirstChild("Toggle_Calm motion", true) end
+            local ok, why = W.ensure(function() return W.modalOpen("Settings") end, function() return W.rail("settings") end, "SETTINGS", 7)
+            if ok then ok, why = W.ensure(function() return W.hasExact(W.scrim(), "Calm motion") end, function() return W.scrim():FindFirstChild("Tab_look", true) end, "look tab") end
+            if ok then ok, why = W.ensure(function() local t = toggle() return t ~= nil and t.Text == "OFF" end, toggle, "Calm motion toggle") end
+            if not ok then add(c, nil, tostring(why)) return name, c end
         end
         if W.modalOpen() then W.closeModal() end
-        add(c, Model == nil or not Model.calm(), "Reduce Motion is off again")
+        add(c, W.wait(function() return not calmOn() end, 6) ~= nil, "Reduce Motion is off again (saved SettingsJson)")
         m.queue0 = W.num("ActiveChestCount") + W.num("QueuedEggsWaiting")
         m.run1 = player:GetAttribute("LastRunId")
         m.ph = "gate"

@@ -38,6 +38,7 @@ def main():
     assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in loop, 'inside the hall only the soft text toast (no big card)'
     assert 'if hall then softenTitle() end' in loop, 'a big card already up shrinks to the soft toast when the cave is entered'
     assert 'soft=soft or inHall()' in src and 'titleBig=not soft' in src, 'showTitle re-checks the cave: no big card or bonus line inside'
+    assert re.search(r'if mine~=titleToken then return end\s*titleBig=false', src), 'a faded card clears titleBig, so entering the cave cannot revive it as a stuck RAIN! (BD-541)'
     assert 'if hall then shake=0 end' in loop, 'no camera shake inside, not even for a quake'
     assert 'if root and not hall and activeId=="quake"' in loop, 'quake cracks gated by hall'
     assert 'local moonOn=live and' in loop and 'local auroraOn=live and' in loop, 'moon / aurora gated by live'

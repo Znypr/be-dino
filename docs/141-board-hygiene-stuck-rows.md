@@ -95,3 +95,68 @@ Same method (own playtest build, new Studio window, real mouse and keyboard, `sc
 New rows from round 2: BD-529, BD-530 (fixed), BD-531 (phone HUD), BD-532 (BUY EGG gate in the playtest).
 
 Next candidates, not run: BD-372 level-3 Conditions tab, the BD-148 crack hint line, BD-164/255 (camera rattle needs a quiet machine). Not agent-runnable: anything with a phone, 2+ players or an owner look.
+
+## 8. Review / test sweep of the P0 and P1 rows (2026-10-17, docs only)
+
+Label: **BOARD AUDIT (docs only).** Every P0 and P1 row in `Review / test` (243 rows on origin/main ab0da09) was read against its acceptance items and the evidence it cites. Checked: every `docs/evidence/...` path exists on main, every `#N` is a merged PR (`gh pr list --state all`), the named verifier is in `.github/workflows/build-generated-place.yml` (the five latest main CI runs are green), and the cited picture or README really shows the acceptance item (the cave, menu-fixes, bd524 and lowpoly-clickthrough pictures were opened). Rule (same as s1 and [114](114-handbook.md) s12): never Done because something probably works; code merged plus only a Studio, phone or owner check left stays `Review / test`.
+
+| Class | Meaning | P0 | P1 | Rows | What was done on the board |
+| --- | --- | ---: | ---: | ---: | --- |
+| (a) DONE-READY | every acceptance item has evidence on main | 8 | 13 | 21 | moved to **Done**, with a "Board hygiene 2026-10-17" note naming the evidence |
+| (b) 1-2 items left | an agent or the lead can close it (a Studio check, a small fix, a doc line) | 12 | 42 | 54 | left in Review / test; a "Left" note on every row that had none |
+| (c) stale or superseded | a later row or decision replaced it | 0 | 3 | 3 | marked **Superseded** with a pointer |
+| (d) needs owner or phone | upload, eye or ear judgement, publish, real phone, 2+ players, live server | 39 | 126 | 165 | left in Review / test; a "Left" note on every row that had none |
+| Total | | 59 | 184 | 243 | Review / test P0 59 to 51, P1 184 to 168 (`python tools/board_summary.py`) |
+
+### 8.1 Rows moved
+
+**Done (21):**
+
+| Row | Evidence |
+| --- | --- |
+| BD-066 | `src/shared/NotifyQueue.luau`, `tools/verify_notify.py` (CI), [80](80-notifications.md); scope of the row is the pure module |
+| BD-093 | `tools/verify_nests.py` (CI); its docstring lists gate, exactly-once, 15 h queue, offline, cap, luck, migration, budget |
+| BD-183 | [87](87-vision-and-feel-guide.md), AGENTS.md line 59, [00](00-documentation-guide.md) line 12, soft-sound rule in [62](62-polish-sfx-goal-juice.md) and [63](63-sfx-pack.md) |
+| BD-239, BD-240, BD-241 | `CombatStats`, `CombatState`, `CombatTeamUp` modules with `verify_combat_stats/state/teamup.py` (CI); scope is the pure modules, wiring is BD-243+, balance stays BD-252 |
+| BD-279, BD-280 | `CaveHubLayout.luau`, `SpawnGeometry.luau`, `BiomePlacement.useHub`, `verify_cave_hub.py`, `verify_spawn.py` (CI); stations walked in `evidence/2026-10-16-cave-acceptance/` |
+| BD-295 | `evidence/2026-10-16-cave-lighting/07-lava-falls-32-high-under-ceiling.jpg`; the sheet height and the 18 wide non-walkable disc are pinned by `verify_cave_lighting.py` and `verify_cave_hub.py` |
+| BD-323 | `evidence/2026-10-16-lowpoly-clickthrough/` (hatch, Index, Fusion, Shop, Settings, 12-dino line-up), [108](108-lowpoly-playtest-profile.md) "Click-through update"; problems filed as BD-326..BD-332 |
+| BD-335 | decision [115](115-decisions-log.md) D4 and L2, [116](116-handbook-conflicts.md) C-7 RESOLVED; AGENTS.md line 44, [114](114-handbook.md) s9 and [46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) say 6/3/2 (15/4/2 text is marked historical) |
+| BD-383, BD-398 | `evidence/2026-10-16-cave-look-v2/after-03-heart-under-blizzard-warm.jpg`; `evidence/2026-10-16-cave-polish-3/` (blizzard, thunder, volcano in the hall); `verify_cave_lighting.py` (CI) |
+| BD-401, BD-403 | `verify_shop_crystals.py`, `verify_cave_weather.py` (CI; the second also ran locally without Luau) |
+| BD-404, BD-409, BD-410, BD-411, BD-413 | the QA gates of [117](117-asset-quality-audit.md) (`tools/qa/*`, `verify_world_overlap.py`, `verify_world_budget.py`, CI) with the measured before/after tables in 117 s2 |
+| BD-419 | `git ls-files build` has no Build020 file; `.gitignore` lines 15-16 |
+
+Deliberately NOT moved although the row says the offline half is finished: BD-412 (the luminance bands are the lead's guess, owner must confirm, 117 s6 Q1), BD-357..BD-359 (a real server was never used), BD-494..BD-497 (phone forecast and guards, phone run open), BD-250/BD-251 (the verifier named in the row does not exist), BD-301 (no after-picture of the Egg Odds panel).
+
+**Superseded (3):** BD-056 by BD-080 (BD-080 is the "BD-056 spec" HUD rework, HudV2, PR #166, `evidence/2026-10-16-hud-rework/`); BD-163 by BD-432 (docs/93 plan table row 2 and docs/123 moved aura/trail anime depth to BD-432; the row's base, PR #45, was closed unmerged); BD-424 by BD-428 (built as BD-428, PR #243; the earlier audit already called it a duplicate).
+
+### 8.2 Rows left (the "Left" note is on the row itself)
+
+(b) one or two items left, 54 rows: BD-082 BD-091 BD-092 BD-100 BD-102 BD-141 BD-145 BD-150 BD-151 BD-153 BD-161 BD-171 BD-174 BD-175 BD-176 BD-180 BD-181 BD-185 BD-202 BD-208 BD-226 BD-229 BD-265 BD-266 BD-267 BD-269 BD-270 BD-281 BD-282 BD-283 BD-287 BD-301 BD-310 BD-313 BD-365 BD-366 BD-367 BD-369 BD-370 BD-372 BD-373 BD-377 BD-389 BD-390 BD-392 BD-395 BD-402 BD-418 BD-423 BD-439 BD-445 BD-460 BD-522 BD-524
+
+(d) needs owner or phone, 165 rows: BD-006 BD-016 BD-017 BD-019 BD-020 BD-023 BD-024 BD-025 BD-026 BD-027 BD-028 BD-029 BD-030 BD-031 BD-032 BD-033 BD-034 BD-036 BD-037 BD-038 BD-039 BD-040 BD-041 BD-042 BD-043 BD-044 BD-045 BD-046 BD-047 BD-049 BD-050 BD-051 BD-052 BD-053 BD-054 BD-057 BD-059 BD-060 BD-061 BD-062 BD-064 BD-065 BD-067 BD-069 BD-079 BD-080 BD-081 BD-090 BD-095 BD-101 BD-103 BD-120 BD-130 BD-131 BD-142 BD-143 BD-144 BD-147 BD-148 BD-149 BD-152 BD-155 BD-162 BD-164 BD-166 BD-168 BD-172 BD-173 BD-177 BD-178 BD-179 BD-184 BD-186 BD-187 BD-188 BD-189 BD-190 BD-195 BD-196 BD-197 BD-200 BD-203 BD-204 BD-206 BD-207 BD-210 BD-213 BD-217 BD-225 BD-227 BD-230 BD-231 BD-242 BD-243 BD-244 BD-245 BD-246 BD-247 BD-248 BD-249 BD-250 BD-251 BD-252 BD-253 BD-255 BD-263 BD-264 BD-268 BD-284 BD-285 BD-286 BD-288 BD-289 BD-290 BD-291 BD-292 BD-296 BD-305 BD-306 BD-309 BD-311 BD-312 BD-316 BD-318 BD-319 BD-321 BD-326 BD-333 BD-336 BD-357 BD-358 BD-359 BD-368 BD-386 BD-387 BD-388 BD-391 BD-393 BD-394 BD-396 BD-397 BD-399 BD-400 BD-412 BD-428 BD-429 BD-430 BD-431 BD-432 BD-433 BD-437 BD-438 BD-441 BD-443 BD-444 BD-462 BD-490 BD-494 BD-495 BD-496 BD-497 BD-500 BD-507 BD-518 BD-531
+
+Every (d) row either needs the owner (uploads, ears, eyes, publish, a yes/no), a real phone, two or more players or the published place, or has no Studio evidence at all and sits in the Build 017-020 era that [44](44-main-integration-checklist.md) still lists under "Remaining Gates". The 23 oldest rows (BD-006 to BD-042, except BD-019) cite no evidence; they got a one-line "Left" and stay.
+
+### 8.3 Findings
+
+- **BD-179 duplicates the still-Backlog BD-140** (crystal pack cards, built under BD-179); BD-140 is P2 and was not touched.
+- **BD-081 and BD-343, BD-391 and BD-405** are marked "near-duplicate, kept" by the 2026-10-16 audit; not superseded here because each pair splits a different owner task.
+- **BD-091 text is stale**: it says 8 catches for the hidden nest gate, code uses `NestMinCatches` 1 (BD-147 audit).
+- **BD-248 art does not exist** (BD-247 still says PLACEHOLDER); BD-250/BD-251 cite `verify_motion_poses.py`, which was never created (checks are in `verify_lowpoly_dinos.py`).
+- The ID lists in the small table above the board in 07-kanban (Backlog / Ready / ... columns) are old and were not touched; `python tools/board_summary.py` is the live count.
+- No code, no Studio, no Place1.rbxl were touched; the CI evidence is the five latest green runs on main plus `verify_cave_weather.py` run locally (the other verifiers need Luau, which this PC lacks).
+
+### 8.4 Findings fixed (2026-10-17, docs only, [07-kanban](07-kanban.md))
+
+Label: **BOARD AUDIT (docs only).** Each finding of 8.3 and what was done. Rows are never deleted.
+
+- **BD-179 / BD-140**: BD-179 is the more complete row (built, Review / test, P1), so it is kept; BD-140 is now **Superseded** with a pointer. The only detail unique to BD-140 (the tab may be hidden instead of "Coming soon" while Robux packs are off; real pack ids wait for BD-004) was merged into BD-179.
+- **BD-091**: an "Updated 2026-10-17" note was appended, the old text stays. Current rules from `Config.luau` and [115](115-decisions-log.md): gate = run of 120 s or more AND `NestMinCatches` 1 (not 8); 1 nest plus 1 per `NestEggsPerExtraNest` 30 further catches; no per-run cap (BD-420, Done); only 5 spots, any nest without a free spot becomes `NestOverflowCrystals` 50 crystals (exactly-once, toast "Nests full!"). [71](71-egg-nests-v2.md) still shows 8 / 100 / 3 in its historical lines.
+- **BD-248**: the row now starts "ART NOT MADE YET; needs owner/Blender" and its Left note says no file exists and docs/77 has no line.
+- **Old ID-list table above the board**: replaced by a one-paragraph pointer to the board and `python tools/board_summary.py`. No tool regenerates it (counts are deliberately not stored).
+- **Malformed priority cells**: BD-230 and BD-231 ("P0 Design: ...") and also BD-233 and BD-234 ("P1 Design: ...") now have a plain `P0` / `P1`; the "Design: [docs/101] (numbers PROVISIONAL)." text moved to the start of the description cell.
+- **Bare status `Review`** (legacy spelling; `board_summary.py` already counted it as Review / test): BD-149, BD-150, BD-151, BD-203 now say `Review / test`.
+- **Other malformed rows, listed and left alone** (the markdown still renders; fixing means inventing cells): 54 rows have 4 cells (no Depends-on cell: BD-161 to BD-229 range, BD-323, BD-325, BD-421 to BD-427, BD-454 to BD-459, BD-492); about 60 rows have a trailing Notes cell with no closing `|` (for example BD-043, BD-055, BD-080, BD-130, BD-147, BD-154, BD-225, BD-245, BD-281 to BD-296, BD-351 to BD-353, BD-358 to BD-360); column counts run from 4 to 9. After the fixes: no missing status, no priority outside P0..P3, no duplicate ids. The old ID-list line was the only row-like line that failed the id check and is gone.
+- **Still open from 8.3** (not part of this task): BD-250 / BD-251 cite `verify_motion_poses.py`, which does not exist; BD-081 / BD-343 and BD-391 / BD-405 stay as near-duplicates.
