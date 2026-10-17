@@ -73,7 +73,7 @@ CHECKS = {
     '556.surge_smooth': 'Water surge: no part turns 8 degrees or more in one 60 Hz frame (blended into idle and into a walk, jump and leap), 5 ms steps never jump',
     '556.hipdip': 'Pose.hipDip: lifts by the compression minus a small dead zone, never above MaxHipDip, nothing for no dip or junk',
     '556.drive_surge': 'animator: the Water surge turns no weld 8 degrees or more in a frame, head, body and tail really swing and the flippers row; Reduce Motion keeps every weld at rest',
-    '556.drive_hipdip': 'animator: a hard-landing hip dip lifts every part by the dip (feet stay put), only the local dino casts rays (few per second, none in flight), none under Reduce Motion, nothing with no floor',
+    '556.drive_hipdip': 'animator: a hard-landing hip dip lifts every part by the dip (feet stay put), only the local dino casts rays (few per second, none while rising), none under Reduce Motion, nothing with no floor',
     '251.client_only': 'the pose module and the animator never touch the server (animation is client-side only)',
 }
 
@@ -1294,6 +1294,9 @@ check("556.drive_hipdip", function()
         local heights = {}
         for f = 1, 14 do
             c.root.Position = V3.new(0, if f <= (opts.frames or 2) then 3 - (opts.dip or 0) else 3, 0)
+            if opts.laggy and f == 1 then -- real engine: the touch-down frame still reports Freefall, floor Air and a fall speed
+                c.setState(ST.Freefall) c.hum.FloorMaterial = Enum.Material.Air c.root.AssemblyLinearVelocity = V3.new(0, -20, 0)
+            elseif opts.laggy and f == 2 then land(c) end
             env.step(1)
             heights[f] = (c.welds[1].C1:Inverse() * V3.zero).Y
         end
@@ -1303,6 +1306,10 @@ check("556.drive_hipdip", function()
     local dipped, env = run({dip = DIP, frames = 2})
     assert(near(dipped[1] - base[1], DIP - 0.03, 1e-6) and near(dipped[2] - base[2], DIP - 0.03, 1e-6), "the dip frames are lifted by the dip: " .. (dipped[1] - base[1]) .. " " .. (dipped[2] - base[2]))
     for f = 3, 14 do assert(near(dipped[f], base[f], 1e-9), "no lift after the dip, frame " .. f) end
+    -- the real engine reads the touch-down frame as still airborne and falling: the lift must be there on that frame too
+    local lbase = run({dip = 0, laggy = true})
+    local lag = run({dip = DIP, frames = 2, laggy = true})
+    assert(near(lag[1] - lbase[1], DIP - 0.03, 1e-6) and near(lag[2] - lbase[2], DIP - 0.03, 1e-6), "touch-down frame still airborne: lift " .. (lag[1] - lbase[1]))
     -- a longer or deeper dip is capped
     local deep = run({dip = 2, frames = 3})
     assert(near(deep[1] - base[1], RealPose.MaxHipDip, 1e-6), "a deep dip is capped at MaxHipDip: " .. (deep[1] - base[1]))
@@ -1480,7 +1487,8 @@ MUTANTS = [
     ('hip dip lift no longer capped (BD-556)', POSE, 'Pose.MaxHipDip = 0.7', 'Pose.MaxHipDip = 9', 1),
     ('animator never lifts for the hip dip (BD-556)', ANIM, 'bob += hipDipFor(rig, now)', 'bob += 0', 1),
     ('animator casts hip rays under Reduce Motion (BD-556)', ANIM, 'if amp > 0 and rig.rayParams then', 'if rig.rayParams then', 1),
-    ('animator casts hip rays all flight long (BD-556)', ANIM, 'if rig.inAir then return 0 end', '', 1),
+    ('animator casts hip rays while rising too (BD-556)', ANIM, 'if rig.inAir and rig.root.AssemblyLinearVelocity.Y > -1 then return 0 end', '', 1),
+    ('animator ignores the dip on the touch-down frame that still reads as airborne (BD-556)', ANIM, 'if rig.inAir and rig.root.AssemblyLinearVelocity.Y > -1 then return 0 end', 'if rig.inAir then return 0 end', 1),
     ('animator never learns the settled gap (BD-556)', ANIM, 'if now - rig.gapAt >= 0.25 then', 'if false then', 1),
     ('animator ignores the flag', ANIM, 'if not LowPoly.enabled() then return end', '', 1),
 ]
