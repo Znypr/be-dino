@@ -200,15 +200,8 @@ function ObjectiveService.start(profileRepository: any): any
         windows[player] = nil
         runFood[player] = nil
     end)
-    -- Progress is queued in memory; this loop commits it (claims and the lease release commit it too).
-    task.spawn(function()
-        while true do
-            task.wait(ObjectiveConfig.FlushSeconds)
-            for _, player in Players:GetPlayers() do
-                if repository.isLoaded(player) then task.spawn(repository.objectiveFlush, player) end
-            end
-        end
-    end)
+    -- Progress is queued in memory. BD-625: no timer of its own; the lease renew (every Config.ProfileRenewSeconds) commits the queue
+    -- inside its existing write, and claims and the lease release commit it too.
     return remote
 end
 

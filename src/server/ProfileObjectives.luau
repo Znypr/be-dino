@@ -18,9 +18,11 @@ local objectiveRules = shared.objectiveRules
 local ownSession = shared.ownSession
 local ownsAny = shared.ownsAny
 local profiles = shared.profiles
+local requeueObjectiveBatch = shared.requeueObjectiveBatch
 local retry = shared.retry
 local store = shared.store
 local syncAttributes = shared.syncAttributes
+local takeObjectiveBatch = shared.takeObjectiveBatch
 local trimOperations = shared.trimOperations
 
 ------------------------------------------------------------------ BD-073 mini objectives (docs/66)
@@ -28,25 +30,10 @@ local trimOperations = shared.trimOperations
 -- required (ObjectiveRules is required lazily, so builds and offline harnesses without it are unaffected). The rules are pure
 -- (shared/ObjectiveRules); this section only supplies the transactions: ownership of the lease, the claim token in
 -- recentOperations, the wallet (progression.crystals, clamped to MaxCrystals), and the write budget (admit).
--- Gameplay progress is queued in memory (objectiveRecord) and committed in batches: by objectiveFlush (the service calls it every
--- ObjectiveConfig.FlushSeconds), inside every claim, and inside the lease release, so a leave or reconnect never drops it.
-
-local function takeObjectiveBatch(player: Player): {any}
-    local batch = objectivePending[player] or {}
-    objectivePending[player] = {}
-    return batch
-end
-
--- A batch that did not commit goes back in FRONT of whatever queued meanwhile. A player who left (release cleared the queue) drops it.
-local function requeueObjectiveBatch(player: Player, batch: {any})
-    local live = objectivePending[player]
-    if live == nil then return end
-    local rules = objectiveRules()
-    local merged: {any} = {}
-    for _, event in batch do rules.queue(merged, event) end
-    for _, event in live do rules.queue(merged, event) end
-    objectivePending[player] = merged
-end
+-- Gameplay progress is queued in memory (objectiveRecord) and committed in batches: inside the lease renew (BD-625: every
+-- Config.ProfileRenewSeconds, no write of its own; ProfileRepository.renew), inside every claim, and inside the lease release, so a
+-- leave or reconnect never drops it. objectiveFlush stays as an explicit one-write commit (tests, tools); nothing calls it on a timer.
+-- takeObjectiveBatch / requeueObjectiveBatch live in ProfileRepository next to the queue (renew and release use them too).
 
 -- Server hooks (BD-074) call this through ObjectiveService.record. Memory only; returns false when the event was not queued.
 function ProfileRepository.objectiveRecord(player: Player, event: any): boolean
