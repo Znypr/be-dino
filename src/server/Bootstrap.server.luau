@@ -156,6 +156,9 @@ local function setup(player: Player)
             Dinosaur.attach(character, Config.WalkSpeed, player)
             if player.Character == character then character:PivotTo(hub) end
         end)
+        -- BD-503: home after a settle / death / first join is a respawn at the hub pad; with StreamingEnabled ask the client to stream the hub in as well
+        -- (concurrent, so the BD-210 "at once" placement above and the attach are not delayed; no-op while streaming is off).
+        task.spawn(function() require(script.Parent.StreamingTeleport).request(player, hub.Position) end)
     end)
     task.spawn(spawnLoadedPlayer, player)
 end
