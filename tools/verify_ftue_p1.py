@@ -70,12 +70,45 @@ assert(P.indexCount(1, 0, 0) == "1 Base" and P.indexCount(1, 2, 0) == "1 Base  \
 local t, body = P.foundToast(1, nil) assert(t == "You found an egg!" and body == nil)
 t = P.foundToast(2, nil) assert(t == "You found 2 eggs!")
 t, body = P.foundToast(1, "Frost") assert(t == "You found a Frost egg!" and body == "A weather egg! Hatch it at Home")
-t, body = P.foundToast(3, "Frost") assert(t == "You found 3 eggs!" and body ~= nil, "several eggs: one merged toast, still explained")
+t, body = P.foundToast(3, "Frost") assert(t == "You found 3 eggs!" and body == "A Frost egg! Hatch them at Home", "several eggs, one weather egg (string form): " .. tostring(body))
+-- BD-508: several eggs in one tick name the weather kind, in words a child reads at a glance.
+t, body = P.foundToast(7, {Ember = 2}) assert(t == "You found 7 eggs!" and body == "2 Ember eggs! Hatch them at Home", "one kind: " .. tostring(body))
+t, body = P.foundToast(7, {Ember = 1}) assert(body == "An Ember egg! Hatch them at Home", "article: " .. tostring(body))
+t, body = P.foundToast(5, {Frost = 1}) assert(body:sub(1, 8) == "A Frost ", "consonant article: " .. tostring(body))
+t, body = P.foundToast(7, {Ember = 3, Frost = 1}) assert(t == "You found 7 eggs!" and body == "3 Ember eggs and more! Hatch them at Home", "mixed, most common named: " .. tostring(body))
+t, body = P.foundToast(8, {Ember = 2, Frost = 2, Dewdrop = 1}) assert(body:find("^2 Ember eggs and more!"), "tie: the name that sorts first, same text every time: " .. tostring(body))
+t, body = P.foundToast(2, {Ember = 5}) assert(body:find("^2 Ember eggs!"), "never more weather eggs than eggs: " .. tostring(body))
+t, body = P.foundToast(4, {}) assert(t == "You found 4 eggs!" and body == nil, "empty table = no weather")
+t, body = P.foundToast(1, {Frost = 1}) assert(t == "You found a Frost egg!" and body == "A weather egg! Hatch it at Home", "one egg keeps its old text")
+t, body = P.foundToast(1.9, {Ember = 1}) assert(t == "You found an Ember egg!", "fractions floor, an before a vowel: " .. t)
+-- Every weather name, every count up to a very large Food x10 tick, one kind and mixed: text <= 30, body <= 44, no "..." cut, no raw "%d".
+local names = { "Dewdrop", "Charged", "Frost", "Seismic", "Ember", "Aurora", "Blood Moon" }
+local checked = 0
+for _, a in names do
+    for _, n in { 2, 3, 7, 10, 25, 99, 100 } do
+        for _, k in { 1, 2, 7, 99 } do
+            for _, mixed in { false, true } do
+                local counts: any = { [a] = k }
+                if mixed then counts[if a == "Ember" then "Frost" else "Ember"] = 1 end
+                local text, extra = P.foundToast(n, counts)
+                assert(#text <= 30 and extra ~= nil and #(extra :: string) <= 44, string.format("fits the toast card: %s %d/%d %s: %s | %s", a, k, n, tostring(mixed), text, tostring(extra)))
+                assert(not (extra :: string):find("%.%.%.") and not (extra :: string):find("%%"), "no cut text, no format leftovers: " .. (extra :: string))
+                local other = if a == "Ember" then "Frost" else "Ember"
+                assert((extra :: string):find(a, 1, true) or (mixed and (extra :: string):find(other, 1, true)), "a kind is named: " .. (extra :: string))
+                if mixed then assert((extra :: string):find("and more", 1, true), "mixed says and more: " .. (extra :: string)) end
+                checked += 1
+            end
+        end
+    end
+end
+assert(checked == #names * 7 * 4 * 2)
 t = P.foundToast(0, nil) assert(t == "You found an egg!", "never 0 eggs")
 for _, name in { "Dewdrop", "Charged", "Frost", "Seismic", "Ember", "Aurora", "Blood Moon" } do
     local text, extra = P.foundToast(1, name)
     assert(#text <= 30 and #(extra :: string) <= 44, "fits NotifyQueue.MaxText/MaxBody: " .. name)
 end
+-- the real NotifyQueue clip would leave all of these as they are (nothing is cut)
+assert(P.foundToast(100, {["Blood Moon"] = 99, Ember = 1}) == "You found 100 eggs!")
 assert(P.ToastTopY <= 8)
 
 -- BD-379 world text

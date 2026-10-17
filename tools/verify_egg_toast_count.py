@@ -179,6 +179,10 @@ def check_wiring():
         text = path.read_text(encoding='utf-8')
         for needle in ('egg caught', 'mutation_egg', '"egg_found"'):
             assert needle not in text, path.name + ' raises its own egg-found toast: ' + needle
+    # BD-508: the toast gets the weather eggs BY NAME with a count (not only the first one), so several eggs of one kind are named.
+    assert 'pendingMutations' in hud and 'pendingMutation ' not in hud and 'pendingMutation,' not in hud, 'HudV2 collects weather eggs per name'
+    assert 'Copy.foundToast(pendingEggs, pendingMutations)' in hud, 'the toast receives the count per weather name'
+    assert 'pendingMutations[mutation.name]' in hud and 'not pendingMutation' not in hud, 'every tagged egg is counted, not only the first'
     # BD-378: the toast placement comes from the pure layout rule, not a fixed y.
     assert 'toastPlacement(' in boot and 'WalletRect' in boot, 'Bootstrap places the toast with TouchLayout.toastPlacement'
     assert 'topY=if shade.Visible then 4 else 80' not in boot, 'the fixed y=4 / y=80 slot is gone'
