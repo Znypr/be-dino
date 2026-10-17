@@ -9,6 +9,7 @@ local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
+local AdminMutationScale = require(ReplicatedStorage.Shared.AdminMutationScale) -- BD-237: per-player admin Mutation chance (docs/115)
 local RunLifecycle = require(script.Parent.RunLifecycle) -- BD-479
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
@@ -16,10 +17,15 @@ local FoodService = {}
 -- BD-120 owner admin panel: runtime-only food worth multiplier (AdminService validates and clamps it).
 local adminFoodMultiplier = 1
 function FoodService.setAdminFoodMultiplier(value: number) adminFoodMultiplier = value end
--- BD-237: playtest-only admin multiplier on the per-egg weather mutation chance. Server memory only (never saved),
--- 1 until AdminService (which authorizes the caller) sets it, back to 1 on every server start.
-local adminMutationMultiplier = 1
-function FoodService.setAdminMutationMultiplier(value: number) adminMutationMultiplier = math.clamp(value, 1, 10) end
+-- BD-237: playtest-only admin multiplier on the per-egg weather mutation chance. It is PER PLAYER (LEAD decision, docs/115):
+-- only the admin who set it rolls at that scale, everyone else is x1, so friends in a playtest never get boosted tags saved to
+-- their profiles. Server memory only (never saved), weak-keyed so a left Player is dropped, cleared when the player leaves
+-- and on admin reset / server start; AdminService (which authorizes the caller) is the only writer.
+local adminMutationScales = AdminMutationScale.new()
+function FoodService.setAdminMutationMultiplier(player: Player, value: number) AdminMutationScale.set(adminMutationScales, player, value) end
+function FoodService.clearAdminMutationMultiplier(player: Player) AdminMutationScale.clear(adminMutationScales, player) end
+function FoodService.clearAllAdminMutationMultipliers() AdminMutationScale.clearAll(adminMutationScales) end
+function FoodService.adminMutationScale(player: Player): number return AdminMutationScale.get(adminMutationScales, player) end
 local TYPES = {
     {id = "berry", weight = 70, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
     {id = "fruit", weight = 20, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
@@ -222,7 +228,7 @@ function FoodService.start(dinosaur,repository)
     local grid = PointGrid.new(8)
     local hiddenFoods = {} -- foods waiting to respawn (small set), so the tick never walks all 2,400 just to look at readyAt
     for _, food in foods do local p = food.part.Position PointGrid.insert(grid, food, p.X, p.Z) end
-    Players.PlayerRemoving:Connect(function(player) previous[player] = nil end)
+    Players.PlayerRemoving:Connect(function(player) previous[player] = nil AdminMutationScale.clear(adminMutationScales, player) end)
     task.spawn(function()
         while true do
             task.wait(Config.FoodTickSeconds)
@@ -297,7 +303,7 @@ function FoodService.start(dinosaur,repository)
                     if after>before and weatherId~="clear" then
                         local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
                         if not ok or typeof(events)~="table" then events={} end
-                        RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end,adminMutationMultiplier)
+                        RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end,FoodService.adminMutationScale(candidate.player))
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
