@@ -91,7 +91,7 @@ local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
 -- BD-170: Open starts the hatch screen at once; the server answer is supplied to it later. pendingHatch = {version, supply, handle}.
-local hatchState: {pending: {version: number, supply: () -> (), handle: any}?, fresh: boolean, next: (() -> boolean)?} = {pending=nil, fresh=false, next=nil}
+local hatchState: {pending: {version: number, supply: () -> (), handle: any}?, fresh: boolean, next: (() -> boolean)?, serial: number} = {pending=nil, fresh=false, next=nil, serial=0}
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
     return EggTraits.selected(decoded("CollectionJson","{}")[id])
@@ -349,10 +349,19 @@ local function open(name: string)
     Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
     Theme.animate(blur,.16,{Size=blurTarget()})
+    if name=="hatch" then -- BD-519: a slide still running from the last modal must not move the hatch body; it starts from the settled home
+        Theme.cancel(body)
+        body.AnchorPoint,body.Position=Vector2.zero,require(script.Parent.ModalCompact).place(true,motion)
+    end
     render(name)
     -- Animate the content as one layer, keeping large collections inexpensive.
-    body.Position=require(script.Parent.ModalCompact).place(false,motion)
-    Theme.animate(body,.14,{Position=require(script.Parent.ModalCompact).place(true,motion)})
+    -- BD-519: not for the hatch. HatchSequence.play (inside render) already anchored the body at its centre (anchor .5, BODY_CENTER);
+    -- a slide to the plain home position with that anchor drew the whole egg stage at the top-left corner for the first frames
+    -- (long on the first OPEN of a session, when assets load). The hatch owns the body position itself.
+    if name~="hatch" then
+        body.Position=require(script.Parent.ModalCompact).place(false,motion)
+        Theme.animate(body,.14,{Position=require(script.Parent.ModalCompact).place(true,motion)})
+    end
     require(script.Parent.ModalCompact).reset()
 end
 local fusionProbe: string?=nil -- nil unknown, "ok", "disabled"
@@ -441,9 +450,11 @@ hatchState.next = function(): boolean
     end
     if hatchPending then return false end
     hatchPending=true
+    hatchState.serial+=1
+    local serial=hatchState.serial -- BD-525: this claim's own 8 s watchdog; an older one must not cancel a LATER claim still in flight
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then
+        if hatchPending and hatchState.serial==serial then
             hatchPending=false autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session)
             notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"})
             local waiting=hatchState.pending
@@ -1005,7 +1016,7 @@ render=function(name: string)
         local rewardLabel=label(body,"",80,236,660,54,38,C.gold)
         local oddsLabel=label(body,"",80,288,660,28,22,C.text)
         local detailLabel=label(body,"",80,316,660,28,20,C.gold)
-        local remainingAfter,failedEgg=0,false
+        local remainingAfter,failedEgg,shownReason=0,false,nil
         local handle: any=nil
         local function supply()
             if modalVersion~=version or active~="hatch" or not handle or not handle.pending() then return end
@@ -1025,6 +1036,7 @@ render=function(name: string)
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
+            shownReason=if failed then nil else EggsLogic.shownReason(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,genes)
             local count=tonumber(string.match(reward,"^(%d+)x")) or 1
             local displayName=Config.SpeciesDisplayNames[id] or id
             rewardLabel.Text=if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName
@@ -1077,7 +1089,7 @@ render=function(name: string)
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
-            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" end end,
             onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
                 autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
                 local character=player.Character
@@ -1597,13 +1609,15 @@ end
 PrivateState.onChanged("LastClaimedChestId", function()
     hatchPending=false
     -- Skippable eggs (selected rarities, nothing notable) are already credited: no animation.
-    local species=string.match(str("LastChestRewardText"),"x (%w+)") or "compy"
     local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
     local outcome={big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=PrivateState.get("LastChestFailed")==true}
+    -- BD-525: the decision (species read, rarity, notable rules) is EggsLogic's; an unreadable or unknown species is never skipped.
+    local skip,parsed=EggsLogic.autoOpenDecision(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),str("LastChestRewardText"),Config.SpeciesRarities,outcome,skipAllReveals)
+    local species=parsed or "compy"
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
-    if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
+    if autoHatching and skip then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount")),os.clock()) -- BD-444: a quickly opened egg still counts
         task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown

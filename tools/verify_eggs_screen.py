@@ -57,6 +57,65 @@ assert(not L.shouldAutoOpen({1}, false, false, 1, nil, false), "unknown data is 
 assert(L.shouldAutoOpen({}, false, false, 3, plain, true), "Open all covers every rarity")
 assert(L.shouldAutoOpen({1}, false, false, 1, {failed = true}, false), "cracked eggs may auto-open (counted in the summary)")
 
+-- BD-525: the species is read from "<count>x <species>" and mapped to its rarity for EVERY species; unreadable or unknown
+-- species are never skipped (they used to default to a Common "compy").
+local RAR = {compy = 1, raptor = 1, gallimimus = 1, microraptor = 1, dimorphodon = 1, archaeopteryx = 2, stegosaurus = 2, parasaurolophus = 2,
+    pachycephalosaurus = 2, pteranodon = 2, triceratops = 3, brachiosaurus = 3, baryonyx = 3, ichthyosaurus = 3, plesiosaurus = 3,
+    ankylosaurus = 4, elasmosaurus = 4, therizinosaurus = 4, quetzalcoatlus = 4, tyrannosaurus = 5, spinosaurus = 5, mosasaurus = 5}
+for species, rarity in RAR do
+    for _, count in {0, 1, 2, 3} do
+        assert(L.parseSpecies(count .. "x " .. species) == species, "parse " .. species)
+        local skip, id, r = L.autoOpenDecision({rarity}, false, false, count .. "x " .. species, RAR, {}, false)
+        assert(skip and id == species and r == rarity, "ticked rarity of " .. species .. " is skipped")
+        local other = if rarity == 1 then 2 else 1
+        assert(not (L.autoOpenDecision({other}, false, false, count .. "x " .. species, RAR, {}, false)), "other rarity ticked: " .. species .. " is shown")
+    end
+end
+for _, bad in {"", "x", "compy", "1x", "1x ", "New dinosaur", "1x two words", "1x Compy!", 5, false} do
+    assert(L.parseSpecies(bad) == nil, "unreadable text gives no species")
+    assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, bad, RAR, {}, true)), "unreadable text is never skipped")
+end
+assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, "1x notaspecies", RAR, {}, true)), "unknown species is never skipped")
+
+-- BD-525: every auto-open setting (all 32 subsets of the five rarities) x every rarity x every kind of egg: an egg is skipped
+-- exactly when its rarity is ticked and it is not Shiny, BIG, mutated, Rainbow or Astra; everything else is shown.
+local kinds = {
+    {name = "plain", outcome = {big = false, shiny = false, eventMutationId = "", genes = {conditionId = "normal"}}, notable = false},
+    {name = "dirty", outcome = {genes = {conditionId = "dirty"}}, notable = false},
+    {name = "cracked", outcome = {genes = {conditionId = "cracked"}}, notable = false},
+    {name = "failed splat", outcome = {failed = true, genes = {conditionId = "cracked"}}, notable = false},
+    {name = "rainbow", outcome = {genes = {conditionId = "rainbow"}}, notable = true},
+    {name = "astra", outcome = {genes = {conditionId = "astra"}}, notable = true},
+    {name = "shiny", outcome = {shiny = true, genes = {conditionId = "normal"}}, notable = true},
+    {name = "big", outcome = {big = true, genes = {conditionId = "normal"}}, notable = true},
+    {name = "mutation", outcome = {eventMutationId = "ember", genes = {conditionId = "normal"}}, notable = true},
+}
+local rep = {"compy", "archaeopteryx", "triceratops", "ankylosaurus", "tyrannosaurus"} -- one species per rarity
+local checked = 0
+for mask = 0, 31 do
+    local selection = {}
+    for r = 1, 5 do if bit32.band(mask, bit32.lshift(1, r - 1)) ~= 0 then table.insert(selection, r) end end
+    for r = 1, 5 do
+        local ticked = bit32.band(mask, bit32.lshift(1, r - 1)) ~= 0
+        for _, kind in kinds do
+            local skip = L.autoOpenDecision(selection, false, false, "1x " .. rep[r], RAR, kind.outcome, false)
+            assert(skip == (ticked and not kind.notable), string.format("setting %d rarity %d %s: skip=%s", mask, r, kind.name, tostring(skip)))
+            -- the same through the pass gate: locked means nothing is skipped, an owned pass changes nothing
+            assert(not (L.autoOpenDecision(selection, true, false, "1x " .. rep[r], RAR, kind.outcome, false)))
+            assert((L.autoOpenDecision(selection, true, true, "1x " .. rep[r], RAR, kind.outcome, false)) == skip)
+            checked += 1
+        end
+    end
+end
+assert(checked == 32 * 5 * #kinds)
+-- Why a Common egg stayed on screen: only Rainbow/Astra need a word (Shiny, BIG and mutations show on the reveal itself), and only
+-- when the player's setting covers the rarity.
+assert(L.shownReason({1}, false, false, 1, {conditionId = "rainbow"}) == "Rainbow egg! Always shown")
+assert(L.shownReason({1}, false, false, 1, {conditionId = "astra"}) == "Astra egg! Always shown")
+assert(L.shownReason({2}, false, false, 1, {conditionId = "rainbow"}) == nil, "rarity not on AUTO: normal heading")
+assert(L.shownReason({}, false, false, 1, {conditionId = "rainbow"}) == nil and L.shownReason({1}, true, false, 1, {conditionId = "rainbow"}) == nil)
+assert(L.shownReason({1}, false, false, 1, {conditionId = "dirty"}) == nil and L.shownReason({1}, false, false, 1, nil) == nil)
+
 -- Pass gate: when required and missing, rows are locked and the setting is ignored.
 assert(not L.locked(false, false) and not L.locked(false, true) and L.locked(true, false) and not L.locked(true, true))
 assert(#L.effective({1, 2}, true, false) == 0 and #L.effective({1, 2}, true, true) == 2 and #L.effective({1, 2}, false, false) == 2)
@@ -102,7 +161,15 @@ def static_checks():
     config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
     assert re.search(r'AutoOpenRequiresPass\s*=\s*false', config), 'AutoOpenRequiresPass must default to false'
     assert '"NESTS"' not in boot and 'name=="nests"' not in boot, 'one Eggs screen: no separate NESTS rail button or menu'
-    assert 'EggsScreen.render' in boot and 'EggsLogic.shouldAutoOpen' in boot
+    assert 'EggsScreen.render' in boot and 'EggsLogic.autoOpenDecision' in boot
+    # BD-525: the handler no longer parses the species itself and no longer defaults an unreadable egg to a Common one
+    claimed = boot[boot.index('PrivateState.onChanged("LastClaimedChestId"'):boot.index('docs/133 demo hook')]
+    assert 'string.match' not in claimed and 'shouldAutoOpen' not in claimed, 'auto-open decision lives in EggsLogic.autoOpenDecision'
+    # BD-525: every claim has its own 8 s watchdog; an older one must not reset autoHatching while a later claim is in flight
+    assert 'hatchState.serial==serial' in boot, 'claim watchdog is per claim'
+    # BD-519: the hatch owns its body position; open() must not slide it
+    opener = boot[boot.index('local function open(name: string)'):boot.index('local fusionProbe')]
+    assert 'if name~="hatch" then' in opener and 'Theme.cancel(body)' in opener, 'open() must not slide the hatch body (BD-519)'
     handler = boot[boot.index('"LastSettledRunId"'):boot.index('"LastExitStatusAt"')]
     assert 'hatchNext' not in handler and 'autoHatching=true' not in handler, 'run end must never force hatching'
     nest = boot[boot.index('"LastNestClaimAt"'):boot.index('"LastRewardText"')]

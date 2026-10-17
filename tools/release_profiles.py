@@ -170,7 +170,7 @@ PROFILES: dict[str, list[Rule]] = {
 }
 
 
-# The playtest-streaming scratch profile is the playtest with Workspace streaming ON (PROPOSAL radii 256 / 128). It is for Studio
+# The playtest-streaming scratch profile is the playtest with Workspace streaming ON (radii 256 / 128: LEAD decision ST4, docs/115 and docs/147 s9). It is for Studio
 # sessions of the BD-502 gates only: never published, never uploaded by CI. ReleaseProfile stays "playtest" so the game behaves as in
 # the playtest build.
 PROFILES["playtest-streaming"] = list(PROFILES["playtest"])

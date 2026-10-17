@@ -10,7 +10,8 @@ NOT modelled (they hit every species alike): line of sight, the trees and rocks 
 
 Reach rules compared per species:
   old     = the root rule of Build 020, radius min(5, 2.25 + 0.75 x (scale - 1)) around the root;
-  new     = the BD-515 mouth rule without a cap (head point, radius follows the head);
+  bd515   = the BD-515 mouth zone as first shipped (slack 1.425, radius pad 1.425), no cap;
+  new     = the BD-522 (MR5) zone in MouthReach (SlackStuds, RadiusPad) without a cap;
   <k>     = the BD-521 cap: front edge and radius <= k x the Compy's at the same scale (MouthReach.zone(species, scale, k)); the plain "capped" column
             is MouthReach.zone with the cap in Config.FoodReachCapCompy, i.e. what the game runs now.
 Two speed regimes: "flat" (every species walks Config.WalkSpeed, isolates the reach rule) and "class" (x CombatConfig speedX, what the
@@ -19,7 +20,11 @@ less efficient, as a real player's is; the greedy full pace makes about 1,100 fo
 between rules and species are meaningful, not the absolute food/min).
 Eggs per run = food x Config.FoodCatchRate (not floored, so the means are smooth); "eggs15" re-bases every number so that the OLD Compy makes 15.
 
-Usage: python tools/simulate_food_reach.py --runner luau.exe [--seeds 8] [--caps 1.25,1.15] [--markdown out.md] [--json out.json] [--check]
+BD-522 PARITY: the mouth rule must not change pace. The report ends with the Compy (the reference species, never capped) against the Build 020 root rule at full, half
+and quarter pace and the verdict against --parity-band (default 3%); --check-parity makes a miss an error. The sweep variants go in --caps as strings:
+  t:<slack>:<radius pad>:<radius factor>:<cap or ->  = the MouthReach tunables (zone = front edge snout x scale + slack, radius = factor x half head x scale + pad);
+  f:<share>:<radius pad>  = a RELAXED zone whose front edge is share x snout x scale (share < 1 leaves the nose outside), for the trade-off table.
+Usage: python tools/simulate_food_reach.py --runner luau.exe [--seeds 8] [--caps 1.25,t:0:1:1:-,f:0.45:1] [--species compy,raptor] [--markdown out.md] [--json out.json] [--check] [--check-parity]
 --check fails when the capped rule (Config.FoodReachCapCompy) leaves the parity band (10%) against the Compy at the same pace, speed regime and
 layouts, or makes the spread between species wider than the old rule's.
 """
@@ -162,7 +167,29 @@ end
 
 -- ---------------------------------------------------------------- reach rules: (offset of the pickup point ahead of the root, radius)
 local function reach(variant: any, species: string, scale: number): (number, number)
+    if type(variant) == "string" and string.sub(variant, 1, 2) == "t:" then
+        -- "t:<slack>:<radius pad>:<radius factor>:<cap>" = the BD-522 tunables of MouthReach (restored after the call; cap "-" = Config.FoodReachCapCompy)
+        local f = string.split(variant, ":")
+        local s0, p0, r0 = MouthReach.SlackStuds, MouthReach.RadiusPad, MouthReach.RadiusFactor
+        MouthReach.SlackStuds, MouthReach.RadiusPad, MouthReach.RadiusFactor = tonumber(f[2]), tonumber(f[3]), tonumber(f[4])
+        local offset, radius = MouthReach.zone(species, scale, tonumber(f[5]))
+        MouthReach.SlackStuds, MouthReach.RadiusPad, MouthReach.RadiusFactor = s0, p0, r0
+        return offset, radius
+    end
+    if type(variant) == "string" and string.sub(variant, 1, 2) == "f:" then
+        -- "f:<share>:<pad>" = RELAXED zone for the trade-off table: front edge = share x snout x scale (share < 1 leaves the nose outside), radius = half head x scale + pad
+        local f = string.split(variant, ":")
+        local radius = MouthReach.headHalf(species, scale) + tonumber(f[3])
+        return tonumber(f[2]) * MouthReach.snoutOffset(species, scale) - radius, radius
+    end
     if variant == "old" then return 0, MouthReach.legacyRadius(scale) end
+    if variant == "bd515" then
+        local s0, p0 = MouthReach.SlackStuds, MouthReach.RadiusPad
+        MouthReach.SlackStuds, MouthReach.RadiusPad = 1.425, 1.425
+        local offset, radius = MouthReach.uncappedHeadOffset(species, scale), MouthReach.uncappedRadius(species, scale)
+        MouthReach.SlackStuds, MouthReach.RadiusPad = s0, p0
+        return offset, radius
+    end
     if variant == "new" then return MouthReach.uncappedHeadOffset(species, scale), MouthReach.uncappedRadius(species, scale) end
     if variant == "capped" then return MouthReach.zone(species, scale) end
     return MouthReach.zone(species, scale, variant :: number)
@@ -197,7 +224,13 @@ local function run(species: string, variant: any, speed: number, layoutSeed: num
         end
         -- The player walks straight at the nearest food that the head can reach by walking at it (a food closer than offset - radius is under the
         -- body: ignored, the head sweeps it later). The facing is the walking direction, the head point leads the root by `offset` along it.
-        if target == nil or target.hidden then target = nearest(grid, px, pz, math.max(0, offset - radius)) end
+        local dmin = math.max(0, offset - radius)
+        if target ~= nil and not target.hidden then
+            -- BD-522: the zone grew (growth) or the walker arrived and the berry is under the body, out of the zone: turn to another berry
+            local tdx, tdz = target.x - px, target.z - pz
+            if math.sqrt(tdx * tdx + tdz * tdz) < dmin then target = nil end
+        end
+        if target == nil or target.hidden then target = nearest(grid, px, pz, dmin) end
         if target then
             local dx, dz = target.x - px, target.z - pz
             local d = math.sqrt(dx * dx + dz * dz)
@@ -255,17 +288,21 @@ end
 print("RATE	" .. string.format("%.6f", Config.FoodCatchRate))
 print("CAP	" .. tostring(MouthReach.capFactor()))
 
-local variants = {"old", "new", "capped"@CAPS@}
+local variants = {"old", "bd515", "new", "capped"@CAPS@}
 local classes = Combat.SpeciesClasses
+local only = @ONLY@
+local regimes = @REGIMES@
 for _, pace in {{"full", 1}, {"half", 0.5}, {"quarter", 0.25}} do
-    for _, regime in {"flat", "class"} do
+    for _, regime in regimes do
         for _, id in ids do
+          if only == nil or table.find(only, id) then
             local classX = if regime == "class" then Combat.Classes[classes[id] or Combat.DefaultClass].speedX else 1
             local speed = Config.WalkSpeed * classX * pace[2]
             for _, v in variants do
                 local food, scale, eaten, se = avg(id, v, speed, SEEDS)
                 print(string.format("S\t%s\t%s\t%s\t%s\t%.2f\t%.1f\t%.3f\t%.1f\t%.1f", pace[1], regime, id, tostring(v), speed, food, scale, eaten, se))
             end
+          end
         end
     end
 end
@@ -273,18 +310,21 @@ print("OK")
 '''
 
 
-def build(caps, seeds):
+def build(caps, seeds, only=None, regimes=('flat', 'class')):
     src = BODY
     for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LADDER@', 'src/shared/ScaleLadder.luau'), ('@MODULE@', 'src/shared/MouthReach.luau'),
                         ('@LAYOUT@', 'src/shared/IslandLayout.luau'), ('@HUB@', 'src/shared/HubScaleRules.luau'), ('@COMBAT@', 'src/shared/CombatConfig.luau')):
         src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
-    return src.replace('@SEEDS@', str(seeds)).replace('@CAPS@', ''.join(', %s' % c for c in caps))
+    only_lua = 'nil' if not only else '{' + ', '.join('"%s"' % o for o in only) + '}'
+    regimes_lua = '{' + ', '.join('"%s"' % r for r in regimes) + '}'
+    return (src.replace('@SEEDS@', str(seeds)).replace('@ONLY@', only_lua).replace('@REGIMES@', regimes_lua)
+            .replace('@CAPS@', ''.join(', %s' % (c if c.replace('.', '', 1).isdigit() else '"%s"' % c) for c in caps)))
 
 
-def simulate(runner, caps, seeds):
+def simulate(runner, caps, seeds, only=None, regimes=('flat', 'class')):
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'food_reach.luau'
-        path.write_text(build(caps, seeds), encoding='utf-8')
+        path.write_text(build(caps, seeds, only, regimes), encoding='utf-8')
         result = subprocess.run([runner, str(path)], capture_output=True, text=True, encoding='utf-8')
     if result.returncode or 'OK' not in result.stdout:
         print(result.stdout, result.stderr)
@@ -328,6 +368,26 @@ def table(rows, meta, pace, regime, variants, species_list):
 PACES = ('full', 'half', 'quarter')
 
 
+def parity(rows, variants, band):
+    """BD-522: the Compy's food/min with each reach rule against the Build 020 root rule, per pace (flat speed; the Compy is a Ground dino)."""
+    lines = ['## Parity check (BD-522, MR5): Compy food/min against the Build 020 root rule, target within +-%.0f%%' % (band * 100), '',
+             '| rule | ' + ' | '.join('%s pace' % p for p in PACES) + ' | verdict |', '| --- | ' + ' | '.join('---:' for _ in PACES) + ' | --- |']
+    ok = True
+    for v in variants:
+        if v == 'old' or ('full', 'flat', 'compy', v) not in rows:
+            continue
+        d = [rows[(p, 'flat', 'compy', v)]['food'] / rows[(p, 'flat', 'compy', 'old')]['food'] - 1 for p in PACES]
+        met = all(abs(x) <= band for x in d)
+        if v == 'capped':
+            ok = met
+        lines.append('| %s | %s | %s |' % (v, ' | '.join('%+.1f%%' % (x * 100) for x in d), 'PARITY' if met else 'not at parity (worst %+.1f%%)' % (max(d, key=abs) * 100)))
+    lines.append('')
+    lines.append('Rule "capped" is what the game runs (MouthReach with Config.FoodReachCapCompy); the Compy is never capped, so "new" and "capped" are the same for it.')
+    lines.append('PARITY ' + ('MET' if ok else 'NOT MET') + ' for the shipped rule (+-%.0f%% at full, half and quarter pace).' % (band * 100))
+    lines.append('')
+    return lines, ok
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
@@ -336,22 +396,29 @@ def main():
     parser.add_argument('--markdown')
     parser.add_argument('--json')
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--species', default='')
+    parser.add_argument('--parity-band', type=float, default=0.03)
+    parser.add_argument('--check-parity', action='store_true')
     args = parser.parse_args()
     caps = [c for c in args.caps.split(',') if c]
-    meta, rows = simulate(args.runner, caps, args.seeds)
+    meta, rows = simulate(args.runner, caps, args.seeds, [x for x in args.species.split(',') if x] or None)
     species_list = sorted({k[2] for k in rows})
-    variants = ['old', 'new', 'capped'] + caps
+    variants = ['old', 'bd515', 'new', 'capped'] + caps
     out = ['# BD-521 food per minute by species (%d layouts, 300 s, greedy walk)' % args.seeds, '',
            'FoodCatchRate = %.4f egg per food. Cap in Config.FoodReachCapCompy: %s. eggs15 = eggs per run re-based so that the OLD Compy makes 15.' % (meta['RATE'], meta['CAP']), '']
     for pace in PACES:
         for regime in ('flat', 'class'):
             out += ['## pace %s, speed %s' % (pace, regime), '', table(rows, meta, pace, regime, variants, species_list), '']
+    parity_lines, parity_ok = parity(rows, variants, args.parity_band)
+    out += parity_lines
     text = '\n'.join(out)
     print(text)
     if args.markdown:
         Path(args.markdown).write_text(text, encoding='utf-8')
     if args.json:
         Path(args.json).write_text(json.dumps({'meta': meta, 'rows': {'|'.join(k): v for k, v in rows.items()}}, indent=1), encoding='utf-8')
+    if args.check_parity and not parity_ok:
+        raise SystemExit(1)
     if args.check:
         problems = []
         for pace in PACES:

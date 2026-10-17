@@ -1,4 +1,96 @@
-# BD-521 food reach by species (offline simulation, 2026-10-17)
+# BD-522: the mouth zone must not change pace (calibration, 2026-10-17)
+
+Owner: "keep growth pacing as it is" (docs/115); the mouth rule may only change WHERE eating happens, not how much food a run makes. The LEAD target of MR5 was: the Compy's simulated
+food/min equals the Build 020 root rule within +-3% at full, half and quarter pace, the other species at parity with the Compy (cap 1.1 of MR4), `FoodCatchRate`, growth curves and
+`WalkSpeed` untouched. Tools: `python tools/simulate_food_reach.py --runner luau.exe --seeds 24 --caps 1,1.25,f:0.43:1 --check` (full tables: [bd522-sim-24-layouts.md](bd522-sim-24-layouts.md);
+the method is the one of BD-521 below, plus two changes: the walker turns to another berry when the zone grew over the one it targets or it arrives with the berry under its body, and the tool
+ends with a parity check) and the fast offline proxy in `tools/verify_mouth_reach.py`.
+
+## Result: parity is NOT reachable while a berry at the snout is eaten
+
+The sim walker eats where the head is. At growth scale 1 the Compy's nose is 3.84 studs ahead of the root and the Build 020 rule ate at 2.25 studs from the root, so any zone that
+reaches the nose eats 1.6 studs (scale 1) to 5 studs (scale 2.25) earlier per berry. The BD-515 zone's extra slack (1.425 studs past the nose) made it worse. Sweep (Compy only, food/min
+against the Build 020 root rule, flat walk speed, 12 to 120 layouts; standard error 2 to 3 points at full and half pace, 6 at quarter pace):
+
+| zone (front edge, radius) | full pace | half pace | quarter pace | berry at the snout eaten? |
+| --- | ---: | ---: | ---: | --- |
+| BD-515 as shipped: snout + 1.425, half head + 1.425 | +40% | +27% to +29% | +42% to +48% | yes |
+| **shipped (MR5): snout + 0.25, half head + 1.0** | **+32% to +36%** | **+18% to +22%** | **+32% to +37%** | **yes** |
+| slack 0, pad 1.0 (the floor: front edge exactly at the nose) | +34% | +21% | +29% | yes, to the millimetre |
+| any radius pad below 0.9 | erratic (-96% to +60%) | | | the walker skips berries between two 0.08 s ticks (a step is 1.8 studs at 22 studs/s) |
+| radius under the head (factor 0 or 0.5) | -100% to +10% | | | only the exact head position eats; same skipping |
+| relaxed front 0.9 x snout | +31% | +20% | +23% | no, the nose is outside the zone |
+| relaxed front 0.7 x snout | +21% | +11% | +13% | no |
+| relaxed front 0.5 x snout | +9% | +9% | -1% | no |
+| **relaxed front 0.43 x snout** (120 layouts: 0.40 / 0.42 / 0.44 / 0.46 give +4.9 / +4.7 / +6.4 / +7.0 at full, -0.5 / +1.0 / +2.1 / +2.5 at half, -5.1 / -5.2 / -2.4 / +0.4 at quarter) | +3% to +6% | -1% to +2% | -4% to -2% | no: a berry at the snout is NOT eaten |
+
+Analytic proxy (least squares over 20 zones x 3 paces, rms 3.7 points): `food ratio = (front edge / old reach)^0.278 x (radius / old radius)^0.014`, at the run's mean growth scale (2.45 / 1.92 / 1.52
+at full / half / quarter pace). The radius hardly matters; the forward reach decides. With the front edge exactly at the nose it gives +33% / +29% / +25%: the floor of any zone that eats at the
+snout, so +-3% cannot be met without leaving the nose outside the zone. One front share cannot hold +-3% at all three paces either (the sim spreads +5 to -5 around 0.43): the growth curve moves
+the nose farther from the root at a high pace.
+
+## Old vs new vs calibrated (24 layouts, 300 s, greedy walk; food/min and change against the Build 020 root rule)
+
+Compy (the reference species, never capped), food/min / change at full | half | quarter pace:
+
+| rule | full pace | half pace | quarter pace | note |
+| --- | ---: | ---: | ---: | --- |
+| Build 020 root rule (radius 2.25 + 0.75 per scale) | 1104 / +0.0% | 595 / +0.0% | 289 / +0.0% | the reference |
+| BD-515 zone (before BD-522) | 1547 / +40.1% | 752 / +26.5% | 426 / +47.6% | eggs per run (old Compy = 15): 21.0 / 19.0 / 22.1 |
+| **shipped: BD-522 zone** (slack 0.25, pad 1.0) | 1462 / +32.4% | 700 / +17.7% | 396 / +37.2% | eggs per run (old Compy = 15): 19.9 / 17.6 / 20.6 |
+| relaxed front 0.43 x snout (not shipped, BD-527) | 1138 / +3.2% | 590 / -0.7% | 276 / -4.4% | eggs per run (old Compy = 15): 15.5 / 14.9 / 14.3 |
+
+(One 24-layout run; the 48-layout sweep above gives +36 / +22 / +32 for the shipped zone, the difference is sampling noise.) The shipped zone removes about a quarter of the lift of the
+BD-515 zone, and every species is still capped to 1.1 x the Compy's zone, so they stay at parity with the Compy (full pace, flat walk speed):
+
+| species | Build 020 root rule | BD-515 zone, no cap | shipped (MR5 zone + cap 1.1) | shipped vs Build 020 | shipped vs Compy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ankylosaurus | 1104 | 1805 | 1518 | +37% | +4% |
+| archaeopteryx | 1104 | 1429 | 1316 | +19% | -10% |
+| baryonyx | 1104 | 1564 | 1518 | +37% | +4% |
+| brachiosaurus | 1104 | 1561 | 1518 | +37% | +4% |
+| compy | 1104 | 1547 | 1462 | +32% | +0% |
+| dimorphodon | 1104 | 1426 | 1340 | +21% | -8% |
+| elasmosaurus | 1104 | 1619 | 1518 | +37% | +4% |
+| gallimimus | 1104 | 1528 | 1466 | +33% | +0% |
+| ichthyosaurus | 1104 | 1582 | 1518 | +37% | +4% |
+| microraptor | 1104 | 1325 | 1291 | +17% | -12% |
+| mosasaurus | 1104 | 1629 | 1518 | +37% | +4% |
+| pachycephalosaurus | 1104 | 1521 | 1510 | +37% | +3% |
+| parasaurolophus | 1104 | 1579 | 1518 | +37% | +4% |
+| plesiosaurus | 1104 | 1596 | 1518 | +37% | +4% |
+| pteranodon | 1104 | 1464 | 1434 | +30% | -2% |
+| quetzalcoatlus | 1104 | 1542 | 1485 | +35% | +2% |
+| raptor | 1104 | 1541 | 1450 | +31% | -1% |
+| spinosaurus | 1104 | 1739 | 1518 | +37% | +4% |
+| stegosaurus | 1104 | 1715 | 1518 | +37% | +4% |
+| therizinosaurus | 1104 | 1627 | 1518 | +37% | +4% |
+| triceratops | 1104 | 1561 | 1518 | +37% | +4% |
+| tyrannosaurus | 1104 | 1612 | 1518 | +37% | +4% |
+
+Spread max / min at full pace, flat speed: Build 020 1.00, shipped 1.18 (the shorter fliers sit 2% to 12% below the Compy: BD-523). `--check` (every species within +10% of the Compy at the same
+pace, spread not wider than uncapped) passes. Class walk speeds (Fly x1.2, Water x0.85, Armored x0.8) are a design stat and move food/min by -20% to +19% in the Build 020 rule too; untouched.
+
+## What was changed
+
+`src/shared/MouthReach.luau`: `SlackStuds` 1.425 -> **0.25** (a berry touching the nose is eaten, 0.25 studs of margin), `RadiusPad` 1.425 -> **1.0** (above half a walking step so no berry is
+skipped between ticks; about half the Compy's 3.49 body width), `RadiusFactor` 1. `uncappedHeadOffset` is now front edge minus radius (the same as the old centre of the head when slack equals pad).
+At scale 1 the Compy's zone is: front edge 4.09 (was 5.27), radius 1.83 (was 2.25), pickup point 2.27 studs ahead of the root (was 3.0). The 1.1 cap logic, `FoodCatchRate`, the growth curve and
+`WalkSpeed` are not touched. `verify_mouth_reach` asserts the new Compy zone, that its snout is inside, and the analytic parity proxy (never above the recorded lift, within 6 points of the
+snout-rule floor, still reproducing the simulated calibration points).
+
+## What is still open (BD-522 is Review / test, BD-527 for the owner)
+
+* The +-3% parity is a LEAD target that the snout rule forbids. Shipped: the closest zone that still eats at the snout (about +32% to +36% food/min at full and quarter pace, +18% to +22% at half
+  pace, against Build 020). The exact-parity zone (front edge about 0.43 x the snout distance, with the same cap) leaves a berry at the nose uneaten, like Build 020; BD-527 asks the owner to
+  choose between that and a `FoodCatchRate` compensation.
+* A simulation of a perfect-aim greedy walker (about 1,100 food/min against the docs/119 estimate of 130 for a human): ratios are meaningful, absolute food/min are not.
+  **A real Studio `LastRunFood` log (docs/122) of a normal 5-minute run, Build 020 root rule against the mouth rule, is still the final check.** Not verified: Studio, a real human walk,
+  trees and rocks, a phone.
+
+---
+
+# BD-521 food reach by species (historical, before BD-522; in the tables below "new" is the BD-515 zone and "capped" the BD-515 zone with the cap 1.1)
 
 Produced by `python tools/simulate_food_reach.py --runner luau.exe --seeds 24 --caps 1,1.25 --check`. Method and limits are in the docstring of that tool and in
 [docs/115](../../115-decisions-log.md) MR4. Columns: **old** = Build 020 root rule, **new** = BD-515 mouth rule without a cap, **capped** = the rule now in the code
