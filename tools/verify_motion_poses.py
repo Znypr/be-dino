@@ -68,6 +68,12 @@ CHECKS = {
     '555.smooth': 'animator: worst per-frame rotation change under 8 degrees for an airborne-on-first-frame jump and leap, in the air, on landing, on short hops (BD-555)',
     '556.restlift': 'Pose.restLift: a flipper (any walk or surge angle) is never lifted below its rest height, rest and Reduce Motion lift 0, junk inputs are safe',
     '556.drive_flipper': 'animator: Water flipper tips stay at or above their rest height through a walk, a jump surge and a leap surge (BD-556)',
+    '556.surge_wave': 'Water surge: a visible travelling body wave, the phase lag grows head -> neck -> body -> tail (fitted from the real samples), tail swings most, both jump and leap',
+    '556.surge_amp': 'Water surge: wave and flipper stroke amplitudes are visible but bounded (head, body, tail yaw; flipper pitch and roll), stroke goes both ways',
+    '556.surge_smooth': 'Water surge: no part turns 8 degrees or more in one 60 Hz frame (blended into idle and into a walk, jump and leap), 5 ms steps never jump',
+    '556.hipdip': 'Pose.hipDip: lifts by the compression minus a small dead zone, never above MaxHipDip, nothing for no dip or junk',
+    '556.drive_surge': 'animator: the Water surge turns no weld 8 degrees or more in a frame, head, body and tail really swing and the flippers row; Reduce Motion keeps every weld at rest',
+    '556.drive_hipdip': 'animator: a hard-landing hip dip lifts every part by the dip (feet stay put), only the local dino casts rays (few per second, none in flight), none under Reduce Motion, nothing with no floor',
     '251.client_only': 'the pose module and the animator never touch the server (animation is client-side only)',
 }
 
@@ -505,9 +511,152 @@ check("251.water", function()
     assert(lo < -0.1 and hi > 0.1, "tail kicks both ways")
     assert(headSnapLeap < -0.2, "leap snaps the head: " .. headSnapLeap)
     assert(headSnapJump > -0.01, "plain surge does not snap: " .. headSnapJump)
-    assert(A("Water", "surge", 0, 0.5, 0.2, "flipper", 1, 1).pitch > 0.1, "flippers pull during the surge")
+    local fpLo, fpHi = 0, 0
+    for i = 0, 200 do
+        local fp = A("Water", "surge", 0, i / 200, 0.2, "flipper", 1, 1).pitch
+        fpLo, fpHi = math.min(fpLo, fp), math.max(fpHi, fp)
+    end
+    assert(fpLo < -0.1 and fpHi > 0.1, "flippers stroke both ways during the surge: " .. fpLo .. " .. " .. fpHi)
     local sg = P.actionWeight("surge", 0.5)
     assert(sg > 0.99 and P.actionWeight("surge", 0) == 0 and P.actionWeight("surge", 1) == 0)
+end)
+
+-- BD-556: the Water surge is a swim burst. The limits below are written out as numbers (design, docs/101 s11), not read from the module.
+local SURGE_CYCLES = {[0] = 1.0, [1] = 1.4} -- undulations over a jump surge and a leap surge
+local function waveFit(role, aggr)
+    -- least squares of  v(p) / env(p) = a sin(kp) + b cos(kp)  over the middle of the surge  ->  amplitude and phase lag (radians): v = amp sin(kp - lag)
+    local k = TAU * SURGE_CYCLES[aggr]
+    local saa, sab, sbb, sav, sbv, peak = 0, 0, 0, 0, 0, 0
+    for i = 0, 400 do
+        local p = i / 400
+        local v = A("Water", "surge", aggr, p, p * 0.4, role, 1, 1).yaw
+        peak = math.max(peak, math.abs(v))
+        local env = math.sin(math.pi * p)
+        if env > 0.3 then
+            local f = v / env
+            local sa, sb = math.sin(k * p), math.cos(k * p)
+            saa, sab, sbb, sav, sbv = saa + sa * sa, sab + sa * sb, sbb + sb * sb, sav + sa * f, sbv + sb * f
+        end
+    end
+    local det = saa * sbb - sab * sab
+    local a, b = (sav * sbb - sbv * sab) / det, (sbv * saa - sav * sab) / det
+    return math.sqrt(a * a + b * b), math.atan2(-b, a), peak
+end
+
+check("556.surge_wave", function()
+    for _, aggr in {0, 1} do
+        local lag = {}
+        for _, role in {"head", "neck", "body", "tail"} do
+            local amp, phase, peak = waveFit(role, aggr)
+            lag[role] = phase
+            assert(amp > 0.03, role .. " must swing in the surge: amplitude " .. amp .. " (aggr " .. aggr .. ")")
+            assert(peak > 0.03, role .. " peak " .. peak)
+        end
+        -- the wave travels: each part follows the one in front by a clear lag; head to tail is a real part of a cycle but not a whole one
+        assert(lag.neck - lag.head > 0.2, "neck must lag the head: " .. lag.head .. " -> " .. lag.neck)
+        assert(lag.body - lag.neck > 0.3, "body must lag the neck: " .. lag.neck .. " -> " .. lag.body)
+        assert(lag.tail - lag.body > 0.3, "tail must lag the body: " .. lag.body .. " -> " .. lag.tail)
+        assert(lag.tail - lag.head > 1.5 and lag.tail - lag.head < math.pi, "head to tail lag " .. (lag.tail - lag.head))
+        -- the tail swings the most, the body the least (the flippers sit on it)
+        local _, _, pHead = waveFit("head", aggr)
+        local _, _, pBody = waveFit("body", aggr)
+        local _, _, pTail = waveFit("tail", aggr)
+        assert(pTail > pHead and pHead > pBody, "tail > head > body: " .. pTail .. " " .. pHead .. " " .. pBody)
+        -- only Water has the wave: the other classes' jump poses never yaw
+        for _, class in {"Ground", "Armored", "Fly"} do
+            for _, role in {"head", "body", "tail"} do
+                for i = 0, 20 do assert(near(A(class, "air", aggr, 0, i * 0.1, role, 1, 1).yaw, 0), class .. " must not undulate") end
+            end
+        end
+    end
+end)
+
+check("556.surge_amp", function()
+    local CAP = {head = 0.3, neck = 0.3, body = 0.1, tail = 0.5} -- yaw, radians (17, 6 and 29 degrees)
+    local MIN = {head = 0.12, body = 0.04, tail = 0.25}
+    for _, aggr in {0, 1} do
+        for role, cap in CAP do
+            local peak = 0
+            for i = 0, 400 do peak = math.max(peak, math.abs(A("Water", "surge", aggr, i / 400, i / 400 * 0.5, role, 1, 1).yaw)) end
+            assert(peak <= cap + 1e-9, role .. " yaw " .. peak .. " beyond " .. cap)
+            if MIN[role] then assert(peak >= MIN[role], role .. " yaw " .. peak .. " too small to see (" .. MIN[role] .. ")") end
+        end
+        for _, side in {-1, 1} do for _, lead in {true, false} do
+            local pLo, pHi, rLo, rHi = 0, 0, 0, 0
+            ctx.phase, ctx.aggr = "surge", aggr
+            for i = 0, 400 do
+                ctx.p, ctx.t = i / 400, i / 400 * 0.5
+                local o = P.sampleAction("flipper", side, lead, ctx, 1, P.new(), "Water")
+                pLo, pHi, rLo, rHi = math.min(pLo, o.pitch), math.max(pHi, o.pitch), math.min(rLo, o.roll * side), math.max(rHi, o.roll * side)
+            end
+            assert(pLo < -0.12 and pHi > 0.2, "flipper stroke goes both ways: " .. pLo .. " .. " .. pHi)
+            assert(pLo > -0.5 and pHi < 0.5, "flipper pitch bounded: " .. pLo .. " .. " .. pHi)
+            assert(rHi > 0.15 and rHi < 0.45 and rLo > -0.45, "flipper roll flares out and in, bounded: " .. rLo .. " .. " .. rHi)
+        end end
+        -- the back flippers follow the front ones (the stroke travels back with the wave)
+        local function firstPush(lead)
+            ctx.phase, ctx.aggr = "surge", aggr
+            for i = 0, 400 do
+                ctx.p, ctx.t = i / 400, 0.2
+                if P.sampleAction("flipper", 1, lead, ctx, 1, P.new(), "Water").pitch < -0.2 then return i end
+            end
+            return 1e9
+        end
+        assert(firstPush(false) > firstPush(true), "back flippers must stroke after the front ones")
+    end
+end)
+
+check("556.surge_smooth", function()
+    local FRAME, LIMIT = 1 / 60, 8 * math.pi / 180
+    local worst, where = 0, ""
+    for _, aggr in {0, 1} do
+        local dur = P.duration("surge", aggr, "Water")
+        for _, walk in {0, 1} do for _, role in ROLES do for _, lead in {true, false} do for _, side in {-1, 1} do
+            local prev
+            for f = 0, math.ceil(dur / FRAME) + 2 do
+                local t = f * FRAME
+                local p = math.clamp(t / dur, 0, 1)
+                local base = S(role, side, lead, 3 + t, 1 + t * P.stepRate(walk), walk, 1, "Water")
+                ctx.phase, ctx.p, ctx.t, ctx.aggr = "surge", p, t, aggr
+                P.blend(base, P.sampleAction(role, side, lead, ctx, 1, P.new(), "Water"), P.actionWeight("surge", p))
+                if prev then
+                    local dp, dy, dr = base.pitch - prev.pitch, base.yaw - prev.yaw, base.roll - prev.roll
+                    local d = math.sqrt(dp * dp + dy * dy + dr * dr)
+                    if d > worst then worst, where = d, role .. " aggr " .. aggr .. " walk " .. walk end
+                end
+                prev = {pitch = base.pitch, yaw = base.yaw, roll = base.roll}
+            end
+        end end end end
+    end
+    print(string.format("  Water surge worst turn per 60 Hz frame (pose maths): %.1f degrees (%s)", worst * 180 / math.pi, where))
+    assert(worst < LIMIT, "a part turns " .. worst * 180 / math.pi .. " degrees in one frame (" .. where .. ")")
+    assert(worst > 1 * math.pi / 180, "control: the surge must move the pose (" .. worst .. ")")
+    for _, role in ROLES do for _, aggr in {0, 1} do
+        local dur = P.duration("surge", aggr, "Water")
+        for step = 0, 99 do
+            local t0 = step / 100 * dur
+            local a = A("Water", "surge", aggr, t0 / dur, t0, role, 1, 1)
+            local b = A("Water", "surge", aggr, math.min(1, (t0 + 0.005) / dur), t0 + 0.005, role, 1, 1)
+            for k, v in a do assert(math.abs(v - b[k]) < 0.05, "surge jumps in 5 ms: " .. role .. " " .. k) end
+        end
+    end end
+end)
+
+check("556.hipdip", function()
+    assert(P.hipDip(3, 3) == 0 and P.hipDip(3, 3.5) == 0 and P.hipDip(3, 2.98) == 0, "no dip, no lift (dead zone)")
+    assert(near(P.hipDip(3, 2.5), 0.47, 1e-9), "half a stud dip lifts by the dip minus the dead zone: " .. P.hipDip(3, 2.5))
+    assert(P.hipDip(3, 0) == P.MaxHipDip and P.MaxHipDip <= 1, "capped")
+    local last = -1
+    for i = 0, 100 do
+        local v = P.hipDip(3, 3 - i * 0.02)
+        assert(v >= last - 1e-12 and v >= 0 and v <= P.MaxHipDip and fin(v), "monotonic and bounded")
+        last = v
+    end
+    for _, junk in {0/0, math.huge, -math.huge, 1e12} do
+        assert(P.hipDip(junk, 3) == 0 and P.hipDip(3, junk) == 0, "junk gap = no lift: " .. tostring(junk))
+    end
+    assert(P.hipDip(nil :: any, 3) == 0 and P.hipDip(3, "x" :: any) == 0, "wrong type = no lift")
+    assert(P.HipDipWindow > 0.1 and P.HipDipWindow <= 0.6, "the dip is looked for for a short moment after touch-down")
 end)
 
 check("251.continuity", function()
@@ -750,6 +899,12 @@ local function boot(opts)
     local Terrain = {}
     env.workspace = {Terrain = Terrain, CurrentCamera = {CFrame = {Position = V3.zero}}}
     function env.workspace:FindFirstChild(n) return nil end
+    env.rays, env.floorY = 0, nil -- BD-556: the hip-dip rays; floorY = height of the ground under every dino (nil = no floor)
+    function env.workspace:Raycast(origin, direction, params)
+        env.rays += 1
+        if env.floorY == nil then return nil end
+        return {Position = V3.new(origin.X, env.floorY, origin.Z)}
+    end
     local hbSignal = {Connect = function(self, fn) table.insert(env.hb, fn) end}
     local Players = {PlayerRemoving = {Connect = function() end}}
     function Players:GetPlayers() return env.players end
@@ -767,7 +922,7 @@ local function boot(opts)
     local osStub = {clock = function() return env.now end, time = os.time}
     local mk = function() return {new = function(...) return {...} end} end
     ANIM(game, env.workspace, osStub, Instance, CFrame, V3, Enum, function(m) return m end,
-        mk(), mk(), mk(), mk(), {fromRGB = function() return 0 end}, mk())
+        mk(), mk(), mk(), mk(), {fromRGB = function() return 0 end}, mk(), {new = function() return {} end})
     env.Players = Players
     function env.addLocal(class, at)
         local c = makeCharacter(class, at)
@@ -1069,6 +1224,106 @@ check("556.drive_flipper", function()
     assert(worst >= -1 - 1e-6, "flipper tip below its rest height by " .. (-1 - worst) .. " stud")
 end)
 
+-- BD-556: the Water surge through the real animator: every weld turns less than 8 degrees per frame, the wave and the stroke are really there,
+-- and Reduce Motion keeps every weld at rest.
+check("556.drive_surge", function()
+    local function yawOf(c, i) return math.asin(math.clamp(c.welds[i].C1:Inverse().r[3], -1, 1)) end -- welds: 1 body, 2 head, 3 tail, 6..9 flippers
+    local function pitchOf(c, i) local r = c.welds[i].C1:Inverse().r return math.atan2(-r[6], r[9]) end
+    for _, aggr in {0, 1} do
+        math.randomseed(7)
+        local env = boot()
+        local c = env.addLocal("Water")
+        env.step(30)
+        if aggr == 1 then c.char:SetAttribute("LeapPredictAt", env.now) else c.hum.Jump = true end
+        local prev = {}
+        for i, w in c.welds do prev[i] = w.C1 end
+        local worst, where = 0, ""
+        local peak = {head = 0, body = 0, tail = 0}
+        local pLo, pHi = 0, 0
+        for _ = 1, 50 do
+            env.step(1)
+            for i, w in c.welds do
+                local d = rotAngle(prev[i], w.C1)
+                if d > worst then worst, where = d, "weld " .. i end
+                prev[i] = w.C1
+            end
+            peak.body, peak.head, peak.tail = math.max(peak.body, math.abs(yawOf(c, 1))), math.max(peak.head, math.abs(yawOf(c, 2))), math.max(peak.tail, math.abs(yawOf(c, 3)))
+            local fp = pitchOf(c, 6)
+            pLo, pHi = math.min(pLo, fp), math.max(pHi, fp)
+        end
+        print(string.format("  Water %s surge: worst weld turn %.1f deg per frame (%s); peak yaw head %.0f body %.0f tail %.0f deg; front flipper pitch %.0f .. %.0f deg",
+            if aggr == 1 then "leap" else "jump", worst, where, peak.head * DEG, peak.body * DEG, peak.tail * DEG, pLo * DEG, pHi * DEG))
+        assert(worst < 8, "aggr " .. aggr .. ": a weld turns " .. worst .. " degrees in one frame (" .. where .. ")")
+        assert(peak.head > 0.1 and peak.tail > 0.2 and peak.body > 0.03, "the body wave is there: " .. peak.head .. " " .. peak.body .. " " .. peak.tail)
+        assert(pLo < -0.15 and pHi > 0.15, "the flippers row both ways: " .. pLo .. " .. " .. pHi)
+        -- and it ends at rest: every weld back to the idle pose (no walking, so only the idle sway remains)
+        env.step(40)
+        assert(#phasesOf(env.calls) == 1, "one surge")
+    end
+    -- Reduce Motion: no pose, every weld at rest the whole time
+    for _, aggr in {0, 1} do
+        local env = boot()
+        env.theme.MotionEnabled = false
+        local c = env.addLocal("Water")
+        env.step(10)
+        if aggr == 1 then c.char:SetAttribute("LeapPredictAt", env.now) else c.hum.Jump = true end
+        for _ = 1, 50 do
+            env.step(1)
+            for i, w in c.welds do assert(isIdentity(w.C1), "Reduce Motion: weld " .. i .. " must stay at rest in the surge") end
+        end
+    end
+end)
+
+check("556.drive_hipdip", function()
+    local DIP = 0.5
+    -- One run: settled on the ground (root 3 studs over the floor), a jump, then a landing whose hip spring pushes the root `dip` studs down for dipFrames frames.
+    -- Returns the body part's weld height per landing frame and the number of rays cast.
+    local function run(opts)
+        math.randomseed(11) -- the same body bob in the two runs we compare
+        local env = boot()
+        env.theme.MotionEnabled = opts.motion ~= false
+        env.floorY = if opts.floor == false then nil else 0
+        local c = env.addLocal("Ground")
+        local remote = if opts.remote then env.addRemote("Ground", V3.new(10, 0, 0)) else nil
+        c.root.Position = V3.new(0, 3, 0)
+        env.step(40) -- settled: the animator learns the normal gap
+        jumpUp(c)
+        c.root.Position = V3.new(0, 9, 0)
+        env.step(20)
+        land(c)
+        local heights = {}
+        for f = 1, 14 do
+            c.root.Position = V3.new(0, if f <= (opts.frames or 2) then 3 - (opts.dip or 0) else 3, 0)
+            env.step(1)
+            heights[f] = (c.welds[1].C1:Inverse() * V3.zero).Y
+        end
+        return heights, env, c
+    end
+    local base = run({dip = 0})
+    local dipped, env = run({dip = DIP, frames = 2})
+    assert(near(dipped[1] - base[1], DIP - 0.03, 1e-6) and near(dipped[2] - base[2], DIP - 0.03, 1e-6), "the dip frames are lifted by the dip: " .. (dipped[1] - base[1]) .. " " .. (dipped[2] - base[2]))
+    for f = 3, 14 do assert(near(dipped[f], base[f], 1e-9), "no lift after the dip, frame " .. f) end
+    -- a longer or deeper dip is capped
+    local deep = run({dip = 2, frames = 3})
+    assert(near(deep[1] - base[1], RealPose.MaxHipDip, 1e-6), "a deep dip is capped at MaxHipDip: " .. (deep[1] - base[1]))
+    -- control: the dip really moves the lift (a verifier that saw no difference would pass the rule above for nothing)
+    assert(dipped[1] - base[1] > 0.3, "control: the lift must be there")
+    -- no floor under the dino: nothing
+    local nofloor = run({dip = DIP, frames = 2, floor = false})
+    for f = 1, 14 do assert(near(nofloor[f], base[f], 1e-9), "no floor, no lift") end
+    -- Reduce Motion: no rays at all and every weld at rest
+    local _, rmEnv, rmC = run({dip = DIP, frames = 2, motion = false})
+    assert(rmEnv.rays == 0, "Reduce Motion: no rays (" .. rmEnv.rays .. ")")
+    for _, w in rmC.welds do assert(isIdentity(w.C1), "Reduce Motion: welds at rest") end
+    -- cost: a settled dino casts about 4 rays a second, a landing one per frame for HipDipWindow seconds
+    local _, costEnv = run({dip = 0})
+    local expected = math.ceil((40 + 20 + 14) / 15) + math.ceil(RealPose.HipDipWindow * 60) + 6
+    assert(costEnv.rays > 0 and costEnv.rays <= expected, "rays cast " .. costEnv.rays .. " (expected 1.." .. expected .. ")")
+    -- remote players never cast
+    local _, remEnv = run({dip = 0, remote = true})
+    assert(remEnv.rays == costEnv.rays, "a remote dino must not cast rays: " .. remEnv.rays .. " vs " .. costEnv.rays)
+end)
+
 check("555.no_crouch", function()
     for _, class in {"Ground", "Armored", "Fly"} do for _, aggr in {0, 1} do for _, speed in {0, RUN} do
         local r = trace(class, aggr, speed)
@@ -1171,7 +1426,7 @@ def run_all(runner, pose_text, anim_text, npc_text, config_text, quiet=False):
     # Chunk 2: the real animator, unmodified, against engine stand-ins (HARNESS).
     anim_chunk = ('local RealPose = (function()\n' + pose_text + '\nend)()\nlocal NpcLowPoly = (function()\n' + npc_text + '\nend)()\n'
                   + 'local P = RealPose\n' + PRELUDE
-                  + 'local ANIM = function(game, workspace, os, Instance, CFrame, Vector3, Enum, require, NumberSequence, NumberSequenceKeypoint, NumberRange, ColorSequence, Color3, Vector2)\n'
+                  + 'local ANIM = function(game, workspace, os, Instance, CFrame, Vector3, Enum, require, NumberSequence, NumberSequenceKeypoint, NumberRange, ColorSequence, Color3, Vector2, RaycastParams)\n'
                   + anim_text + '\nend\n' + HARNESS)
     code2, out2, err2 = run_luau(runner, anim_chunk, 'motion_animator.luau')
     messages.append(out2 + err2)
@@ -1213,6 +1468,20 @@ MUTANTS = [
     ('air phase keeps the push-off stretch again (BD-555)', POSE, 'tk = cls.t -- already in the full tuck', 'st, tk = cls.s, cls.t -- already in the full tuck', 1),
     ('flippers dip into the ground again (no rest lift, BD-556)', ANIM, 'if lift > 0 then shift +=', 'if false then shift +=', 1),
     ('restLift lifts nothing (BD-556)', POSE, 'return math.clamp(finite(rest - low), 0, Pose.MaxLift)', 'return 0', 1),
+    ('Water surge wave has no lag (all parts swing together, BD-556)', POSE, 'Pose.SurgeWaveLag = {head = 0, neck = 0.4, body = 1.1, tail = 2.3}', 'Pose.SurgeWaveLag = {head = 0, neck = 0, body = 0, tail = 0}', 1),
+    ('Water surge wave runs tail to head (BD-556)', POSE, 'Pose.SurgeWaveLag = {head = 0, neck = 0.4, body = 1.1, tail = 2.3}', 'Pose.SurgeWaveLag = {head = 2.3, neck = 1.9, body = 1.1, tail = 0}', 1),
+    ('Water surge tail barely swings (BD-556)', POSE, 'body = 0.09, tail = 0.45}', 'body = 0.09, tail = 0.05}', 1),
+    ('Water surge tail swings 46 degrees (BD-556)', POSE, 'body = 0.09, tail = 0.45}', 'body = 0.09, tail = 0.8}', 1),
+    ('Water surge wave twice as fast (BD-556)', POSE, 'return 1.0 + 0.4 * math.clamp(finite(aggr), 0, 1)', 'return 2.0 + 0.8 * math.clamp(finite(aggr), 0, 1)', 1),
+    ('Water surge flippers hold instead of rowing (BD-556)', POSE, 'pitch = 0.34 * stroke', 'pitch = 0.34 * lunge', 1),
+    ('Water surge back flippers stroke with the front ones (BD-556)', POSE, 'Pose.SurgeFlipperLag = 1.0', 'Pose.SurgeFlipperLag = 0', 1),
+    ('Water surge ignores Reduce Motion in yaw (BD-556)', POSE, 'out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)', 'out.yaw = math.clamp(finite(yaw), -Pose.MaxAngle, Pose.MaxAngle)', 1),
+    ('hip dip lift is always 0 (BD-556)', POSE, 'return math.clamp(restGap - gap - Pose.HipDipDeadZone, 0, Pose.MaxHipDip)', 'return 0', 1),
+    ('hip dip lift no longer capped (BD-556)', POSE, 'Pose.MaxHipDip = 0.7', 'Pose.MaxHipDip = 9', 1),
+    ('animator never lifts for the hip dip (BD-556)', ANIM, 'bob += hipDipFor(rig, now)', 'bob += 0', 1),
+    ('animator casts hip rays under Reduce Motion (BD-556)', ANIM, 'if amp > 0 and rig.rayParams then', 'if rig.rayParams then', 1),
+    ('animator casts hip rays all flight long (BD-556)', ANIM, 'if rig.inAir then return 0 end', '', 1),
+    ('animator never learns the settled gap (BD-556)', ANIM, 'if now - rig.gapAt >= 0.25 then', 'if false then', 1),
     ('animator ignores the flag', ANIM, 'if not LowPoly.enabled() then return end', '', 1),
 ]
 
