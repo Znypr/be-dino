@@ -189,8 +189,43 @@ def strip_comments(text: str) -> str:
     return "\n".join(lines)
 
 
-def static_problems() -> list[str]:
+# Every profile write (a `store:UpdateAsync(` in ProfileRepository) is classified. A new write must be put in one set on purpose:
+ROUTINE_WRITES_WITH_ADMIT = {"fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "objectiveFlush", "objectiveClaim"}
+ADMIT_AT_CALLER = {"writeRevealSkip", "writeSettings"}  # setRevealSkip / setSettings / the coalescing flush call admit() first
+PRIORITY_WRITES = {"load", "commitRunSettlement", "purchase", "renew", "release", "applyGifts"}  # never starved by a flooding client
+FLAG_GATED_WRITES = {"grantCollectionTestSpecies", "grantChestTest", "setMutationTestCopies", "demoGrantEggs", "demoEquip", "demoAddCrystals"}
+KNOWN_UNBUDGETED = {"applySkin": "BD-618 (i): flag off; limited by SkinService's own 10-per-10-s window"}
+NO_LEASE_CHECK = {"load"}  # load ACQUIRES the lease
+
+
+def write_problems() -> list[str]:
+    """Every profile write is lease-checked and either budgeted or deliberately not (docs/151 section 3)."""
     problems: list[str] = []
+    lines = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8").splitlines()
+    func, start = None, 0
+    seen: set[str] = set()
+    for i, line in enumerate(lines):
+        m = re.match(r"^(?:local )?function (?:ProfileRepository\.)?(\w+)", line)
+        if m:
+            func, start = m.group(1), i
+        if "store:UpdateAsync(" in line and not line.strip().startswith("--") and func:
+            seen.add(func)
+            body = "\n".join(lines[start:i])
+            if func not in NO_LEASE_CHECK and "ownSession(" not in "\n".join(lines[i:i + 16]):
+                problems.append(f"static: ProfileRepository.{func} writes the profile without an ownSession (lease) check")
+            if func in ROUTINE_WRITES_WITH_ADMIT:
+                if "admit(" not in body:
+                    problems.append(f"static: ProfileRepository.{func} is a routine write and no longer calls admit() before the store request")
+            elif func not in ADMIT_AT_CALLER | PRIORITY_WRITES | FLAG_GATED_WRITES | set(KNOWN_UNBUDGETED):
+                problems.append(f"static: ProfileRepository.{func} is a new profile write: classify it in verify_remote_fuzz.py (budgeted, priority or flag-gated) and add it to docs/151")
+    for name in ROUTINE_WRITES_WITH_ADMIT | ADMIT_AT_CALLER | PRIORITY_WRITES | FLAG_GATED_WRITES | set(KNOWN_UNBUDGETED):
+        if name not in seen:
+            problems.append(f"static: classified write {name} no longer exists in ProfileRepository (update the lists)")
+    return problems
+
+
+def static_problems() -> list[str]:
+    problems: list[str] = write_problems()
     counted: dict[tuple[str, str], int] = {}
     for path in sorted((ROOT / "src/server").glob("*.luau")):
         text = strip_comments(path.read_text(encoding="utf-8"))
