@@ -24,6 +24,11 @@ assert(M.qualifies(prop(0, 12, 15, 14, 8, 14), {x = 0, y = 22, z = 0}, dino), "c
 -- Ground cover never qualifies, however close.
 assert(not M.qualifies(prop(0, 0.5, 10, 0.8, 0.8, 0.8), cam, dino), "pebble")
 assert(not M.qualifies(prop(0, 0.4, 10, 6, 1.0, 6), cam, dino), "flat ground patch")
+-- BD-513: the biggest dino's default camera (BIG Ankylosaurus at growth scale 4.8: 89 studs, CameraFraming.MaxDistance 90) still fades props
+-- between camera and dino; the range is above that distance and still off for a cinematic camera.
+assert(M.MaxRange >= 100, "range covers the 90 stud default camera of a BIG dino")
+assert(M.qualifies(prop(0, 8, 45, 8, 16, 8), {x = 0, y = 6, z = 0}, {x = 0, y = 2, z = 90}), "tree between a 90 stud camera and the dino must fade")
+assert(not M.qualifies(prop(0, 8, 50, 8, 16, 8), {x = 0, y = 6, z = 0}, {x = 0, y = 2, z = M.MaxRange + 10}), "beyond the range nothing fades")
 -- Camera far from the dino (cinematic, stuck camera): nothing qualifies; NaN safe.
 assert(not M.qualifies(prop(0, 8, 100, 8, 16, 8), {x = 0, y = 6, z = 0}, {x = 0, y = 2, z = 200}))
 assert(not M.qualifies(prop(0, 8, 10, 8, 16, 8), {x = 0 / 0, y = 0, z = 0}, dino))
