@@ -9,13 +9,57 @@ Engine physics, real TouchGui geometry and physical-device DPI still need Studio
 an Android phone; see docs/51-bd053-054-movement-mobile.md.
 """
 from pathlib import Path
-import argparse, subprocess, tempfile
+import argparse, re, subprocess, tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def wrapped(path):
     return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+
+
+def static_feedback_paths():
+    """BD-524: every code path that can move the "Tell us!" button (first screen, mid-run, Run Complete, respawn, a toast, the Admin button)
+    must use the published TouchLayout.feedback rect. The Luau layout math below proves the rect is clear; this proves nothing else
+    repositions the button after it. Static, so it also covers the post-run and respawn paths that the layout runner cannot reach."""
+    fb = (ROOT / 'src/client/FeedbackClient.client.luau').read_text(encoding='utf-8')
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    # 1. Nothing outside FeedbackClient touches the button.
+    for path in (ROOT / 'src').rglob('*.luau'):
+        text = path.read_text(encoding='utf-8')
+        if path.name != 'FeedbackClient.client.luau':
+            assert 'TellUsButton' not in text, f'{path.name}: only FeedbackClient may touch the Tell us! button'
+            assert not re.search(r'PlayerGui[^\n]{0,80}"PlaytestFeedback"', text), f'{path.name}: only FeedbackClient may reach the PlaytestFeedback gui'
+    # 2. Exactly one function, pin(), assigns Position/Size; it reads the published rect.
+    match = re.search(r'^local function pin\(\)\n(.*?)^end\n', fb, re.M | re.S)
+    assert match, 'FeedbackClient: pin() missing'
+    pin_body, outside = match.group(1), fb[:match.start()] + fb[match.end():]
+    assert 'GetAttribute("FeedbackRect")' in pin_body, 'pin() must read the published FeedbackRect'
+    assert len(re.findall(r'open\.Position, open\.Size = pos, size', pin_body)) == 1, 'pin() assigns open.Position once, from the rect'
+    assert not re.search(r'open\.(Position|Size)\b[^\n]*[^=<>~]=[^=]', outside), 'a path outside pin() assigns the Tell us! Position/Size'
+    assert 'open.Position' not in outside.replace('open:GetPropertyChangedSignal("Position")', ''), 'open.Position is used outside pin()'
+    # 3. The initial spot is the one fallback constant (above the plate), used only until the first publish.
+    assert fb.count('FALLBACK_POS') == 3 and 'UDim2.new(0, 18, 1, -138)' in fb and 'UDim2.new(0, 12, 1, -68)' not in fb, 'only the above-the-plate fallback may position the button'
+    # 4. pin() re-runs on every event that could leave the button stale: a new rect, any other change of Position, Visible (run end, respawn), the plate moving.
+    for hook in ('ui:GetAttributeChangedSignal("FeedbackRect"):Connect(pin)', 'open:GetPropertyChangedSignal("Position"):Connect(pin)',
+                 'open:GetPropertyChangedSignal("Visible"):Connect(pin)', 'plate:GetPropertyChangedSignal("AbsolutePosition"):Connect(pin)'):
+        assert hook in fb, 'pin() hook missing: ' + hook
+    # 5. The run-end / respawn watcher (BD-441) only changes Visible, never the spot.
+    watcher = fb[fb.index('-- BD-441: watch the character'):fb.index('open.Activated:Connect')]
+    assert 'CharacterAdded' in watcher and 'Rules.showButton' in watcher and 'open.Visible' in watcher
+    assert 'Position' not in watcher and 'open.Size' not in watcher, 'the run-end / respawn watcher must not move the button'
+    # 6. Neither gui is rebuilt on respawn, and both share one pixel space, so the published rect stays valid after a respawn.
+    assert 'gui.Name, gui.ResetOnSpawn, gui.DisplayOrder = "PlaytestFeedback", false, 40' in fb
+    assert 'gui.Name,gui.ResetOnSpawn,gui.ZIndexBehavior = "BeDinoUI",false' in boot
+    assert 'ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets' in fb and 'gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets' in boot
+    # 7. The rect is published once per layout pass, from scales(), after HudV2.layout, and scales() re-runs on resize, viewport, touch controls, input change.
+    assert boot.count('SetAttribute("FeedbackRect"') == 1 and 'RemoveAttribute("FeedbackRect")' not in boot, 'one publisher, never cleared'
+    scales = boot[boot.index('local function scales()'):boot.index('local function characterAdded')]
+    assert scales.index('HudV2).layout(layout)') < scales.index('SetAttribute("FeedbackRect"'), 'FeedbackRect is published after the HUD layout'
+    for trigger in ('gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)', 'ViewportSize"):Connect(scales)', 'task.defer(function() layoutQueued=false scales() end)'):
+        assert trigger in boot, 'layout re-run trigger missing: ' + trigger
+    assert '\nscales()\ngui:SetAttribute("Ready",true)' in boot, 'first layout pass runs before Ready'
+    print('Tell us! static paths ok: one writer (pin), run-end/respawn only flip Visible, rect republished by every layout pass')
 
 
 def script():
@@ -213,6 +257,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
     args = parser.parse_args()
+    static_feedback_paths()
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'verify.luau'
         path.write_text(script(), encoding='utf-8')
