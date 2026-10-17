@@ -503,6 +503,11 @@ local function stormScenario(hostileCount, label)
         reportErrors(label, takeErrors())
         check(label .. ": the honest player's run settlement committed during the storm", settledDuringStorm == true, tostring(settledDuringStorm))
         check(label .. ": no DataStore queue drop", M.queueDrops == 0, tostring(M.queueDrops))
+        -- BD-614: one account's spam must not starve the others (before the fix: 1%, 16% and 41% for 1, 2 and 4 hostile of 12), and the
+        -- fair-share path must not push the store past 60 + 10 x players requests a minute (the mock throttles when it would).
+        check(label .. ": honest players' routine writes answered rate_limited at most 2% (" .. stats.honestLimited .. " of " .. stats.honestTried .. ")",
+            stats.honestLimited * 50 <= stats.honestTried, stats.honestLimited .. "/" .. stats.honestTried)
+        check(label .. ": the DataStore request ceiling was never exceeded (nothing throttled)", M.throttled == 0, tostring(M.throttled))
         local hostileWrites = 0
         for _, p in hostile do hostileWrites += (M.byKeyWrites[keyOf(p.UserId)] or 0) - hostileWritesStart[p] end
         local bound = hostileCount * (server.Config.WriteBurst + (STORM + 10) * server.Config.WriteRefillPerSecond + (STORM + 10) / 30 + 8)

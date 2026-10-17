@@ -166,6 +166,26 @@ local function prefSuperseded(player: Player, kind: string, seq: number): boolea
     return seqs ~= nil and (seqs[kind] or 0) ~= seq
 end
 local writeStats = {admitted = 0, rejected = 0, coalesced = 0, flushed = 0}
+-- BD-614 (docs/151): the server-wide share is a SOFT limit. A player who has used less than their fair part of it in the last 60 s is
+-- still admitted when the window is full (up to Config.WriteFairCeiling of the DataStore budget), so one account that spams its own
+-- bucket empty cannot make everyone else's routine writes answer rate_limited. The spammer's own writes are shed first; priority
+-- writes keep at least the rest of the budget; the DataStore request ceiling is never raised. Memory only, no profile field.
+local fairLogs: {[Player]: {at: {number}, head: number, tail: number}} = setmetatable({}, {__mode = "k"}) :: any
+local function fairUsed(player: Player, at: number): number
+    local log = fairLogs[player]
+    if not log then return 0 end
+    while log.head <= log.tail and log.at[log.head] <= at - 60 do
+        log.at[log.head] = nil
+        log.head += 1
+    end
+    return log.tail - log.head + 1
+end
+local function fairRecord(player: Player, at: number)
+    local log = fairLogs[player]
+    if not log then log = {at = {}, head = 1, tail = 0}; fairLogs[player] = log end
+    log.tail += 1
+    log.at[log.tail] = at
+end
 local function admit(player: Player): boolean
     if Config.WriteBudgetEnabled == false then return true end
     local at = os.clock()
@@ -177,12 +197,20 @@ local function admit(player: Player): boolean
     bucket.tokens = math.min(Config.WriteBurst, bucket.tokens + (at - bucket.at) * Config.WriteRefillPerSecond)
     bucket.at = at
     local players = if PlayersService then #PlayersService:GetPlayers() else 1 -- offline mocks may not model Players
-    local share = (60 + 10 * math.max(1, players)) * (1 - Config.WriteBudgetReserve)
-    if bucket.tokens < 1 or requestsInWindow(at) >= share then
+    local total = 60 + 10 * math.max(1, players)
+    local share = total * (1 - Config.WriteBudgetReserve)
+    local used = requestsInWindow(at)
+    local admitted = bucket.tokens >= 1 and used < share
+    if not admitted and bucket.tokens >= 1 and Config.WriteFairShareEnabled ~= false then
+        -- window full: a player under their fair part (share / players) still gets through, below the fair ceiling
+        admitted = used < total * Config.WriteFairCeiling and fairUsed(player, at) < share / math.max(1, players)
+    end
+    if not admitted then
         writeStats.rejected += 1
         return false
     end
     bucket.tokens -= 1
+    fairRecord(player, at)
     writeStats.admitted += 1
     return true
 end

@@ -25,7 +25,9 @@ The client (BD-065 Fusion Menu) is built by a separate agent against this docume
   **the client never supplies traits, odds, result IDs or stages beyond `targetStage`.**
 - Strings: 1..120 chars for IDs, 1..80 for `token`, 1..64 for digests, 1..16 for
   `targetStage`. Numbers must be finite integers in range.
-- `donorIds`: a proper array (keys `1..n`, no holes) of 1..15 strings. The exact recipe
+- `donorIds`: a proper array (keys `1..n`, no holes) of 1..15 strings. **SUPERSEDED (historical) 2026-10-15:** the live cap is
+  `FusionService.MaxDonorIds = 6` and the recipe is 6 Base / 3 Gold / 2 Emerald (owner target in
+  [AGENTS.md](../AGENTS.md) line 44, [docs/90](90-fusion-ladder-v2.md); audit [docs/155](155-fusion-ladder-source-vs-docs-audit.md) C-50). The text that follows is the older contract: the exact recipe
   count (15 for Gold, 4 for Emerald, 2 for Diamond; was 50/10/3 until 2026-10-14, so the accepted maximum shrank from 50 to 15) and ownership are enforced afterwards (`wrong_donor_count`,
   `wrong_owner`, ...). IDs are only ever looked up inside the caller's own profile.
 - **Rate limit (PROVISIONAL):** `Config.FusionRequestsPerWindow = 20` requests per player

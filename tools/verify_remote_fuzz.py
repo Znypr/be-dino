@@ -299,6 +299,9 @@ MUTANTS = [
     ("a dinosaur can be swapped in the middle of a run again (BD-613 reverted)", "equip-next-run", {
         "src/server/CollectionService": ('local inRun = runState == "Active" or runState == "Ending"', "local inRun = false")},
      "equip-next-run: a pick during a run answers next_run"),
+    ("BD-614 reverted: a full server-wide share rejects every player again", "storm-4", {
+        "src/server/ProfileRepository": ("Config.WriteFairShareEnabled ~= false", "false")},
+     "storm-4-hostile-of-12: honest players' routine writes answered rate_limited at most 2%"),
 ]
 
 
