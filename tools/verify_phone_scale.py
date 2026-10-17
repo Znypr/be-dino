@@ -25,7 +25,7 @@ for _,s in sizes do
         assert(m.minText==14 and m.minButton==44)
         assert(m.panelW*m.scale<=w+1e-6 and m.panelH*m.scale<=h+1e-6,"panel fits the screen "..w.."x"..h)
         if h>=500 then
-            assert(m.mode=="desktop" and m.scale==oldRule(w,h) and m.panelW==860 and m.panelH==520 and m.bodyW==824 and m.bodyH==402 and m.bodyTop==98 and m.headerH==78,"desktop unchanged "..w.."x"..h)
+            assert(m.mode=="desktop" and m.scale==oldRule(w,h) and m.panelW==860 and m.panelH==520 and m.bodyW==824 and m.bodyH==402 and m.bodyTop==98 and m.headerH==78 and m.fit==1 and m.innerW==824 and m.innerH==402 and m.scrollX==false,"desktop unchanged "..w.."x"..h)
         else
             assert(m.mode=="compact","short viewport is compact "..w.."x"..h)
             assert(m.scale>=.8 and m.scale<=1,"compact scale band")
@@ -60,9 +60,20 @@ for _,s in {{836,390},{667,375}} do
         local w,h=s[1],s[2]-bar
         local m=P.modal(w,h)
         assert(m.mode=="compact")
-        local bodyH=math.floor(m.bodyH)
+        -- BD-538: no horizontal canvas. The scroller (innerW design px, inside a UIScale m.fit) is exactly the panel body wide on screen, and the
+        -- 836 px a screen needs (4 + 824 + 8 for the scroll bar) fits inside innerW, so the sideways bar can never show and nothing is cut.
+        assert(m.scrollX==false,"no sideways scroll "..w.."x"..h)
+        assert(m.innerW>=P.BodyW-1e-6,"836 px screen fits the scroller width "..w.."x"..h.." innerW "..m.innerW)
+        assert(m.fit<=1 and m.fit>0.9,"fit is a mild shrink "..w.."x"..h.." fit "..m.fit)
+        assert(math.abs(m.innerW*m.fit-(m.panelW-8))<1e-6 and math.abs(m.innerH*m.fit-m.bodyH)<1e-6,"fitted scroller = old window")
+        assert(m.innerW*m.effScale<=w-2*P.Margin+1e-6,"body fits the screen width, no sideways scroll "..w.."x"..h)
+        assert(4*m.effScale+824*m.effScale+8*m.effScale<=m.innerW*m.effScale+1e-6,"4 + 824 + bar inside the width")
+        assert(math.abs(m.effScale-m.scale*m.fit)<1e-9)
+        for _,t in {10,16,18,22,40} do assert(P.floorText(t,m.effScale)*m.effScale>=14-1e-9) end
+        for _,b in {22,40,48,54,68} do assert(P.floorButton(b,m.effScale)*m.effScale>=44-1e-9) end
+        local bodyH=math.floor(m.innerH)
         for _,hint in {false,true} do
-            local L=P.eggsLayout(bodyH,hint,m.scale)
+            local L=P.eggsLayout(bodyH,hint,m.effScale)
             local tag=string.format("Eggs %dx%d (bar %d) hint %s body %d",s[1],s[2],bar,tostring(hint),bodyH)
             inside(L.slotY,L.nestH,bodyH,tag.." nests")
             inside(L.cardY,L.cardH,bodyH,tag.." card")
@@ -71,20 +82,27 @@ for _,s in {{836,390},{667,375}} do
             assert(L.openY>=8+L.rowH and L.openY>=L.hintY+L.hintH,tag.." OPEN under the status row and the hint")
             assert(L.openY+L.openH<=L.gearY,tag.." OPEN does not touch AUTO")
             assert(L.gearY+L.gearH<=L.cardH,tag.." AUTO inside the card")
-            assert(L.openH*m.scale>=44-1e-9 and L.gearH*m.scale>=44-1e-9,tag.." OPEN and AUTO >= 44 px")
-            assert(L.nestH*m.scale>=44,tag.." nest slots are tap targets")
+            assert(L.openH*m.effScale>=44-1e-9 and L.gearH*m.effScale>=44-1e-9,tag.." OPEN and AUTO >= 44 px")
+            assert(L.nestH*m.effScale>=44,tag.." nest slots are tap targets")
             assert(L.slotY+L.nestH<=L.cardY,tag.." nests above the card")
         end
-        local X=P.exitLayout(bodyH,m.scale)
+        local X=P.exitLayout(bodyH,m.effScale)
         local tag=string.format("Go home %dx%d (bar %d) body %d",s[1],s[2],bar,bodyH)
         inside(X.artY,X.artSize,bodyH,tag.." picture")
         inside(X.lineY,X.lineH,bodyH,tag.." line")
         inside(X.totalsY,X.totalsH,bodyH,tag.." totals")
         inside(X.buttonsY,X.buttonH,bodyH,tag.." buttons")
         assert(X.lineY+X.lineH<=X.totalsY and X.totalsY+X.totalsH<=X.buttonsY,tag.." text above the buttons")
-        assert(X.buttonH*m.scale>=44-1e-9,tag.." GO HOME and CANCEL >= 44 px")
+        assert(X.buttonH*m.effScale>=44-1e-9,tag.." GO HOME and CANCEL >= 44 px")
         assert(X.artY+X.artSize<=bodyH,tag.." picture fits")
     end
+end
+-- BD-538 probe: the old rule (a 836 px canvas inside the scroller at the 0.8 floor) WAS wider than the body at 667 x 317, and fit < 1 is what fixes it.
+do
+    local m=P.modal(667,317)
+    assert(m.fit<1 and 836*m.scale>(m.panelW-8)*m.scale+1,"probe: the old canvas was 668 px in a 644 px body")
+    assert(math.abs(836*m.scale-668.8)<1 and math.abs((m.panelW-8)*m.scale-644.8)<1)
+    assert(P.modal(836,332).fit==1 and P.modal(836,390).fit==1,"836 wide canvases are not shrunk")
 end
 for _,line in seen do print(line) end
 print("phone scale: modal policy, desktop identity, floors ok")
@@ -130,6 +148,11 @@ def static_checks():
     scale = (ROOT / 'src/shared/PhoneScale.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'workspace', 'os.clock', 'task.', 'require('):
         assert banned not in scale, 'PhoneScale stays pure: ' + banned
+    compact = (ROOT / 'src/client/ModalCompact.luau').read_text()
+    # BD-538: the scroller is fitted to the width (UIScale BodyFit), never scrolls sideways, and screens get the fitted height and scale.
+    assert 'Enum.ScrollingDirection.Y' in compact and 'ScrollingDirection.XY' not in compact, 'compact body scrolls vertically only'
+    assert 'fit.Name, fit.Parent = "BodyFit", s' in compact and 'fitScale.Scale = m.fit' in compact and 'UDim2.fromOffset(m.innerW, m.innerH)' in compact
+    assert 'math.floor(m.innerH)' in compact and 'return if m then m.effScale else 1' in compact and 'm.scrollX' not in compact and 'UDim2.fromOffset(0, if bottom <= m.innerH' in compact
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     locals_ = len(re.findall(r'^local ', boot, re.M))
     assert locals_ <= 193, 'Bootstrap top-level locals: %d (was 193, limit 200)' % locals_

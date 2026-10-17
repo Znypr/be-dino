@@ -186,18 +186,19 @@ end
 
 -- Called from Bootstrap's scales() with the TouchLayout result. Puts the SIZE bar under whatever sits at the top centre
 -- (the build badge on desktop, the nav rail on phones) so nothing overlaps; the bar shrinks a little on small canvases.
+-- BD-538: TouchLayout.sizeBar / sizeHint own the numbers (the bar is 250 x 34 and the hint 360 x 28 design px, TouchLayout.SIZEBAR).
 function Hud.layout(layout: any)
     local bar = barPlate
     if not bar then return end
-    local scale = math.clamp(if layout.touch then layout.rail.scale else layout.hud.scale, 0.7, 1)
-    local top = if layout.touch then layout.rail.y + layout.rail.h * layout.rail.scale + 4 else 64
-    bar.AnchorPoint, bar.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, top)
+    -- BD-538: the rects come from TouchLayout (SIZE bar + goal hint), so they clear the weather/LEAP column on a 667 px phone.
+    local b, h = layout.sizeBar, layout.sizeHint
+    bar.AnchorPoint, bar.Position = Vector2.zero, UDim2.fromOffset(b.x, b.y)
     local uiScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-    uiScale.Scale, uiScale.Parent = scale, bar
+    uiScale.Scale, uiScale.Parent = b.scale, bar
     if hintLabel then
-        hintLabel.Position = UDim2.new(0.5, 0, 0, top + (BAR_H + 4) * scale)
+        hintLabel.AnchorPoint, hintLabel.Position = Vector2.zero, UDim2.fromOffset(h.x, h.y)
         local hintScale = hintLabel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-        hintScale.Scale, hintScale.Parent = scale, hintLabel
+        hintScale.Scale, hintScale.Parent = h.scale, hintLabel
     end
 end
 
