@@ -29,8 +29,17 @@ function State.look(info, priceText: string)
     return {kind = kind, dim = false, caption = caption, buttonText = info.buyButton or "BUY", active = true, tone = "price"}
 end
 
--- BD-430: the Crystals tab button always says something useful. A known price is always shown ("R$ 99"), also while
--- packs are off (the Coming soon line sits above the cards); an unknown price says "Price soon" instead of nothing.
+-- BD-546: what the Crystals tab shows. While Config.CrystalPacksEnabled is not exactly true (the same test the server uses) the tab shows ONE
+-- friendly "Coming soon" card and no R$ price button at all: a child must not see a price button they cannot use. The pack grid
+-- (and every R$ button) exists only in the "packs" view.
+State.PacksView, State.SoonView = "packs", "comingSoon"
+State.SoonTitle, State.SoonLine = "Coming soon!", "Crystal packs are on the way."
+function State.packsView(enabled: any): string
+    return if enabled == true then State.PacksView else State.SoonView
+end
+
+-- BD-430: with packs on, a pack button always says something useful. A known price is shown ("R$ 99"); an unknown price says "Price soon"
+-- instead of nothing. Only the "packs" view (packsView) draws these buttons.
 function State.packButton(price: number?): string
     if type(price) == "number" and price > 0 then return "R$ " .. tostring(price) end
     return "Price soon"

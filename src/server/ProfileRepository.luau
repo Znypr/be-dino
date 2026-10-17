@@ -22,6 +22,16 @@ local CosmeticOwnership = require(script.Parent.CosmeticOwnership) -- BD-059 pha
 local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 local PaidRandomGate = require(ReplicatedStorage.Shared.PaidRandomGate) -- BD-532
 
+-- BD-074 (docs/66 s18): a committed gameplay fact is reported to ObjectiveService AFTER its transaction (never before, never from
+-- the client). Every call site is `if Config.ObjectivesEnabled == true then objectives().x(...) end`: with the flag off that is one
+-- boolean test, ObjectiveService is never even required, and no argument is evaluated. Required lazily so offline harnesses that
+-- do not carry the module are unaffected while the flag is off (tools/verify_objective_hooks.py checks every site).
+local objectiveService: any = nil
+local function objectives(): any
+    if objectiveService == nil then objectiveService = require(script.Parent.ObjectiveService) end
+    return objectiveService
+end
+
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
 local demoActive = localPreview and Config.DemoDirectorEnabled == true -- docs/133: Studio-only, unpublished, flag-gated demo triggers
@@ -904,6 +914,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
     end
     adopt(player, updated)
     if profiles[player] then syncAttributes(player, profiles[player]) end
+    if Config.ObjectivesEnabled == true and not duplicate then objectives().recordFusionUse(player) end -- BD-074: after the committed fusion
     return true, committed, if duplicate then "duplicate" else "fused"
 end
 
@@ -1199,6 +1210,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
     PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
+    if Config.ObjectivesEnabled == true then -- BD-074: after the committed + adopted settlement (also for the in-call duplicate of a lost acknowledgement; the run id makes a replay count once)
+        local progress = ProfileRepository.progression(player)
+        objectives().recordRunSettled(player, runId, runSeconds, runEggs, if progress then ProgressionRules.level(progress) else nil)
+    end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
@@ -1459,6 +1474,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
 
     adopt(player, updated)
     if profiles[player] then syncAttributes(player, profiles[player]) end
+    if Config.ObjectivesEnabled == true then objectives().record(player, "dino_equipped", 1) end -- BD-074: after the committed equip (not for "already_equipped")
     return true, "equipped"
 end
 
@@ -1684,10 +1700,11 @@ end
 
 -- Credits one queue egg (collection, identity, metrics), refills the queue and records
 -- its operation. Returns the committed outcome or nil. Runs inside an UpdateAsync transform.
-local function applyHatch(profileValue: any, chest: any, index: number, outcome: any, now: number)
+local function applyHatch(profileValue: any, chest: any, index: number, outcome: any, now: number, freshSpecies: {[string]: boolean}?)
     table.remove(profileValue.eggs, index)
     local species = profileValue.collection[outcome.speciesId]
     if typeof(species) ~= "table" then return nil end
+    if freshSpecies ~= nil and not (chest.genes ~= nil and not chest.genes.hatchSuccess) and not ownsAny(species) then freshSpecies[outcome.speciesId] = true end -- BD-074: BEFORE this egg is added (objective hook only; nothing persisted)
     local mutationId=chest.mutationId or ""
     outcome.genes=chest.genes
     outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
@@ -1809,6 +1826,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     local leaseLost = false
     local notReady = false
     local missing = false
+    local freshSpecies: {[string]: boolean}? = if Config.ObjectivesEnabled == true then {} else nil -- BD-074: only allocated while the flag is on
 
     if not admit(player) then return false, nil, "rate_limited" end
     local ok, updated = retry("chest claim", function()
@@ -1845,7 +1863,8 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             if chest.reward and index ~= 1 then missing = true return nil end
 
             pageOutcomes = {}
-            if not applyHatch(profileValue, chest, index, outcome, now) then return nil end
+            if freshSpecies ~= nil then table.clear(freshSpecies) end -- a repeated transform starts from the stored profile again
+            if not applyHatch(profileValue, chest, index, outcome, now, freshSpecies) then return nil end
             -- Hatch page: following ready run/nest eggs at the queue head commit in the same
             -- transaction (their rewards are precommitted, so nothing is rerolled).
             while #pageOutcomes < Config.HatchPageSize - 1 and chest.reward and chest.genes
@@ -1853,7 +1872,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 local nextEgg = profileValue.eggs[1]
                 if not nextEgg or not nextEgg.reward or not nextEgg.genes or now < nextEgg.readyAt
                     or (nextEgg.kind ~= "run_egg" and nextEgg.kind ~= "nest_egg") then break end
-                local nextOutcome = applyHatch(profileValue, nextEgg, 1, table.clone(nextEgg.reward), now)
+                local nextOutcome = applyHatch(profileValue, nextEgg, 1, table.clone(nextEgg.reward), now, freshSpecies)
                 if not nextOutcome then return nil end
                 table.insert(pageOutcomes, nextOutcome)
             end
@@ -1886,6 +1905,11 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         if profiles[player] then syncAttributes(player, profiles[player]) end
     end
     publishHatch(player, chestId, committedOutcome)
+    if Config.ObjectivesEnabled == true and not duplicateOutcome then -- BD-074: after the committed claim; the head egg and its whole hatch page count once, here (the later buffered reveals do not)
+        local opened = {outcome}
+        for _, pageOutcome in pageOutcomes do table.insert(opened, pageOutcome) end
+        objectives().recordHatched(player, opened, freshSpecies)
+    end
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -2094,6 +2118,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if not player.Parent then return true,if duplicate then "duplicate" else outcome.status end
     adopt(player, updated)
     if player.Parent and profiles[player] then syncAttributes(player,profiles[player]) end
+    if Config.ObjectivesEnabled == true and action=="buyPotion" and not duplicate then objectives().record(player,"potion_bought",1) end -- BD-074: after the committed purchase
     return true,if duplicate then "duplicate" else outcome.status
 end
 

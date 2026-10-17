@@ -7,7 +7,7 @@ import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath",RunLifecycle="RunLifecycle",ObjectiveService="ObjectiveService"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==12 and carry<1e-8)
 local accumulated,total=0,0
@@ -43,11 +43,13 @@ function Workspace:SetAttribute(k,v)self.attrs[k]=v end
 local nowSeconds=100 -- BD-479: the nest-weather test moves the server clock
 function Workspace:GetServerTimeNow()return nowSeconds end
 function Workspace:GetAttribute(k)return self.attrs[k]end
+local pickupRays=false -- BD-074: pickup rays (mouth to food) are not placement rays
 local rays=0
 local missingTerrain=false
 local artFailure=false
 function Workspace:Raycast(origin,direction,params)
  rays+=1
+ if pickupRays then return nil end
  if direction.Y<0 then
   assert(params.FilterDescendantsInstances[1]==self.Terrain and params.FilterDescendantsInstances[2]==nil,"ground ray must query terrain independently of props")
   if missingTerrain then return nil end
@@ -58,12 +60,14 @@ function Workspace:Raycast(origin,direction,params)
 end
 local workspace=Workspace
 local AdminMutationScale='''+wrapped('src/shared/AdminMutationScale.luau')+'''
-local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",MouthReach="MouthReach",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig"}}
+local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",MouthReach="MouthReach",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig",RunEggTags="RunEggTags"}}
 function Storage:FindFirstChild(name)return if name=="BeDinoRemotes" then Remotes else nil end
 local guid=0
 local Http={GenerateGUID=function()guid+=1 return tostring(guid)end}
 local game={GetService=function(self,name)return ({Players=Players,ReplicatedStorage=Storage,HttpService=Http})[name]end}
-local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="Config" then return Config elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
+local FoodConfig=table.clone(Config) -- BD-074: the tick test flips ObjectivesEnabled on this copy (Config itself may be frozen)
+local ObjectiveSpy={calls={},loads=0}
+local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="RunLifecycle" then return {noteNestWeather=function()end} elseif id=="RunEggTags" then return {nextScore=function(before,whole,maxScore,runCap)return math.min(maxScore,runCap,before+whole)end,apply=function(events)return events,0 end} elseif id=="ObjectiveService" then ObjectiveSpy.loads+=1 return {record=function(player,kind,amount)table.insert(ObjectiveSpy.calls,{player=player,kind=kind,amount=amount}) return true end} elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="Config" then return FoodConfig elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
 local created={}
 local Instance={new=function(kind)
  local o={attrs={},Name="",kind=kind,OnServerEvent={Connect=function(self,fn)self.callback=fn end}}
@@ -100,6 +104,92 @@ missingTerrain=false artFailure=true
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"broken art must not remove food")
 print("Food startup passed: terrain-only placement, 12 nearby starter pickups, missing-ray fallback and broken-art survival")
+-- BD-074 (docs/66 s18): the pickup tick reports food eaten ONCE per player per tick (summed), only while Config.ObjectivesEnabled.
+do
+ local growth=0
+ local dinoStub={addGrowth=function(_,amount)growth+=amount end}
+ local function mockPlayer(id,position,scale)
+  local player={UserId=id,Name="P"..id,attrs={}}
+  local root={Position=position,AssemblyLinearVelocity=vector(0,0,0),CFrame={LookVector=vector(0,0,-1)}}
+  function root:IsA(k)return k=="BasePart"end
+  local humanoid={Health=100,WalkSpeed=16}
+  local character={attrs={DinoAttached=true,RunState="Active",VisualScale=scale}}
+  function character:SetAttribute(k,v)self.attrs[k]=v end
+  function character:GetAttribute(k)return self.attrs[k]end
+  function character:FindFirstChild(k)return if k=="HumanoidRootPart" then root else nil end
+  function character:FindFirstChildOfClass(k)return if k=="Humanoid" then humanoid else nil end
+  player.Character=character
+  return player,character
+ end
+ -- fresh food field + its tick loop (the LAST function Food.start scheduled), run for exactly two ticks
+ local function freshField()
+  local mark,scheduledMark=#created,#scheduled
+  artFailure=false missingTerrain=false
+  Food.start(dinoStub)
+  local parts={}
+  for i=mark+1,#created do local item=created[i] if item.kind=="Part" and item.attrs.Points and item.Position then function item:FindFirstChild()return nil end table.insert(parts,item) end end
+  return parts,scheduled[#scheduled]
+ end
+ local function inReach(parts,position,scale)
+  local radius=MouthReach.radius(nil,scale)
+  local n=0
+  for _,part in parts do
+   local dx,dz=part.Position.X-position.X,part.Position.Z-position.Z
+   if dx*dx+dz*dz<=radius*radius and math.abs(part.Position.Y-position.Y)<MouthReach.VerticalLimit then n+=1 end
+  end
+  return n
+ end
+ local function twoTicks(tick,players)
+  Players.GetPlayers=function()return players end
+  local waits=0
+  task.wait=function()waits+=1 if waits>=3 then error("STOP_TICKS") end end
+  local ok,err=pcall(tick)
+  task.wait=function()end
+  Players.GetPlayers=function()return {} end
+  assert(not ok and string.find(tostring(err),"STOP_TICKS"),"the tick loop ran for two ticks: "..tostring(err))
+ end
+ pickupRays=true
+ -- flag OFF: pickups still pay, the objective module is never even required, nothing is reported
+ do
+  local parts,tick=freshField()
+  local first=parts[1]
+  local a,ac=mockPlayer(9001,vector(first.Position.X,first.Position.Y,first.Position.Z),3)
+  FoodConfig.ObjectivesEnabled=false
+  ObjectiveSpy.loads,ObjectiveSpy.calls=0,{}
+  twoTicks(tick,{a})
+  assert(growth>0 and (ac.attrs.CatchScore or 0)>=0,"pickups are still eaten with the flag off")
+  assert(ObjectiveSpy.loads==0 and #ObjectiveSpy.calls==0,"flag off: no require, no call")
+ end
+ -- flag ON: one call per player per tick, amount = pickups eaten in that tick
+ do
+  local parts,tick=freshField()
+  local first=parts[1]
+  local near=vector(first.Position.X,first.Position.Y,first.Position.Z)
+  local expectedA=inReach(parts,near,3)
+  assert(expectedA>=1)
+  -- a second player at a different food, far from the first
+  local second
+  for _,part in parts do
+   local dx,dz=part.Position.X-near.X,part.Position.Z-near.Z
+   if dx*dx+dz*dz>40*40 then second=part break end
+  end
+  local farPos=vector(second.Position.X,second.Position.Y,second.Position.Z)
+  local expectedB=inReach(parts,farPos,1)
+  local a,ac=mockPlayer(9002,near,3)
+  local b,bc=mockPlayer(9003,farPos,1)
+  FoodConfig.ObjectivesEnabled=true
+  ObjectiveSpy.loads,ObjectiveSpy.calls=0,{}
+  twoTicks(tick,{a,b})
+  assert(#ObjectiveSpy.calls==2,"exactly one call per player for the tick, not one per food: "..#ObjectiveSpy.calls.." (A reached "..expectedA..", B "..expectedB..")")
+  local byPlayer={}
+  for _,call in ObjectiveSpy.calls do assert(call.kind=="food_eaten") byPlayer[call.player]=call.amount end
+  assert(byPlayer[a]==expectedA and byPlayer[b]==expectedB,"the amount is the number of pickups eaten: A "..tostring(byPlayer[a]).."/"..expectedA..", B "..tostring(byPlayer[b]).."/"..expectedB)
+  assert(expectedA>1 or expectedB>1,"at least one player ate several foods in the tick, so batching is exercised")
+  FoodConfig.ObjectivesEnabled=false
+ end
+ pickupRays=false
+ print("Food objective hook passed: one batched food_eaten call per player per tick (amount = pickups eaten), nothing required or reported with the flag off")
+end
 task.spawn=function(fn)fn()end
 ProgressionConfig='''+wrapped('src/shared/ProgressionConfig.luau')+'\nRewardMath='+wrapped('src/server/RewardMath.luau')+'\n'+ 'local Lifecycle='+wrapped('src/server/RunLifecycle.luau')+'\n'+'''
 local function character()

@@ -119,6 +119,7 @@ local function handleAction(player: any, request: any)
         local quote, reason = repository.quoteFusion(player, request.targetStage, copyList(request.donorIds))
         if not quote then return fail(reason or "bad_request") end
         if type(quote.odds) ~= "table" or type(quote.oddsVersion) ~= "string" then return fail("odds_not_approved") end
+        if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveService).recordFusionUse(player) end -- BD-074: the server priced a full, owned donor set (the menu asks only then)
         return {ok = true, quote = {speciesId = quote.speciesId, patternId = quote.patternId, targetStage = quote.targetStage,
             donorIds = quote.donorIds, lossManifest = quote.lossManifest, consentRequired = quote.consentRequired,
             consentDigest = quote.consentDigest, quoteDigest = quote.quoteDigest, recipeVersion = quote.recipeVersion,

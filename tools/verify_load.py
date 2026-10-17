@@ -139,6 +139,7 @@ end
 
 -------------------------------------------------------------------- shared DataStore + per-server budget
 local DATA = {}
+local OBJECTIVE_LOADS = 0 -- BD-074: how often any module asked for ObjectiveService (must stay 0 while Config.ObjectivesEnabled is false)
 local OPLABEL = setmetatable({}, {__mode = "k"})
 local M -- metrics of the running scenario
 
@@ -220,6 +221,7 @@ local function newServer(name, jobId, overrides)
         GetService = function(_, id) return services[id] or error("service " .. id .. " is not modelled") end}
     local function load(n)
         local path = n.__path
+        if string.find(path, "ObjectiveService", 1, true) then OBJECTIVE_LOADS += 1 end
         if server.cache[path] ~= nil then return server.cache[path] end
         local source = SOURCES[path] or error("module not embedded in harness: " .. path)
         local chunk = assert(loadstring(source, "=" .. path))
