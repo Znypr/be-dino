@@ -330,8 +330,8 @@ print("pose checks passed")
 ACTION_BODY = r'''
 local PHASES = {Ground = {"crouch", "push", "air", "land"}, Armored = {"crouch", "push", "air", "land"}, Fly = {"crouch", "push", "air", "land"}, Water = {"surge"}}
 local ctx = P.newCtx()
-local function A(class, phase, aggr, p, t, role, side, amp, carry)
-    ctx.phase, ctx.p, ctx.t, ctx.aggr, ctx.carry = phase, p, t, aggr, carry or 0.7
+local function A(class, phase, aggr, p, t, role, side, amp, carry, flap, wing)
+    ctx.phase, ctx.p, ctx.t, ctx.aggr, ctx.carry, ctx.flap, ctx.wing = phase, p, t, aggr, carry or 0.7, flap or 0, wing
     return P.sampleAction(role, side, true, ctx, amp or 1, P.new(), class)
 end
 
@@ -447,6 +447,29 @@ check("251.fly", function()
     local flutter = span(0, "land", 0, 0.2, 200)
     assert(flutter > 0.05, "landing flutter missing: " .. flutter)
     assert(near(wing(1, "land", 1, 0.45, 0, 1), -1.25), "wings folded again at the end of the landing")
+    -- first-look fix: the landing starts from the flap angle the air phase ended on (it used to snap to 0, up to about 20 degrees in one frame)
+    for _, aggr in {0, 1} do for i = 0, 40 do
+        local airT = i * 0.073
+        for _, side in {-1, 1} do
+            local air = A("Fly", "air", aggr, 0, airT, "wing", side, 1).roll
+            local land = A("Fly", "land", aggr, 0, 0, "wing", side, 1, 1, P.airFlap(airT, aggr)).roll
+            assert(near(air, land, 1e-9), "Fly air -> land wing pop: " .. air .. " vs " .. land .. " at " .. airT)
+        end
+    end end
+    -- a hop that lands BEFORE the wings opened (crouch, push) must hand over exactly: the old landing opened them in one frame (about 60 degrees)
+    for _, spec in {{"crouch", 1, 0.08}, {"crouch", 0.4, 0.03}, {"push", 0, 0}, {"push", 0.3, 0.036}, {"push", 0.7, 0.084}, {"push", 1, 0.12}} do
+        local phase, p, t = spec[1], spec[2], spec[3]
+        for _, side in {-1, 1} do for _, role in {"wing", "body", "head", "leg"} do
+            local last = A("Fly", phase, 0, p, t, role, side, 1)
+            local land = A("Fly", "land", 0, 0, 0, role, side, 1, 0, 0, P.wingOpen(phase, p)) -- what the animator hands over (carry 0, flap 0)
+            if role == "wing" then
+                assert(near(last.roll, land.roll, 1e-9) and near(last.pitch, land.pitch, 1e-9), "Fly " .. phase .. " p=" .. p .. " -> land wing pop: " .. last.roll .. " vs " .. land.roll)
+            end
+        end end
+    end
+    assert(near(P.wingOpen("crouch", 1), 0) and near(P.wingOpen("air", 0), 1) and near(P.wingOpen("push", 1), 1), "wingOpen end points")
+    -- and the carried flap is gone by the end of the first third of the landing (no lingering offset)
+    assert(near(wing(1, "land", 1, 0.45, 0, 1), A("Fly", "land", 0, 1, 0.45, "wing", 1, 1, 1, 0.35).roll), "carried flap must fade out by the end of the landing")
     -- Fly crouches less than Ground
     assert(A("Fly", "crouch", 0, 1, 0.1, "body", 1, 1).dy > A("Ground", "crouch", 0, 1, 0.1, "body", 1, 1).dy, "Fly crouches shallower")
     -- wings do nothing for classes that have none: other roles still follow the ground rules
@@ -1012,6 +1035,8 @@ MUTANTS = [
     ('animator plays actions under Reduce Motion', ANIM, 'if amp == 0 then rig.act = nil elseif', 'if false then rig.act = nil elseif', 1),
     ('animator splash counts swapped (jump 9, leap 5)', ANIM, 'if leaping then 9 else 5', 'if leaping then 5 else 9', 1),
     ('animator never reads the leap stamp', ANIM, 'num(character, "LeapPredictAt")', 'num(character, "LeapPredictAtX")', 1),
+    ('Fly landing ignores the carried wing opening again (60 degree pop)', POSE, 'math.clamp(finite(ctx.wing or 1), 0, 1) * (1 - ease(p))', '(1 - ease(p))', 1),
+    ('Fly landing ignores the air flap again (wing pop)', POSE, 'math.clamp(finite(ctx.flap or 0), -0.4, 0.4) * (1 - ease(p / 0.3))', '0', 1),
     ('animator rig loses its character again (the jump poses never played)', ANIM, 'rig = {character = character, visual', 'rig = {visual', 1),
     ('animator ignores walking speed for the phase', ANIM, 'Pose.stepRate(rig.speed)', 'Pose.stepRate(0)', 1),
     ('animator animates far remote players', ANIM, 'RANGE, REMOTE_STEP, RUN_SPEED = 80,', 'RANGE, REMOTE_STEP, RUN_SPEED = 8000,', 1),
