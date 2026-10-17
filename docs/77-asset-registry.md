@@ -2,6 +2,8 @@
 
 Every art asset the game uses at runtime. Add a line here when an asset is added. Code-drawn art is PLACEHOLDER per [docs/72](72-ui-copy-and-asset-standards.md). Status: in game / uploaded not bound / planned / placeholder.
 
+**Texture size rule (LEAD TX1 narrowed by audit C-41, docs/115 and 116 section I, 2026-10-17):** the 512 px max (256 px when it reads the same) applies to **UI icons, badges and shop/egg art** only (docs/146 evidence). **Flipbook sheets and ribbons keep the docs/109 spec** (4 x 4 cells of 256 px = 1024 px sheet; ribbon 2048 x 512 or the 1024 x 256 downscale); an FX or weather sheet below that spec needs a Studio test and a line in docs/77 first.
+
 | Name | Type | Repo file | Roblox asset ID | Used by | Status |
 |---|---|---|---|---|---|
 | potion_model_flask | 3D model (Roblox generate_mesh): round flask, blue liquid, lightning charm | - (Roblox generate_mesh, 2026-10-15) | 114182681867384 (Model) | src/shared/PotionArt.luau ModelAssets.flask: speed potions Common-Epic (shop cards, confirm, POTIONS nav button) | in game via InsertService (src/server/PotionModels.luau); vector flask fallback |

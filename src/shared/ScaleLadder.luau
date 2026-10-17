@@ -15,12 +15,13 @@ ScaleLadder.Unit = "studs"
 
 -- ---------------------------------------------------------------- dinosaurs
 -- BD-232 (owner rule: "Sizes follow about 10% growth per unlock tier; fly and water species are scaled by bulk up to the T-Rex"; LEAD
--- decision 2026-10-17, owner delegated, docs/115). Sizing is THE size rule; each species row has its unlock tier (Config.SpeciesRarities),
+-- decision 2026-10-17, owner delegated, docs/115; Water corrected from length to bulk, C-39). Sizing is THE size rule; each species row has its unlock tier (Config.SpeciesRarities),
 -- its basis and its target in studs. scale = the LowPolyDinoAssets clone-time scale (MIRRORED, CODE; the one place a species size is set),
 -- and width/height/length = the Studio bounding box of LowPolyDinos.clone(species) at spawn (growth scale 1), template pose, 2 decimals
 -- (BD-471 method, re-measured after the BD-232 scale change; docs/evidence/2026-10-17-species-sizes/). That box IS the in-game spawn size:
 -- the clone bakes `scale` into the parts and DinosaurVisual.render only multiplies by the growth scale (1 at spawn, HubScaleRules 1 in the hub).
--- measured = true for ALL 22 species. measured = false would mean ESTIMATE = scale x heightPerScaleEstimate (do not use for a new species).
+-- measured = true for ALL 22 species. EXCEPTION until the Studio re-measure (docs/evidence/2026-10-17-water-bulk/): the box, snout and headLength of the three
+-- Water species (C-39, bulk instead of length) are the old measured values x new scale / old scale (exact for a uniform clone scale), not yet re-read in Studio.
 -- BD-515 (docs/115 MR1-MR3): snout = how far the snout tip is ahead of the model centre (the root) at spawn, and headLength = the length of the
 -- `head` MeshPart along the body, both from the same Studio measurement (the part's bounding box in the model frame, 2 decimals). snout equals
 -- length / 2 for all species but Microraptor (its template wings reach further forward than the head). The generated head parts include neck,
@@ -56,12 +57,12 @@ ScaleLadder.Dino = {
         dimorphodon = {scale = 1.71, tier = 1, basis = "bulk", target = 5.55, width = 5.76, height = 5.13, length = 5.73, snout = 2.86, headLength = 3.06, measured = true},
         elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, snout = 5.37, headLength = 4.38, measured = true},
         gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, snout = 3.89, headLength = 2.52, measured = true},
-        ichthyosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 3.78, height = 4.31, length = 8.61, snout = 4.31, headLength = 3.95, measured = true},
+        ichthyosaurus = {scale = 3.71, tier = 3, basis = "bulk", target = 6.71, width = 4.89, height = 5.57, length = 11.13, snout = 5.57, headLength = 5.11, measured = true},
         microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, snout = 2.31, headLength = 0.32, measured = true},
-        mosasaurus = {scale = 3.47, tier = 5, basis = "length", target = 10.41, width = 3.37, height = 3.55, length = 10.41, snout = 5.21, headLength = 2.69, measured = true},
+        mosasaurus = {scale = 5.64, tier = 5, basis = "bulk", target = 8.12, width = 5.48, height = 5.77, length = 16.92, snout = 8.47, headLength = 4.37, measured = true},
         pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, snout = 4.21, headLength = 3.54, measured = true},
         parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, snout = 4.54, headLength = 3.94, measured = true},
-        plesiosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 4.81, height = 7.99, length = 8.61, snout = 4.30, headLength = 4.04, measured = true},
+        plesiosaurus = {scale = 2.78, tier = 3, basis = "bulk", target = 6.71, width = 4.66, height = 7.74, length = 8.34, snout = 4.17, headLength = 3.91, measured = true},
         pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, snout = 3.45, headLength = 2.29, measured = true},
         quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, snout = 4.02, headLength = 3.41, measured = true},
         spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, snout = 6.03, headLength = 4.54, measured = true},
@@ -71,10 +72,10 @@ ScaleLadder.Dino = {
 
 -- ---------------------------------------------------------------- the size rule (BD-232)
 -- Unlock tier = Config.SpeciesRarities (1 Common .. 5 Legendary; a species is unlocked by hatching it). Basis by class: Ground and Armored
--- (Elasmosaurus is a normal Ground dino, docs/101) use HEIGHT; Fly uses BULK; Water uses LENGTH, so a long low swimmer is not forced tall.
+-- (Elasmosaurus is a normal Ground dino, docs/101) use HEIGHT; Fly and Water use BULK (C-39: the owner said "fly/water scaled by bulk"; Water was by length first).
 --   height target(tier) = Sizing.height.tier1 x growthPerTier^(tier - 1)            (Compy, tier 1, is 6.6)
 --   bulk   target(tier) = Sizing.bulk.top   / growthPerTier^(topTier - tier)        (the T-Rex's bulk is the top, tier 5)
---   length target(tier) = Sizing.length.top / growthPerTier^(topTier - tier)        (the T-Rex's length is the top, tier 5)
+--   length target(tier) = Sizing.length.top / growthPerTier^(topTier - tier)        (kept as a helper; no species uses it since C-39)
 -- bulk = cube root of the bounding-box volume (width x height x length), in studs, so it compares with a height. The tolerance is the
 -- allowed relative gap between a species' measured size and its target (scale is rounded to 2 decimals, so the real gap is under 0.5%).
 ScaleLadder.Sizing = {

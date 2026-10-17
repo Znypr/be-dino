@@ -57,7 +57,7 @@ def check_registry():
         assert cls == expect, f"{name} class {cls} != {expect}"
         # BD-232: the scale is no longer a tier formula; the SIZE rule (10% per unlock tier by height, bulk or length) and its tolerance
         # are enforced by tools/verify_scale_ladder.py against the Studio boxes, which also compares this table with ScaleLadder.
-        assert 1.2 <= float(scale) <= 4.5, f"{name} scale {scale} outside the sane range 1.2 to 4.5"
+        assert 1.2 <= float(scale) <= 6, f"{name} scale {scale} outside the sane range 1.2 to 6 (C-39: the bulk-sized Mosasaurus is 5.64)"
     assert sum(len(v) for v in PLAN.values()) == 22 and set().union(*PLAN.values()) == set(names), "part plan must cover all species"
     assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
     for name in names:

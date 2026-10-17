@@ -132,7 +132,7 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 ### 8.1 Any 3D asset or prop
 1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
-3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). Species sizes follow the BD-232 rule (about 10% growth per unlock tier; ground by height from the 6.6 Compy, fly by bulk, water by length, T-Rex on top; LEAD decision in docs/115, SZ1). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
+3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). Species sizes follow the BD-232 rule (about 10% growth per unlock tier; ground by height from the 6.6 Compy, fly and water by bulk, T-Rex on top; water was by length until C-39 corrected it to the owner's wording, 2026-10-17; LEAD decision in docs/115, SZ1). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
@@ -141,11 +141,11 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled; on a PHONE the far ones are culled with the props beyond the cull radius, BD-496).
 10. Registry line in [77](77-asset-registry.md); no invented asset IDs.
 ### 8.1.1 Scale ladder table (BD-407, CODE numbers)
-Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Not Studio evidence:** 19 of 22 species heights are ESTIMATES until the Studio bounding-box measurement in BD-471 replaces them. A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
+Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Studio evidence:** all 22 boxes were measured in Studio (BD-471, BD-232); the three Water boxes (Ichthyosaurus, Plesiosaurus, Mosasaurus) were then rescaled to the bulk rule (C-39, BD-537) by the exact clone-scale ratio and are re-read in Studio under [docs/evidence/2026-10-17-water-bulk/](evidence/2026-10-17-water-bulk/README.md). A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
 <!-- scale-ladder:begin -->
 All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
 
-**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 22 of 22 species, BD-471 and BD-232, 2026-10-17).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly by bulk (cube root of W x H x L), water by length, the T-Rex on top. In the cave hub every dinosaur is exactly 1x (docs/115).
+**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 22 of 22 species, BD-471 and BD-232, 2026-10-17).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), the T-Rex on top (C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).
 
 | Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | run height x1.52 | mid height x2 | long height x3 | max height x4 | bigMax height x4.8 |
 | --- | ---: | --- | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -161,12 +161,12 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | dimorphodon | 1 | bulk | 5.55 | 1.71 | 5.76 x 5.13 x 5.73 | MEASURED | 7.8 | 10.3 | 15.4 | 20.5 | 24.6 |
 | elasmosaurus | 4 | height | 8.78 | 3.58 | 3.95 x 8.78 x 10.74 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
 | gallimimus | 1 | height | 6.60 | 3.89 | 2.42 x 6.61 x 7.78 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
-| ichthyosaurus | 3 | length | 8.60 | 2.87 | 3.78 x 4.31 x 8.61 | MEASURED | 6.6 | 8.6 | 12.9 | 17.2 | 20.7 |
+| ichthyosaurus | 3 | bulk | 6.71 | 3.71 | 4.89 x 5.57 x 11.13 | MEASURED | 8.5 | 11.1 | 16.7 | 22.3 | 26.7 |
 | microraptor | 1 | bulk | 5.55 | 1.52 | 7.11 x 4.56 x 5.29 | MEASURED | 6.9 | 9.1 | 13.7 | 18.2 | 21.9 |
-| mosasaurus | 5 | length | 10.41 | 3.47 | 3.37 x 3.55 x 10.41 | MEASURED | 5.4 | 7.1 | 10.6 | 14.2 | 17.0 |
+| mosasaurus | 5 | bulk | 8.12 | 5.64 | 5.48 x 5.77 x 16.92 | MEASURED | 8.8 | 11.5 | 17.3 | 23.1 | 27.7 |
 | pachycephalosaurus | 2 | height | 7.26 | 2.81 | 4.51 x 7.25 x 8.43 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
 | parasaurolophus | 2 | height | 7.26 | 3.03 | 5.30 x 7.27 x 9.09 | MEASURED | 11.1 | 14.5 | 21.8 | 29.1 | 34.9 |
-| plesiosaurus | 3 | length | 8.60 | 2.87 | 4.81 x 7.99 x 8.61 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
+| plesiosaurus | 3 | bulk | 6.71 | 2.78 | 4.66 x 7.74 x 8.34 | MEASURED | 11.8 | 15.5 | 23.2 | 31.0 | 37.2 |
 | pteranodon | 2 | bulk | 6.10 | 1.54 | 7.07 x 4.62 x 6.89 | MEASURED | 7.0 | 9.2 | 13.9 | 18.5 | 22.2 |
 | quetzalcoatlus | 4 | bulk | 7.38 | 2.04 | 8.20 x 6.12 x 8.04 | MEASURED | 9.3 | 12.2 | 18.4 | 24.5 | 29.4 |
 | spinosaurus | 5 | height | 9.66 | 4.02 | 5.53 x 9.66 x 12.06 | MEASURED | 14.7 | 19.3 | 29.0 | 38.6 | 46.4 |

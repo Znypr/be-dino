@@ -40,12 +40,9 @@ STUDIO = {
     'dimorphodon': {1: (12.0, 36, 336), 2: (24.0, 34, 272), 4: (48.0, 34, 249)},
     'elasmosaurus': {1: (16.51, 47, 260), 2: (33.02, 46, 219), 4: (66.05, 46, 196)},
     'gallimimus': {1: (12.13, 43, 282), 2: (24.27, 42, 231), 4: (48.54, 41, 201)},
-    'ichthyosaurus': {1: (12.0, 40, 367), 2: (24.0, 34, 301), 4: (48.0, 33, 277)},
     'microraptor': {1: (12.0, 31, 416), 2: (24.0, 26, 372), 4: (48.0, 27, 373)},
-    'mosasaurus': {1: (12.0, 39, 402), 2: (24.0, 32, 321), 4: (48.0, 30, 296)},
     'pachycephalosaurus': {1: (13.41, 45, 267), 2: (26.82, 44, 226), 4: (53.64, 44, 198)},
     'parasaurolophus': {1: (13.57, 43, 267), 2: (27.13, 42, 223), 4: (54.27, 42, 201)},
-    'plesiosaurus': {1: (14.43, 46, 264), 2: (28.86, 45, 222), 4: (57.73, 44, 198)},
     'pteranodon': {1: (12.0, 37, 352), 2: (24.0, 35, 290), 4: (48.0, 39, 266)},
     'quetzalcoatlus': {1: (12.0, 46, 302), 2: (24.0, 44, 247), 4: (48.0, 44, 220)},
     'raptor': {1: (12.02, 39, 277), 2: (24.04, 39, 229), 4: (48.09, 39, 202)},
@@ -55,6 +52,11 @@ STUDIO = {
     'triceratops': {1: (14.42, 47, 259), 2: (28.84, 47, 211), 4: (57.68, 46, 190)},
     'tyrannosaurus': {1: (17.28, 46, 242), 2: (34.57, 45, 204), 4: (69.14, 45, 184)},
 }
+
+# C-39 (BD-537, docs/116): the three Water species were resized from length to bulk, so their old sweep rows (ichthyosaurus, mosasaurus,
+# plesiosaurus) no longer describe the game. They are removed until the Studio sweep is redone (docs/evidence/2026-10-17-water-bulk/); until
+# then only checks 1 to 3 (the module's own rules) apply to them, not check 4.
+PENDING_SWEEP = ('ichthyosaurus', 'mosasaurus', 'plesiosaurus')
 
 BODY = r'''
 local sizes = {SIZES}
@@ -125,7 +127,7 @@ def main():
     if guard is None or abs(guard[0] - 24) > 1e-6 or abs(guard[1] - 12) > 1e-6 or abs(guard[2] - 24) > 1e-6 or abs(guard[3]) > 1e-9:
         problems.append('junk input does not fall back to the old rule: %s' % (guard,))
     # small and flat bodies keep the old view
-    for species in ('raptor', 'gallimimus', 'dimorphodon', 'microraptor', 'archaeopteryx', 'pteranodon', 'ichthyosaurus', 'mosasaurus'):
+    for species in ('raptor', 'gallimimus', 'dimorphodon', 'microraptor', 'archaeopteryx', 'pteranodon'):  # C-39: swimmers are bulk-sized, no longer small
         for s in (1, 2, 4):
             z, _ = rows[(species, s)]
             if z > BASE * s * 1.02:
@@ -144,7 +146,7 @@ def main():
                 problems.append('%s at %s: Studio fill %d%% is outside 25 to 56%% of the screen height' % (species, s, fill))
             if top < 160:
                 problems.append('%s at %s: Studio dino top %d px is inside the HUD banner (needs 160 or more)' % (species, s, top))
-    missing = [sp for sp in MEASURED if sp not in STUDIO]
+    missing = [sp for sp in MEASURED if sp not in STUDIO and sp not in PENDING_SWEEP]
     if missing:
         problems.append('no Studio sweep row for: %s' % ', '.join(missing))
     # BD-513 BIG: at the BIG maximum growth scale 4.8 no species is held back by the cap: the camera distance is the size rule's own number
