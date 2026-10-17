@@ -1,6 +1,6 @@
 # 66 - Intake: mini objectives
 
-Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see sections 17 and 19); BD-075 panel built behind the same flag (offline-tested, Studio pictures pending, see section 18)**; BD-076 to BD-078 are Backlog. All numbers PROVISIONAL.
+Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see sections 17 and 20); BD-075 panel built behind the same flag (offline-tested, Studio pictures pending, see section 18)**; BD-076 to BD-078 are Backlog. All numbers PROVISIONAL.
 
 ## 1-3. Intention, new vs extension, fit
 - **Intention:** teach the loop in the first 15 minutes, then give veterans small reasons to try leap, potions, fusion without a grind wall. Loop moments: run, hatch, shop, collection, fusion.
@@ -51,7 +51,7 @@ Tutorial total 160 Crystals (about 5 runs, one random egg): a gentle gift.
 - Anti-abuse: counters per window capped at 2x goal; fixed structure limits claims; small amounts; `MaxCrystals` clamp; no Robux link.
 
 ## 8. NextGoal feed
-`NextGoal` shows the first unclaimed objective (Tutorial first, else the closest to done): "Goal  Hatch 3 eggs: 1/3". Falls back to current fusion/level logic when none.
+`NextGoal` shows the first unclaimed objective (Tutorial first, else the closest to done): "Goal  Hatch 3 eggs: 1/3". Falls back to current fusion/level logic when none. **Built as BD-076, with the priority table of section 19 (the fusion goal beats an unfinished task).**
 
 ## 9. Visuals, icons, animations, audio
 - Visuals (reuse): popup-body panel, header-blue, card-common rows, progress-track bars, button-green Claim, button-dark pill, reward-burst on claim. None new.
@@ -134,7 +134,30 @@ Question: do the docs/66 mini objectives duplicate the Goals panel / goal line, 
 
 **Evidence.** `python tools/verify_objectives_panel.py --runner <luau>` (pure rules, then the REAL `ObjectivesPanel.luau` on a GUI mock fed by the REAL `ObjectiveRules` view: folded/open/claimable states, claim request shape, waiting state, same-token retry, silent in a run and before the first egg, copy rules), plus the extended `verify_movement_mobile.py` / `verify_hud.py` (panel rect versus every HUD piece). Studio pictures (folded, open, claimable at desktop and 836 x 390) go to `docs/evidence/2026-10-17-objectives-panel/` once the lead frees Studio.
 
-## 19. Implementation status BD-074: the event hooks (2026-10-17, offline only)
+## 19. Implementation status BD-076: the top objective on the one-line goal (2026-10-17, offline only, behind `ObjectivesEnabled`)
+**Priority rule (one rule, highest first).** The line under the Crystals plate shows the FIRST thing in this list that exists:
+
+| # | Shown | Example | Why |
+| --- | --- | --- | --- |
+| 1 | a **claimable objective** | `Done! Claim in Tasks` | free Crystals are waiting, it beats everything, even a ready fusion |
+| 2 | the **fusion goal** (best in-progress or ready recipe) | `Gold: 5/6 Compy` | the long-term compass beats an unfinished small task |
+| 3 | an **unfinished objective** (the panel's top row) | `Hatch 10 eggs: 3/10` | any active task is more useful than a bare XP bar |
+| 4 | the **level XP fallback** | `Level 3: 50/500 XP` | only when nothing above exists |
+
+Full 3 x 3 table (objective none / unfinished / claimable against fusion none / in progress / ready), the winner: none+none = level, none+progress = fusion, none+ready = fusion, unfinished+none = objective, unfinished+progress = fusion, unfinished+ready = fusion, claimable+anything = objective. `tools/verify_objectives_panel.py` asserts all nine.
+
+**Which objective.** The panel's own choice (`ObjectivePanelRules.select`, the same rows the panel shows): finished first (tutorial, carried, short, daily), else the tutorial row, else short and daily in turns. **T8 watch item kept:** the goal line asks with the same `playGoalActive` flag as the panel, so an unfinished "Collect a second species" never reaches the line while the Goals PLAY line is on screen and not finished; a finished T8 is a reward and does show. Nothing is shown (the old line stays) until the server has answered once.
+
+**Flag off.** `GoalHud` passes `objective = nil` unless `Config.ObjectivesEnabled`; `NextGoal.pick` without an objective is exactly the old `fusion or level` (checked field for field on 15 inputs), `NextGoal` knows nothing about the flag, and the text is still `prefix .. goal.text`. The line is byte-identical to Build 020.
+
+**Copy and width (docs/72).** Short, plain, no clock, no multiplier. A finished task says `Done! Claim ...`; an unfinished one says `Name: 3/10`, and a one-step task shows only its name (`0/1` says nothing). The line is 244 design px wide; on a phone it is drawn at a fixed `floorText(17)` size (always >= 14 px on screen) and on a desktop it scales between 14 and 17 px behind a `Goal  ` prefix. Words are fitted with a conservative width estimate (`ObjectivePanelRules.textWidth`: em table for the HUD font plus 8 % slack, at the SMALLEST size Bootstrap draws the line, minus the prefix), so the line never leans on the engine cutting a word:
+- finished: the longest of `Done! Claim at the objectives panel` / `Done! Claim in Tasks` / `Done! Claim it` / `Done!` that fits. The longest phrase is about 350 px at 17 px, so it never fits a 244 px line and `Done! Claim in Tasks` is what players see on all 56 checked canvases; the long phrase is kept only so a wider line would use it.
+- unfinished: the whole `Name: 3/10` if it fits; else whole words are dropped from the end of the name (and a dangling `a` / `toward` / `the`) and `...` marks the cut (`Add a dino...`, `Collect a second...`), the count stays; a single over-long word becomes `Task 3/10`.
+- The line re-fits whenever Bootstrap restyles it (resize, mouse/touch switch) and wakes up only when the top row changes, not on every 20 s poll.
+
+**Evidence.** `python tools/verify_objectives_panel.py --runner <luau>` now also runs: the priority table, flag-off identity, copy and width for every catalogue task (at progress 0 and goal - 1) on 56 canvases (8 phones, 6 tablets, desktops, 667 x 317, and 836 x 390 / 667 x 375 minus 0/36/44/58 px of top bar, each as mouse and touch), the T8 versus PLAY case, and the real panel's `goalLine` / `onTopChanged` on the GUI mock. Static: `objectives` stays nil outside the flag block, `goalLine` is called only inside `if objectives then`, `NextGoal` has no flag or Roblox service. **Not proven offline:** the real on-screen width (the estimate is deliberately wide; a Studio `TextService` measurement and pictures of the line at desktop and 667 x 375 stay with BD-078).
+
+## 20. Implementation status BD-074: the event hooks (2026-10-17, offline only)
 **Still OFF.** Every hook sits behind `Config.ObjectivesEnabled` (false in every committed build, pinned by `release_profiles`). With the flag off a hook site is ONE boolean test: no argument is evaluated, `ObjectiveService` is never required, nothing is allocated, no profile is read or written. Hooks report a fact only AFTER the server committed it (the profile transaction and `adopt`, or the server-side accept), never from client input; no client file touches objectives.
 
 | Objective(s) | Event | Hook site (server) | Reported when |
