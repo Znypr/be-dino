@@ -28,7 +28,7 @@ compiler accepted exactly 4 more non-constant locals.
   python tools/verify_local_budget.py --top 10                   # also print the top scopes
   python tools/verify_local_budget.py --selftest --compiler PATH/luau-compile
 
-Exit 1 when any scope exceeds FAIL_ABOVE (185). Warnings above WARN_ABOVE (170).
+Exit 1 when any scope exceeds FAIL_ABOVE (185). Warnings above WARN_ABOVE (140). All of src/ (server, client, shared) is scanned.
 """
 import argparse
 import json
@@ -40,7 +40,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WARN_ABOVE = 170
+WARN_ABOVE = 140  # docs/150: WeatherVisuals.client grew 110 -> 147 and Bootstrap sat at 198 inside one day; warn early, fail at 185
 FAIL_ABOVE = 185
 COMPILER_LIMIT = 200
 
