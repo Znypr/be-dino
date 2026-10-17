@@ -90,6 +90,12 @@ end
 function GiftRules.validId(value: any): boolean
     return type(value) == "string" and #value >= 1 and #value <= Limits.MaxIdLength and string.match(value, "^[%w_%-]+$") ~= nil
 end
+-- BD-590: the shape of an id that could ever have been issued ("R" or "A" first). A typo or forged id like "nope" is refused as bad input.
+function GiftRules.validIssuedId(value: any): boolean
+    if not GiftRules.validId(value) then return false end
+    local first = string.sub(value :: string, 1, 1)
+    return first == "R" or first == "A"
+end
 -- A gift id comes from the source, never from the client: robux "R" + PurchaseId, admin "A" + GUID (GF16).
 function GiftRules.idMatchesSource(id: any, source: any): boolean
     if not GiftRules.validId(id) then return false end
