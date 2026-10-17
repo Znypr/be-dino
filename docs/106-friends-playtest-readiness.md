@@ -1,8 +1,11 @@
 # 106 Friends playtest readiness audit (main at 3e3e932, 2026-10-16)
 
+> **PARTLY SUPERSEDED 2026-10-17.** The current readiness doc is [145 session 1 readiness](145-session1-readiness-2026-10-17.md) (offline audit on main b616687; [125](125-friends-playtest-go-no-go.md) is its predecessor). Kept as history, not rewritten. Stale here: the Verdict (now NOT READY, see 145 s1); s1 flag table (`CaveHub`, `LowPolyDinos` and `ClassMovementEnabled` are now ON in the playtest profile, and 145 s3 has the current table); the `FoodCatchRate` 4/500 line (now 12/500, about 15 eggs per 5 minutes); risk 4 (EditableImage memory is no longer dormant, `LowPolyDinos` is ON in the playtest); s4 smoke script (use 145 s4b and s5 instead); s5 NOT-ready list (cave hub and low-poly dinos are no longer excluded; the session 1 cap is 4 players, not 8). Still valid: the owner checklist idea of s2, the risks about phones, multiplayer and DataStore, and the policy notes.
+
 Label: **CURRENT BUILD BEHAVIOR** audit, read from code and tool output. Nothing here was run on a published server or a phone. Method: read `src/shared/Config.luau`, `tools/release_profiles.py`, the consumers of each flag, docs 55, 95, 102, 105, and the kanban rows BD-004/019/020/021/085/097/168. `python tools/verify_release.py` passes for **default** (20 keys) and **playtest** (18 keys; one warning: `DeveloperProducts` still lists Robux ids, inert while the paid flags are false and no products exist in the playtest experience).
 
 ## Verdict
+*(Superseded by [145](145-session1-readiness-2026-10-17.md) s1: NOT READY until the lead Studio pass and the owner steps.)*
 **GO for a small, private, owner-supervised friends playtest on desktop, after the owner steps in section 2 and one clean smoke run (section 4). NO-GO for phones, for more than about 4 players, and for any of the "not ready" items (section 5).** Phone performance and multiplayer have never been measured on the current main, so a friends playtest is also the first real data point. Say so to the friends.
 
 ## 1. Runtime flags and shipped defaults
@@ -80,6 +83,7 @@ In the playtest profile add: BiomeKit world, food kit, persistent fusion and ide
 15. (Optional, owner Android) repeat 4, 5 and 8 on a phone and record fps and any crash.
 
 ## 5. Explicitly NOT ready
+*(Superseded: the cave hub and low-poly dinos are ON in the playtest profile by owner decision of 2026-10-16; see [145](145-session1-readiness-2026-10-17.md) s4c. The other bullets still hold.)*
 - HP combat, NPC predators, Bite (BD-243..252, BD-316; Peaceful mode removed 2026-10-16, docs/115).
 - Cave Sanctuary and hub travel (BD-280..293).
 - Low-poly generated dinos and their EditableImage patterns on a published server (BD-225, BD-306..309).

@@ -139,6 +139,12 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("ClassMovementEnabled", "set", True, reason="BD-423 class feel (glide, dash, speed) for friends playtests, no combat needed"),
         Rule("CaveHub", "set", True, reason="owner 2026-10-16: the cave hub is in the first friends playtest (docs/125)"),
         Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: world v2, 1 part per MeshPart prop, total under 8,000 (docs/68)"),
+        # docs/145 s7: the playtest must not silently ship these. They stay off in source (default profile requires the first
+        # three too); requiring them here means a local edit before a playtest build fails the build, not only CI's default one.
+        _flag_off("CombatEnabled", "BD-243 HP combat stays off in the friends playtest: instant bigger-eats-smaller (docs/145)"),
+        _flag_off("SpecialFoodsEnabled", "BD-207 rare special foods stay off in the friends playtest (food alone must progress)"),
+        _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics stay off in the friends playtest (docs/121)"),
+        _flag_off("FastTravelPerk", "BD-391/405 Fast travel perk is not in session 1: the playtest ships it false, rail travel is free (docs/145 s7)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],

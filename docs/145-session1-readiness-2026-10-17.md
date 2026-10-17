@@ -186,7 +186,7 @@ Setup (not a step): `python tools/build.py --profile playtest`, close every othe
 8. **Friends session**: 4 players max, 1 to 2 hours. Send the short note (private test, may reset, no Robux, desktop, placeholder numbers) first; ask the five questions after (docs/125 s6); export the server log the same day and run `python tools/telemetry_report.py server.log` and `python tools/feedback_report.py server.log`.
 9. **Optional art**: lead runs the 16-file upload batch (docs/120), condition eggs at 512 px; sounds are the owner's job (docs/136).
 
-## 7. Findings (small, not fixed here)
+## 7. Findings (small; items 1 to 4 fixed 2026-10-17, see the follow-up note below)
 
 1. **129 s10 is stale**: it says class movement is effectively off; the playtest profile sets `ClassMovementEnabled` true. 129 s6 says to use the test grant, but test grants are forbidden by `verify_release`; docs/141 script B is the working route.
 2. **Playtest profile does not require the off flags**: `CombatEnabled`, `SpecialFoodsEnabled`, `PerDinoCosmeticsEnabled` and `FastTravelPerk` are not `require`d false in the playtest rules (default requires the first three; `FastTravelPerk` is in no profile). CI builds both from the same source, so a flip is caught on the default build, but a local edit before a playtest build is not. A four-line `_flag_off` addition would close it.
@@ -194,9 +194,19 @@ Setup (not a step): `python tools/build.py --profile playtest`, close every othe
 4. **docs/106 and docs/125 are partly stale** (106: `CaveHub` false, `LowPolyDinos` false, rate 4/500, max 8 players; 125 s1 NO-GO for the cave is overridden by its own addendum). This doc and 129 are the current pair. The BD-317 row still points at 106's 14-step script.
 5. **Tests need numpy**: 4 import errors locally without it. CI installs it; a line in the tests README would save time.
 6. **Hard stop that is easy to miss**: `DeveloperProducts` lists six Robux ids and `verify_release` only warns. If BD-004 resolves to the legacy experience, those products may really exist there.
+   **Before publishing: if the playtest experience turns out to be the LEGACY one that owns real Robux developer products, the product ids in `Config.DeveloperProducts` must be cleared (or the products removed from that experience) before the playtest is published.** The flags `CrystalPacksEnabled` and `PaidRandomItemsEnabled` hide the prompts, but a real product in a friends experience is still a paid-random and no-Robux-line breach (docs/43, AGENTS.md). Do not change any id until the owner answers BD-004; this is a pre-publish checklist item, not a code change.
 7. **Condition egg sources are 1024 px** and about 450 KB each; the Eggs page draws them small. Upload at 512 px.
 8. **Feedback and telemetry are log-only**: Roblox keeps server logs for a short time; export the same day or the data is gone.
 9. **Board hygiene**: about 320 of about 420 rows are `Review / test` and 20 are Done; 69 non-Done rows are P0. None of this changes with this audit; do not mark anything Done without the Studio or phone evidence this doc lists.
+
+## 8. Follow-up 2026-10-17 (small findings 1 to 4 and 6 fixed)
+Found above, fixed in the follow-up PR (docs, verifier and profile only; no game code and no id was changed):
+- Finding 1: docs/129 s6 now points at docs/141 script B instead of the test grant; s10 now says `ClassMovementEnabled` is ON in the playtest profile.
+- Finding 2: `tools/release_profiles.py` playtest rules now `require` `CombatEnabled`, `SpecialFoodsEnabled`, `PerDinoCosmeticsEnabled` and `FastTravelPerk` to be false (`_flag_off`, the same pattern `verify_release` uses). `FastTravelPerk` is false in the playtest build: it is checked, not set. `verify_release.py --profile playtest` and `tests/test_release.py` (`PlaytestOffFlagTests`) cover it.
+- Finding 3: `verify_session1_smoke.py` no longer forces `FastTravelPerk = true`. It uses the real playtest values, so with the perk off it now checks that the perk purchase is refused and that rail travel is free for everyone (132 checks instead of 135). It still cannot model `LowPolyDinos` or `ClassMovementEnabled`: its output now says they are NOT MODELLED, so s5 steps 2 and 7 stay the only check of them.
+- Finding 4: docs/106 and docs/125 carry a "partly superseded" banner and per-section notes pointing here; the BD-317 row points at this doc. History was not rewritten.
+- Finding 6: the pre-publish warning about legacy Robux developer product ids is in finding 6 above and on the BD-004 row. No id was changed.
+Not touched: findings 5, 7, 8, 9.
 
 ## Handbook check
 Vibe and tone ([114](114-handbook.md)): the friends note keeps the test private, small, kid-safe and Robux-free; no copy was changed. Owner decisions of 2026-10-16 and 2026-10-17 ([115](115-decisions-log.md)) are respected: cave hub and 4 players in session 1, no Peaceful, hunting stays on, food alone must progress, admin Mutation x10 per player. Statuses use the rule that "merged" is not "checked": nothing is claimed Studio-verified or phone-verified. Docs only; no source, config or flag was changed. Doc number 145 is free on origin/main and in open PRs (144 is #347).

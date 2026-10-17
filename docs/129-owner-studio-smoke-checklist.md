@@ -8,6 +8,8 @@ Label: **OWNER CHECK LIST**. Everything below passed offline checks only; nobody
 
 Cave items: the owner put the cave hub in session 1 (2026-10-16), so `CaveHub` is ON in the playtest profile (PR #254, docs/125) and the cave checks below BLOCK session 1. Items marked (open PR) are not on main yet; check them once merged.
 
+**Current readiness doc: [145](145-session1-readiness-2026-10-17.md)** (offline audit of this list on main b616687, 15-step lead Studio pass in its s5). Corrections of 2026-10-17 are applied in s6 and s10 below.
+
 ## 1. Sanctuary / hub (first screen)
 | BD | Look at | Good looks like | Level |
 | --- | --- | --- | --- |
@@ -53,7 +55,7 @@ Cave items: the owner put the cave hub in session 1 (2026-10-16), so `CaveHub` i
 ## 6. Rare hatch
 | BD | Look at | Good looks like | Level |
 | --- | --- | --- | --- |
-| BD-428 (merged #243) | Hatch a Legendary, Shiny or mutation (use the test grant in Studio) | Banner and confetti when the reveal lands, warm `shiny_bang` sound, another player sees one short banner; not spammy | BLOCKS for session 2, NICE for session 1 |
+| BD-428 (merged #243) | Hatch a Legendary, Shiny or mutation (test grants are forbidden by `verify_release`; use [141](141-board-hygiene-stuck-rows.md) script B: F2, Blood Moon, Food x10, Mutation x10, catch about 15 food, open the mutated egg) | Banner and confetti when the reveal lands, warm `shiny_bang` sound, another player sees one short banner; not spammy | BLOCKS for session 2, NICE for session 1 |
 | BD-428 | Reduce Motion / Effects Off | Banner and sound, no confetti | NICE |
 
 ## 7. Shops
@@ -79,8 +81,8 @@ Cave items: the owner put the cave hub in session 1 (2026-10-16), so `CaveHub` i
 ## 10. Class picker and dino page
 | BD | Look at | Good looks like | Level |
 | --- | --- | --- | --- |
-| BD-423, #250 (open PR) | Dino page class line and picker | One short class line under the species name (Ground / Fly / Water / Armored) plus a feel hint; no overlap with stats or buttons; every owned dino can be equipped | NICE for session 1 (class movement is effectively off) |
-| BD-246 | Fly glide, Water dash | Only if `ClassMovementEnabled` is on: smooth, not twitchy | NICE |
+| BD-423, #250 (open PR) | Dino page class line and picker | One short class line under the species name (Ground / Fly / Water / Armored) plus a feel hint; no overlap with stats or buttons; every owned dino can be equipped | NICE for session 1 (but `ClassMovementEnabled` is ON in the playtest profile, so Fly glide and Water dash are live: walk them in the lead Studio pass, [145](145-session1-readiness-2026-10-17.md) s5 step 2) |
+| BD-246 | Fly glide, Water dash | `ClassMovementEnabled` is ON in the playtest profile (docs/145 s3): smooth, not twitchy; the audit suggests treating this as BLOCKS because friends will feel it | NICE (145 suggests BLOCKS) |
 
 ## 11. Sound Lab (Settings > Sound > SOUND LAB)
 | BD | Look at | Good looks like | Level |
