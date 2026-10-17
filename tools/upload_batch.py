@@ -5,6 +5,7 @@
     python tools/upload_batch.py --out DIR       # another folder (default build/upload-batch/, gitignored)
 
 Collects every repo PNG whose slot (tools/asset_slots.json) is still EMPTY: the trail shop icons, the mutation badges,
+the Crystal Shop tab icons, tiles and green-spotted egg (BD-047),
 the Blender FX textures in resources/effects/fx-v2/, the three meadow-grass-v2 maps and the Eggs page art
 (jungle stage JPG + five condition egg PNGs in resources/ui/v2/stage/), plus (BD-296) the seven Blender cave meshes
 (6 wall rock forms and the gate arch frame, assets/blender/world/fbx_v3/cave_*_v3.fbx, slot kind `mesh`: uploaded as a Model, the
@@ -39,6 +40,8 @@ PNG_SIG = b'\x89PNG\r\n\x1a\n'
 GROUPS = [
     ('trail icons', 'resources/ui/v2/icons', r'trail-([a-z]+)-v1\.png', lambda m: 'trail_' + m.group(1), True),
     ('mutation badges', 'resources/ui/v2/icons', r'mutation-([a-z]+)-v1\.png', lambda m: 'mutation_' + m.group(1), True),
+    ('shop icons and tiles', 'resources/ui/v2/icons', r'shop-(tab|tile)-([a-z]+)-v1\.png', lambda m: f'shop_{m.group(1)}_{m.group(2)}', True),
+    ('green-spotted egg', 'resources/ui/v2/icons', r'egg-green-spotted-v1\.png', lambda m: 'egg_green_spotted', True),
     ('FX textures', 'resources/effects/fx-v2', r'([A-Za-z]+)(?:-([a-z]+))?\.png',
      lambda m: m.group(1) + (m.group(2).capitalize() if m.group(2) else ''), True),
     ('meadow grass maps', 'resources/materials/meadow-grass-v2', r'meadow-grass-v2-([a-z]+)\.png',

@@ -2225,6 +2225,136 @@
    ]
   },
   {
+   "name": "shop_tab_auras",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tab_auras",
+   "group": "Images.shop_tab_auras",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tab_auras\""
+   ]
+  },
+  {
+   "name": "shop_tab_trails",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tab_trails",
+   "group": "Images.shop_tab_trails",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tab_trails\""
+   ]
+  },
+  {
+   "name": "shop_tab_conditions",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tab_conditions",
+   "group": "Images.shop_tab_conditions",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tab_conditions\""
+   ]
+  },
+  {
+   "name": "shop_tab_crystals",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tab_crystals",
+   "group": "Images.shop_tab_crystals",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tab_crystals\""
+   ]
+  },
+  {
+   "name": "egg_green_spotted",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "egg_green_spotted",
+   "group": "Images.egg_green_spotted",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"egg_green_spotted\""
+   ]
+  },
+  {
+   "name": "shop_tile_auras",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tile_auras",
+   "group": "Images.shop_tile_auras",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tile_\" .. tab"
+   ]
+  },
+  {
+   "name": "shop_tile_trails",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tile_trails",
+   "group": "Images.shop_tile_trails",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tile_\" .. tab"
+   ]
+  },
+  {
+   "name": "shop_tile_eggs",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tile_eggs",
+   "group": "Images.shop_tile_eggs",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tile_\" .. tab"
+   ]
+  },
+  {
+   "name": "shop_tile_conditions",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tile_conditions",
+   "group": "Images.shop_tile_conditions",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tile_\" .. tab"
+   ]
+  },
+  {
+   "name": "shop_tile_crystals",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shop_tile_crystals",
+   "group": "Images.shop_tile_crystals",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopArt.luau",
+    "\"shop_tile_\" .. tab"
+   ]
+  },
+  {
    "name": "cave_rockform_slabs_v3",
    "kind": "mesh",
    "target": "worldmesh",
