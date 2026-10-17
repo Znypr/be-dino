@@ -14,13 +14,17 @@ both re-render the Potion Shop, the remote names and the allowed-action list agr
     python tools/verify_potion_purchase.py --runner /path/to/luau
 """
 from pathlib import Path
-import argparse, re, subprocess, tempfile
+import argparse, re, subprocess, sys, tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path):
-    return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 BODY = r'''
@@ -60,13 +64,15 @@ local client={cache={},log={}}
 local PrivateStateStub={
  set=function(p,k,v) p.attrs[k]=v client.cache[k]=v table.insert(client.log,k) end,
  get=function(p,k) return p.attrs[k] end,forget=function() end}
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
+local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end}) -- docs/152: stands in for the lazily required ObjectiveService when Config.ObjectivesEnabled is on
 local rewardSpecies=nil
 local NestQueue=NEST_QUEUE_MODULE
 local FtueRules=FTUE_RULES_MODULE
 local SettingsModel=SETTINGS_MODEL_MODULE
 local Rewards=nil
 local require=function(id)
+ if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end
  if id=="PrivateState" then return PrivateStateStub end
  if id=="Cosmetic" then return COSMETIC_OWNERSHIP_MODULE end
  if id=="RareHatchService" then return {record=function() end} end
@@ -285,7 +291,7 @@ def static_checks():
     for code in ('insufficient_crystals', 'sold_out', 'not_offered', 'stale_window', 'window_required', 'inventory_full', 'save_failed'):
         assert code in status, code
     # The test wallet re-pins crystals AFTER a purchase is applied (so the counter never moves in Studio memory profiles).
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text()
+    repo = profile_sources.repository_text()
     pin = 'if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end'
     assert repo.count(pin) >= 3
     print('Potion purchase source checks passed: confirm handler transacts before leaving the modal, transact fires ProgressionAction, result and ProgressionJson refresh the shop, remote contract agrees on both sides')

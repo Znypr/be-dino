@@ -8,13 +8,18 @@ reconnects. Mocks validate transaction logic only, not Studio replication or UI.
 from pathlib import Path
 import argparse
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path):
-    return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 HARNESS = r'''
@@ -79,10 +84,13 @@ local game={GameId=1,JobId="test",GetService=function(_,id) return services[id] 
 local task={wait=function() end,spawn=function() end}
 local warn=function() end
 local script={Parent={}}
+storage.Shared.SecretSpeciesConfig="SecretSpeciesConfig" -- docs/152: a separate statement, so the derived harnesses that patch the storage line above keep matching
+local SecretSpecies=nil -- RewardMath requires it lazily while Config.SecretSpeciesEnabled is on; the real (pure) module is loaded right below
 local require=function(id)
- if id=="Config" then return GameConfig elseif id=="ProgressionConfig" then return ProgressionConfig end
+ if id=="Config" then return GameConfig elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="SecretSpeciesConfig" then return SecretSpecies end
  error("unexpected module "..tostring(id))
 end
+SecretSpecies=@@SECRET_SPECIES@@
 local NestQueue=@@NEST_QUEUE@@
 local FtueRules=@@FTUE_RULES@@
 local SettingsModel=@@SETTINGS_MODEL@@
@@ -96,9 +104,14 @@ local require=function(id) if id=="Identity" then return Identity end return Gam
 local FusionOdds=@@FUSION_ODDS@@
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
 local Cosmetic=@@COSMETIC_OWNERSHIP@@
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
+-- BD-074 / switch-on rehearsal (docs/152): with Config.ObjectivesEnabled on, ProfileRepository requires ObjectiveService lazily after a commit;
+-- this no-op spy stands in (the real service runs in verify_objective_hooks and verify_multiplayer_sim) and the flag-off runs never load it.
+local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end})
 local require=function(id)
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="SecretSpeciesConfig" then return SecretSpecies end
+ if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end -- after the PrivateState line on purpose: verify_objectives inserts its own ObjectiveService handling before it
  if id=="Cosmetic" then return Cosmetic end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
@@ -579,6 +592,10 @@ print(string.format("Seeded draws passed: %d tier-0 rolls Cracked %.2f%% Dirty %
  draws,100*counts.cracked/draws,100*counts.dirty/draws,100*counts.normal/draws,100*counts.rainbow/draws,100*(counts.astra or 0)/draws,100*failedDraws/draws))
 print("BD-044/BD-045 reward loop verified (offline Luau; Studio verification pending)")
 '''
+
+
+# docs/152: inlined at import time (not a token in script()), because rollback/skins/gifts/secret-species build their own prefix from HARNESS
+HARNESS = HARNESS.replace('@@SECRET_SPECIES@@', module('src/shared/SecretSpeciesConfig.luau'))
 
 
 def script():

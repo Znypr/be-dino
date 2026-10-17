@@ -18,8 +18,12 @@ import verify_rewards  # noqa: E402  (reuses the mocked DataStore prefix)
 FIXTURE = 'tools/fixtures/build020/'
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path):
-    return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 BODY = (ROOT / 'tools' / 'fixtures' / 'rollback_body.luau').read_text(encoding='utf-8')

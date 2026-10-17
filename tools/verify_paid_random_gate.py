@@ -14,6 +14,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 
 def read(path):
@@ -45,7 +48,7 @@ def static():
     gate = read('src/shared/PaidRandomGate.luau')
     for banned in ('game:GetService', 'Instance.new', 'workspace', 'require('):
         assert banned not in gate, 'PaidRandomGate stays pure: ' + banned
-    repo = read('src/server/ProfileRepository.luau')
+    repo = profile_sources.repository_text()
     body = repo[repo.index('function ProfileRepository.progressionAction'):]
     body = body[:body.index('local eggId=nil')]
     assert 'PaidRandomGate.guards(action) and PaidRandomGate.blocked(Config.DeveloperProducts, Config.PaidRandomItemsEnabled, PrivateState.get(player, "PaidRandomEligible"))' in body, \

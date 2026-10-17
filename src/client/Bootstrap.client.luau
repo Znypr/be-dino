@@ -706,6 +706,8 @@ render=function(name: string)
             label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
         end
         for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end
+        -- BD-606 (SS9): one honest line about the secret dino in FREE eggs, only while secrets can really drop (flag on and a model ready); never in the upgrade odds
+        if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do label(list,note,10,lineY,790,28,19) lineY+=32 end end
         list.CanvasSize=UDim2.fromOffset(0,lineY)
         button(body,"MORE DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end).TextSize=20
         button(body,"BACK",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open(if upgradeOdds then "conditionConfirm" else "eggPurchase") end)
@@ -985,7 +987,7 @@ render=function(name: string)
         button(body,"GOLD",388,0,200,44,C.gold,function() fusionTarget="gold" open("fusion") end)
         button(body,"DIAMOND",600,0,200,44,C.blue,function() fusionTarget="diamond" open("fusion") end)
         label(body,"MAKE IT "..string.upper(target),388,56,420,54,30,if diamond then C.blue else C.gold)
-        label(body,"Consume "..cost.." "..source.." copies for 1 "..target.." "..Config.SpeciesDisplayNames[selected]..". Cosmetic only.",392,118,420,76,22)
+        label(body,"Consume "..cost.." "..source.." copies for 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..". Cosmetic only.",392,118,420,76,22)
         meter(body,400,214,400,owned,cost,C.gold,string.format("%d / %d %s copies",owned,cost,source))
         button(body,"FUSE SELECTED DINO",400,277,400,56,if owned>=cost then C.accent else C.card,function()
             if owned<cost then notify("You need "..cost.." "..source.." copies",C.red) return end
@@ -1002,7 +1004,7 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="Confirm "..target.." Fusion",if diamond then C.blue else C.gold
         art(body,"mutation_"..fusionTarget,26,35,230)
         label(body,"Use "..cost.." "..source.." copies?",280,12,510,64,30)
-        label(body,"Receive 1 "..target.." "..Config.SpeciesDisplayNames[selected]..". The consumed copies are removed after a successful save.",280,100,510,115,24)
+        label(body,"Receive 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..". The consumed copies are removed after a successful save.",280,100,510,115,24)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then

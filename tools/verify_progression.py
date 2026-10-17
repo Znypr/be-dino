@@ -4,7 +4,10 @@ Mocks validate logic/transactions, not Studio physics or rendering.
 from pathlib import Path
 import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
-def module(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import profile_sources
+def module(path):return profile_sources.module(path) # docs/150: ProfileRepository plus the parts it installs
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\nlocal GameConfig='+module('src/shared/Config.luau')+'\n'
  s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Genetics='+module('src/shared/EggGenetics.luau')+'\n'
@@ -466,7 +469,7 @@ assert(donorDetails.traitsKnown and donorDetails.genes.patternId~=nil)
 local fusionSpecies=donorDetails.speciesId
 local function goldCount() return localUser.attrs.CollectionJson[fusionSpecies].gold end -- mock JSONEncode returns a table copy
 -- Default-off flag: no quote, no fusion.
-assert(GameConfig.IdentityFusionPreviewEnabled==false)
+assert(GameConfig.IdentityFusionPreviewEnabled==false,"the committed Config has the fusion flag off")
 assert(select(2,LocalRepository.quoteFusion(localUser,"gold",donors))=="fusion_disabled")
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token="off"}))=="fusion_disabled")
 assert(LocalRepository.setFusionTestRoller({})==false)

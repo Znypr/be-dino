@@ -24,8 +24,12 @@ import release_profiles  # noqa: E402
 import verify_rewards  # noqa: E402  (reuses the mocked DataStore prefix)
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path: str) -> str:
-    return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 def doc_rows() -> list[tuple[str, str, int, int]]:

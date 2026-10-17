@@ -33,7 +33,8 @@ function CollectionService.start(profileRepository, dinosaur)
     end
 
     local equipSpecies = getRemote(folder :: Folder, "EquipSpecies")
-    local testGrant = getRemote(folder :: Folder, "TestGrantSpecies")
+    -- BD-610: exists ONLY while its flag is on (pinned off in every release profile); the flag is still re-checked inside the handler.
+    local testGrant = if Config.CollectionTestGrantEnabled == true then getRemote(folder :: Folder, "TestGrantSpecies") else nil
 
     equipSpecies.OnServerEvent:Connect(function(player: Player, speciesId, requestToken, variantKey, ...)
         if select("#", ...) ~= 0 then return end
@@ -65,16 +66,18 @@ function CollectionService.start(profileRepository, dinosaur)
         end
     end)
 
-    testGrant.OnServerEvent:Connect(function(player: Player, ...)
-        if select("#", ...) ~= 0 then return end
-        if not Config.CollectionTestGrantEnabled then return end
-        if not rateAllowed(lastGrantRequest, player) then
-            player:SetAttribute("LastCollectionGrantStatus", "rate_limited")
-            return
-        end
-        local _, status = profileRepository.grantCollectionTestSpecies(player)
-        player:SetAttribute("LastCollectionGrantStatus", status)
-    end)
+    if testGrant then
+        testGrant.OnServerEvent:Connect(function(player: Player, ...)
+            if select("#", ...) ~= 0 then return end
+            if not Config.CollectionTestGrantEnabled then return end
+            if not rateAllowed(lastGrantRequest, player) then
+                player:SetAttribute("LastCollectionGrantStatus", "rate_limited")
+                return
+            end
+            local _, status = profileRepository.grantCollectionTestSpecies(player)
+            player:SetAttribute("LastCollectionGrantStatus", status)
+        end)
+    end
 end
 
 return CollectionService

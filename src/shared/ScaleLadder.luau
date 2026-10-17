@@ -68,6 +68,26 @@ ScaleLadder.Dino = {
         spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, snout = 6.03, headLength = 4.54, measured = true},
         therizinosaurus = {scale = 2.56, tier = 4, basis = "height", target = 8.78, width = 4.91, height = 8.78, length = 10.24, snout = 5.12, headLength = 2.75, measured = true},
     },
+    -- BD-606 (docs/115 SS8, LEAD decision, owner delegated): the SEVEN SECRET species (Shared/SecretSpeciesConfig). They are not in `order` or `species` above
+    -- (the 22 shipped species, the Index and the doc table stay as they are) but they follow the very same rule, and the pure sizing modules
+    -- (HitSize, MouthReach) and the camera verifier read them through ScaleLadder.dinoRow. Unlock tier for SIZE = 1 for all seven (the secret
+    -- tier is calm Legendary only for colour and sound, SS3; a secret is a Compy-sized silly find next to the others). Basis by CLASS exactly as
+    -- SZ1: Ground height 6.6, Fly and Water bulk 5.55 (the Penguin is Water, so bulk; the Budgiesaurus is Fly, bulk).
+    -- measured = false: no mesh exists yet, so the box, `scale` (target / about 3 studs, the generator normalisation, Compy 2.2) and the head numbers are DESIGN
+    -- ESTIMATES with bird proportions. A secret species with a filled model slot (SecretSpeciesConfig.assetId) MUST have measured = true,
+    -- i.e. its row re-read from the Studio bounding box like the 22 (tools/verify_scale_ladder.py fails otherwise).
+    secret = {
+        order = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus"}, -- Shared/SecretSpeciesConfig.Order
+        species = {
+            chickosaurus = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 4.00, height = 6.60, length = 5.80, snout = 2.90, headLength = 1.28, measured = false},
+            pigeon = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.70, height = 6.60, length = 6.30, snout = 3.15, headLength = 1.39, measured = false},
+            dodo = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 5.30, height = 6.60, length = 6.50, snout = 3.25, headLength = 1.43, measured = false},
+            duck = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.90, height = 6.60, length = 6.70, snout = 3.35, headLength = 1.47, measured = false},
+            penguin = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 4.40, height = 6.60, length = 5.89, snout = 2.95, headLength = 1.30, measured = false},
+            budgiesaurus = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 6.40, height = 5.20, length = 5.14, snout = 2.57, headLength = 1.13, measured = false},
+            foxosaurus = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.40, height = 6.60, length = 8.70, snout = 4.35, headLength = 1.91, measured = false},
+        },
+    },
 }
 
 -- ---------------------------------------------------------------- the size rule (BD-232)
@@ -156,9 +176,18 @@ function ScaleLadder.targetSize(basis: string, tier: number): number
     return top / s.growthPerTier ^ (s.topTier - tier)
 end
 
+-- The size row of a species: one of the 22 shipped species, else one of the seven secrets (BD-606), else nil. The ONE lookup that HitSize and
+-- MouthReach use, so a secret species is sized by the very same rules as the others.
+function ScaleLadder.dinoRow(speciesId: any): any?
+    if typeof(speciesId) ~= "string" then return nil end
+    local row = (ScaleLadder.Dino.species :: any)[speciesId]
+    if row ~= nil then return row end
+    return (ScaleLadder.Dino.secret.species :: any)[speciesId]
+end
+
 -- Height of a species at a drawn scale (the low-poly model scales uniformly with the dino).
 function ScaleLadder.dinoHeight(speciesId: string, scale: number): number
-    local row = ScaleLadder.Dino.species[speciesId]
+    local row = ScaleLadder.dinoRow(speciesId)
     return if row then row.height * scale else 0
 end
 

@@ -172,6 +172,18 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | spinosaurus | 5 | height | 9.66 | 4.02 | 5.53 x 9.66 x 12.06 | MEASURED | 14.7 | 19.3 | 29.0 | 38.6 | 46.4 |
 | therizinosaurus | 4 | height | 8.78 | 2.56 | 4.91 x 8.78 x 10.24 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
 
+**Secret species (BD-606, docs/115 SS8; behind `SecretSpeciesEnabled`, off).** Sized by the same rule as tier 1 (Compy-sized); 0 of 7 are measured. A row stays an ESTIMATE (design box, bird proportions) until its mesh exists; a secret whose model slot is filled must be MEASURED.
+
+| Secret species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source |
+| --- | ---: | --- | ---: | ---: | --- | --- |
+| chickosaurus | 1 | height | 6.60 | 2.2 | 4.00 x 6.60 x 5.80 | ESTIMATE |
+| pigeon | 1 | height | 6.60 | 2.2 | 3.70 x 6.60 x 6.30 | ESTIMATE |
+| dodo | 1 | height | 6.60 | 2.2 | 5.30 x 6.60 x 6.50 | ESTIMATE |
+| duck | 1 | height | 6.60 | 2.2 | 3.90 x 6.60 x 6.70 | ESTIMATE |
+| penguin | 1 | bulk | 5.55 | 1.85 | 4.40 x 6.60 x 5.89 | ESTIMATE |
+| budgiesaurus | 1 | bulk | 5.55 | 1.85 | 6.40 x 5.20 x 5.14 | ESTIMATE |
+| foxosaurus | 1 | height | 6.60 | 2.2 | 3.40 x 6.60 x 8.70 | ESTIMATE |
+
 Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Size rule: growth 1.1 per tier, tolerance 2%, height tier 1 = 6.6, bulk top 8.12, length top 10.41.
 
 **World, food and hub (height in studs unless stated).**

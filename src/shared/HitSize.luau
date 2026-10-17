@@ -25,8 +25,7 @@ local function finite(v: any, fallback: number): number
 end
 
 local function rowOf(speciesId: any): any?
-    if typeof(speciesId) ~= "string" then return nil end
-    local row = (ScaleLadder.Dino.species :: any)[speciesId]
+    local row = ScaleLadder.dinoRow(speciesId) -- BD-606: the 22 shipped species, then the seven secrets
     return if row and typeof(row.width) == "number" and typeof(row.length) == "number" then row else nil
 end
 

@@ -124,6 +124,34 @@ function Secret.resolve(reward: any): string?
     return id :: string
 end
 
+-------------------------------------------------------------------- Equip (BD-606, docs/115 SS7)
+-- A found secret can be EQUIPPED and played, but it is never written into `equippedSpeciesId`: Build 020 refuses a profile whose equipped
+-- species it does not know (SchemaError, RB1), so the stored pair stays a species Build 020 knows (the fallback below, with no variant key)
+-- and the secret lives in the ADDITIVE record `profile.equippedSecret = {speciesId, variantKey?}`. Build 020 ignores the record (and plays
+-- the fallback dino); the current build honours it only while the flag is on, the model slot is filled, the profile still owns the secret and
+-- the stored species is still the fallback (a re-equip made by an older build wins).
+Secret.EquipFallback = "compy"
+
+-- May a request equip this species id right now? (the flag is the caller's: it passes Config.SecretSpeciesEnabled)
+function Secret.canEquip(speciesId: any, enabled: any): boolean
+    return enabled == true and Secret.isSecret(speciesId) and Secret.modelReady(speciesId)
+end
+
+-- The record stored beside the fallback pair.
+function Secret.equipRecord(speciesId: string, variantKey: string?): { speciesId: string, variantKey: string? }
+    return { speciesId = speciesId, variantKey = variantKey }
+end
+
+-- The equip a stored profile asks for: (secret id, variant key or nil), or nil when there is none or it cannot be honoured (not a secret,
+-- model slot empty, junk variant key, or the stored species is no longer the fallback). Ownership is the caller's check.
+function Secret.readEquip(record: any, storedSpeciesId: any): (string?, string?)
+    if typeof(record) ~= "table" or storedSpeciesId ~= Secret.EquipFallback then return nil, nil end
+    local id, key = record.speciesId, record.variantKey
+    if not Secret.isSecret(id) or not Secret.modelReady(id) then return nil, nil end
+    if key ~= nil and (typeof(key) ~= "string" or #key < 1 or #key > 160) then return nil, nil end
+    return id :: string, key :: string?
+end
+
 -- A fresh collection entry for a secret species, created lazily on its first hatch (never in a new profile).
 function Secret.newEntry(): { base: number, gold: number, diamond: number, events: { [string]: number }, variants: { [string]: any } }
     return { base = 0, gold = 0, diamond = 0, events = {}, variants = {} }

@@ -6,6 +6,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 
 def module(path):
@@ -75,7 +78,7 @@ def script():
 
 
 def static_checks():
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    repo = profile_sources.repository_text()
     assert 'ProgressionRules.backfillDiscovered(profileValue)' in repo, 'backfill on load'
     assert 'ProgressionRules.discover(profileValue,chest.genes,mutationId)' in repo, 'hatch records discovery'
     assert 'ProgressionRules.discover(nextProfile' in repo, 'fusion result records discovery'

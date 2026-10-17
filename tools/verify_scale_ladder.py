@@ -51,6 +51,21 @@ MEASURED = {
     'spinosaurus': (5.53, 9.66, 12.06),
     'therizinosaurus': (4.91, 8.78, 10.24),
 }
+# BD-606 (docs/115 SS8): the seven SECRET species (Shared/SecretSpeciesConfig). No mesh exists yet, so these boxes (width, height, length at spawn)
+# are DESIGN ESTIMATES with bird proportions, the very numbers in ScaleLadder.Dino.secret.species (drift-checked below). When a secret gets its
+# mesh, its row is re-read from the Studio bounding box, this table is updated and the row's `measured` turns true. Also used by the camera,
+# hit size and mouth reach verifiers, so the secrets are covered by every sizing rule with their model slot empty or filled.
+SECRET_BOXES = {
+    'chickosaurus': (4.00, 6.60, 5.80),
+    'pigeon': (3.70, 6.60, 6.30),
+    'dodo': (5.30, 6.60, 6.50),
+    'duck': (3.90, 6.60, 6.70),
+    'penguin': (4.40, 6.60, 5.89),
+    'budgiesaurus': (6.40, 5.20, 5.14),
+    'foxosaurus': (3.40, 6.60, 8.70),
+}
+SECRET_SIZE_TIER = 1  # SS8: every secret is sized as a tier 1 (Compy-sized) find
+ALL_BOXES = {**MEASURED, **SECRET_BOXES}  # the 22 shipped species + the 7 secrets
 TOLERANCE = 0.02  # BD-232: allowed relative gap between a species size and the 10%-per-tier rule
 STAGE_COLUMNS = ('run', 'mid', 'long', 'max', 'bigMax')
 
@@ -75,6 +90,24 @@ local ids = {}
 for id in LowPoly do ids[#ids + 1] = id end
 table.sort(ids)
 out("lowpoly.ids", table.concat(ids, ","))
+-- BD-606: the secret roster, its class, its model slot and whether it is ready (a filled, positive whole asset id)
+out("secret.order", table.concat(Secret.Order, ","))
+local ready = Secret.readyIds()
+out("secret.ready", table.concat(ready, ","))
+for _, id in Secret.Order do
+    local s = Secret.Species[id]
+    out("secretcfg." .. id .. ".class", s.class)
+    out("secretcfg." .. id .. ".assetId", s.assetId)
+    out("secretcfg." .. id .. ".ready", Secret.modelReady(id))
+    local entry = LowPoly[id]
+    out("secretlow." .. id .. ".present", entry ~= nil)
+    if entry then
+        out("secretlow." .. id .. ".assetId", entry.assetId)
+        out("secretlow." .. id .. ".scale", entry.scale)
+        out("secretlow." .. id .. ".tier", entry.tier)
+        out("secretlow." .. id .. ".class", entry.class)
+    end
+end
 out("order", table.concat(Config.SpeciesOrder, ","))
 for id, row in LowPoly do
     out("species." .. id .. ".scale", row.scale)
@@ -145,6 +178,7 @@ def script():
         + 'local LowPoly=' + wrapped('src/shared/LowPolyDinoAssets.luau') + '\n'
         + 'local Hub=' + wrapped('src/shared/HubScaleRules.luau') + '\n'
         + 'local Config=' + wrapped('src/shared/Config.luau') + '\n'
+        + 'local Secret=' + wrapped('src/shared/SecretSpeciesConfig.luau') + '\n'
         + 'local Kit=' + wrapped('src/shared/WorldKitData.luau') + '\n'
         + 'local Biome=' + wrapped('src/shared/BiomePlacement.luau') + '\n'
         + 'local Gen=' + wrapped('src/shared/WorldGeneratedMeshes.luau') + '\n'
@@ -190,8 +224,10 @@ def check_drift(ladder, code, errors):
     ladder_order = ladder['Dino.order.1'] and [ladder[f'Dino.order.{i}'] for i in range(1, 23)]
     if ','.join(ladder_order) != code['order']:
         errors.append('DRIFT Dino.order: ladder species order differs from Config.SpeciesOrder')
-    if code['lowpoly.ids'] != ','.join(sorted(ladder_order)):
-        errors.append('DRIFT species: LowPolyDinoAssets lists different species than the ladder')
+    # BD-606: LowPolyDinoAssets lists the 22 shipped species, plus exactly the secret species whose model slot is filled (never an invented entry)
+    ready = [x for x in code['secret.ready'].split(',') if x]
+    if code['lowpoly.ids'] != ','.join(sorted(ladder_order + ready)):
+        errors.append('DRIFT species: LowPolyDinoAssets lists different species than the ladder (the 22 plus the secrets with a filled model slot)')
     for sid in ladder_order:
         same(f'Dino.species.{sid}.scale', f'species.{sid}.scale')
     for key in ('Dino.hubScale', 'Dino.maxScale', 'Dino.bigMultiplier', 'Dino.collider.width', 'Dino.collider.length',
@@ -314,6 +350,68 @@ def check_sizing(ladder, code, errors):
         top_v = {'bulk': g('Sizing.bulk.top'), 'length': g('Sizing.length.top')}.get(basis)
         if top_v and size_of(basis, box[sid]) > top_v * (1 + tol):
             errors.append(f'SIZING {sid} {basis} {size_of(basis, box[sid]):.2f} is above the T-Rex top {top_v}')
+
+
+def check_secret(ladder, code, errors):
+    """BD-606 (docs/115 SS8): the seven secret species follow the SZ1 rule with a Compy-sized tier 1, their rows equal SECRET_BOXES, and a
+    secret with a filled model slot has a LowPolyDinoAssets entry that equals its ladder row and a MEASURED box (never an estimate in the game)."""
+    g = lambda k: num(ladder, k)
+    growth, top = g('Sizing.growthPerTier'), int(g('Sizing.topTier'))
+    rule = {
+        'height': lambda t: g('Sizing.height.tier1') * growth ** (t - 1),
+        'bulk': lambda t: g('Sizing.bulk.top') / growth ** (top - t),
+    }
+    tol = g('Sizing.tolerance')
+    order = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 8) if f'Dino.secret.order.{i}' in ladder]
+    if ','.join(order) != code['secret.order']:
+        errors.append('SECRET ScaleLadder.Dino.secret.order differs from SecretSpeciesConfig.Order')
+    if sorted(order) != sorted(SECRET_BOXES):
+        errors.append('SECRET the verifier SECRET_BOXES list differs from the ladder secret roster')
+    ready = {x for x in code['secret.ready'].split(',') if x}
+    expect_basis = {'Fly': 'bulk', 'Water': 'bulk'}
+    for sid in order:
+        key = f'Dino.secret.species.{sid}'
+        cls = code[f'secretcfg.{sid}.class']
+        tier, basis, target = int(g(f'{key}.tier')), ladder[f'{key}.basis'], g(f'{key}.target')
+        if tier != SECRET_SIZE_TIER:
+            errors.append(f'SECRET {sid}: size tier {tier}, SS8 says {SECRET_SIZE_TIER} (Compy-sized)')
+        if basis != expect_basis.get(cls, 'height'):
+            errors.append(f'SECRET {sid}: basis {basis} does not fit class {cls} (Ground height, Fly and Water bulk, SZ1)')
+        want = rule[basis](tier)
+        if not close(target, want, 0.006):
+            errors.append(f'SECRET {sid}: target {target} is not the rule value {want:.3f} for {basis} tier {tier}')
+        box = tuple(g(f'{key}.{k}') for k in ('width', 'height', 'length'))
+        if sid in SECRET_BOXES and any(not close(x, y, 1e-9) for x, y in zip(box, SECRET_BOXES[sid])):
+            errors.append(f'SECRET {sid}: ladder box {box} differs from SECRET_BOXES {SECRET_BOXES[sid]} (update both when a mesh is measured)')
+        got = size_of(basis, box)
+        if abs(got - want) > tol * want:
+            errors.append(f'SECRET {sid} ({basis}, tier {tier}): size {got:.2f} is more than {tol:.0%} from the rule {want:.2f}')
+        length, snout, head = box[2], g(f'{key}.snout'), g(f'{key}.headLength')
+        if abs(snout - length / 2) > 0.03 or not 0 < head <= length:
+            errors.append(f'SECRET {sid}: snout {snout} / head length {head} out of range for a body {length} long')
+        scale = g(f'{key}.scale')
+        if not 0.5 <= scale <= 6:
+            errors.append(f'SECRET {sid}: scale {scale} outside the sane range 0.5 to 6')
+        measured = ladder[f'{key}.measured'] == 'true'
+        has_model = sid in ready
+        if has_model != (code[f'secretcfg.{sid}.ready'] == 'true'):
+            errors.append(f'SECRET {sid}: ready list disagrees with modelReady')
+        if has_model and not measured:
+            errors.append(f'SECRET {sid}: the model slot is filled but the ladder row is still an ESTIMATE; measure the real mesh in Studio (docs/149 s3) and set measured = true')
+        if measured and not has_model:
+            errors.append(f'SECRET {sid}: the row says measured but the model slot is empty')
+        if code[f'secretlow.{sid}.present'] == 'true':
+            if not has_model:
+                errors.append(f'SECRET {sid}: LowPolyDinoAssets has an entry but the SecretSpeciesConfig model slot is empty (never invent ids)')
+            else:
+                if code[f'secretlow.{sid}.assetId'] != code[f'secretcfg.{sid}.assetId']:
+                    errors.append(f'SECRET {sid}: LowPolyDinoAssets assetId {code[f"secretlow.{sid}.assetId"]} differs from the SecretSpeciesConfig slot {code[f"secretcfg.{sid}.assetId"]}')
+                if not close(num(code, f'secretlow.{sid}.scale'), scale, 1e-9):
+                    errors.append(f'SECRET {sid}: LowPolyDinoAssets scale {code[f"secretlow.{sid}.scale"]} differs from the ladder {scale}')
+                if int(num(code, f'secretlow.{sid}.tier')) != tier or code[f'secretlow.{sid}.class'] != cls:
+                    errors.append(f'SECRET {sid}: LowPolyDinoAssets tier/class differ from the ladder tier {tier} / class {cls}')
+        elif has_model:
+            errors.append(f'SECRET {sid}: the model slot is filled but LowPolyDinoAssets has no entry (the hatch would show no dino)')
 
 
 def check_wiring(errors):
@@ -466,6 +564,17 @@ def render(ladder):
         dims = ' x '.join(f'{g(f"Dino.species.{sid}.{k}"):.2f}' for k in ('width', 'height', 'length'))
         add(f'| {sid} | {int(g(f"Dino.species.{sid}.tier"))} | {ladder[f"Dino.species.{sid}.basis"]} | {g(f"Dino.species.{sid}.target"):.2f} | {fmt(g(f"Dino.species.{sid}.scale"))} | {dims} | {src} | {cells} |')
     add('')
+    sec = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 8)]
+    n_sec = sum(1 for sid in sec if ladder[f'Dino.secret.species.{sid}.measured'] == 'true')
+    add(f'**Secret species (BD-606, docs/115 SS8; behind `SecretSpeciesEnabled`, off).** Sized by the same rule as tier 1 (Compy-sized); {n_sec} of {len(sec)} are measured. A row stays an ESTIMATE (design box, bird proportions) until its mesh exists; a secret whose model slot is filled must be MEASURED.')
+    add('')
+    add('| Secret species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source |')
+    add('| --- | ---: | --- | ---: | ---: | --- | --- |')
+    for sid in sec:
+        k = f'Dino.secret.species.{sid}'
+        dims = ' x '.join(f'{g(f"{k}.{x}"):.2f}' for x in ('width', 'height', 'length'))
+        add(f'| {sid} | {int(g(f"{k}.tier"))} | {ladder[f"{k}.basis"]} | {g(f"{k}.target"):.2f} | {fmt(g(f"{k}.scale"))} | {dims} | {"MEASURED" if ladder[f"{k}.measured"] == "true" else "ESTIMATE"} |')
+    add('')
     add('Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): ' + ', '.join(
         f'{ladder[f"Dino.stages.{i}.id"]} x{fmt(g(f"Dino.stages.{i}.scale"))} (growth {fmt(g(f"Dino.stages.{i}.growth"))}{", BIG" if ladder[f"Dino.stages.{i}.big"] == "true" else ""})'
         for i in range(1, 7)) + f'. Hub scale {fmt(g("Dino.hubScale"))}. BIG multiplier {fmt(g("Dino.bigMultiplier"))}. Torso collider {fmt(g("Dino.collider.width"))} wide x {fmt(g("Dino.collider.length"))} long, top {fmt(g("Dino.collider.topPerScale"))} x scale above the floor. Size rule: growth {fmt(g("Sizing.growthPerTier"))} per tier, tolerance {g("Sizing.tolerance"):.0%}, height tier 1 = {fmt(g("Sizing.height.tier1"))}, bulk top {fmt(g("Sizing.bulk.top"))}, length top {fmt(g("Sizing.length.top"))}.')
@@ -528,6 +637,7 @@ def main():
     check_drift(ladder, code, errors)
     check_wiring(errors)
     check_sizing(ladder, code, errors)
+    check_secret(ladder, code, errors)
     check_order(ladder, errors)
     check_doc(ladder, args.write_doc, errors)
     if errors:

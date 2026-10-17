@@ -47,6 +47,10 @@ This is not persistent migration or new fusion-gameplay acceptance; use Kanban f
 unpublished-memory-only 10 → 1 Gold transaction over the BD-060 sidecar, with
 offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
 
+## Where the profile transactions live (BD-607)
+
+[ProfileRepository split](150-profile-repository-split.md): `src/server/ProfileRepository.luau` keeps the store, lease, retry, write budget, load / migration and save path, and installs the transaction groups from `ProfileEggs`, `ProfileFusion`, `ProfileObjectives`, `ProfileGifts`, `ProfileSkins`, `ProfileShop`, `ProfileCollection`, `ProfilePrefs` and `ProfileTestGrants` (same public API, function bodies unchanged). Verifiers that read the source use `tools/profile_sources.py`; `tools/verify_profile_golden.py` proves the stored profile did not change. The same document holds the size audit of the rest of `src/` (15 largest files, locals, the module size guard over server, client and shared, BD-623).
+
 ## Historical documents: keep for traceability, not as active instructions
 
 Do **not** delete build snapshots or test evidence just to make them look current. Retain their specific facts and outputs, with clear historical notices. Older strings like "this is the current build", "persistence is not implemented", "GitHub main is Build 013", "three-species only" and "60-second newly earned egg timing" are scoped to their original dates/builds.
