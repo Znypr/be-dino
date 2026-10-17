@@ -507,11 +507,20 @@ render=function(name: string)
         local buyY=cardsHeight-targetHeight-10
         if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
         if require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab) then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
-        for i,tab in require(Shared.FtueP1).shopTabs(num("AccountLevel")) do
-            button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end).TextSize=20
+        local ShopTiles=require(script.Parent.ShopTiles) -- BD-047: tab icons, green-spotted egg, landing tiles; each shows only when its image id exists
+        local shopTabs=require(Shared.FtueP1).shopTabs(num("AccountLevel"))
+        if ShopTiles.landing then
+            ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals")),
+                onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end})
+            return
+        end
+        for i,tab in shopTabs do
+            local tabButton=button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
+            tabButton.TextSize=20
+            ShopTiles.decorateTab(tabButton,tab,tabsHeight)
         end
         if cosmeticTab=="eggs" then
-            art(body,"egg",20,cardsY+12,220)
+            if not ShopTiles.eggProduct(body,20,cardsY+12,220) then art(body,"egg",20,cardsY+12,220) end
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
@@ -1193,7 +1202,7 @@ rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
 for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"SHOP","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
-    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if require(script.Parent.HubTravelClient).press(entry[3]) then return end if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
+    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if require(script.Parent.HubTravelClient).press(entry[3]) then return end if entry[3]=="fusion" then openFusion() else if entry[3]=="auras" then require(script.Parent.ShopTiles).enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) end open(entry[3]) end end)
     b.TextSize=20
     art(b,if entry[3]=="auras" then "amber" else (NavigationArtwork[entry[3]] or entry[2]),5,6,40) -- BD-046: SHOP wears the crystal icon
     b.Text=""
@@ -1212,7 +1221,7 @@ updateNavigation=function()
     end
 end
 updateNavigation()
-require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=open,openFusion=openFusion,notify=notify,close=close}) -- BD-288: no-op while Config.CaveHub is false
+require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=function(name) if name=="auras" then require(script.Parent.ShopTiles).enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) end open(name) end,openFusion=openFusion,notify=notify,close=close}) -- BD-288: no-op while Config.CaveHub is false
 require(script.Parent.FtueRail).attach(rail,navigationButtons) -- BD-368: first run: only POTIONS, SETTINGS and a MENU chip until the first egg
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
@@ -1225,7 +1234,7 @@ art(crystalHUD,"amber",6,4,40)
 local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
 do local crystalOpen=Instance.new("TextButton") -- BD-046: tapping the crystal count opens the same Shop as the SHOP button
     crystalOpen.Name,crystalOpen.Text,crystalOpen.BackgroundTransparency,crystalOpen.Size,crystalOpen.ZIndex,crystalOpen.Parent="OpenShop","",1,UDim2.fromScale(1,1),crystalHUD.ZIndex+5,crystalHUD
-    crystalOpen.Activated:Connect(function() Sfx.play("ui_click") if require(script.Parent.HubTravelClient).press("auras") then return end open("auras") end) end
+    crystalOpen.Activated:Connect(function() Sfx.play("ui_click") if require(script.Parent.HubTravelClient).press("auras") then return end require(script.Parent.ShopTiles).enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) open("auras") end) end
 local crystalValue=Instance.new("NumberValue")
 crystalValue.Value=num("Crystals")
 crystalText.Text=math.round(crystalValue.Value).." Crystals"

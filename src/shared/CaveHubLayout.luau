@@ -239,6 +239,12 @@ local KINDS: {[string]: any} = {
     dress_rock_small = {3, 2.2, 2.6, 68, "rocks"}, dress_rock_mossy = {4.6, 3.6, 3.6, 262, "rocks"}, dress_rock_medium = {5, 3.6, 4.2, 278, "rocks"},
     dress_bush = {5.4, 3.6, 3.6, 340, "rocks", walk = true}, dress_log = {7.9, 2.8, 3, 199, "rocks"}, dress_stump = {6.4, 5.3, 2.7, 199, "rocks"},
     dress_crystal = {2.4, 3.2, 2.4, 1500, "rocks", walk = true},
+    -- BD-296 wall rock forms + gate arch frame (Blender, assets/blender/world/fbx_v3/cave_*_v3.fbx; docs/140 "Cave wall rock forms"). w, h, d = the mesh's
+    -- own size (x, up, depth with the wall at the back), tris = measured. Slots in CaveHubProps.Slots: the rows exist always but place NOTHING until an id
+    -- is pasted into WorldGeneratedMeshes.Props, so the cave is exactly as today until the owner uploads. No colliders (they would exist without the mesh).
+    cave_form_slabs = {15.01, 12.68, 6.36, 336, "rocks"}, cave_form_buttress = {12.5, 18.66, 7.82, 380, "rocks"}, cave_form_ledge = {17.49, 11.25, 8.77, 308, "rocks"},
+    cave_form_tumble = {18.44, 9.61, 8.65, 364, "rocks"}, cave_form_fins = {10.85, 19.2, 7.57, 350, "rocks"}, cave_form_terrace = {20.44, 7.58, 7.83, 362, "rocks"},
+    cave_gate_frame = {39.79, 25.79, 9.77, 456, "station", hang = true}, -- hang = true: a wall piece set into the gate wall (its back is inside the rock), not a floor prop
 }
 CaveHubLayout.Kinds = KINDS
 
@@ -782,6 +788,125 @@ function CaveHubLayout.get(): any
         end
         jamb(0, gateS.z - 22, -1, 1, 0, 1, 14.5)
         jamb(0, gateS.z - 22, 1, 1, 0, 2, 14.5)
+
+        -- 4. Wall rock forms (BD-296, docs/140): large layered slabs, buttresses and overhang ledges (8-20 studs) that stand with their back against the
+        -- cave wall to break up the flat Concrete. Own random stream (nothing above moves), placed last so every earlier row is unchanged. The rows exist
+        -- always; CaveProps places a mesh only once its id is pasted into WorldGeneratedMeshes.Props (empty today = the cave looks exactly as before).
+        -- Rules: only in the rooms (every box keeps PathHalf + FORM_LANE of each walking path, off pads, ledges, the lava basin and falls, the gate lane,
+        -- the lamp niches, the Fame boards, the scatter rocks and the dressing, and off each other), the back stays against the wall (back corners no more than FORM_BACK buried and 2 studs off
+        -- the wall surface), the front stays on the floor, and the form fits under the dome. Footprint = oriented box {x, z, yaw, w, d}.
+        local FORM_ORDER = {"cave_form_slabs", "cave_form_buttress", "cave_form_ledge", "cave_form_tumble", "cave_form_fins", "cave_form_terrace"}
+        local FORM_TARGET, FORM_TRIES, FORM_LANE, FORM_BACK, FORM_APART = 12, 4000, 4.0, 5.5, 16
+        local fseed = 3301
+        local function frand(): number
+            fseed = (fseed * 1103515245 + 12345) % 2147483648
+            return fseed / 2147483648
+        end
+        local lamps = lampSpots()
+        local boards = CaveHubLayout.boardSpots()
+        local forms: {any} = {}
+        local function corners(b: any): {{number}}
+            local c, s = math.cos(b.yaw), math.sin(b.yaw)
+            local ax, az = {c, -s}, {s, c} -- local x / z axes in world (boxDist convention)
+            local out = {}
+            for _, sx in {-1, 0, 1} do
+                for _, sz in {-1, 0, 1} do
+                    out[#out + 1] = {b.x + ax[1] * sx * b.w / 2 + az[1] * sz * b.d / 2, b.z + ax[2] * sx * b.w / 2 + az[2] * sz * b.d / 2}
+                end
+            end
+            return out
+        end
+        local function formFree(b: any, h: number): string?
+            for _, p in corners(b) do
+                if p[2] < gateS.z - 16 and math.abs(p[1]) < 24 then return "gate" end
+                if p[2] > FALL.z - 14 then return "fall" end
+            end
+            for _, s in stations do
+                if boxDist(s.x, s.z, b) < s.r + 2 then return "station" end
+            end
+            for _, pa in built.paths do
+                for i = 0, 14 do
+                    local t = i / 14
+                    if boxDist(pa.ax + (pa.bx - pa.ax) * t, pa.az + (pa.bz - pa.az) * t, b) < pa.half + FORM_LANE then return "path" end
+                end
+            end
+            for _, lg in built.ledges do
+                if boxDist(lg.x, lg.z, b) < math.max(lg.w, lg.d) / 2 + 2 then return "ledge" end
+            end
+            if boxDist(POOL.x, POOL.z, b) < POOL.r + 8 then return "pool" end
+            for _, q in placed do
+                if boxDist(q[1], q[2], b) < q[3] * 0.8 + 0.5 then return "placed" end
+            end
+            for _, q in dressed do
+                if boxDist(q[1], q[2], b) < q[3] * 0.5 + 0.3 then return "dressed" end
+            end
+            for _, wp in lamps do
+                if boxDist(wp[1], wp[2], b) < 6 then return "lamp" end
+            end
+            for _, bd in boards do
+                if boxDist(bd.x, bd.z, b) < 14 then return "board" end
+            end
+            for _, f in forms do
+                for _, p in corners(f) do
+                    if boxDist(p[1], p[2], b) < 1.5 then return "formcorner" end
+                end
+                for _, p in corners(b) do
+                    if boxDist(p[1], p[2], f) < 1.5 then return "formcorner2" end
+                end
+                if dist(f.x, f.z, b.x, b.z) < FORM_APART then return "apart" end
+            end
+            return nil
+        end
+        built.formWhy = {}
+        local formKey = 0
+        local tries = 0
+        while #forms < FORM_TARGET and tries < FORM_TRIES do
+            tries += 1
+            local key = FORM_ORDER[formKey % #FORM_ORDER + 1]
+            local k = KINDS[key]
+            local w, h, d = k[1], k[2], k[3]
+            local rx, rz = (frand() * 2 - 1) * CaveHubLayout.BoxHalfX, (frand() * 2 - 1) * CaveHubLayout.BoxHalfZ
+            if (caveField(rx, rz)) < 1 then continue end
+            local wx, wz, nx, nz = toWall(rx, rz, 1.0)
+            if not (wx and wz and nx and nz) then continue end
+            -- pivot = bbox bottom centre; the back plane lies 1.5 studs behind the wall point (sd 1.0), so it is buried 0.5 studs in the wall
+            local cx, cz = wx + nx * (d / 2 - 1.5), wz + nz * (d / 2 - 1.5)
+            local b = {x = cx, z = cz, yaw = yawTo(nx, nz), w = w, d = d}
+            local tx, tz = -nz, nx
+            local ok, edge = true, "edge"
+            for _, sgn in {-1, 0, 1} do -- back plane stays on the wall along the whole width
+                local bsd = caveField(wx - nx * 1.5 + tx * sgn * w / 2, wz - nz * 1.5 + tz * sgn * w / 2)
+                if bsd < -FORM_BACK or bsd > 2.5 then ok, edge = false, "back" end
+                if not insideFloorLocal(wx - nx * 1.5 + nx * d * 0.9 + tx * sgn * w / 2, wz - nz * 1.5 + nz * d * 0.9 + tz * sgn * w / 2, 1.0) then ok, edge = false, "front" end
+            end
+            if ok and ceilingAbove(cx, cz) + 1.5 < h then ok, edge = false, "ceiling" end
+            local why = if ok then formFree(b, h) else edge
+            built.formWhy[why or "ok"] = (built.formWhy[why or "ok"] or 0) + 1
+            if ok and not why then
+                forms[#forms + 1] = b
+                addProp(key, cx, cz, b.yaw, 1, "rockform")
+                formKey += 1
+            end
+        end
+        built.formTries = tries
+    end
+
+    -- BD-296 gate arch frame (Blender stone arch with a keystone and two lantern hooks, docs/140): stands in the 30 wide mouth of the gate. The
+    -- niche of the mouth is cut GateCut (6) studs past the wall, so the frame's block front sits 1 stud in front of the wall surface at the centre
+    -- line and its back (7 studs behind the front) lies in the niche and the rock behind it. Faces the Heart side (yaw pi: the mesh front is -Z at yaw 0). Hooks hang at x = +-16.5, 10.4 over the
+    -- floor; CaveLightingRules.archLight() puts the one warm PointLight between them. Row exists always, places nothing until its id is pasted.
+    do
+        local g = station("gate")
+        local frontZ = g.z - 22
+        for i = 0, 140 do
+            local zz = g.z - 12 - i * 0.5
+            if (caveField(0, zz)) <= 1.0 then frontZ = zz break end
+        end
+        local k = KINDS.cave_gate_frame
+        local pz = frontZ - 2.19 -- the block fronts stand 2.19 studs in front of the bbox-centre pivot (tools/blender/build_cave_rockforms_v3.py report); the hooks reach out to the bbox front
+        addProp("cave_gate_frame", 0, pz, math.pi, 1, "gatearch")
+        built.gateArch = {x = 0, z = pz, frontZ = frontZ, yaw = math.pi, w = k[1], h = k[2], d = k[3], hookX = 16.5, hookY = CaveHubLayout.FloorY + 10.4,
+            lightY = CaveHubLayout.FloorY + 13, lightZ = frontZ + 3.5}
     end
 
     -- invisible colliders: one per flagged prop, plus the lava fence and the gate pillars

@@ -1,7 +1,7 @@
 """Session 1 smoke (docs/125, BD-317): offline end-to-end simulation of the first friends playtest.
 
 Builds the generated-place config with the PLAYTEST profile rules (tools/release_profiles.py applied to src/shared/Config.luau,
-plus the owner's playtest values CaveHub = true and FastTravelPerk = true), then runs the REAL server modules (ProfileRepository,
+whose real values are used as they are, including FastTravelPerk = false), then runs the REAL server modules (ProfileRepository,
 RunLifecycle, LeaveCoordinator, RewardMath, PrivateState, ChestService, RareHatchService, TelemetryService, HubTravelService
 and the pure shared rules) inside the verify_load virtual-clock harness (mock DataStore with latency, same as
 tools/verify_multiplayer_sim.py). tools/session1_smoke.luau is the scenario:
@@ -9,9 +9,12 @@ tools/verify_multiplayer_sim.py). tools/session1_smoke.luau is the scenario:
   4 players join and each equips a species; 5-minute runs of food pickups at the docs/119 rate (food only, nobody eats anybody);
   one player is eaten (eggs kept), one exits home; each run settles exactly once; about 15 eggs each are revealed one by one;
   a rare hatch goes through RareHatchService (celebration, one rate-limited announcement); nests incl. overflow to crystals;
-  crystals buy an aura and the Fast travel perk, HubTravel then works; goals panel counts; telemetry events; a second run;
+  crystals buy an aura; the Fast travel perk is refused (the playtest ships FastTravelPerk false) and rail travel is free;
+  goals panel counts; telemetry events; a second run;
   a rejoin keeps perk, nests, crystals and the UserId-keyed cooldowns. It asserts invariants and prints a short report.
 
+Not modelled: LowPolyDinos and ClassMovementEnabled are true in the playtest Config and are passed to the server modules,
+but nothing here loads dino models or moves a Humanoid, so neither is exercised (the run prints this too).
 Limits: mocks prove transaction, ordering and rule behaviour only, not Roblox networking, physics, real DataStore latency or
 a phone (docs/111 s6). Predation itself (PredationService) needs a physics world: the eaten player ends through the same
 RunLifecycle.tryEnd(..., "Predation") call it uses.
@@ -49,6 +52,10 @@ STATIC = [
 ]
 
 
+# On in the playtest profile, but nothing in the scenario loads dino models or moves a Humanoid.
+NOT_MODELLED = ("LowPolyDinos", "ClassMovementEnabled")
+
+
 def lua_literal(value) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -59,11 +66,14 @@ def lua_literal(value) -> str:
 
 def playtest_overrides() -> tuple[dict, list[str]]:
     source = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
-    _, report = release_profiles.apply_profile(source, "playtest")
+    rewritten, report = release_profiles.apply_profile(source, "playtest")
     overrides = dict(report.applied)
+    # Real playtest values only. The scenario also needs to know the perk flag, which the profile only requires false:
+    # read it from the profile-applied Config instead of forcing it (the playtest build does not enable it).
+    perk = release_profiles.config_entries(rewritten).get("FastTravelPerk")
+    overrides["FastTravelPerk"] = bool(perk[-1][1]) if perk else False
     # docs/125 / owner 2026-10-16: the cave hub is in session 1. Only add what the profile does not already set.
-    for key in ("CaveHub", "FastTravelPerk"):
-        overrides.setdefault(key, True)
+    overrides.setdefault("CaveHub", True)
     notes = [e for e in report.errors if "PlaytestUniverseId" not in e and "PlaytestPlaceId" not in e]
     return overrides, notes
 
@@ -142,6 +152,10 @@ def main(argv=None) -> int:
     total, failed = (int(x) for x in done[0].split("|")[1:3])
     shown = ("ReleaseProfile", "CaveHub", "FastTravelPerk", "RunTelemetryEnabled", "IdentityPersistentEnabled")
     print("Session 1 smoke report (playtest profile: " + ", ".join(f"{k}={v}" for k, v in sorted(overrides.items()) if k in shown) + ")")
+    unmodelled = [k for k in NOT_MODELLED if overrides.get(k) is True]
+    if unmodelled:
+        print("  NOT MODELLED by this smoke (on in the playtest build, never exercised here): " + ", ".join(unmodelled)
+              + ". Check them in Studio (docs/145 s5 steps 2 and 7).")
     for line in lines:
         if line.startswith("REPORT|"):
             print("  " + line[7:])

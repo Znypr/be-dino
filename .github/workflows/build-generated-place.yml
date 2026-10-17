@@ -81,7 +81,9 @@ jobs:
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_hub_scale.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
+          python tools/verify_lowpoly_views.py --runner /tmp/luau/luau
           python tools/verify_world_budget.py --runner /tmp/luau/luau
+          python tools/qa/phone_forecast.py --runner /tmp/luau/luau --check
           python tools/verify_world_overlap.py --runner /tmp/luau/luau
           python tools/verify_world_props.py --runner /tmp/luau/luau
           python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
@@ -143,6 +145,7 @@ jobs:
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
+          python tools/verify_potion_purchase.py --runner /tmp/luau/luau
           python tools/verify_ui_format.py --runner /tmp/luau/luau
           python tools/verify_weather.py --runner /tmp/luau/luau
           python tools/verify_env_polish.py --runner /tmp/luau/luau
@@ -154,6 +157,7 @@ jobs:
           python tools/verify_mutation_look.py --runner /tmp/luau/luau
           python tools/verify_mutation_badges.py
           python tools/verify_trail_icons.py
+          python tools/verify_shop_tiles.py --runner /tmp/luau/luau
           python tools/verify_fx.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau

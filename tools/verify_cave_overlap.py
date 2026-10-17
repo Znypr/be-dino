@@ -134,8 +134,26 @@ def check(runner, report=False):
             errors.append('dress %s (%.1f,%.1f) in the lava basin zone' % (a['key'], a['x'], a['z']))
         if a['z'] < gate[1] - 16 and abs(a['x']) < 24:
             errors.append('dress %s (%.1f,%.1f) in the gate lane' % (a['key'], a['x'], a['z']))
+    # BD-296 wall rock forms (docs/140): the 8-20 stud forms stand against the wall, so they keep the same lanes as the dressing with a wider margin on the
+    # paths (the forms are tall), and they never overlap the ferns / mushrooms / moss of the dressing either. The gate frame is a wall piece (hang = true in the layout):
+    # it sits IN the gate wall at the end of the gate lane, by design, and is checked in verify_cave_hub.py instead.
+    forms = [p for p in props if p['owner'] == 'rockform']
+    for a in forms:
+        for sg in paths:
+            if seg_dist_box(a, sg) < sg['half'] + 3.0:
+                errors.append('rockform %s (%.1f,%.1f) too close to path %s' % (a['key'], a['x'], a['z'], sg['id']))
+        for sid, (sx, sz, sr) in stations.items():
+            if obb_point_dist(a, sx, sz) < sr:
+                errors.append('rockform %s (%.1f,%.1f) on pad %s' % (a['key'], a['x'], a['z'], sid))
+        if obb_point_dist(a, px, pz) < pr + 5:
+            errors.append('rockform %s (%.1f,%.1f) in the lava basin zone' % (a['key'], a['x'], a['z']))
+        if a['z'] < gate[1] - 16 and abs(a['x']) < 24:
+            errors.append('rockform %s (%.1f,%.1f) in the gate lane' % (a['key'], a['x'], a['z']))
+        for d in dress:
+            if obb_overlap(a, d, 0.2):
+                errors.append('rockform %s (%.1f,%.1f) overlaps dressing %s (%.1f,%.1f)' % (a['key'], a['x'], a['z'], d['key'], d['x'], d['z']))
     if report:
-        print('solid props %d, clutter %d, paths %d, dress footprints %d' % (len(solid), len(props) - len(solid), len(paths), len(dress)))
+        print('solid props %d, clutter %d, paths %d, dress footprints %d, rock forms %d' % (len(solid), len(props) - len(solid), len(paths), len(dress), len(forms)))
     return errors, len(props)
 
 

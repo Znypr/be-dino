@@ -12,8 +12,8 @@ function Loader.load(): (number, number)
     folder.Name = LowPoly.FolderName
     folder.Parent = ReplicatedStorage
     local loaded, failed = 0, 0
-    for speciesId, info in Assets :: any do
-        if folder:FindFirstChild(speciesId) then continue end
+    local function loadOne(speciesId: string, info: any)
+        if folder:FindFirstChild(speciesId) then return end
         local container: Instance? = nil
         local ok, result = pcall(function()
             container = InsertService:LoadAsset(info.assetId)
@@ -40,6 +40,19 @@ function Loader.load(): (number, number)
             warn("[Be Dino] low-poly " .. speciesId .. " unavailable; keeping current visual: " .. tostring(result))
         end
     end
+    -- BD-381: the starter (compy) first, then every other species at once. One after the other took about 25 s, and every menu
+    -- preview or world dino built in that window showed the legacy model. The clients also wait for a pending template (LowPoly.pending).
+    local running = 0
+    if (Assets :: any).compy then loadOne("compy", (Assets :: any).compy) end
+    for speciesId, info in Assets :: any do
+        if speciesId == "compy" then continue end
+        running += 1
+        task.spawn(function()
+            loadOne(speciesId, info)
+            running -= 1
+        end)
+    end
+    while running > 0 do task.wait(0.1) end
     workspace:SetAttribute("LowPolyDinosLoaded", loaded)
     workspace:SetAttribute("LowPolyDinosFailed", failed)
     return loaded, failed

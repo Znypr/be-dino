@@ -170,6 +170,31 @@ class LowPolyProfileTests(unittest.TestCase):
         self.assertTrue(any("LowPolyDinos" in e for e in report.errors))
 
 
+class PlaytestOffFlagTests(unittest.TestCase):
+    """docs/145 s7: the playtest profile itself requires the off-by-design flags, not only the default build."""
+
+    OFF = ("CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk")
+
+    def test_playtest_requires_each_flag_false(self):
+        rules = {r.key: r for r in profiles.rules_for("playtest")}
+        for key in self.OFF:
+            self.assertEqual((rules[key].mode, rules[key].value), ("require", False), key)
+
+    def test_committed_source_passes_playtest_off_flags(self):
+        report = profiles.verify_source(with_ids(CONFIG), "playtest")
+        self.assertFalse([e for e in report.errors if any(k in e for k in self.OFF)], report.errors)
+
+    def test_flipping_any_off_flag_fails_playtest(self):
+        for key in self.OFF:
+            report = profiles.verify_source(with_value(with_ids(CONFIG), key, "true"), "playtest")
+            self.assertTrue(any(key in e for e in report.errors), key)
+
+    def test_playtest_build_refuses_a_flipped_off_flag(self):
+        for key in self.OFF:
+            _, report = profiles.apply_profile(with_value(with_ids(CONFIG), key, "true"), "playtest")
+            self.assertTrue(any(key in e for e in report.errors), key)
+
+
 class LoadHarnessTests(unittest.TestCase):
     def test_harness_embeds_real_repository(self):
         script = verify_load.harness()

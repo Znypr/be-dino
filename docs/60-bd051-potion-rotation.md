@@ -20,6 +20,7 @@ Status: Review / test. Studio and phone evidence pending. **Owner-approved 2026-
 
 ## Tests
 - `tools/verify_potion_shop.py` (CI): window math, determinism and rotation, distinct offers, stock bounds 1-3, stock and rarity weight ordering over 30,000 windows, every potion reachable, sold out, not offered, stale/future window, window reset, insufficient crystals/inventory not consuming stock, owned use independent of offers, persistence validation.
+- `tools/verify_potion_purchase.py` (CI): the real `ProgressionAction` handler plus the unpublished-Studio memory profile, driven with the exact request the confirm button sends (`<potion>@<window>`): purchased / busy / duplicate token / stale window / sold out / use, ProgressionJson potions and shop stock change, the 1,000,000 test wallet stays pinned after a spend (by design: an unchanged counter in Studio is NOT a failed buy), every catalog potion buyable, ids within the 40 character remote limit; plus source checks that the BUY POTION handler calls `transact` before leaving the modal and that the result and ProgressionJson listeners re-render the shop (2026-10-17 lead Studio check).
 - `tools/verify_progression.py`: repository-level duplicate token, stale window, bare id, sold out, and reconnect keeping stock. `tools/verify_load.py` and `tools/qa/shop-multiplayer.server.luau` use windowed ids.
 
 ## Risks and open items
