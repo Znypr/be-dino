@@ -8,9 +8,11 @@ local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local PrivateState = require(script.Parent.PrivateState)
+local CooldownMemory = require(script.Parent.CooldownMemory)
 local RewardMath = require(script.Parent.RewardMath)
 local StreamingTeleport = require(script.Parent.StreamingTeleport)
-local lastExitRequest: {[Player]: number} = {}
+local lastPredator: {[Player]: number} = setmetatable({}, {__mode = "k"}) :: any
+local exitMemory = CooldownMemory.new(120) -- BD-618 (f): the Home cooldown is keyed by UserId, so leaving and rejoining does not reset it
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
 local streamingStart: {[Player]: boolean} = {} -- BD-498: a player whose spawn area is being streamed in right now (StreamingEnabled only)
@@ -65,6 +67,11 @@ function RunLifecycle.worldReady(player: Player): boolean
     if player:GetAttribute("WorldReady") == true then return true end
     local joinedAt = player:GetAttribute("JoinedAt")
     return typeof(joinedAt) == "number" and os.clock() - joinedAt >= Config.WorldReadyTimeoutSeconds
+end
+
+-- BD-618 (e): who ended the player's last run by predation (0 = nobody). Server memory only; nothing is replicated.
+function RunLifecycle.lastPredatorUserId(player: Player): number
+    return lastPredator[player] or 0
 end
 
 function RunLifecycle.configureSettlement(callback)
@@ -203,7 +210,7 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     player:SetAttribute("LastRunId", snapshot.runId)
     player:SetAttribute("LastRunEndAt", workspace:GetServerTimeNow())
-    player:SetAttribute("LastPredatorUserId", sourceUserId or 0)
+    lastPredator[player] = sourceUserId or 0 -- BD-618 (e): server memory only (was a public Player attribute that told everyone who ate you)
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health > 0 then
@@ -310,6 +317,9 @@ function RunLifecycle.start()
     readyRemote.Parent = folder
     readyRemote.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
+        -- BD-618 (b): the server cannot see the client's terrain, so this stays an honour-system flag, but it is only believed once, and only
+        -- after the SERVER terrain exists (an honest client fires after IslandTerrainReady too). A forged early call can no longer pre-clear the gate.
+        if player:GetAttribute("WorldReady") == true or workspace:GetAttribute("IslandTerrainReady") ~= true then return end
         player:SetAttribute("WorldReady", true)
     end)
     local function joined(player: Player) player:SetAttribute("JoinedAt", os.clock()) end
@@ -332,9 +342,7 @@ function RunLifecycle.start()
         if select("#", ...) ~= 0 then return end
         if player:GetAttribute("ProfileState") ~= "Loaded" then return end
         local now = os.clock()
-        local last = lastExitRequest[player] or -math.huge
-        if now - last < Config.ExitRequestCooldownSeconds then return end
-        lastExitRequest[player] = now
+        if not exitMemory.allow(player.UserId, "exit", now, Config.ExitRequestCooldownSeconds) then return end
         local character = activeCharacter(player)
         if not character then return end
         if predatorNearby(player, character) then
@@ -348,10 +356,6 @@ function RunLifecycle.start()
         -- run immediately (no stay-still channel). tryEnd is the same idempotent path as
         -- death and predation: the first caller flips Active -> Ending and settles once.
         RunLifecycle.tryEnd(player, character, "ManualExit")
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        lastExitRequest[player] = nil
     end)
 end
 

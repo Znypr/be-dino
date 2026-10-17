@@ -12,6 +12,7 @@ local buffers: {[Player]: Core.Buffer} = setmetatable({}, {__mode = "k"}) :: any
 local remote: RemoteEvent? = nil
 local stats = {snapshots = 0, deltas = 0, bytes = 0}
 PrivateState.stats = stats
+PrivateState.HelloGapSeconds = 2 -- BD-618 (c): at most one snapshot per client in this time (was 0.5)
 
 local function bufferOf(player: Player): Core.Buffer
     local buffer = buffers[player]
@@ -86,10 +87,24 @@ function PrivateState.start()
     remote = event
     -- hello = "I am listening": sent once per client start and again whenever a delta was missed. A rejoin is a new
     -- client, so it says hello again and receives the full snapshot.
+    -- BD-618 (c): a snapshot is the whole private state (about 10 KB after long play), so a client may cost one every 2 s, not every 0.5 s.
+    -- A request inside that window is not lost: one snapshot is sent when the window ends (a resync after a missed delta still arrives).
     local lastHello: {[Player]: number} = setmetatable({}, {__mode = "k"}) :: any
+    local helloPending: {[Player]: boolean} = setmetatable({}, {__mode = "k"}) :: any
     event.OnServerEvent:Connect(function(player: Player)
         local now = os.clock()
-        if now - (lastHello[player] or -math.huge) < 0.5 then return end
+        local wait = PrivateState.HelloGapSeconds - (now - (lastHello[player] or -math.huge))
+        if wait > 0 then
+            if helloPending[player] then return end
+            helloPending[player] = true
+            task.delay(wait, function()
+                helloPending[player] = nil
+                if player.Parent == nil then return end
+                lastHello[player] = os.clock()
+                PrivateState.sendSnapshot(player)
+            end)
+            return
+        end
         lastHello[player] = now
         PrivateState.sendSnapshot(player)
     end)

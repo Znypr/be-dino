@@ -12,6 +12,7 @@ local lastGrant = "lastGrant"
 local lastNest = "lastNest"
 local lastSkip = "lastSkip"
 local lastSettings = "lastSettings"
+local nestClaimCount: {[Player]: number} = setmetatable({}, {__mode = "k"}) :: any -- BD-618 (e): LastNestClaimAt is this counter, not the server clock
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -72,7 +73,8 @@ function ChestService.start(profileRepository)
         end
         local _, _, status = profileRepository.claimNest(player, nestId)
         player:SetAttribute("LastNestClaimStatus", status)
-        player:SetAttribute("LastNestClaimAt", os.clock()) -- changes every request so the client always sees a repeat
+        nestClaimCount[player] = (nestClaimCount[player] or 0) + 1
+        player:SetAttribute("LastNestClaimAt", nestClaimCount[player]) -- BD-618 (e): a per-player counter (was the server's os.clock()); it changes every request so the client always sees a repeat
     end)
 
     -- BD-044 reveal-skip preference (UI only; never affects rewards).

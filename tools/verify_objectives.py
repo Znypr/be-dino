@@ -558,6 +558,62 @@ fOk,fStatus=Repository.objectiveFlush(p) assert(fOk==false and fStatus=="save_fa
 failMode=nil p.attrs.ProfileState="Loaded"
 fOk,fStatus=Repository.objectiveFlush(p) assert(fOk and fStatus=="flushed" and data[key(p)].objectives.tutorial.progress.T5==1,"the batch survived the outage")
 
+-- BD-625: the lease renew commits the queue inside its OWN write (no flush request, no timer)
+local rn=user(908) assert(Repository.load(rn))
+assert(select(2,Repository.objectiveFlush(rn))=="nothing")
+local rnObjectivesBefore=copy(data[key(rn)].objectives)
+local t0=transforms
+assert(Repository.renew(rn),"bd625 step 2")
+assert(transforms==t0+1,"an empty queue renews with exactly the one lease write")
+assert(same(data[key(rn)].objectives,rnObjectivesBefore),"an empty queue never touches the objectives field")
+assert(Repository.objectiveRecord(rn,{kind="food_eaten",amount=1}) and Repository.objectiveRecord(rn,{kind="food_eaten",amount=2}),"bd625 step 5")
+local function rnT1() local o=data[key(rn)].objectives return o and o.tutorial.progress.T1 or 0 end
+local rn0=rnT1()
+t0=transforms
+local revisionBefore=data[key(rn)].revision
+assert(Repository.renew(rn),"bd625 step 6")
+assert(transforms==t0+1,"the queue rides the renew write: one UpdateAsync, no extra request")
+assert(data[key(rn)].revision==revisionBefore+1,"one revision for lease and progress together")
+assert(rnT1()==rn0+3,"the renew committed the queued food progress")
+assert(select(2,Repository.objectiveFlush(rn))=="nothing" and rn.attrs.ProfileState=="Loaded","the queue is empty after the renew")
+-- lost acknowledgement on the renew: the retry sees the same batch id, so id-less events count once
+assert(Repository.objectiveRecord(rn,{kind="food_eaten",amount=2}),"bd625 step 11")
+failMode="ack_lost"
+assert(Repository.renew(rn),"bd625 step 12")
+assert(rnT1()==rn0+5,"a lost renew acknowledgement must not double count: "..tostring(rnT1()),"bd625 step 13")
+-- outage: the renew fails, the batch stays queued, the next renew (or the release) commits it
+assert(Repository.objectiveRecord(rn,{kind="food_eaten",amount=4}),"bd625 step 14")
+failMode="all"
+assert(Repository.renew(rn)==false and rn.attrs.ProfileState=="SaveFailed")
+failMode=nil
+assert(rnT1()==rn0+5,"nothing committed during the outage")
+assert(Repository.renew(rn) and rn.attrs.ProfileState=="Loaded")
+assert(rnT1()==rn0+9,"the outage batch committed with the next renew, once")
+-- progress queued after the last renew rides the lease release (leave, shutdown)
+assert(Repository.objectiveRecord(rn,{kind="food_eaten",amount=6}),"bd625 step 20")
+failMode="all"
+assert(Repository.renew(rn)==false,"bd625 step 21")
+failMode=nil
+Repository.release(rn)
+assert(rnT1()==rn0+15,"a failed renew's batch survives to the lease release")
+assert(data[key(rn)].session==nil,"released")
+-- a newer build's field: the renew still renews the lease, never reads, writes or reorders the field
+local rnv=user(909) assert(Repository.load(rnv)) Repository.release(rnv)
+data[key(rnv)].objectives={v=2,future={"data"},tutorial={claimed={T1=true}}}
+assert(Repository.load(rnv),"bd625 step 24")
+local rnvCopy=copy(data[key(rnv)].objectives)
+assert(Repository.objectiveRecord(rnv,{kind="food_eaten",amount=10}),"bd625 step 25")
+local rnvRevision=data[key(rnv)].revision
+assert(Repository.renew(rnv) and data[key(rnv)].revision==rnvRevision+1,"the lease renew still goes through")
+assert(same(data[key(rnv)].objectives,rnvCopy),"a newer build's objectives field is untouched by the renew")
+-- lease lost during a renew: the player is flagged, the batch is not written
+local rll=user(910) assert(Repository.load(rll))
+assert(Repository.objectiveRecord(rll,{kind="food_eaten",amount=10}),"bd625 step 28")
+local rllProgress=copy(data[key(rll)].objectives)
+data[key(rll)].session.leaseId="other-server"
+assert(Repository.renew(rll)==false and rll.attrs.ProfileState=="LeaseLost")
+assert(same(data[key(rll)].objectives,rllProgress),"a lost lease writes nothing")
+
 -- window rollover through the real server-clock path
 local wprofile=user(903) assert(Repository.load(wprofile))
 fakeNow=DAY0+100
@@ -632,7 +688,7 @@ local pSnapshot=copy(data[key(p)])
 Repository.release(p)
 local afterOff=copy(data[key(p)])
 assert(same(pSnapshot.objectives,afterOff.objectives) and same(pSnapshot.progression,afterOff.progression),"flag off again: objectives and wallet untouched")
-print("Repository passed: flag-off identity, lazy additive field, claim once + tokens, reconnect, lost acks, outage, rollover, newer version, corrupt field, clamp, write budget")
+print("Repository passed: flag-off identity, renew piggyback, lazy additive field, claim once + tokens, reconnect, lost acks, outage, rollover, newer version, corrupt field, clamp, write budget")
 '''
 
 

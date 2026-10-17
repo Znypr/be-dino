@@ -302,22 +302,13 @@ local function loadWithRetry(server, p)
 end
 
 -- docs/152 (switch-on rehearsal): with Config.ObjectivesEnabled the real server queues objective events in memory (the hooks call
--- ProfileRepository.objectiveRecord after each commit) and ObjectiveService flushes every ObjectiveConfig.FlushSeconds. The harness
--- does not start ObjectiveService (it needs Roblox instances), so it plays the same two roles: one queued event per pickup tick, per
--- settlement and per hatch claim, and one flush thread per joined player. Flag off (every committed profile): nothing here runs.
+-- ProfileRepository.objectiveRecord after each commit). BD-625: there is no flush timer any more; the lease renew (the real
+-- ProfileRepository.renew the harness already runs) commits the queue inside its existing write. The harness does not start
+-- ObjectiveService (it needs Roblox instances), so it only plays the hook side: one queued event per pickup tick, per settlement
+-- and per hatch claim. Flag off (every committed profile): nothing here runs.
 local function objectivesOn(server) return server.Config.ObjectivesEnabled == true end
 local function objectiveEvent(server, p, kind, amount, eventId)
     if objectivesOn(server) then server.Repository.objectiveRecord(p, {kind = kind, amount = amount, id = eventId}) end
-end
-local function objectiveFlushLoop(sc, server, p)
-    if not objectivesOn(server) then return end
-    local flushSeconds = __OBJECTIVE_FLUSH_SECONDS__ -- ObjectiveConfig.FlushSeconds, read from shared/ObjectiveConfig.luau by harness()
-    task.spawn(function()
-        while p.Parent and now < sc.duration do
-            sleep(flushSeconds)
-            if p.Parent and server.Repository.isLoaded(p) then op("objective-flush", server.Repository.objectiveFlush, p) end
-        end
-    end)
 end
 
 -- Egg conservation per UserId: settled run eggs + opened nest eggs == claimed + still queued/banked.
@@ -372,7 +363,6 @@ local function playerLoop(sc, servers, p, index, rng)
     sleep(sc.joinStagger * (index - 1))
     join(server, p)
     if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
-    objectiveFlushLoop(sc, server, p)
     local runs, token = 0, 0
     local hopped = false
     local function sanctuary()
@@ -445,7 +435,6 @@ local function playerLoop(sc, servers, p, index, rng)
             server = servers[2]
             join(server, p)
             if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
-            objectiveFlushLoop(sc, server, p)
         end
     end
     p.Parent = nil
@@ -632,10 +621,7 @@ def harness(root: Path = ROOT) -> str:
     sources = "{\n" + ",\n".join(entries) + "\n}"
     scenarios = "{" + ",".join(
         "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k not in ("gated", "playtestGate")) + "}" for sc in SCENARIOS) + "}"
-    flush = re.search(r"FlushSeconds = (\d+)", (root / "src/shared/ObjectiveConfig.luau").read_text(encoding="utf-8"))
-    if flush is None:
-        raise SystemExit("ObjectiveConfig.FlushSeconds not found; update the objective flush model in verify_load.py")
-    text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources).replace("__OBJECTIVE_FLUSH_SECONDS__", flush.group(1))
+    text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources)
     return "local SCENARIO_FAIL_RATE = 0\n" + text
 
 

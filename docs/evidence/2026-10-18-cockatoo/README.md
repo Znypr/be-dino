@@ -1,0 +1,17 @@
+# Cockatoo special bird (BD-621), 2026-10-18
+
+Owner request 2026-10-18: "add a cockatoo as well to the special bird ones". Name chosen by the lead: **Cockatoosaurus**, kept the same everywhere. Status: **Backlog, P3** ("not high prio" per the owner). No 3D model has been accepted yet.
+
+## References (the owner's, in order of importance)
+1. PRIMARY: [reference/cockatoo-owner-ref-2-raptor-pose.webp](../../reference/cockatoo-owner-ref-2-raptor-pose.webp): a soft, fluffy, feathered raptor-style cockatoo dino in a low crouching run: cream-white layered feathers, a swept-back pale-yellow crest of long feather blades, yellow-tipped tail feathers and a yellow wash on the wings, a hooked dark-grey beak, a big round brown eye, small feathered arms with black curved claws, strong grey scaly legs with big black claws, a chunky tail. Cute, realistic-leaning rather than blocky. (The file is byte-identical to [reference/cockatoo-owner-draft.webp](../../reference/cockatoo-owner-draft.webp), the first draft the owner sent; both names are kept.)
+2. SECONDARY: [reference/cockatoo-owner-ref.png](../../reference/cockatoo-owner-ref.png): photo of a sulphur-crested cockatoo in profile.
+
+## What happened so far (all in the owner's Place 1, UNSAVED there)
+- First round (photo only): three `generate_mesh` candidates A, B, C (assets 99267586089150, 126006588047426, 103214744543139) and, after the first draft, D (83223847018251, draft-following). All came back split into the 8 parts. Findings from the renders: A had a flat orange V crest, B a chunky body with a full spiky yellow crest, C a slim tall body with a fan crest; B and C had one wing generated black (the generator ignored "white wings"); D came out as a squat blob with one yellow horn and a spiky yellow spine. None has claws or a raptor stance. The owner saw them and wants the PRIMARY reference instead, so **A to D are obsolete** and are to be deleted from the staging folder `Workspace > Cockatoo candidates` (still in the open Place 1 window).
+- The Place 1 and scratch Studio windows kept ending up minimised, so no final pictures exist. No model was placed in `Silly secret dinos v3`.
+
+## Next (when the owner unblocks a Studio window)
+Generate the new prompts in [prompts.txt](prompts.txt) (A closest to the picture: low crouching run; B chunkier; C simpler), compare each with the PRIMARY reference by screenshots (front, side, 3/4), name the largest difference per candidate, pick the best, place it after Foxosaurus in `Workspace > Silly secret dinos v3` (6-stud edge gap, on the baseplate, facing -Z), take pictures, rate it 1 to 10 against the reference, and record the asset ids here.
+
+## What the generator cannot draw (expectation, from the budgie and fox runs)
+Fine layered feather scales, a long swept crest of separate blades, the pale-yellow wash on the wings and the yellow-tipped tail feathers will at best be a coarse texture on a low-poly mesh. Claws, scaly feet and the big brown eye with a dark rim are likely to come out simplified. The result is a low-poly-style cockatoo dino, not a copy of the picture. No floating geometry will be added to fake missing detail.
