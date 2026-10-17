@@ -147,3 +147,16 @@ Every (d) row either needs the owner (uploads, ears, eyes, publish, a yes/no), a
 - **BD-248 art does not exist** (BD-247 still says PLACEHOLDER); BD-250/BD-251 cite `verify_motion_poses.py`, which was never created (checks are in `verify_lowpoly_dinos.py`).
 - The ID lists in the small table above the board in 07-kanban (Backlog / Ready / ... columns) are old and were not touched; `python tools/board_summary.py` is the live count.
 - No code, no Studio, no Place1.rbxl were touched; the CI evidence is the five latest green runs on main plus `verify_cave_weather.py` run locally (the other verifiers need Luau, which this PC lacks).
+
+### 8.4 Findings fixed (2026-10-17, docs only, [07-kanban](07-kanban.md))
+
+Label: **BOARD AUDIT (docs only).** Each finding of 8.3 and what was done. Rows are never deleted.
+
+- **BD-179 / BD-140**: BD-179 is the more complete row (built, Review / test, P1), so it is kept; BD-140 is now **Superseded** with a pointer. The only detail unique to BD-140 (the tab may be hidden instead of "Coming soon" while Robux packs are off; real pack ids wait for BD-004) was merged into BD-179.
+- **BD-091**: an "Updated 2026-10-17" note was appended, the old text stays. Current rules from `Config.luau` and [115](115-decisions-log.md): gate = run of 120 s or more AND `NestMinCatches` 1 (not 8); 1 nest plus 1 per `NestEggsPerExtraNest` 30 further catches; no per-run cap (BD-420, Done); only 5 spots, any nest without a free spot becomes `NestOverflowCrystals` 50 crystals (exactly-once, toast "Nests full!"). [71](71-egg-nests-v2.md) still shows 8 / 100 / 3 in its historical lines.
+- **BD-248**: the row now starts "ART NOT MADE YET; needs owner/Blender" and its Left note says no file exists and docs/77 has no line.
+- **Old ID-list table above the board**: replaced by a one-paragraph pointer to the board and `python tools/board_summary.py`. No tool regenerates it (counts are deliberately not stored).
+- **Malformed priority cells**: BD-230 and BD-231 ("P0 Design: ...") and also BD-233 and BD-234 ("P1 Design: ...") now have a plain `P0` / `P1`; the "Design: [docs/101] (numbers PROVISIONAL)." text moved to the start of the description cell.
+- **Bare status `Review`** (legacy spelling; `board_summary.py` already counted it as Review / test): BD-149, BD-150, BD-151, BD-203 now say `Review / test`.
+- **Other malformed rows, listed and left alone** (the markdown still renders; fixing means inventing cells): 54 rows have 4 cells (no Depends-on cell: BD-161 to BD-229 range, BD-323, BD-325, BD-421 to BD-427, BD-454 to BD-459, BD-492); about 60 rows have a trailing Notes cell with no closing `|` (for example BD-043, BD-055, BD-080, BD-130, BD-147, BD-154, BD-225, BD-245, BD-281 to BD-296, BD-351 to BD-353, BD-358 to BD-360); column counts run from 4 to 9. After the fixes: no missing status, no priority outside P0..P3, no duplicate ids. The old ID-list line was the only row-like line that failed the id check and is gone.
+- **Still open from 8.3** (not part of this task): BD-250 / BD-251 cite `verify_motion_poses.py`, which does not exist; BD-081 / BD-343 and BD-391 / BD-405 stay as near-duplicates.
