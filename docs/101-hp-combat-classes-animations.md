@@ -106,7 +106,7 @@ Client-side only, driven from the low-poly part rig (body, head, tail, legs, win
 Species flavour (Brachiosaurus neck sway, T-Rex arm twitch) is data, not new code. Skins keep their own style (docs/97). The chicken/dino walk is the one shared language for every class.
 
 ## 12. Class movement rules and map access (BD-231, BD-246)
-- FLY: hover height capped (about 6 studs, only during jump/glide), no sustained flight, server clamps Y, cannot leave the map or reach unreachable spots, normal pickup range for food.
+- FLY: hover height capped (about 6.5 studs of feet height, only during jump/glide; FH2, s20.6), no sustained flight, server clamps Y, cannot leave the map or reach unreachable spots, normal pickup range for food.
 - WATER: ground-bound, no `Jump`; water zones give a small flavour speed bonus (+10%); can still pick up food and settle everywhere.
 - ARMORED: normal terrain, slower; knockback halved.
 - A check in `tools/verify_classes.py` proves every class can reach food and the settle point in every map region.
@@ -258,3 +258,7 @@ Option A is in code: `ClassMovement.hoverStep` (feet height = root height above 
 
 ### 20.5 Studio numbers (2026-10-17, [evidence](evidence/2026-10-17-hover/README.md), CURRENT BUILD BEHAVIOR)
 Pteranodon through `EquipSpecies`, island run, feet height sampled on Heartbeat: boosted jump (jump power 99) **6.45 to 6.48** (22.24 with the cap off); leap **10.21** (exempt); glide plateau **-16.2** studs/s (the 12 cap plus one gravity step of the post-step sample). **One miss:** a plain Fly jump rises **6.92** uncapped (the 6.05 of s20.1 and the 5.60 of the offline simulation under-predict: the Humanoid keeps pushing for a few frames), so the 6.5 cap trims it to **6.45**, about 0.47 stud, and "a plain jump is untouched" holds only approximately. Fly still jumps above Ground in theory (jump power 55 vs 50), not measured. Open for LEAD: keep 6.5 and reword ("about 6.5"), or raise `heightCap` to about 7.0 (then a boosted jump held at 7.0 touches the 7-stud `BiteVerticalLimit` edge) and correct the simulation to 6.92.
+
+
+### 20.6 Decision on the measured numbers (LEAD, owner delegated 2026-10-16, FH2)
+Option (a): the cap stays at `heightCap` 6.5 (feet height). A plain Fly jump really rises about 6.9 uncapped (the Humanoid keeps pushing for a few frames after take-off), so the cap trims it to about 6.46, which nobody feels. The s12 wording "about 6 studs" now reads "about 6.5 studs"; a boosted jump stays at 6.5 and below the 7-stud `BiteVerticalLimit`. No new number. The offline simulation keeps its 5.6 / 6.05 model and is labelled as a lower bound.
