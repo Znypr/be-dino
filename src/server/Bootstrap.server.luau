@@ -43,6 +43,7 @@ task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD
 if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(script.Parent.ImportedResources).loadGeneratedWorld() end
 if require(ReplicatedStorage.Shared.HatchV2Assets).enabled(Config, game:GetService("RunService"):IsStudio() and game.GameId == 0) then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end -- BD-397 (docs/118), no-op while false
 Arena.build()
+require(script.Parent.StreamingSetup).start() -- BD-498 (docs/150): Persistent models when StreamingEnabled is on; returns at once while it is off
 Leaderboards.start()
 
 require(script.Parent.PrivateState).start() -- BD-360 owner-only channel, before any profile can load
