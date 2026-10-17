@@ -232,7 +232,7 @@ Median (p50) hours until the FIRST Gold / Emerald / Diamond of any one species+p
 | Emerald (4 Gold) | 60 | about 1,590 | **8.8 h** |
 | Diamond (2 Emerald) | 120 | about 3,360 | **18.7 h** |
 
-Reproduce: `python tools/simulate_fusion_ladder.py --hours` (about 1 s). `--check` (CI) asserts the recipes in `IdentityFusion.luau` are 15/4/2 and that the three medians stay inside 1.3-2.2 h, 7.0-10.5 h and 15.0-22.0 h. A specific target (a chosen species and pattern) is much slower, as in section 11: rare species stay out of reach without pattern research (BD-063) or trading.
+Reproduce: `python tools/simulate_fusion_ladder.py --hours` (about 1 s). `--check` (CI) asserts the recipes in `IdentityFusion.luau` are the CURRENT ladder, 6/3/2 (this line said 15/4/2 and was wrong about the tool: `tools/simulate_fusion_ladder.py:296` has asserted 6/3/2 since docs/90; see [AGENTS.md](../AGENTS.md) line 44 and [docs/155](155-fusion-ladder-source-vs-docs-audit.md)) and that the three medians stay inside 1.3-2.2 h, 7.0-10.5 h and 15.0-22.0 h. A specific target (a chosen species and pattern) is much slower, as in section 11: rare species stay out of reach without pattern research (BD-063) or trading.
 
 Storage: a complete Diamond is 8 Gold + 2 Emerald + 1 Diamond ledgers and 120 archived parent eggs, about 40 KB in the sidecar versus the 3.2 MB ceiling ([58](58-fusion-ladder-50-10-3.md)).
 
