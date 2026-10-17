@@ -61,7 +61,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     local eggsLabel = text(eggPlate, "EggsText", 30, C.gold, 74)
     eggsLabel.TextScaled = true
     local limit = Instance.new("UITextSizeConstraint")
-    limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 12, eggsLabel
+    limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 14, eggsLabel
 
     -- SIZE bar: slim, top-centre, only during a run.
     local bar = plate(gui, "SizeBar", BAR_W, BAR_H)

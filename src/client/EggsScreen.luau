@@ -59,7 +59,7 @@ function EggsScreen.render(ctx: any)
         local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = C.outline, 2, frame
         local text = label(frame, text, 0, 0, w, h, size)
         text.TextScaled = true
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = size, 10, text
+        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = size, 14, text -- docs/114 s4.4
         return frame, text
     end
 
