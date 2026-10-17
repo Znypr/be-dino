@@ -54,30 +54,73 @@ function MouthReach.snoutOffset(speciesId: any, scale: any): number
     return if row then row.snout * growthOf(scale) else 0
 end
 
--- Studs from the root to the head point (the centre of the head) along the facing direction, 0 for an unknown species.
-function MouthReach.headOffset(speciesId: any, scale: any): number
-    local row = rowOf(speciesId)
-    if not row then return 0 end
-    return (row.snout - headLength1(row) / 2) * growthOf(scale)
-end
-
 -- The old root-based radius (and the radius of a species without a measured row).
 function MouthReach.legacyRadius(scale: any): number
     return math.min(MouthReach.LegacyMaxRadius, Config.FoodPickupRadius + (growthOf(scale) - 1) * MouthReach.LegacyGrowthBonus)
 end
 
--- Pickup radius around the head point.
-function MouthReach.radius(speciesId: any, scale: any): number
+-- Studs the zone reaches beyond the snout tip: the old 2.25 minus the Compy's half head (1.425). The FRONT EDGE of the zone is always snout + slack.
+function MouthReach.slack(): number
+    local ref = rowOf(MouthReach.RefSpecies)
+    return Config.FoodPickupRadius - (if ref then headLength1(ref) / 2 else 0)
+end
+
+-- BD-515 radius before the BD-521 cap (docs/115 MR2): follows the head size, plus the old growth bonus.
+function MouthReach.uncappedRadius(speciesId: any, scale: any): number
     local row = rowOf(speciesId)
     if not row then return MouthReach.legacyRadius(scale) end
-    local ref = rowOf(MouthReach.RefSpecies)
-    local refHalf = if ref then headLength1(ref) / 2 else 0
-    local slack = Config.FoodPickupRadius - refHalf
-    return headLength1(row) / 2 * growthOf(scale) + slack
+    return headLength1(row) / 2 * growthOf(scale) + MouthReach.slack()
+end
+
+-- BD-515 head point offset before the cap: the centre of the head (snout - half the head).
+function MouthReach.uncappedHeadOffset(speciesId: any, scale: any): number
+    local row = rowOf(speciesId)
+    if not row then return 0 end
+    return (row.snout - headLength1(row) / 2) * growthOf(scale)
+end
+
+-- BD-521 (docs/115 MR4): the cap factor k = Config.FoodReachCapCompy (nil or not a number >= 1 = no cap). A species never gets a zone that reaches
+-- farther ahead of the root than k x the Compy's zone at the same growth scale, nor a wider one: the simulated food per minute is driven by how far
+-- AHEAD of the root a berry is eaten (front edge = snout + slack, so it follows the body length), much more than by the head size. Where the cap
+-- binds the front edge and the radius shrink, the head point moves back accordingly; the Compy and every shorter species are never changed.
+function MouthReach.capFactor(): number?
+    local k = (Config :: any).FoodReachCapCompy
+    return if typeof(k) == "number" and k == k and k >= 1 and k < 1e9 then k else nil
+end
+
+-- Front edge of the zone ahead of the root (studs) before the cap: the snout tip plus the slack.
+function MouthReach.uncappedFront(speciesId: any, scale: any): number
+    local row = rowOf(speciesId)
+    if not row then return MouthReach.legacyRadius(scale) end
+    return row.snout * growthOf(scale) + MouthReach.slack()
+end
+
+-- (offset of the pickup point ahead of the root, radius) for a species at a growth scale, with an optional cap factor (default: the config one).
+function MouthReach.zone(speciesId: any, scale: any, capK: number?): (number, number)
+    if not rowOf(speciesId) then return 0, MouthReach.legacyRadius(scale) end
+    local radius, front = MouthReach.uncappedRadius(speciesId, scale), MouthReach.uncappedFront(speciesId, scale)
+    local k = if capK ~= nil then capK else MouthReach.capFactor()
+    if k ~= nil then
+        radius = math.min(radius, k * MouthReach.uncappedRadius(MouthReach.RefSpecies, scale))
+        front = math.min(front, k * MouthReach.uncappedFront(MouthReach.RefSpecies, scale))
+    end
+    return front - radius, radius
+end
+
+-- Studs from the root to the head point (the pickup point) along the facing direction, 0 for an unknown species.
+function MouthReach.headOffset(speciesId: any, scale: any): number
+    return (MouthReach.zone(speciesId, scale))
+end
+
+-- Pickup radius around the head point (capped, see MouthReach.capFactor).
+function MouthReach.radius(speciesId: any, scale: any): number
+    local _, radius = MouthReach.zone(speciesId, scale)
+    return radius
 end
 
 -- Head point on the ground plane. look = the root's look vector (any length); a vertical or junk look vector gives the root itself.
-function MouthReach.point(rootX: number, rootZ: number, lookX: number, lookZ: number, speciesId: any, scale: any): (number, number)
+-- uncapped = true gives the BD-515 centre of the head (predation, MR3) instead of the food pickup point of the BD-521 capped zone.
+function MouthReach.point(rootX: number, rootZ: number, lookX: number, lookZ: number, speciesId: any, scale: any, uncapped: boolean?): (number, number)
     local lx, lz = finite(lookX, 0), finite(lookZ, 0)
     local length = math.sqrt(lx * lx + lz * lz)
     if length < 0.05 then return rootX, rootZ end

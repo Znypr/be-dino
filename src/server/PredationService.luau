@@ -114,7 +114,7 @@ function PredationService.start(runLifecycle, dinosaur)
                     local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
                     if attacker.speciesId ~= nil then
                         -- BD-515: measured from the attacker's head point (root + forward x head offset); the radius is unchanged
-                        local headX, headZ = MouthReach.point(attacker.root.Position.X, attacker.root.Position.Z, attacker.look.X, attacker.look.Z, attacker.speciesId, attacker.scale)
+                        local headX, headZ = MouthReach.point(attacker.root.Position.X, attacker.root.Position.Z, attacker.look.X, attacker.look.Z, attacker.speciesId, attacker.scale, true)
                         horizontal = Vector3.new(victim.root.Position.X - headX, 0, victim.root.Position.Z - headZ).Magnitude
                     end
                     local radius = math.min(Config.PredationMaxRadius,
