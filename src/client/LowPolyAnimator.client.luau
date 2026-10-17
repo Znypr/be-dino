@@ -99,16 +99,17 @@ local function updateAction(rig: any, now: number)
         or (hum.FloorMaterial == Enum.Material.Air and math.abs(root.AssemblyLinearVelocity.Y) > 3)
     local ph = rig.act
     if airborne then
+        -- BD-555: the humanoid reports Jumping only once the dino has left the ground, so a crouch and a push-off here would play AFTER take-off
+        -- (legs fold, unfold, fold again inside 0.4 s). Every take-off and every ledge step-off goes straight into the air tuck instead, faded in
+        -- from the current pose (Pose.airWeight); the leap crouch from the request is left out for the same reason (the leap is already moving).
         if ph == nil or ph == "land" then
             rig.aggr = if leaping then 1 else 0
-            if state == Enum.HumanoidStateType.Freefall and not jumpKey and not leaping then startPhase(rig, "air", now) -- stepped off a ledge: no crouch
-            else startPhase(rig, "crouch", now) end
-        elseif ph ~= "air" and now - rig.actAt >= Pose.duration(ph, rig.aggr, rig.class) then
-            startPhase(rig, if ph == "crouch" then "push" else "air", now)
+            startPhase(rig, "air", now) -- take-off
         end
         if leaping then rig.aggr = 1 end
     elseif ph ~= nil and ph ~= "land" then
-        rig.carry = if ph == "air" then math.clamp((now - rig.actAt) / Pose.TuckTime, 0, 1) else 0
+        rig.carry = if ph == "air" then 1 else 0
+        rig.landFrom = if ph == "air" then Pose.airWeight(now - rig.actAt) else 1 -- a hop that lands before the tuck finished lands from that weight
         rig.flap = if ph == "air" and rig.class == "Fly" then Pose.airFlap(now - rig.actAt, rig.aggr) else 0 -- the landing flutter continues from here
         local dur = Pose.duration(ph, rig.aggr, rig.class)
         rig.wing = Pose.wingOpen(ph, if dur > 0 then math.clamp((now - rig.actAt) / dur, 0, 1) else 1) -- a hop that lands before the wings opened keeps them folded
@@ -169,7 +170,8 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         local dur = Pose.duration(phase, rig.aggr, rig.class)
         ctx.phase, ctx.t, ctx.aggr, ctx.carry, ctx.flap, ctx.wing = phase, elapsed, rig.aggr, rig.carry, rig.flap, rig.wing
         ctx.p = if dur > 0 then math.clamp(elapsed / dur, 0, 1) else 0
-        k = Pose.actionWeight(phase, ctx.p)
+        ctx.direct = phase == "air" -- BD-555: the air phase always begins at take-off now, with no stretch of its own
+        k = if phase == "air" then Pose.airWeight(elapsed) elseif phase == "land" then Pose.landWeight(ctx.p, rig.landFrom) else Pose.actionWeight(phase, ctx.p)
     end
     local bob = Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class) * height -- BD-388: one shared translation for every part
     for _, item in rig.parts do
@@ -184,7 +186,13 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
             local pivot = pivotFor(item.role, part.Size, item.side)
             -- Joint pivot rotation (the anchor never moves, no stretch) + shared whole-body bob + head peck forward in studs (-Z), both
             -- expressed in the part's own frame through the weld's rest rotation.
+            local lift = 0 -- BD-556: a Water flipper pivots at mid height and its tip dipped up to 0.3 stud into the ground: hold the lowest corner at its rest height
+            if item.role == "flipper" then
+                local up = item.weld.C0.Rotation:Inverse() * Vector3.new(0, 1, 0)
+                lift = Pose.restLift({part.Size.X, part.Size.Y, part.Size.Z}, {pivot.X, pivot.Y, pivot.Z}, out.pitch, out.yaw, out.roll, {up.X, up.Y, up.Z})
+            end
             local shift = item.weld.C0.Rotation:Inverse() * Vector3.new(0, bob, -out.fwd)
+            if lift > 0 then shift += item.weld.C0.Rotation:Inverse() * Vector3.new(0, lift, 0) end
             local anim = CFrame.new(shift) * CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)
                 * CFrame.new(0, out.dy * height, out.dz * height)
             item.weld.C1 = anim:Inverse()
@@ -216,7 +224,7 @@ RunService.Heartbeat:Connect(function(dt)
             local _, size = visual:GetBoundingBox()
             -- character: updateAction reads it (jump, leap, land, surge, defeat). It was never set, so those poses never played (found by tools/verify_motion_poses.py).
             rig = {character = character, visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), aggr = 0, carry = 0, flap = 0, wing = 1, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, landFrom = 1, flap = 0, wing = 1, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
@@ -242,7 +250,7 @@ RunService.Heartbeat:Connect(function(dt)
         local rig = npcRigs[model]
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
-            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0, flap = 0, wing = 1,
+            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0, landFrom = 1, flap = 0, wing = 1,
                 leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             npcRigs[model] = rig
         end
