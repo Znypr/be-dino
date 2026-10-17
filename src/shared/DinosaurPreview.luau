@@ -143,11 +143,23 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
             local world=viewport:FindFirstChildOfClass("WorldModel")
             if visible(viewport) then
                 -- The flat picture stays up while loading retries (at most 8); it is replaced the moment a real model lands.
-                if not world and attempts<8 then attempts+=1;loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
+                -- BD-381: while the low-poly template is still loading the retries do not count (the flat picture stays up until it lands).
+                local waiting=LowPoly.pending(speciesId)
+                if not world and (attempts<8 or waiting) then
+                    if not waiting then attempts+=1 end
+                    loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end)
+                end
             elseif world then world:Destroy();attempts=0 end
         end)
         viewport.Destroying:Once(function() connection:Disconnect() end)
-    else load() end
+    else
+        -- BD-381: species without CreatureData (and the first try for the rest) wait for the low-poly template instead of keeping a legacy model.
+        if not load() then
+            LowPoly.whenReady(speciesId,function()
+                if viewport.Parent and not viewport:FindFirstChildOfClass("WorldModel") then load() end
+            end)
+        end
+    end
     return viewport
 end
 return Preview

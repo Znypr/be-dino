@@ -19,6 +19,9 @@ function ResourceModels.clone(id: string,genes: any?,patient: boolean?): Model?
     if RunService:IsClient() then
         local lowPoly=LowPoly.clone(id,genes) -- BD-225 spike: nil when the flag is off or the model is not loaded
         if lowPoly then return lowPoly end
+        -- BD-381: a preview (patient) never takes the legacy model while the low-poly one is still being loaded; the caller shows the
+        -- flat picture and asks again (LowPoly.whenReady). Only a real failure (loader done, no template) falls back to legacy.
+        if patient==true and LowPoly.pending(id) then return nil end
         local authored=Authored.clone(id,genes,patient)
         if authored then return authored end
         if patient==true and Authored.has(id) then return nil end
