@@ -23,6 +23,7 @@ local function describe(row: any, group: string): any
     local reward = if type(row.reward) == "table" then row.reward else {}
     return {
         id = row.id, name = tostring(row.name or ""), group = group, carried = row.carried == true,
+        note = if type(row.note) == "string" and row.note ~= "" then row.note else nil, -- optional catalogue hint (T3 "Cracked eggs count too"), shown small under the name
         progress = progress, goal = goal, fraction = progress / goal,
         reward = {crystals = whole(reward.crystals), xp = whole(reward.xp)},
         claimable = row.claimed ~= true and (row.done == true or progress >= goal),

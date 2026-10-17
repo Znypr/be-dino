@@ -36,11 +36,12 @@ TouchLayout.GOALS = {w = 260, h = 44, dy = 34, minW = 130}
 -- zone and the Goals header (the weather column starts under it); the open sheet is the one part that may cover the Goals header, the weather column
 -- and the hub chip while the player has it open (everything else stays clear: tools/verify_movement_mobile.py). Bootstrap publishes both as the
 -- ObjectivesRect / ObjectivesOpenRect attributes of the BeDinoUI gui.
-TouchLayout.OBJECTIVES = {w = 300, minW = 190, h = 44, rowH = 52, rows = 3, gap = 4, deskGap = 8}
+-- rowH is the FIXED height of one task row (name, bar, count, prize or a centred 44 px CLAIM, no overlap); rowGap is the space between two rows (a divider sits in it).
+TouchLayout.OBJECTIVES = {w = 300, minW = 190, h = 44, rowH = 60, rows = 3, gap = 4, deskGap = 8, rowGap = 4}
 TouchLayout.GOALS_OPEN_H = 214 -- GoalsPanel unfolded: 44 + 2 + 3 x 56
 function TouchLayout.objectivesOpenH(): number
     local O = TouchLayout.OBJECTIVES
-    return O.h + 2 + O.rows * O.rowH + 4
+    return O.h + 2 + O.rows * O.rowH + (O.rows - 1) * O.rowGap + 4
 end
 -- Desktop (not compact) hub Goals panel, mirroring GoalsPanel.luau's own formula (right edges aligned on the wallet, 34 px design under the goal line, 260 wide).
 function TouchLayout.goalsDesktop(crystal): (Rect, Rect)
