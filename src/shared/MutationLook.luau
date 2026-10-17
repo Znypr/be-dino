@@ -53,6 +53,16 @@ function Look.blend(base: {number}, id: string, amount: number?): {number}
     return {base[1] + (entry.tint[1] - base[1]) * a, base[2] + (entry.tint[2] - base[2]) * a, base[3] + (entry.tint[3] - base[3]) * a}
 end
 
+-- Pure, per pixel (0..1 floats): the same pull as Look.blend, for the low-poly bake. MeshPart.Color does NOT tint a part whose
+-- texture is a bake (TextureContent), so on low-poly dinos the tint has to live in the texture itself (BD-518, LowPolyTexture.paint).
+function Look.pull(r: number, g: number, b: number, id: any, amount: number?): (number, number, number)
+    local entry = Look.get(id)
+    if not entry then return r, g, b end
+    local a = math.clamp(amount or entry.amount, 0, Look.MaxAmount)
+    local t = entry.tint
+    return r + (t[1] / 255 - r) * a, g + (t[2] / 255 - g) * a, b + (t[3] / 255 - b) * a
+end
+
 -- Tints every BasePart under a model/viewport once and idempotently. The part remembers its own colour (MutBase)
 -- and the colour it painted (MutOut): if something else recolours it meanwhile (genes), the new colour becomes the
 -- base. Materials are never changed (dinos stay matte). id nil/"" restores the original colour.

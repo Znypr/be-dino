@@ -26,6 +26,8 @@ Setup (2 min). `python tools/build.py --profile playtest`, open `build/BeDino-Bu
 7. Tap **AUTO**: Settings opens on its Help tab with "Auto-open eggs" rarity toggles. Turn on Common only, close, tap **OPEN** once: Common eggs hatch without a reveal and a tidy "Auto-opened eggs" summary lists counts. Turn it back off.
 8. Pass = steps 1-7 as written, no red Output lines. Record in the BD-148 row: date, window size, PASS / the failing step, screenshots in `docs/evidence/<date>-eggs-screen/`. Failure goes in as a new BD row, not a silent fix.
 
+**2026-10-17 run (agent, own Studio window, [evidence](evidence/2026-10-17-stuck-BD-148/README.md)):** steps 1-5 and 7 pass. Step 6 is outdated: OPEN now starts ONE hatch party and Next egg stays inside it (BD-170); it does not return to the card after every egg. Not yet checked: the "Some eggs can crack!" line (step 6) and the 844x390 repeat; BD-523 (Common auto-open still revealed one plain Common egg), BD-519 (egg drawn top-left once) and BD-522 ("Tell us!" covers the EGGS plate) came out of it.
+
 ## 3. Script B: BD-154 mutations, one real catch (about 10 minutes, lead, Studio)
 
 Why: every mutation QA so far used a hand-seeded tag. docs/99 "Not verified" still asks for the real path: weather -> FoodService catch -> tag -> toast -> Eggs card -> hatch -> dino -> world.
@@ -58,3 +60,20 @@ Admin > 3 min > Start now for each of the 7 events, standing in the meadow; for 
 4. Score the weather events and listen to nothing (weather beds are silent until you upload sounds, docs/120).
 5. Approve or reject the premium egg and crack PNGs of the UI-motion pass (BD-043).
 6. (Done 2026-10-16) BD-235 is decided; see section 5.
+
+## 7. Agent-runnable Studio checks, ranked (2026-10-17)
+
+P0/P1 rows in Review / test whose only open item is a Studio check one agent can do alone (no phone, no second player, no owner taste call, no publishing). Ranked by priority, then by how many rows the check unblocks. Method: own playtest build, new Studio window, real mouse input, Studio screen_capture only (BD-154 method, [bd154-unseeded](evidence/2026-10-17-bd154-unseeded/README.md)).
+
+| Rank | Row | Pri | Unblocks | Result 2026-10-17 |
+| --- | --- | --- | --- | --- |
+| 1 | BD-148 Eggs screen (script A above) | P0 | BD-152, BD-153, BD-169, BD-094, BD-369, BD-444, BD-092 | Steps 1-5, 7 pass; step 6 outdated; left: phone-size repeat, cracked hint line. [evidence](evidence/2026-10-17-stuck-BD-148/README.md) |
+| 2 | BD-170 hatch flow (same session) | P0 | BD-171, BD-397 | Done. [evidence](evidence/2026-10-17-stuck-BD-170/README.md); BD-519 found |
+| 3 | BD-365 first eggs never Cracked | P0 | BD-371, BD-369 | Live on 5 fresh profiles; left: odds-panel line. [evidence](evidence/2026-10-17-stuck-BD-365/README.md) |
+| 4 | BD-441 / BD-440 / BD-442 first-screen clutter (same session) | P0 / P1 | BD-368 follow-ups | 440 and 442 Done; 441 desktop pass, phone left; BD-522 found |
+| 5 | BD-169 + BD-094 (same session) | P0 / P1 | BD-208 look check | Done |
+| extra | BD-371 after the splat (needs a Cracked egg) | P1 | none | Done. [evidence](evidence/2026-10-17-stuck-BD-371/README.md) |
+| extra | BD-155 "pale Ember dino" check | P1 | BD-162 | Found and fixed BD-518 (tint never rendered on low-poly). [evidence](evidence/2026-10-17-ember-tint/README.md) |
+
+Next candidates, not run (each fits one single-player session): BD-445 and BD-372 (Shop at 0 crystals, needs the admin to set crystals), BD-382 (one tap on another rail button with a station menu open), BD-420 (more than five nests, needs the nest timer edit), BD-101 (potion shop icons), BD-146 (equip swap with patterns and FX rig), BD-289 (walk-up prompts in the cave), BD-490 (cave dressing look + luminance with `tools/qa/luminance.py`). Not agent-runnable: BD-164/255 (camera rattle needs a quiet machine), anything with a phone, 2+ players or an owner look.
+
