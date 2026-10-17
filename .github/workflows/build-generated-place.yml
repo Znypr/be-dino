@@ -85,6 +85,7 @@ jobs:
           python tools/verify_hub_scale.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_views.py --runner /tmp/luau/luau
+          python tools/verify_motion_poses.py --runner /tmp/luau/luau --selftest
           python tools/verify_world_budget.py --runner /tmp/luau/luau
           python tools/qa/phone_forecast.py --runner /tmp/luau/luau --check
           python tools/verify_phone_guards.py --runner /tmp/luau/luau

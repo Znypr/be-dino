@@ -211,7 +211,8 @@ RunService.Heartbeat:Connect(function(dt)
         local rig = rigs[character]
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
-            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
+            -- character: updateAction reads it (jump, leap, land, surge, defeat). It was never set, so those poses never played (found by tools/verify_motion_poses.py).
+            rig = {character = character, visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
                 height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             rigs[character] = rig
         end
