@@ -203,6 +203,8 @@ function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, 
     local result = record(id, output.speciesId .. "/" .. output.stage, output, {kind = "fusion", operationId = operationId,
         recipeVersion = recipeVersion, oddsVersion = oddsVersion, parentStage = parentStage, parents = snapshots})
     -- No parent cosmetic fields are copied into either output or lineage.
+    -- BD-456 (docs/137 s4): and no parent skin either. `record` creates no `skin` field, so a fused output starts on the account default (Base unless the
+    -- player set one); the donors' per-dino choices vanish with the donors, while the account-wide entitlement (profile.ownedSkins) is untouched.
     return result
 end
 return Identity

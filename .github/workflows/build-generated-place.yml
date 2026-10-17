@@ -171,6 +171,7 @@ jobs:
           python tools/verify_rollback.py --runner /tmp/luau/luau
           python tools/verify_gifts.py --runner /tmp/luau/luau
           python tools/verify_gift_ui.py --runner /tmp/luau/luau
+          python tools/verify_skins.py --runner /tmp/luau/luau
           python tools/verify_nests.py --runner /tmp/luau/luau
           python tools/verify_mutations.py --runner /tmp/luau/luau
           python tools/verify_mutation_look.py --runner /tmp/luau/luau

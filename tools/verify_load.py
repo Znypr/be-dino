@@ -31,7 +31,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_EMBED_BYTES = 140_000  # skip large generated art tables the repository never requires (ProfileRepository.luau itself passed 120,000 with BD-073; ResourceGeometry 164k and IconRaster 203k stay out)
+MAX_EMBED_BYTES = 155_000  # skip large generated art tables the repository never requires (ProfileRepository.luau itself passed 120,000 with BD-073 and 140,000 with BD-456; ResourceGeometry 164k and IconRaster 203k stay out)
 
 HARNESS = r'''
 local SOURCES = __SOURCES__
