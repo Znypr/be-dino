@@ -586,7 +586,9 @@ print("Repository passed: flag-off identity, lazy additive field, claim once + t
 '''
 
 
-def script() -> str:
+def harness_prefix() -> str:
+    """The mocked-DataStore ProfileRepository harness of tools/verify_rewards.py plus the objective modules (shared with
+    tools/verify_objective_hooks.py). Tokens (@@...@@) are filled by fill()."""
     prefix = verify_rewards.HARNESS.split('local function user(id)')[0]
     # Let the real repository find the objective modules (it requires ObjectiveRules lazily) and give it a controllable clock.
     needle = 'local PrivateStateStub='
@@ -604,12 +606,10 @@ def script() -> str:
     assert prefix.count(needle) == 1
     prefix = prefix.replace(needle,
         'local fakeNow=0\nlocal realOs=os\nlocal os=setmetatable({time=function() return fakeNow end},{__index=realOs})\n' + needle)
-    rows = doc_rows()
-    doc_literal = '{' + ','.join('{"%s","%s",%d,%d}' % r for r in rows) + '}'
-    pure = PURE.replace('@@DOC_ROWS@@', doc_literal).replace('@@DOC_COUNT@@', str(len(rows)))
-    # The pure part and the service part run in their own `do` scopes of the same chunk so locals do not leak into the repository run.
-    body = 'do\n' + pure + '\n' + SERVICE.replace('@@OBJ_SERVICE@@', module('src/server/ObjectiveService.luau')) + '\nend\n' + REPO
-    text = prefix + '\n' + body
+    return prefix
+
+
+def fill(text: str) -> str:
     for token, path in [
         ('@@PROGRESSION_CONFIG@@', 'src/shared/ProgressionConfig.luau'),
         ('@@GAME_CONFIG@@', 'src/shared/Config.luau'),
@@ -629,10 +629,21 @@ def script() -> str:
         ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@OBJ_CONFIG@@', 'src/shared/ObjectiveConfig.luau'),
         ('@@OBJ_RULES@@', 'src/shared/ObjectiveRules.luau'),
+        ('@@OBJ_SERVICE@@', 'src/server/ObjectiveService.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
         text = text.replace(token, module(path))
     return text
+
+
+def script() -> str:
+    prefix = harness_prefix()
+    rows = doc_rows()
+    doc_literal = '{' + ','.join('{"%s","%s",%d,%d}' % r for r in rows) + '}'
+    pure = PURE.replace('@@DOC_ROWS@@', doc_literal).replace('@@DOC_COUNT@@', str(len(rows)))
+    # The pure part and the service part run in their own `do` scopes of the same chunk so locals do not leak into the repository run.
+    body = 'do\n' + pure + '\n' + SERVICE + '\nend\n' + REPO
+    return fill(prefix + '\n' + body)
 
 
 def main(argv=None) -> int:

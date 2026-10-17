@@ -14,6 +14,8 @@ PhoneScale.CompactBelow = 500 -- gui height under this is "compact" (phone lands
 PhoneScale.CompactFloor = 0.8 -- never shrink a compact modal under this
 PhoneScale.Margin = 8 -- px gap between the compact panel and the screen edge
 PhoneScale.HeaderH = 48 -- compact header height (design px), desktop is 78 (BD-531: was 56; the close button still floors to 44 px)
+PhoneScale.ModalRailGap = 12 -- BD-546: px between the desktop left rail and a desktop modal panel
+PhoneScale.ModalRightMargin = 20 -- px between a desktop modal and the right screen edge (the old (w - 40) / 860 rule is 20 on each side)
 PhoneScale.RailLabelW = 60 -- px a rail button needs for a 14 px label (SETTINGS is about 58 px), else icon-only
 PhoneScale.BodyTop = 56 -- compact body scroller top inside the panel (design px) (BD-531: was 66, 8 px more body on a 332 px phone canvas)
 PhoneScale.BodyW = 836 -- BD-538: width a screen needs inside the scroller: 4 px left + the 824 px body + 8 px for the scroll bar
@@ -21,6 +23,7 @@ PhoneScale.BodyW = 836 -- BD-538: width a screen needs inside the scroller: 4 px
 export type Modal = {
     mode: string, scale: number, panelW: number, panelH: number, -- panelW/H in design px (before UIScale)
     bodyW: number, bodyH: number, scrollX: boolean, headerH: number, bodyTop: number,
+    centerDx: number, -- BD-546: px the panel centre sits right of the screen centre (desktop, to keep clear of the left rail); 0 elsewhere
     minText: number, minButton: number,
     fit: number, innerW: number, innerH: number, effScale: number, -- BD-538: body fit (see PhoneScale.modal)
 }
@@ -34,11 +37,20 @@ function PhoneScale.desktopScale(w: number, h: number): number
     return math.max(0.05, math.min(1, (w - 40) / PhoneScale.DesktopW, (h - 40) / PhoneScale.DesktopH))
 end
 
-function PhoneScale.modal(w: number, h: number): Modal
+-- BD-546: `clearLeft` (optional) is the x in px that a DESKTOP modal must stay right of (the left rail's right edge plus ModalRailGap, from
+-- TouchLayout.modalClearLeft). Without it, or in compact mode (phones), nothing changes. With it the panel is centred on the screen when it
+-- clears, else slid right by `centerDx`, and shrunk only as far as needed to stay on screen.
+function PhoneScale.modal(w: number, h: number, clearLeft: number?): Modal
     if not PhoneScale.isCompact(h) then
-        return {mode = "desktop", scale = PhoneScale.desktopScale(w, h), panelW = 860, panelH = 520, bodyW = 824, bodyH = 402,
-            scrollX = false, headerH = 78, bodyTop = 98, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
-            fit = 1, innerW = 824, innerH = 402, effScale = PhoneScale.desktopScale(w, h)}
+        local scale, dx = PhoneScale.desktopScale(w, h), 0
+        if clearLeft and clearLeft > 0 then
+            local room = w - PhoneScale.ModalRightMargin - clearLeft
+            scale = math.max(0.05, math.min(scale, room / PhoneScale.DesktopW))
+            dx = math.max(0, clearLeft + PhoneScale.DesktopW * scale / 2 - w / 2)
+        end
+        return {mode = "desktop", scale = scale, panelW = 860, panelH = 520, bodyW = 824, bodyH = 402,
+            scrollX = false, headerH = 78, bodyTop = 98, centerDx = dx, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
+            fit = 1, innerW = 824, innerH = 402, effScale = scale}
     end
     local scale = math.clamp((w - 2 * PhoneScale.Margin) / PhoneScale.DesktopW, PhoneScale.CompactFloor, 1)
     local panelW = (w - 2 * PhoneScale.Margin) / scale
@@ -52,7 +64,7 @@ function PhoneScale.modal(w: number, h: number): Modal
     local fit = math.min(1, (panelW - 8) / PhoneScale.BodyW)
     return {mode = "compact", scale = scale, panelW = panelW, panelH = panelH, bodyW = math.min(panelW - 8, 842),
         bodyH = bodyH, scrollX = false, headerH = PhoneScale.HeaderH,
-        bodyTop = PhoneScale.BodyTop, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
+        bodyTop = PhoneScale.BodyTop, centerDx = 0, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
         fit = fit, innerW = (panelW - 8) / fit, innerH = bodyH / fit, effScale = scale * fit}
 end
 

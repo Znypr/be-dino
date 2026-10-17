@@ -1,6 +1,6 @@
 # 66 - Intake: mini objectives
 
-Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see section 17); BD-075 panel built behind the same flag (offline-tested, Studio pictures pending, see section 18)**; BD-074 and BD-076 to BD-078 are Backlog (no gameplay hooks). All numbers PROVISIONAL.
+Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see sections 17 and 20); BD-075 panel built behind the same flag (offline-tested, Studio pictures pending, see section 18)**; BD-076 to BD-078 are Backlog. All numbers PROVISIONAL.
 
 ## 1-3. Intention, new vs extension, fit
 - **Intention:** teach the loop in the first 15 minutes, then give veterans small reasons to try leap, potions, fusion without a grind wall. Loop moments: run, hatch, shop, collection, fusion.
@@ -156,3 +156,33 @@ Full 3 x 3 table (objective none / unfinished / claimable against fusion none / 
 - The line re-fits whenever Bootstrap restyles it (resize, mouse/touch switch) and wakes up only when the top row changes, not on every 20 s poll.
 
 **Evidence.** `python tools/verify_objectives_panel.py --runner <luau>` now also runs: the priority table, flag-off identity, copy and width for every catalogue task (at progress 0 and goal - 1) on 56 canvases (8 phones, 6 tablets, desktops, 667 x 317, and 836 x 390 / 667 x 375 minus 0/36/44/58 px of top bar, each as mouse and touch), the T8 versus PLAY case, and the real panel's `goalLine` / `onTopChanged` on the GUI mock. Static: `objectives` stays nil outside the flag block, `goalLine` is called only inside `if objectives then`, `NextGoal` has no flag or Roblox service. **Not proven offline:** the real on-screen width (the estimate is deliberately wide; a Studio `TextService` measurement and pictures of the line at desktop and 667 x 375 stay with BD-078).
+
+## 20. Implementation status BD-074: the event hooks (2026-10-17, offline only)
+**Still OFF.** Every hook sits behind `Config.ObjectivesEnabled` (false in every committed build, pinned by `release_profiles`). With the flag off a hook site is ONE boolean test: no argument is evaluated, `ObjectiveService` is never required, nothing is allocated, no profile is read or written. Hooks report a fact only AFTER the server committed it (the profile transaction and `adopt`, or the server-side accept), never from client input; no client file touches objectives.
+
+| Objective(s) | Event | Hook site (server) | Reported when |
+| --- | --- | --- | --- |
+| T1, S2 | `food_eaten` | `FoodService` pickup tick | After the pickups were claimed and the catch score was committed; ONE call per player per tick, amount = pickups eaten that tick (batched, never per food) |
+| T2, S3, D2 | `run_end` | `ProfileRepository.commitRunSettlement` | After the settlement transaction and `adopt`; id `run:<runId>` (a replay or a lost acknowledgement counts once); the run length rides along as `value` |
+| S5 | `event_egg_caught` | same settlement | After the commit; amount = run eggs that carry a weather id (an egg caught during a weather event), id `events:<runId>` |
+| T7 | `level_reached` | same settlement | After the commit; `value` = the committed account level (threshold row: counts only at level 3 or more) |
+| T3, S1, D1 | `egg_hatched` | `ProfileRepository.claimChest` | After the claim transaction and `adopt`; ONE event per claim whose amount is the head egg plus its whole hatch page; revealing already-committed page eggs reports nothing |
+| T8, D4 | `species_new` | same claim | Species the player did not own before this claim, judged inside the transaction against the stored profile |
+| D6 | `rare_hatched` | same claim | Hatched dinos of species tier 3 (Rare) or better; a failed Cracked egg is not one |
+| T4 | `dino_equipped` | `ProfileRepository.equipSpecies` | After the committed equip (not for "already equipped", not for a locked species) |
+| T5, S4 | `leap_used` | `LeapService` request handler | After the server accepted the leap (grounded, off cooldown, no wall ahead, rate limited); a leap that is rolled back later still costs the 30 s penalty |
+| T6, D3 | `potion_bought` | `ProfileRepository.progressionAction` (`buyPotion`) | After the purchase transaction and `adopt`; a duplicate token or a refused purchase reports nothing |
+| T9, D5 | `fusion_menu_opened`, `fusion_step_added` | `FusionService` quote and `ProfileRepository.fuseDinosaurs` | After the server priced a full, owned donor set (quote) or committed a fusion |
+
+**LEAD decisions (owner may overrule):**
+1. A failed Cracked egg counts as hatched ("opened"), but never as Rare or as a new species.
+2. "Event egg" = an egg caught during weather (its weather id is not `clear`).
+3. The server cannot see a menu being opened (only the client can), and `FusionAction` `list` is also used by the Index, the goal line and a start-up probe, so T9 and D5 both count on the first server-verified use of the Fusion menu: a priced quote for a full, owned donor set, or a committed fusion. T9 therefore needs a full donor set (6 of one species, the Gold recipe), which is stricter than its text. If the owner wants a literal "opened", BD-075 must add a server-validated "opened" ping, and that is a client-reported event. While fusion itself is off (`IdentityFusionPreviewEnabled`) T9 and D5 cannot be earned at all.
+4. The run length is recorded but nothing gates on it, so "Finish 3 runs" can be done with three instant runs. A minimum run length is a balance call for the owner.
+5. Level is read at each settlement, so a player already above level 3 earns T7 with their next run.
+
+**API.** `ObjectiveService.record(player, kind, amount, eventId, value)` is the one entry point (the signature BD-073 shipped, not `record(player, eventId, amount)`). Three recorders carry the facts that produce several events at once and are called from the same committed paths: `recordRunSettled`, `recordHatched`, `recordFusionUse`. The pending queue holds 64 events, so batched or id-less events are used wherever a burst is possible (food, hatches); only one-per-run ids exist.
+
+**Not hooked, on purpose.** Weather survived, nests opened, potions used, food by kind and a plain "eggs caught" count are events no objective in this catalogue needs. Adding one means adding a catalogue row and its `EventKinds` entry first (BD-072 style), then one hook.
+
+**Evidence.** `python tools/verify_objective_hooks.py --runner <luau>` (CI step added) prints this table from the real sources and fails if an objective has no hook; a hook is not after its commit anchor, behind its guard and in the same function; a hook exists outside the declared sites or in client code; or a require is not lazy. It runs the real `ProfileRepository` and `ObjectiveService`. Flag off: zero requires, zero calls and zero objective writes over a session of settlement, hatches, equip, potion and replays. Flag on: the right counters (run, event eggs, level, batched hatches, new species, rare, equip, potion, fusion use), replays counted once, tutorial T1-T9 (160 Crystals) and the window rows claimed exactly once. The Food tick (batching, one call per player per tick), the Leap handler and the FusionService quote and fuse sites are exercised in `verify_gameplay.py` and `verify_progression.py`; `verify_multiplayer_sim.py` proves a flag-off 12-player run writes no objective data and never loads the module. Offline only: no Studio, no real DataStore, no phone.
