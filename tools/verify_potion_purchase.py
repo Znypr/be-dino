@@ -64,13 +64,15 @@ local client={cache={},log={}}
 local PrivateStateStub={
  set=function(p,k,v) p.attrs[k]=v client.cache[k]=v table.insert(client.log,k) end,
  get=function(p,k) return p.attrs[k] end,forget=function() end}
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
+local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end}) -- docs/152: stands in for the lazily required ObjectiveService when Config.ObjectivesEnabled is on
 local rewardSpecies=nil
 local NestQueue=NEST_QUEUE_MODULE
 local FtueRules=FTUE_RULES_MODULE
 local SettingsModel=SETTINGS_MODEL_MODULE
 local Rewards=nil
 local require=function(id)
+ if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end
  if id=="PrivateState" then return PrivateStateStub end
  if id=="Cosmetic" then return COSMETIC_OWNERSHIP_MODULE end
  if id=="RareHatchService" then return {record=function() end} end

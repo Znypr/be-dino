@@ -181,10 +181,51 @@ PROFILES: dict[str, list[Rule]] = {
 # the playtest build.
 PROFILES["playtest-streaming"] = list(PROFILES["playtest"])
 
+# The all-on-rehearsal scratch profile (docs/152) is the playtest with EVERY built-but-off gameplay flag ON at once, so the offline
+# suites can be run against the combined Config (tools/run_rehearsal.py). It is never built into a published place and never
+# uploaded; it is not a shipped profile (its Streaming entry is scratch, which is how release_playtest.shipped_profiles and the
+# shipped-profile hard stops skip it). It keeps the paid/Robux line closed: CrystalPacksEnabled and PaidRandomItemsEnabled stay
+# required-false, so no Robux product can sell and no paid random item can exist even in the rehearsal. Test/demo/QA/preview
+# switches (grants, harnesses, QA overlay, DemoDirector, HatchV2Preview) are not gameplay and stay required-false too.
+# A new built-but-off flag must be added here (or to EXCLUDED in tools/verify_switch_on.py, with a reason): that check fails until it is.
+REHEARSAL_ON = [
+    ("ObjectivesEnabled", "BD-072..077 mini objectives"),
+    ("GiftClaimEnabled", "BD-451 gift claim path"),
+    ("AdminGiftsEnabled", "BD-451/452 free admin gifts"),
+    ("GiftingEnabled", "BD-451/453 gift sender flag (Robux sender not built; no product is sold while CrystalPacksEnabled is false)"),
+    ("FoodPickupAtMouth", "BD-515 eating at the mouth"),
+    ("PredationAtMouth", "BD-515 predation at the mouth"),
+    ("CombatEnabled", "BD-243 HP combat"),
+    ("SpecialFoodsEnabled", "BD-207 rare special foods"),
+    ("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics"),
+    ("FastTravelPerk", "BD-391/405 fast travel perk"),
+    ("HatchV2", "BD-397 v2 hatch (falls back to v1 per egg)"),
+    ("SecretSpeciesEnabled", "BD-604/BD-228 secret silly creatures (a secret hatches only once its model slot is filled)"),
+    ("DinoSkinsEnabled", "BD-456 dino skins data model and equip (shares profile.ownedSkins with gifting)"),
+]
+_REHEARSAL_ON_KEYS = {key for key, _ in REHEARSAL_ON}
+
+
+def _rehearsal_rules() -> list[Rule]:
+    rules: list[Rule] = []
+    for rule in PROFILES["playtest"]:
+        if rule.key in _REHEARSAL_ON_KEYS and rule.mode == "require":
+            continue  # the playtest pins these off; the rehearsal turns them on
+        if rule.key in ("PlaytestUniverseId", "PlaytestPlaceId") and rule.mode == "check":
+            rules.append(Rule(rule.key, "check", predicate=_id_or_zero, reason="rehearsal: BD-004 ids are not needed offline"))
+            continue
+        rules.append(rule)
+    rules.extend(Rule(key, "set", True, reason=f"rehearsal: {why}") for key, why in REHEARSAL_ON)
+    return rules
+
+
+PROFILES["all-on-rehearsal"] = _rehearsal_rules()
+
 STREAMING: dict[str, Streaming] = {
     "default": Streaming(),
     "playtest": Streaming(),
     "playtest-streaming": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
+    "all-on-rehearsal": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
 }
 
 

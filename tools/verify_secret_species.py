@@ -816,10 +816,9 @@ def part_b():
     prefix = 'local CURRENT_SECRET=nil\n' + prefix
     patches = [
         ('local seedCounter=1\n', 'local seedCounter=1\nlocal function resetSeed(n) seedCounter=n end\n'),
-        ('SettingsModel="SettingsModel",PaidRandomGate="PaidRandomGate"}}', 'SettingsModel="SettingsModel",PaidRandomGate="PaidRandomGate",SecretSpeciesConfig="Secret"}}'),
-        (' if id=="Config" then return GameConfig elseif id=="ProgressionConfig" then return ProgressionConfig end\n error("unexpected module "..tostring(id))',
-         ' if id=="Config" then return GameConfig elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Secret" then return CURRENT_SECRET end\n error("unexpected module "..tostring(id))'),
-        ('elseif id=="PaidRandomGate" then return @@PAID_RANDOM_GATE@@ end', 'elseif id=="PaidRandomGate" then return @@PAID_RANDOM_GATE@@ elseif id=="Secret" then return CURRENT_SECRET end'),
+        # docs/152: verify_rewards' harness now carries the real SecretSpeciesConfig for every rewards-family verifier (the rehearsal turns the flag on).
+        # Here the module under test is swapped between sub-tests, so the base module becomes a proxy onto CURRENT_SECRET.
+        ('SecretSpecies=' + verify_rewards.module('src/shared/SecretSpeciesConfig.luau'), 'SecretSpecies=setmetatable({}, {__index = function(_, key) return CURRENT_SECRET[key] end})'),
     ]
     for old, new in patches:
         assert prefix.count(old) == 1, 'harness patch target changed in verify_rewards: ' + old[:60]
