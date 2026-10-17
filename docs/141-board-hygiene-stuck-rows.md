@@ -75,5 +75,23 @@ P0/P1 rows in Review / test whose only open item is a Studio check one agent can
 | extra | BD-371 after the splat (needs a Cracked egg) | P1 | none | Done. [evidence](evidence/2026-10-17-stuck-BD-371/README.md) |
 | extra | BD-155 "pale Ember dino" check | P1 | BD-162 | Found and fixed BD-518 (tint never rendered on low-poly). [evidence](evidence/2026-10-17-ember-tint/README.md) |
 
-Next candidates, not run (each fits one single-player session): BD-445 and BD-372 (Shop at 0 crystals, needs the admin to set crystals), BD-382 (one tap on another rail button with a station menu open), BD-420 (more than five nests, needs the nest timer edit), BD-101 (potion shop icons), BD-146 (equip swap with patterns and FX rig), BD-289 (walk-up prompts in the cave), BD-490 (cave dressing look + luminance with `tools/qa/luminance.py`). Not agent-runnable: BD-164/255 (camera rattle needs a quiet machine), anything with a phone, 2+ players or an owner look.
+### Round 2 (2026-10-17, branch claude/stuck-studio-round2)
 
+Same method (own playtest build, new Studio window, real mouse and keyboard, `screen_capture` only; scratch config `StudioTestCrystals = 0`, `NestIncubationSeconds = 20`, never committed). Order of the candidates above, plus the phone-size repeat of rank 1.
+
+| Row | Pri | Result 2026-10-17 | Evidence |
+| --- | --- | --- | --- |
+| BD-445 / BD-372 Shop at 0 crystals | P1 | Hint and hidden CONDITIONS tab (levels 1, 2) PASS; two small bugs found and fixed (BD-529 hint over the footer, BD-530 BUY EGG confirm with a negative balance); left: the CONDITIONS tab at level 3 | [BD-445](evidence/2026-10-17-stuck-BD-445/README.md) |
+| BD-382 one tap with a menu open | P1 | **Done**: Potions to Shop to Eggs to Fusion to Shop in one tap each, chip works with a menu open | [BD-382](evidence/2026-10-17-stuck-BD-382/README.md) |
+| BD-420 more than five nests | P1 | **Done**: 5 nests into 5 empty slots, then "Extra nests: +250 Crystals" and "Nests full!" once; runs under 120 s give no nests | [BD-420](evidence/2026-10-17-stuck-BD-420/README.md) |
+| BD-101 potion icons | P1 | 12 of 12 ids load, cards, confirm, USE button, HUD chip PASS; left: 5 rarity frames, phone look | [BD-101](evidence/2026-10-17-stuck-BD-101/README.md) |
+| BD-146 equip swap | P0 | **Done**: Compy to Round Spots Stegosaurus and back with an aura, one visual each time | [BD-146](evidence/2026-10-17-stuck-BD-146/README.md) |
+| BD-289 walk-up prompts | P1 | G-key walk-up, no re-open, Teleport OFF glow trail PASS; the 96 px tap face cannot be clicked through the MCP (a plain control billboard also fails): phone only | [BD-289](evidence/2026-10-17-stuck-BD-289/README.md) |
+| BD-490 cave dressing | P1 | Renders, meshes load, luminance 0.25 to 0.29 at the Heart, 0.177 at a station (one dark close-up 0.148); owner look left | [BD-490](evidence/2026-10-17-stuck-BD-490/README.md) |
+| BD-148 phone-size repeat | P0 | Steps 1 to 6 PASS at 836 x 390 with scrolls; BD-531 (HUD at small heights); the "Some eggs can crack!" line still unseen | [BD-148](evidence/2026-10-17-stuck-BD-148/README.md) |
+
+**Phone size from Studio:** the MCP cannot set a device. `StudioDeviceEmulatorService` is not reachable from the command bar and no tool drives the Device Emulator. A usable stand-in is resizing the Studio window with SetWindowPos until `Camera.ViewportSize` reads about 844 x 390; it checks layout only (touch is off), so touch targets, thumb controls and Billboard tap faces still need the owner's phone (BD-085). Studio also stopped rendering (viewport 1 x 1, MCP "Connection closed") after about 30 minutes with six Studio windows open; the cure was a fresh window.
+
+New rows from round 2: BD-529, BD-530 (fixed), BD-531 (phone HUD), BD-532 (BUY EGG gate in the playtest).
+
+Next candidates, not run: BD-372 level-3 Conditions tab, the BD-148 crack hint line, BD-164/255 (camera rattle needs a quiet machine). Not agent-runnable: anything with a phone, 2+ players or an owner look.
