@@ -10,7 +10,7 @@ It runs the REAL pure module in Luau (with the real Config and ScaleLadder) and 
   5. SAME FUNCTION: FoodService and PredationService require Shared/MouthReach (no private copy of the radius), the module sits in src/shared
      and uses no Instance / game API, so the server and any client preview run the same code; FoodService no longer reads FoodPickupRadius;
   6. DATA: ScaleLadder has snout and headLength for all 22 species (snout equals half the body length except where the head is not the front);
-  7. FLAGS: Config.FoodPickupAtMouth is on (it only acts with LowPolyDinos) and Config.PredationAtMouth is off (predation change verified offline only).
+  7. FLAGS: Config.FoodPickupAtMouth is OFF (docs/115 MR6, until the BD-527 pace check; it only acts with LowPolyDinos) and Config.PredationAtMouth is off (predation change verified offline only).
   8. CAP (BD-521, docs/115 MR4): the zone (front edge ahead of the root, radius) never exceeds Config.FoodReachCapCompy x the Compy's at the same scale
      (checked at 6 scales for all 22 species), the Compy and every species under the cap keep the uncapped BD-515 zone, the head point is never behind the root,
      a berry at the zone's front edge is eaten, and the cap factor stays inside the parity band 1.0 to 1.10 (tools/simulate_food_reach.py measures food/min).
@@ -237,8 +237,8 @@ def main():
         problems.append('expected 22 species in ScaleLadder, found %d' % count)
     if capk is None or not 1.0 <= capk <= 1.10:
         problems.append('Config.FoodReachCapCompy is %s, expected a number in the parity band 1.0 to 1.10 (docs/115 MR4)' % (capk,))
-    if flags != ('true', 'false'):
-        problems.append('Config.FoodPickupAtMouth / PredationAtMouth are %s, expected true / false' % (flags,))
+    if flags != ('false', 'false'):
+        problems.append('Config.FoodPickupAtMouth / PredationAtMouth are %s, expected false / false (docs/115 MR6: off until the BD-527 pace check)' % (flags,))
     for (species, s), (snout, head, r, dirs, legacy, ufront, urad, uhead, edge) in sorted(rows.items()):
         for d in dirs:
             if d[0] != '1' and snout <= head + r + 1e-6:

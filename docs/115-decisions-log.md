@@ -254,3 +254,8 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 ### Task effects (2026-10-17, streaming experiment)
 - BD-502 gates 3 and 5 done (ST4, [147](147-streaming-experiment-2026-10-17.md) s9): the desktop far view is not visibly worse at 256 / 128 and the pair stays; gates 1 (phone run, also 256 / 128 against 256 / 192) and 2 (2-client run) are open and need the owner's phone and a second client. No flag, profile value or Config value changed.
 - BD-498 gets the result (B parked); new rows BD-502 (flip, P1), BD-503 (teleports, P2), BD-504 (registry hardening, P3), BD-505 (`Sanctuary` lookup bug, P2, not a streaming problem), BD-506 (the inert code, Review / test). No flag, profile, Config value or asset id changed.
+
+## LEAD decision 2026-10-17 (owner delegated): mouth eating stays OFF until the pace is measured
+| # | Decision | Why | Source |
+|---|---|---|---|
+| MR6 | **LEAD (owner delegated):** `Config.FoodPickupAtMouth` is **false** in every profile for now. The mouth zone code (MR1, MR4, MR5) stays built and verified, but the game keeps the Build 020 root rule until a real Studio `LastRunFood` log (a person playing two 5-minute Compy runs, one with the flag on, one off) shows the pace effect. If the lift is under about 10%, turn it on; otherwise the owner picks an option in BD-527. | The owner said to keep pacing as it is. The sim shows any zone that eats at the snout lifts Compy food per minute by about +18% to +37% (perfect-aim walker, ratios only), and an owner instruction outranks a lead decision. | BD-522, BD-527, docs/evidence/2026-10-17-food-reach/ |
