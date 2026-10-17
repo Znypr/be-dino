@@ -1,8 +1,89 @@
-# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17)
+# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17); status updated at end of day
 
 Label: **CURRENT BUILD BEHAVIOR** audit, offline only. Nothing here was run in Studio, on a published server or on a phone, and no game code was changed. It refreshes [125 go / no-go](125-friends-playtest-go-no-go.md) and walks the items of [106](106-friends-playtest-readiness.md) and [129](129-owner-studio-smoke-checklist.md) against what is merged today. Sources: [AGENTS.md](../AGENTS.md), [55 runbook](55-playtest-release-runbook.md), [111 multiplayer](111-multiplayer-audit.md), [115 decisions](115-decisions-log.md), [120 uploads](120-pending-owner-uploads-checklist.md), [141 Studio scripts](141-board-hygiene-stuck-rows.md), `tools/release_profiles.py`, the kanban rows BD-317, BD-085, BD-322, BD-020, BD-019, BD-004, BD-319, BD-364, BD-293.
 
-## 1. Summary (one screen)
+> **Reading order (end of 2026-10-17).** The new section **"Status at end of 2026-10-17"** below is the current go / no-go. Everything after the line "Morning baseline" is the audit on main b616687 (PR #346) and stays as history; the notes at the end of the new section say which of its parts a later PR overtook. Nothing was deleted.
+
+## Status at end of 2026-10-17
+
+Label: **CURRENT BUILD BEHAVIOR** status on main `aba6a29` (PR #378). Docs only; nothing was run in Studio or on a phone for this section. Sources: `git log origin/main` (PRs #347 to #378 merged after the 145 baseline; #374, #379 and #291 still open), the row statuses in [07 kanban](07-kanban.md), the LEAD decisions in [115](115-decisions-log.md), [141](141-board-hygiene-stuck-rows.md) s7, [146](146-phone-forecast-2026-10-17.md) and [147](147-streaming-experiment-2026-10-17.md). CI on main `aba6a29` is green (workflow "Build generated Roblox place", `gh run list`); the offline numbers of s2 below were taken on b616687 and were not re-run here. Nothing here is called Done without its evidence path, and "merged" is still not "checked".
+
+**Verdict: still NO-GO for friends session 1.** No code blocker is known, and the lead's single-player Studio checks of today passed or found and fixed what they found. Every remaining blocker needs the owner (experience, publish, a second client, a phone) or a lead Studio pass that has not been done as a whole.
+
+### 1. GO / NO-GO table for session 1
+
+| # | Blocker | Open? | Who must act | Evidence / where |
+| --- | --- | --- | --- | --- |
+| 1 | Which experience is the playtest one, and can a non-owner join it (BD-004) | **OPEN, NO-GO** | **Owner** (2 min in Creator Hub); then lead writes the ids into Config | BD-004 row (Blocked); `src/shared/Config.luau` lines 108-109 unchanged since 2026-10-14; the only alt join said "not available" ([40](40-mesh-access-verification.md)) |
+| 2 | Creator Hub settings and the first publish (private, named playtesters, Computer only or accept phones, 4 players, no products, Allow Mesh & Image APIs ON); if BD-004 is the legacy experience, clear `DeveloperProducts` first | **OPEN, NO-GO** | **Owner** publishes; lead prepares the tag and build | [55](55-playtest-release-runbook.md) s4, 145 s6 items 2 to 4; release record empty |
+| 3 | Rollback drill (BD-020, BD-320): publish r1, restore r0, roll forward | **OPEN, NO-GO** (hard stop of [125](125-friends-playtest-go-no-go.md)) | **Owner** | Rule decided: RB1 in [115](115-decisions-log.md) (roll back only to the previous playtest tag, never to Build 020 after an Epic/Legendary); the offline drill is green ([111 rollback](111-rollback-drill.md)) |
+| 4 | Non-owner view of the published place: no admin panel, all images, models and sounds load, settings and a fusion survive a rejoin | **OPEN, NO-GO** | **Owner** with an alt account | 106 S1 to S3, S12, S14; live-only |
+| 5 | Lead Studio pass of 145 s5 (15 steps) | **PARTLY DONE** | **Lead / agent** for the rest | Done today in single-player Studio: Eggs screen and OPEN loop (BD-148, BD-170, BD-371), first eggs never Cracked (BD-365), unseeded mutation catch (BD-154 Done), shops at 0 crystals (BD-445), potion icons (BD-101), one-tap travel (BD-382 Done), more than five nests (BD-420 Done), equip swap (BD-146 Done), cave dressing renders (BD-490), egg reveal fixes (BD-519, BD-525), HUD and Tell us! fixes (BD-507, BD-524); folders listed in s5. **Not done:** the 5-minute stopwatch run (145 s5 step 1, BD-418 "about 15 eggs"), the weather-leak cycle in the cave, the memory read (`LowPolyImagesMiB`, step 11), the feedback-line check, the flag decision (step 15). A partial walk in the owner checkout (`docs/evidence/2026-10-17-session1-studio/`) is not on main and is not counted |
+| 6 | Multiplayer live (BD-319, BD-364, BD-502 gate 2): the 4-player Local Server script, then 2 clients on the streaming-on copy | **OPEN, NO-GO** | **Owner** runs it (needs a second client); lead prepares | [111](111-multiplayer-audit.md) s5.6; only the offline 2/4/8-player simulation exists (145 s2) |
+| 7 | Phone (BD-085, BD-322, BD-293, BD-502 gate 1): measure the build and the streaming pair 256/128 against 256/192 | **OPEN**; stops being a blocker only if Devices is set to Computer only | **Owner** (Android) | [146](146-phone-forecast-2026-10-17.md) s7; guards BD-495 to BD-497 are built but unmeasured; `StreamingEnabled` stays OFF ([115](115-decisions-log.md) ST1, ST4) |
+| 8 | Food pace with eating at the mouth (BD-527, BD-522) | **OPEN, not a blocker while OFF** | **Owner** picks; lead flips the flag only after | `Config.FoodPickupAtMouth = false` ([115](115-decisions-log.md) MR6); the simulation says +18% to +37% Compy food per minute if it were on; the two Studio runs are not done |
+| 9 | Phone-size HUD (BD-531): EGGS plate missing in a run at 836 x 390, hub HUD overlaps | **OPEN** (matters only with phones) | **Agent** | BD-531 row; [evidence](evidence/2026-10-17-stuck-BD-148/README.md) |
+| 10 | The 16 unbound images; sounds | Images **CLOSED** (bound by #349); sounds still mostly unbound and unheard, not a blocker | Owner (ears) for sounds | `python tools/upload_batch.py --list` to confirm; [120](120-pending-owner-uploads-checklist.md), [136](136-owner-art-and-sound-quick-prompts.md) |
+| 11 | Code and offline checks | **CLOSED as far as known** | Lead | CI green on `aba6a29`; s2 and s8 below |
+
+### 2. Owner hands-on steps, in order
+
+Times are estimates. Steps 1 to 3 gate session 1 (step 4 too if phones may join); 5 to 8 do not.
+
+1. **BD-004, which experience (2 min).** Why: the ids in Config may be the legacy experience and the join never worked. Where: Creator Hub > Creations; write down name and id (the universe is in the address bar), then the start place id; tell the lead. Text in the BD-004 row.
+2. **Publish the playtest build (about 25 min, plus 10 min for the rollback drill).** Why: nothing has been published or tagged, and blockers 2 to 4 need it. Where: Creator Hub settings and publish steps in [55](55-playtest-release-runbook.md) s4 and 145 s6 items 2 to 6 (join check and smoke with an alt account; rollback drill = publish r1, restore r0, roll forward, record both version numbers). The lead builds `python tools/build.py --profile playtest` first.
+3. **2-player run (about 15 min).** Why: replication, what another client sees, a real second client (BD-364, BD-502 gate 2). Where: Studio Test > Local Server with 4 players, script [111](111-multiplayer-audit.md) s5.6 (10 min); then 5 min with 2 clients on the streaming-on copy (`python tools/build.py --profile playtest-streaming`, [147](147-streaming-experiment-2026-10-17.md) s9.4). Paste the output lines it asks for into BD-364.
+4. **Phone run (about 45 min); needed only if phones may join session 1.** Why: BD-085 and BD-322 are unmeasured, and BD-502 gate 1 compares the streaming pair 256/128 with 256/192. Where: Android, [55](55-playtest-release-runbook.md) s3 and [146](146-phone-forecast-2026-10-17.md) s7 (20 min, 3 runs), then 10 min of walking on each of the two streaming copies the lead builds with `tools/qa/streaming_variants.py` ([147](147-streaming-experiment-2026-10-17.md) s9.3); read memory and part count.
+5. **BD-527 two-run pace check (about 15 min).** Why: decide if eating at the mouth changes the egg count. Where: Studio, two 5-minute Compy runs with `FoodPickupAtMouth` off then on, read `LastRunFood` ([119](119-catch-rate-15-per-run.md), [115](115-decisions-log.md) MR6, BD-527 row). The lead flips the flag in a scratch config that is never committed.
+6. **Grass pick, A / B / C (2 min).** Why: BD-528 waits for you. Where: `docs/evidence/2026-10-17-grass-ab/contact-sheet-A-B-C.jpg` and its README (the lead recommends A).
+7. **VFX packs lab walk (about 10 min).** Why: go / no-go on adapting Pack 1 for fire auras and trails (BD-493) and a check of the puff upload id. Where: `C:/Users/znypr/dtmp/VFXLab-Packs.rbxlx` (outside the repo); questions in [144](144-vfx-packs-trial.md) s8; images `docs/evidence/review-2026-10-17/33-vfx-packs-*`.
+8. **Tell the lead where the V3 Compy file lives (1 min).** Why: no doc or kanban row names its location (searched 2026-10-17), so nobody can pick it up. Where: reply in the owner inbox with the folder or Studio place. Not needed for session 1.
+
+### 3. What agents can do without the owner (next 5 Backlog rows by priority)
+
+1. **BD-531** (P1) phone-size HUD: EGGS plate, hub overlaps, Eggs screen scroll. Check at 836 x 390 with the window-resize stand-in ([141](141-board-hygiene-stuck-rows.md) s7); touch-only parts wait for the phone.
+2. **BD-167** (P1) world density v3: new Blender kit pieces (rocks, trees, bushes, flowers, reeds, food kinds) inside the part budget; BD-199 (contact sheet, then in-game) gates each batch.
+3. **BD-055** (P1) weather sky, cloud and particle completion (code and Blender textures; weather sounds stay with the owner, BD-132).
+4. **BD-035** (P1) modular Blender egg, pattern, condition and mutation render passes.
+5. **BD-048** (P1) Blender world VFX and the six trail rarity categories (the ten trail icons are BD-178, Review / test).
+
+Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playtest, P2), BD-504 (P3), BD-508 (P3), and Studio checks not yet run: the BD-372 level-3 Conditions tab, the BD-148 "Some eggs can crack!" line, BD-164 / BD-255 camera rattle (needs a quiet machine). BD-503 shipped in #365 but its row reads Backlog until open PR #374 restores it. The P0 Backlog rows (BD-021, BD-085, BD-293, BD-317, BD-322) all wait on the owner, a publish or a phone.
+
+### 4. Not verified
+
+- **Phone:** nothing measured. Resizing the Studio window checks layout only (no touch, memory or heat). The guards BD-495 to BD-497, BD-531 and the streaming minimum-radius risk ([115](115-decisions-log.md) ST4) are reasoned or Studio-only.
+- **Published server:** never published, no tag, no rollback, no non-owner asset load, no real DataStore timing, no `ProfileMode` Persistent check.
+- **Multi-player:** offline simulation only (681 checks, 145 s2); no live second client, no streaming-on 2-client run.
+- **Real saves:** no existing profile was migrated or reloaded in this audit; the playtest store is fresh by design (`BeDino_Playtest_M1_v1`). Fusion persistence, nest timers and settings across a rejoin are checked against mocks only.
+- Also not seen: eating at the mouth with a real human walk (flag OFF), fliers and swimmers in a real run, server hit sizes in a bite (combat flag OFF), and any sound by ear.
+
+### 5. What merged on 2026-10-17 since the 145 baseline (PRs #347 to #378; statuses follow the kanban)
+
+| Area | PRs and rows | Status and evidence |
+| --- | --- | --- |
+| Readiness doc and findings | #348 (this doc), #351 (BD-317 findings) | Docs and verifier only; s8 below |
+| Assets | #349 binds 16 images; #350 cave wall rock forms and gate arch; #347 Creator Store VFX packs lab (BD-493) | Review / test; ids for plants, colossal trees and cave meshes are still empty ([146](146-phone-forecast-2026-10-17.md)); the "16 files still empty" line of s3 is superseded |
+| Phone forecast and guards | BD-494 #354, BD-495..499 #359 | The forecast is an estimate ([146](146-phone-forecast-2026-10-17.md)); guards are Review / test, offline model only |
+| Streaming experiment and prep | BD-498 #362, BD-503 #365, BD-502 gates 3 and 5 #370 | `StreamingEnabled` OFF in every shipped profile; gates 3, 4, 5 done in desktop Studio, gates 1 (phone) and 2 (2 clients) open: [147](147-streaming-experiment-2026-10-17.md), `docs/evidence/2026-10-17-streaming/`, `2026-10-17-stream-prep/`, `2026-10-17-stream-radius/` |
+| Species size, camera, hit size | BD-500 #360, camfit #366, BD-514 #377, BD-407 #356, BD-471 #358 | Review / test; [species-sizes](evidence/2026-10-17-species-sizes/README.md), [camfit](evidence/2026-10-17-camfit/README.md); hit sizes are offline only (combat OFF) |
+| Mouth reach | BD-515 #367, BD-521 #368, BD-522 #372 | Built, **OFF** per MR6; simulation in [food-reach](evidence/2026-10-17-food-reach/README.md); owner choice BD-527 |
+| Mutation tint | BD-518 #369 | Review / test; [ember-tint](evidence/2026-10-17-ember-tint/README.md) |
+| Eggs and hatch | BD-154 #364 (Done), BD-519 and BD-525 #375, BD-381 #353 | BD-154 Done with [evidence](evidence/2026-10-17-bd154-unseeded/README.md); [egg-reveal-fixes](evidence/2026-10-17-egg-reveal-fixes/README.md) |
+| UI and HUD | BD-501 UI floor sweep #361, BD-507 #363, BD-524 #371, BD-408 `verify_handbook` #357 | Review / test; [ui-floor](evidence/2026-10-17-ui-floor/README.md), [hud-fix](evidence/2026-10-17-hud-fix/README.md), folder `docs/evidence/2026-10-17-bd524/` |
+| Shop | BD-529 and BD-530 in #378, potion end-to-end verifier #352 | Review / test; [BD-445](evidence/2026-10-17-stuck-BD-445/README.md), folder `docs/evidence/2026-10-17-shop/` |
+| Stuck rows, rounds 1 and 2 | #369, #378 | Done, each with its evidence folder ([141](141-board-hygiene-stuck-rows.md) s7): BD-170, 440, 442, 169, 094, 371, 382, 420, 146. BD-148, 365, 445, 101, 289, 490 stay Review / test with their remaining items listed there |
+| Decisions | #355 (RB1 rollback rule, TX1 512 px uploads), #333 (gifting to anyone) | [115](115-decisions-log.md) |
+| Board tooling | #376 `tools/next_bd_id.py`, `tools/verify_kanban_merge.py` | Run both before adding or merging kanban rows (AGENTS.md "Picking numbers") |
+
+**What the older sections of this doc look like now.** Section 1 (verdict and top-5): blocker 2 (nobody has walked the loop) is PARTLY DONE, see blocker 5 above; the other four stand. Section 3: the "16 files still empty" is closed by #349. Sections 4 and 5: the item table and the 15-step list are still the right checklist, with the steps named in blocker 5 done in part. Section 6: replaced by the numbered list above (same steps; the rollback drill is folded into step 2; the 2-player run, BD-527, grass, VFX and V3 Compy steps did not exist this morning). Section 7 and 8: unchanged.
+
+---
+
+## Morning baseline below (2026-10-17, main b616687), kept as history
+
+## 1. Summary (one screen) - HISTORICAL, morning of 2026-10-17
+
+Superseded in part by "Status at end of 2026-10-17" above: use its GO / NO-GO table. The verdict and the five blockers below are kept as written.
 
 **Verdict: NOT READY today. No code blocker turned up offline (every check below passes), but nobody has looked at the current build, and two owner facts are unresolved.** It becomes ready after a lead Studio pass (section 5, about 35 minutes) and the owner steps (section 6). Wording for friends: private test, desktop, 4 players, progress may reset, no Robux, economy numbers are placeholders.
 
@@ -31,6 +112,8 @@ Also open, not top-5: the 5-minute / about 15 egg claim has never been stopwatch
 Every `verify_*.py` is wired into CI (`comm` of the workflow against `tools/` is empty). Offline checks prove rules, ordering and budgets against mocks. They do not prove how anything looks, sounds, feels or performs.
 
 ## 3. Release flags: what session 1 actually runs
+
+_Update end of 2026-10-17: the flag table still matches the playtest profile; `StreamingEnabled` and `FoodPickupAtMouth` are OFF in both profiles, and the "16 files still empty" line below was closed by #349._
 
 The playtest profile (`tools/release_profiles.py`) changes these from the default build (diff computed by applying the profile to `Config.luau`):
 
@@ -174,7 +257,9 @@ Setup (not a step): `python tools/build.py --profile playtest`, close every othe
 14. **Write the result**: a PASS or FAIL per 129 BLOCKS line and the step 11 numbers in BD-317, with screenshots in `docs/evidence/2026-10-NN-session1-studio/`.
 15. **Decide the flags with the owner** from what you saw: if the cave, low-poly dinos or class movement look wrong, remove the `Rule(...)` lines in `release_profiles.py` for that flag (one PR), not a hot fix. That is the rollback lever before publishing.
 
-## 6. Owner steps (publish, phone, friends)
+## 6. Owner steps (publish, phone, friends) - HISTORICAL
+
+Replaced by the numbered list in "Status at end of 2026-10-17" section 2 (same steps in the same spirit, plus the new ones).
 
 1. **Fix BD-004 first (2 minutes).** Creator Hub > Creations: open each experience, write down name and id, and tell the lead which one is the playtest experience. If it is a new one, its ids replace `PlaytestUniverseId` and `PlaytestPlaceId` in Config (docs/55 s2). If it is the legacy one, check whether it owns the six Robux products; session 1 needs none.
 2. **Creator Hub settings (docs/55 s4)**: Private or Limited with the named friends as playtesters (Play, not Edit); complete the maturity questionnaire; Devices Computer only unless you accept a phone friend; Max players 4; no products, passes or subscriptions; HTTP off; **Allow Mesh & Image APIs ON**; publish from the same owner account.
