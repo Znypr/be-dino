@@ -530,7 +530,7 @@ render=function(name: string)
                 local owned=type(p.perks)=="table" and p.perks.fastTravel==true
                 local perkPrice=ProgressionConfig.FastTravelPrice
                 label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)
-                button(body,if owned then "YOURS" else perkPrice.." Crystals",540,math.max(cardsY+targetHeight*2+146,332),284,40,if owned then C.card else C.accent,function()
+                button(body,if owned then "YOURS" else perkPrice.." Crystals",540,math.max(cardsY+targetHeight*2+146,332),284,targetHeight,if owned then C.card else C.accent,function()
                     if not owned then transact("buyPerk","fastTravel") open("auras") end
                 end).Active=not owned
             end
@@ -584,9 +584,9 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,require(Shared.ShopCardState).packButton(nil),8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,require(Shared.ShopCardState).packButton(nil),8,96,248,44,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextScaled=true b.TextWrapped=false b.Active=false -- BD-430: the price always fits the button, never "..."
-                    local fit=Instance.new("UITextSizeConstraint") fit.MaxTextSize,fit.MinTextSize,fit.Parent=22,12,b
+                    local fit=Instance.new("UITextSizeConstraint") fit.MaxTextSize,fit.MinTextSize,fit.Parent=22,14,b -- docs/114 s4.4: never under 14 px
                     cards[i]={button=b,tag=tag}
                 end
                 -- Each card shows its price as soon as it is known; a price that never arrives stays "Price soon".
@@ -769,10 +769,10 @@ render=function(name: string)
             local look=ShopCardState.look({left=left,buyButton=item.price.." Crystals"},item.price.." Crystals")
             local card=box(scroller,x,y,264,132,ShopCard.cardColor(C.card:Lerp(color,.28),look),24)
             art(card,bottle(item),6,8,64)
-            label(card,item.name,74,3,186,26,19,color)
-            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,28,186,44,15)
-            label(card,if left>0 then left.." left" else look.caption,74,74,186,20,15,ShopCard.captionColor(look))
-            local buy=button(card,look.buttonText,8,96,248,30,color:Lerp(C.panel,.45),function()
+            label(card,item.name,74,2,186,24,19,color)
+            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,26,186,36,15)
+            label(card,if left>0 then left.." left" else look.caption,74,62,186,20,15,ShopCard.captionColor(look))
+            local buy=button(card,look.buttonText,8,84,248,44,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
                 if left>0 then chosenPotion=item.id open("potionConfirm") end
             end)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
@@ -784,9 +784,9 @@ render=function(name: string)
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned>0 then
-                local x=(slot%3)*276 local y=338+math.floor(slot/3)*46
+                local x=(slot%3)*276 local y=338+math.floor(slot/3)*50
                 slot+=1
-                local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,44,C.purple,function()
                     chosenPotion=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
@@ -794,13 +794,13 @@ render=function(name: string)
                 useButton.TextSize=16
                 -- BD-101: the owner's potion icon beside the name (a sibling above the button, so the text keeps its own padding);
                 -- no valid image id -> no icon and the button looks exactly as before.
-                if require(Shared.PotionArt).icon(scroller,item.id,UDim2.fromOffset(34,34),UDim2.fromOffset(x+5,y+20),useButton.ZIndex+1) then
+                if require(Shared.PotionArt).icon(scroller,item.id,UDim2.fromOffset(34,34),UDim2.fromOffset(x+5,y+22),useButton.ZIndex+1) then
                     local pad=Instance.new("UIPadding") pad.PaddingLeft=UDim.new(0,40) pad.Parent=useButton
                 end
             end
         end
         if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
-        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*46+8)
+        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*50+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
@@ -935,8 +935,8 @@ render=function(name: string)
         local target=if diamond then "Diamond" else "Gold"
         hero(body,selected,14,0,360,260,fusionTarget,true)
         art(body,"mutation_"..fusionTarget,142,242,84)
-        button(body,"GOLD",388,0,200,42,C.gold,function() fusionTarget="gold" open("fusion") end)
-        button(body,"DIAMOND",600,0,200,42,C.blue,function() fusionTarget="diamond" open("fusion") end)
+        button(body,"GOLD",388,0,200,44,C.gold,function() fusionTarget="gold" open("fusion") end)
+        button(body,"DIAMOND",600,0,200,44,C.blue,function() fusionTarget="diamond" open("fusion") end)
         label(body,"MAKE IT "..string.upper(target),388,56,420,54,30,if diamond then C.blue else C.gold)
         label(body,"Consume "..cost.." "..source.." copies for 1 "..target.." "..Config.SpeciesDisplayNames[selected]..". Cosmetic only.",392,118,420,76,22)
         meter(body,400,214,400,owned,cost,C.gold,string.format("%d / %d %s copies",owned,cost,source))
@@ -1395,7 +1395,7 @@ local function scales()
     goalHUD.Position=UDim2.fromOffset(layout.crystal.x,layout.crystal.y+layout.crystal.h*layout.crystal.scale+4)
     goalScale.Scale=layout.crystal.scale
     local goalFloor=if layout.touch then require(Shared.PhoneScale).floorText(17,layout.crystal.scale) else 17 -- BD-333: goal text renders >= 14 px, truncated instead of shrunk
-    goalLimit.MaxTextSize,goalLimit.MinTextSize=goalFloor,if layout.touch then goalFloor else 1
+    goalLimit.MaxTextSize,goalLimit.MinTextSize=goalFloor,if layout.touch then goalFloor else require(Shared.PhoneScale).MinText -- docs/114 s4.4: the desktop line wraps to two lines before it ever shrinks under 14 px
     goalText.TextScaled,goalText.TextSize=not layout.touch,goalFloor
     goalText.TextWrapped,goalText.TextTruncate=not layout.touch,if layout.touch then Enum.TextTruncate.AtEnd else Enum.TextTruncate.None
     place(hud,hudScale,layout.hud)

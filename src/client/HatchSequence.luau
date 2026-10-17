@@ -81,7 +81,7 @@ local function chipFrame(front: Frame, name: string, spec: {number}, textLeft: n
     local text = Instance.new("TextLabel")
     text.Name, text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = "Text", 1, UDim2.fromOffset(textLeft, 3), UDim2.new(1, -(textLeft + textRight), 1, -6), Enum.Font.FredokaOne, WHITE
     text.TextScaled, text.TextWrapped, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, false, 0, Theme.Colors.outline, 28, chip
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 12, text
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 14, text -- docs/114 s4.4: never under 14 px
     return chip, text, scale, stroke
 end
 local function buildPaint(front: Frame): PaintKit
@@ -126,19 +126,19 @@ local function buildPaint(front: Frame): PaintKit
         kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
         -- Colour chip right under its bucket: [swatch] Name [TIER badge], one line.
         local spec = FxPlan.Chips[if i == 1 then "left" else "right"]
-        local chip, text, sc, cs = chipFrame(front, "PaintChip" .. i, spec, 46, 92)
+        local chip, text, sc, cs = chipFrame(front, "PaintChip" .. i, spec, 46, 104)
         local swatch = Instance.new("Frame")
         swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.new(0, 25, .5, 0), UDim2.fromOffset(30, 30), 28, chip
         corner(swatch)
         local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = WHITE, 3, swatch
         local badge = Instance.new("Frame")
-        badge.Name, badge.AnchorPoint, badge.Position, badge.Size, badge.ZIndex, badge.Parent = "TierBadge", Vector2.new(1, .5), UDim2.new(1, -8, .5, 0), UDim2.fromOffset(82, 30), 28, chip
+        badge.Name, badge.AnchorPoint, badge.Position, badge.Size, badge.ZIndex, badge.Parent = "TierBadge", Vector2.new(1, .5), UDim2.new(1, -8, .5, 0), UDim2.fromOffset(94, 30), 28, chip
         corner(badge, UDim.new(0, 10))
         local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Theme.Colors.outline, 2, badge
         local badgeText = Instance.new("TextLabel")
         badgeText.BackgroundTransparency, badgeText.Position, badgeText.Size, badgeText.Font, badgeText.TextColor3 = 1, UDim2.fromOffset(4, 2), UDim2.new(1, -8, 1, -4), Enum.Font.FredokaOne, WHITE
         badgeText.TextScaled, badgeText.TextStrokeTransparency, badgeText.TextStrokeColor3, badgeText.ZIndex, badgeText.Parent = true, 0, Theme.Colors.outline, 29, badge
-        local bl = Instance.new("UITextSizeConstraint") bl.MaxTextSize, bl.MinTextSize, bl.Parent = 18, 10, badgeText
+        local bl = Instance.new("UITextSizeConstraint") bl.MaxTextSize, bl.MinTextSize, bl.Parent = 18, 14, badgeText
         kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
         kit.chipBadges[i], kit.chipBadgeLabels[i] = badge, badgeText
     end
@@ -306,7 +306,7 @@ local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number
     label.BackgroundTransparency, label.Position, label.Size, label.Font, label.Text = 1, UDim2.fromOffset(42, 2), UDim2.new(1, -50, 1, -4), Enum.Font.FredokaOne, text
     label.TextColor3, label.TextScaled, label.ZIndex, label.TextStrokeTransparency, label.TextStrokeColor3 = WHITE, true, f.ZIndex + 1, 0, Color3.new(0, 0, 0)
     label.Parent = f
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 10, label
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 14, label
     local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, f
     return f, scale, stroke
 end
@@ -402,7 +402,7 @@ function Seq.play(args: Args): Handle
     hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(0)
     hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.ZIndex, hint.Visible = 0, Theme.Colors.outline, a.body.ZIndex + 6, false
     hint.Parent = a.body
-    local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 12, hint
+    local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 14, hint
 
     -- Full-screen tap target (>= 44 px everywhere) plus a small "Skip all" while more eggs wait. Taps are ignored until the result is in.
     local overlay = Instance.new("TextButton")

@@ -17,10 +17,11 @@ local state = {dinos = nil :: any, species = {found = 0, owned = 0, total = 0} :
 function Panel.setDinos(dinos: any) state.dinos, state.dirty = dinos, true end
 function Panel.setSpecies(counts: any) state.species, state.dirty = counts, true end
 
+local HEADER_H = 44 -- the header is a button: docs/114 s4.4 tap-target floor (the folded panel is as tall as its header)
 function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
     local C = Theme.Colors
     local root = Instance.new("Frame")
-    root.Name, root.Size, root.BackgroundColor3, root.BackgroundTransparency, root.ZIndex = "GoalsPanel", UDim2.fromOffset(260, 30), C.panel, 0.15, 2
+    root.Name, root.Size, root.BackgroundColor3, root.BackgroundTransparency, root.ZIndex = "GoalsPanel", UDim2.fromOffset(260, HEADER_H), C.panel, 0.15, 2
     Theme.decorate(root, 5)
     root.Visible, root.Parent = false, gui
     local scale = Instance.new("UIScale")
@@ -28,13 +29,13 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
 
     local header = Instance.new("TextButton")
     header.Name, header.Text, header.Font, header.TextSize, header.TextColor3 = "Header", Rules.Title .. "  (tap)", Enum.Font.FredokaOne, 17, C.gold
-    header.BackgroundTransparency, header.Size, header.ZIndex, header.Parent = 1, UDim2.new(1, 0, 0, 30), root.ZIndex + 1, root
+    header.BackgroundTransparency, header.Size, header.ZIndex, header.Parent = 1, UDim2.new(1, 0, 0, 44), root.ZIndex + 1, root
     Theme.TextStyle.apply(header)
 
     local rows = {}
     local bars: {Frame} = {}
     for i, id in Rules.Order do
-        local y = 32 + (i - 1) * 56
+        local y = HEADER_H + 2 + (i - 1) * 56
         local line = Instance.new("TextLabel")
         line.Name, line.Font, line.TextSize, line.TextColor3, line.TextXAlignment = id, Enum.Font.FredokaOne, 16, C.text, Enum.TextXAlignment.Left
         line.BackgroundTransparency, line.Position, line.Size, line.ZIndex, line.Parent = 1, UDim2.fromOffset(8, y), UDim2.fromOffset(244, 22), root.ZIndex + 1, root
@@ -64,7 +65,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
             r.fill.BackgroundColor3 = if l.done then C.gold else C.accent
             r.line.Visible, r.step.Visible, r.bar.Visible = not folded, not folded, not folded
         end
-        root.Size = UDim2.fromOffset(260, if folded then 30 else 32 + #rows * 56)
+        root.Size = UDim2.fromOffset(260, if folded then HEADER_H else HEADER_H + 2 + #rows * 56)
         header.Text = Rules.Title .. (if folded then "  (tap)" else "")
     end
     header.Activated:Connect(function() folded = not folded render() end)
