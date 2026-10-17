@@ -345,7 +345,7 @@ runScenario(function(env, server)
     for _, id in {3001, 3002} do
         local e = runs1[id].catches
         check(string.format("food-only 5 min run %d gives a healthy egg band (10..22)", id), e >= 10 and e <= 22, e)
-        check("food-only run growth > 0 without any predation " .. id, (players[id].attrs.LastPredatorUserId or 0) == 0 and runs1[id].reason == "ManualExit")
+        check("food-only run growth > 0 without any predation " .. id, players[id].attrs.LastPredatorUserId == nil and runs1[id].reason == "ManualExit")
         sum += e n += 1
     end
     check("mean eggs of two 5-minute runs about 15 (12..18)", sum / n >= 12 and sum / n <= 18, sum / n)

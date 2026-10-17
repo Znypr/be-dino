@@ -29,7 +29,8 @@ local game = {GetService = function(_, n) return services[n] end}
 local workspace = {GetServerTimeNow = function() return clock end, GetAttribute = function() return nil end}
 local task = {spawn = function(f, ...) f(...) end, wait = function() end, delay = function() end}
 local RewardMath = {recordNestWeather = function(ledger) return ledger end} -- BD-479: the real ledger logic is tested in verify_gameplay and verify_nests
-local script = {Parent = {PrivateState = PS, RewardMath = RewardMath}}
+local CooldownMemory = {new = function() return {allow = function() return true end} end} -- BD-618 (f): the Home cooldown memory (tested in verify_multiplayer_sim and the remote fuzz)
+local script = {Parent = {PrivateState = PS, RewardMath = RewardMath, CooldownMemory = CooldownMemory}}
 local require = function(x) return x end
 local typeof = function(v) return type(v) end
 

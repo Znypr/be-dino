@@ -6,7 +6,8 @@
 --    measured 0.00 studs). Both run in src/client/ClassGlide.client.luau (ClassMovement.glideStep / hoverStep); BD-595 deleted the dead loop.
 --  * WATER dash: remote "ClassDash" (no arguments). The server validates and answers the SAME player with the velocity; the client
 --    applies it (it owns its physics, like the leap). Rate limited, cooldown from ClassMovement, grounded, Water only, never upward.
---  * FLY glide (BD-246 remainder): remote "ClassGlide" (one boolean: jump held). The server only records the flag; the client applies it.
+--  * FLY glide (BD-246 remainder): the RemoteEvent "ClassGlide" exists only as a marker that the class rules are on (ClassGlide.client.luau waits for it);
+--    BD-618 (a): nothing is sent through it and the server has NO handler or store for it (since BD-593 the client applies the glide alone).
 -- Every number is PROVISIONAL (docs/101); they all come from Shared/ClassMovement and CombatConfig.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -44,8 +45,6 @@ function Service.start()
     local glideRemote = Instance.new("RemoteEvent")
     glideRemote.Name = "ClassGlide"
     glideRemote.Parent = remote.Parent
-    local glideHeld: {[Player]: boolean} = {}
-    local lastGlideRequest: {[Player]: number} = {}
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
     params.FilterDescendantsInstances = {workspace.Terrain, workspace:FindFirstChild("BeDinoArena") or workspace.Terrain}
@@ -70,15 +69,7 @@ function Service.start()
     end
     Players.PlayerAdded:Connect(hookPlayer)
     for _, p in Players:GetPlayers() do hookPlayer(p) end
-    Players.PlayerRemoving:Connect(function(p) lastRequest[p] = nil lastDash[p] = nil
-        glideHeld[p] = nil lastGlideRequest[p] = nil end)
-    glideRemote.OnServerEvent:Connect(function(player: Player, ...)
-        if select("#", ...) ~= 1 or typeof((...)) ~= "boolean" then return end
-        local now = workspace:GetServerTimeNow()
-        if now - (lastGlideRequest[player] or -math.huge) < 0.1 then return end
-        lastGlideRequest[player] = now
-        glideHeld[player] = (...) :: boolean
-    end)
+    Players.PlayerRemoving:Connect(function(p) lastRequest[p] = nil lastDash[p] = nil end)
 
     remote.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end

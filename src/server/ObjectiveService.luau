@@ -48,10 +48,16 @@ end
 -- Fixed-window per-player limiter (PROVISIONAL ObjectiveConfig values), same shape as FusionService.
 local function allowed(player: any): boolean
     local now = clock()
-    local window = windows[player]
+    -- BD-618 (f): keyed by UserId and kept after the player leaves, so a rejoin does not give a fresh window (memory only; stale windows are pruned below).
+    local okId, userId = pcall(function() return player.UserId end)
+    local key = if okId and type(userId) == "number" then userId else player
+    local window = windows[key]
     if not window or now - window.startedAt >= ObjectiveConfig.RateWindowSeconds then
+        for other, old in windows do
+            if now - old.startedAt >= 2 * ObjectiveConfig.RateWindowSeconds then windows[other] = nil end
+        end
         window = {startedAt = now, count = 0}
-        windows[player] = window
+        windows[key] = window
     end
     window.count += 1
     return window.count <= ObjectiveConfig.RequestsPerWindow
@@ -197,8 +203,7 @@ function ObjectiveService.start(profileRepository: any): any
         return ObjectiveService.handle(player, ...)
     end
     Players.PlayerRemoving:Connect(function(player)
-        windows[player] = nil
-        runFood[player] = nil
+        runFood[player] = nil -- BD-618 (f): the request window is kept (keyed by UserId), only per-session progress is dropped
     end)
     -- Progress is queued in memory; this loop commits it (claims and the lease release commit it too).
     task.spawn(function()

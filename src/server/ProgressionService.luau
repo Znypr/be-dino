@@ -31,6 +31,8 @@ local current=nil
 local weatherEnds=0
 local nextWeather=0
 local buckets={}
+local lastRequestAt={} -- BD-618 (f): the 0.4 s gap is remembered by UserId, so a rejoin does not reset it (memory only)
+local requestCount=0
 local function weatherPick()
     local total=0 for _,event in Config.Weather do total+=event.weight end
     local roll=random:NextNumber(0,total)
@@ -172,8 +174,12 @@ function Service.start(repository)
             or typeof(id)~="string" or #id>40 or typeof(token)~="string" or #token<1 or #token>80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]
-        if bucket and (bucket.busy or now-bucket.last<.4) then response:FireClient(player,token,false,"busy") return end
-        buckets[player]={last=now,busy=true}
+        -- BD-618 (f): the 0.4 s gap is remembered by UserId (a rejoin does not reset it); only the in-flight flag stays per Player.
+        local last=lastRequestAt[player.UserId]
+        if (bucket and bucket.busy) or (last and now-last<.4) then response:FireClient(player,token,false,"busy") return end
+        lastRequestAt[player.UserId]=now requestCount+=1
+        if requestCount%64==0 then for id,at in lastRequestAt do if now-at>120 then lastRequestAt[id]=nil end end end
+        buckets[player]={busy=true}
         -- BD-354: a throw inside the action must not leave busy=true forever (every later request would be refused).
         local ran,ok,status=pcall(repository.progressionAction,player,action,id,token,replace)
         if not ran then warn("[Be Dino] ProgressionAction failed: "..tostring(ok)) ok,status=false,"save_failed" end

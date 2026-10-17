@@ -4,6 +4,7 @@
 -- tools/verify_profile_golden.py proves the stored profile is byte-identical to before the split.
 return function(ProfileRepository: any, shared: any)
 local Config = shared.Config
+local admit = shared.admit
 local adopt = shared.adopt
 local handleLeaseLost = shared.handleLeaseLost
 local identityAvailable = shared.identityAvailable
@@ -61,6 +62,7 @@ function ProfileRepository.applySkin(player: Player, plan: any): (boolean, strin
     if needsInstance and (typeof(plan.instanceId) ~= "string" or #plan.instanceId < 1 or #plan.instanceId > 120) then return false, "bad_plan" end
     if needsSkin and (typeof(plan.skin) ~= "string" or #plan.skin < 1 or #plan.skin > 40) then return false, "bad_plan" end
     if plan.modelSpecies ~= nil and typeof(plan.modelSpecies) ~= "table" then return false, "bad_plan" end
+    if not admit(player) then return false, "rate_limited" end -- BD-618 (i): a skin write counts in the same per-player and server-wide budget as every other routine write
     local now = os.time()
     local status = "unchanged"
     local denied: string? = nil
