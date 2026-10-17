@@ -1,16 +1,21 @@
 """docs/147 (BD-498 experiment): make StreamingEnabled / forced-phone COPIES of a built place, for a Studio session. Never touches src/, the default or the playtest
 profile, or the repo's build output; the shipped places keep StreamingEnabled OFF.
 
-  python tools/build.py --profile playtest --output C:/tmp/stream-off.rbxlx
-  python tools/qa/streaming_variants.py C:/tmp/stream-off.rbxlx C:/tmp/stream-on.rbxlx --target 256 --min 128
-  python tools/qa/streaming_variants.py C:/tmp/stream-off.rbxlx C:/tmp/stream-on-phone.rbxlx --target 256 --min 128 --phone
+  python tools/build.py --profile playtest --output C:/tmp/stream-off.rbxlx                  # control: StreamingEnabled false
+  python tools/build.py --profile playtest-streaming --output C:/tmp/stream-on.rbxlx         # BD-502 gate 4: the build writes the Workspace properties
+  python tools/qa/streaming_variants.py C:/tmp/stream-off.rbxlx C:/tmp/stream-off-probe.rbxlx --off
+  python tools/qa/streaming_variants.py C:/tmp/stream-on.rbxlx C:/tmp/stream-on-phone.rbxlx --phone
+  python tools/qa/streaming_variants.py C:/tmp/stream-on.rbxlx C:/tmp/stream-on-r160.rbxlx --target 160 --min 96 --phone   # radius sweep only
 
---off writes the unchanged place plus the probe only (the control). --phone patches the device classifiers of WorldCulling, ContactShadow, CavePhoneGuard and
+The streaming properties come from the build profile `playtest-streaming` (tools/release_profiles.py, scratch, never published), no longer hand-edited
+into the place: this tool only checks the source has them (or, for --off, does not), adds the probe, and for a radius SWEEP rewrites the two radius values.
+--off keeps the place and adds the probe only (the control). --phone patches the device classifiers of WorldCulling, ContactShadow, CavePhoneGuard and
 WeatherVisuals to "Phone" in the COPY (Studio on a PC cannot emulate a touch phone for them). The probe is tools/qa/streaming_probe.client.luau.
 Workspace.StreamingTargetRadius / StreamingMinRadius are not scriptable in Studio, so they are written into the .rbxlx as properties (verified by behaviour: the
 streamed part counts follow the radius, docs/147 s3).
 """
 import argparse
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,14 +35,19 @@ PHONE_PATCHES = [
 ]
 
 
-def make(source: str, streaming: bool, target: int, minimum: int, phone: bool) -> str:
+def make(source: str, streaming: bool, target: int | None, minimum: int | None, phone: bool) -> str:
     place = source
-    old = '<string name="Name">Workspace</string>\n'
-    if place.count(old) != 1:
-        raise SystemExit("expected exactly one Workspace item")
+    has_streaming = '<bool name="StreamingEnabled">true</bool>' in place
+    if streaming and not has_streaming:
+        raise SystemExit("source has StreamingEnabled false: build it with `tools/build.py --profile playtest-streaming` (BD-502 gate 4)")
+    if not streaming and has_streaming:
+        raise SystemExit("--off needs a source built with StreamingEnabled false (`--profile playtest`)")
     if streaming:
-        place = place.replace(old, old + f'      <bool name="StreamingEnabled">true</bool>\n      <int name="StreamingTargetRadius">{target}</int>\n'
-                                        f'      <int name="StreamingMinRadius">{minimum}</int>\n')
+        for name, value in (("StreamingTargetRadius", target), ("StreamingMinRadius", minimum)):
+            if value is not None:
+                place, count = re.subn(rf'(<int name="{name}">)\d+(</int>)', rf"\g<1>{value}\g<2>", place)
+                if count != 1:
+                    raise SystemExit(f"expected exactly one {name} property in the source place")
     probe = esc((ROOT / "tools/qa/streaming_probe.client.luau").read_text(encoding="utf-8"))
     marker = '<string name="Name">ReplicatedFirst</string>\n    </Properties>\n'
     if place.count(marker) != 1:
@@ -57,12 +67,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("source")
     parser.add_argument("output")
-    parser.add_argument("--target", type=int, default=256, help="StreamingTargetRadius")
-    parser.add_argument("--min", type=int, default=128, help="StreamingMinRadius")
+    parser.add_argument("--target", type=int, default=None, help="radius SWEEP only: override StreamingTargetRadius of the profile build")
+    parser.add_argument("--min", type=int, default=None, help="radius SWEEP only: override StreamingMinRadius of the profile build")
     parser.add_argument("--off", action="store_true", help="control: probe only, StreamingEnabled stays false")
     parser.add_argument("--phone", action="store_true", help="force the Phone device class in the copy")
     args = parser.parse_args()
     text = Path(args.source).read_text(encoding="utf-8", newline="")
     result = make(text, not args.off, args.target, args.min, args.phone)
     Path(args.output).write_text(result, encoding="utf-8", newline="")
-    print(f"wrote {args.output} (streaming={'off' if args.off else f'{args.target}/{args.min}'}, phone={args.phone})")
+    print(f"wrote {args.output} (streaming={'off' if args.off else 'on (from the profile build' + (f', radii overridden to {args.target}/{args.min}' if args.target or args.min else '') + ')'}, phone={args.phone})")

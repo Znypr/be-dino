@@ -9,6 +9,7 @@ local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local RunLifecycle = {}
 local PrivateState = require(script.Parent.PrivateState)
 local RewardMath = require(script.Parent.RewardMath)
+local StreamingTeleport = require(script.Parent.StreamingTeleport)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
@@ -279,11 +280,11 @@ function RunLifecycle.requestStart(player: Player): boolean
     if workspace.StreamingEnabled then -- BD-498 (docs/150): load the island around the spawn on this client BEFORE the teleport, so the dino never lands on empty ground
         if streamingStart[player] then return false end
         streamingStart[player] = true
-        pcall(function() player:RequestStreamAroundAsync(SpawnGeometry.islandPoint(Layout), 8) end)
+        StreamingTeleport.request(player, SpawnGeometry.islandPoint(Layout), 8) -- BD-503 helper: pcall'd, the run start waits up to 8 s for the island
         streamingStart[player] = nil
         if player.Parent ~= Players or player.Character ~= character or character:GetAttribute("RunState") ~= "Sanctuary" then return false end
     end
-    require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
+    require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)), true) -- true: streamed above
     RunLifecycle.begin(player, character)
     return true
 end

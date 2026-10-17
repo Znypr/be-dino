@@ -195,6 +195,75 @@ class PlaytestOffFlagTests(unittest.TestCase):
             self.assertTrue(any(key in e for e in report.errors), key)
 
 
+class StreamingProfileTests(unittest.TestCase):
+    """BD-502 gate 4: the build writes Workspace streaming properties per profile; shipped profiles keep them off."""
+
+    def workspace_project(self, folder):
+        project = temp_project(folder, with_ids(CONFIG))
+        spec = json.loads(project.read_text())
+        spec["tree"]["Workspace"] = {"$className": "Workspace"}
+        project.write_text(json.dumps(spec))
+        return project
+
+    def test_shipped_profiles_have_streaming_off(self):
+        for name in ("default", "playtest"):
+            self.assertFalse(profiles.streaming_for(name).enabled, name)
+            self.assertEqual(profiles.workspace_properties(name), [], name)
+            self.assertEqual(profiles.streaming_config_errors(name), [], name)
+
+    def test_scratch_profile_turns_it_on_with_the_proposal_radii(self):
+        setting = profiles.streaming_for("playtest-streaming")
+        self.assertEqual((setting.enabled, setting.scratch, setting.target_radius, setting.min_radius), (True, True, 256, 128))
+        self.assertEqual(profiles.streaming_config_errors("playtest-streaming"), [])
+        # same release rules as the playtest, so the game behaves as the playtest build
+        self.assertEqual(profiles.PROFILES["playtest-streaming"], profiles.PROFILES["playtest"])
+
+    def test_build_writes_workspace_properties_only_when_on(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = self.workspace_project(folder)
+            off, _, off_report = packager.build_profile("playtest", project)
+            on, _, on_report = packager.build_profile("playtest-streaming", project)
+            self.assertEqual((off_report.errors, on_report.errors), ([], []))
+            self.assertNotIn(b"StreamingEnabled", off)
+            self.assertFalse(verify_release.workspace_streaming_from_place(off)["enabled"])
+            actual = verify_release.workspace_streaming_from_place(on)
+            self.assertEqual((actual["enabled"], actual["target_radius"], actual["min_radius"], actual["integrity_mode"]), (True, 256, 128, 0))
+            self.assertEqual(verify_release.streaming_place_errors(off, "playtest")[0], [])
+            self.assertEqual(verify_release.streaming_place_errors(on, "playtest-streaming")[0], [])
+
+    def test_verify_release_rejects_streaming_in_a_shipped_profile(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = self.workspace_project(folder)
+            on, _, _ = packager.build_profile("playtest-streaming", project)
+            errors, warnings = verify_release.streaming_place_errors(on, "playtest")
+            self.assertTrue(any("StreamingEnabled" in e and "declares False" in e for e in errors), errors)
+            self.assertTrue(any("SCRATCH" in w for w in verify_release.streaming_place_errors(on, "playtest-streaming")[1]))
+
+    def test_shipped_profile_may_opt_in_only_with_a_gate_naming_existing_evidence(self):
+        original = profiles.STREAMING["playtest"]
+        try:
+            profiles.STREAMING["playtest"] = profiles.Streaming(enabled=True)
+            self.assertTrue(profiles.streaming_config_errors("playtest"))
+            profiles.STREAMING["playtest"] = profiles.Streaming(enabled=True, gate="BD-502:docs/does-not-exist.md")
+            self.assertTrue(any("does not exist" in e for e in profiles.streaming_config_errors("playtest")))
+            profiles.STREAMING["playtest"] = profiles.Streaming(enabled=True, gate="BD-502:docs/147-streaming-experiment-2026-10-17.md")
+            self.assertEqual(profiles.streaming_config_errors("playtest"), [])
+            profiles.STREAMING["playtest"] = profiles.Streaming(enabled=True, scratch=True)
+            self.assertTrue(any("cannot be marked scratch" in e for e in profiles.streaming_config_errors("playtest")))
+        finally:
+            profiles.STREAMING["playtest"] = original
+
+    def test_bad_radii_are_rejected(self):
+        original = profiles.STREAMING["playtest-streaming"]
+        try:
+            profiles.STREAMING["playtest-streaming"] = profiles.Streaming(enabled=True, scratch=True, target_radius=100, min_radius=200)
+            self.assertTrue(profiles.streaming_config_errors("playtest-streaming"))
+            profiles.STREAMING["playtest-streaming"] = profiles.Streaming(enabled=True, scratch=True, integrity_mode="Nope")
+            self.assertTrue(profiles.streaming_config_errors("playtest-streaming"))
+        finally:
+            profiles.STREAMING["playtest-streaming"] = original
+
+
 class LoadHarnessTests(unittest.TestCase):
     def test_harness_embeds_real_repository(self):
         script = verify_load.harness()

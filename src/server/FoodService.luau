@@ -9,6 +9,15 @@ local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
 local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: eating happens at the mouth (the same pure function a client preview can use)
+-- BD-381 rule: the LowPolyDinos flag is read only through LowPoly.enabled (verify_lowpoly_views); a test harness without it falls back to the root rule
+local lowPolyModule: any = false
+local function lowPolyOn(): boolean
+    if lowPolyModule == false then
+        local ok, lp = pcall(function() local shared: any = ReplicatedStorage.Shared return require(shared.LowPolyDinos) end)
+        lowPolyModule = if ok and type(lp) == "table" and type(lp.enabled) == "function" then lp else nil
+    end
+    return lowPolyModule ~= nil and lowPolyModule.enabled() == true
+end
 local ScaleLadder = require(ReplicatedStorage.Shared.ScaleLadder) -- BD-407: food sizes in studs live in the one scale ladder
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local AdminMutationScale = require(ReplicatedStorage.Shared.AdminMutationScale) -- BD-237: per-player admin Mutation chance (docs/115)
@@ -251,7 +260,7 @@ function FoodService.start(dinosaur,repository)
                         local scale = character:GetAttribute("VisualScale") or 1
                         -- BD-515 (docs/115 MR1): the pickup point is the HEAD point (root + forward x head offset of the species), the radius follows the
                         -- head size. Only for the low-poly dinos (the sizes in ScaleLadder are theirs); the legacy visual keeps the root and 2.25 + 0.75 per scale.
-                        local speciesId = if Config.FoodPickupAtMouth == true and Config.LowPolyDinos == true then character:GetAttribute("SpeciesId") else nil
+                        local speciesId = if Config.FoodPickupAtMouth == true and lowPolyOn() then character:GetAttribute("SpeciesId") else nil
                         local look = root.CFrame.LookVector
                         local headX, headZ = MouthReach.point(position.X, position.Z, look.X, look.Z, speciesId, scale)
                         local radius = MouthReach.radius(speciesId, scale)

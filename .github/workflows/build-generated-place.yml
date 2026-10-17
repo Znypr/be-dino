@@ -98,6 +98,7 @@ jobs:
           python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
           # cave and hub
           python tools/verify_cave_gate.py --runner /tmp/luau/luau
+          python tools/verify_streaming_teleports.py --runner /tmp/luau/luau
           python tools/verify_cave_hub.py --runner /tmp/luau/luau
           python tools/verify_cave_lava.py --runner /tmp/luau/luau
           python tools/verify_cave_weather.py

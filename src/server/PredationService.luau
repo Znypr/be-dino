@@ -6,6 +6,15 @@ local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags)
 local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: same head-point rule as the food pickup, behind Config.PredationAtMouth (off)
+-- BD-381 rule: the LowPolyDinos flag is read only through LowPoly.enabled (verify_lowpoly_views); a test harness without it falls back to the root rule
+local lowPolyModule: any = false
+local function lowPolyOn(): boolean
+    if lowPolyModule == false then
+        local ok, lp = pcall(function() local shared: any = ReplicatedStorage.Shared return require(shared.LowPolyDinos) end)
+        lowPolyModule = if ok and type(lp) == "table" and type(lp.enabled) == "function" then lp else nil
+    end
+    return lowPolyModule ~= nil and lowPolyModule.enabled() == true
+end
 
 local CooldownMemory = require(script.Parent.CooldownMemory)
 
@@ -74,7 +83,7 @@ function PredationService.start(runLifecycle, dinosaur)
                             score = numberAttribute(character, "GrowthScore", 0),
                             scale = numberAttribute(character, "VisualScale", 1),
                             -- BD-515 (docs/115 MR3): the mouth is where a bite lands; only read while PredationAtMouth and LowPolyDinos are on
-                            speciesId = if Config.PredationAtMouth == true and Config.LowPolyDinos == true then character:GetAttribute("SpeciesId") else nil,
+                            speciesId = if Config.PredationAtMouth == true and lowPolyOn() then character:GetAttribute("SpeciesId") else nil,
                             look = root.CFrame.LookVector,
                         })
                     end
