@@ -675,6 +675,10 @@ local function tick(dt)
     -- camera follows the dino
     camera.CFrame = CFrame.new(root.Position + Vector3.new(0, 15, 25))
     player.CameraMinZoomDistance = 12 + (char:FindFirstChild("LocalMeshVisual") and char.LocalMeshVisual.boxSize.Y or 0)
+    if SCENARIO == "studionoise" and now > 30 and not SIM.errored then
+        SIM.errored = true
+        for i = 1, 40 do table.insert(logHistory, {message = "Failed to upload TexturePack (" .. i .. "): PublishService AssetUpload failed HTTP 429", messageType = Enum.MessageType.MessageError, timestamp = os.time()}) end
+    end
     if SCENARIO == "errors" and now > 30 and not SIM.errored then
         SIM.errored = true table.insert(logHistory, {message = "boom: attempt to index nil", messageType = Enum.MessageType.MessageError, timestamp = os.time()})
     end

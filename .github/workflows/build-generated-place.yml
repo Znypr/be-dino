@@ -85,6 +85,7 @@ jobs:
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
           python tools/verify_egg_origin.py --runner /tmp/luau/luau
           python tools/verify_load_gate.py --runner /tmp/luau/luau
+          python tools/verify_surface_maps.py
           python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_hub_scale.py --runner /tmp/luau/luau
@@ -124,6 +125,7 @@ jobs:
           python tools/verify_ftue_copy.py --runner /tmp/luau/luau
           python tools/verify_ftue_p1.py --runner /tmp/luau/luau
           python tools/verify_ftue_rules.py --runner /tmp/luau/luau
+          python tools/verify_safe_eggs_line.py --runner /tmp/luau/luau
           # hatch and mutation reveal
           python tools/verify_hatch.py --runner /tmp/luau/luau
           python tools/verify_hatch_fx.py --runner /tmp/luau/luau

@@ -146,7 +146,7 @@ def admin_page_errors() -> list[str]:
     for code in sorted(set(re.findall(r'fail\("(\w+)"\)', server))):
         if code not in known:
             errors.append(f'AdminGiftRules.Messages has no copy for the code {code!r} that AdminGifts returns')
-    for code in ('rate_limited', 'cant_receive', 'try_again', 'lookup_minute', 'lookup_day', 'lookup_server', 'store_corrupt', 'bad_sender', 'profile_not_loaded'):
+    for code in ('rate_limited', 'cant_receive', 'try_again', 'lookup_minute', 'lookup_day', 'lookup_server', 'store_corrupt', 'bad_sender', 'profile_not_loaded', 'unknown_gift'):
         if code not in known:
             errors.append(f'AdminGiftRules.Messages has no copy for the GiftService code {code!r}')
     panel = (ROOT / 'src/client/AdminPanel.client.luau').read_text(encoding='utf-8')
@@ -813,6 +813,63 @@ do
 end
 print("GiftService revoke passed: before claim, after claim, idempotent, tombstone beats a re-delivered receipt, no crystal clawback")
 
+ ---------------------------------------------------------------- BD-590: Take back needs a gift that exists
+do
+ local S,W=server()
+ local R2,R3=7910,7911
+ local u=user(R2) assert(Repository.load(u))
+ local function claimedCount() local n=0 for _ in (data[key(u)].claimedGifts or {}) do n+=1 end return n end
+ local function revokeLogs() local n=0 for _,line in W.printed do if string.find(line,"[BD-GIFT] revoke",1,true) then n+=1 end end return n end
+ local function auditHas(userId,ev) for _,e in (giftsData["audituser_"..userId] or {}) do if e.ev==ev then return true end end return false end
+ -- an id nobody ever sent: nothing is written anywhere
+ local before,beforeProfile,beforeClaimed=copy(giftsData),copy(data[key(u)]),claimedCount()
+ local logs0=revokeLogs()
+ local ok,status=S.revoke(ADMIN,R2,"Anope")
+ check(not ok and status=="unknown_gift","a never-sent id answers unknown_gift")
+ check(same(before,giftsData),"unknown id: the Gifts store is byte-for-byte unchanged (no inbox key, no tombstone, no audit line)")
+ check(giftsData["inbox_"..R2]==nil and not auditHas(R2,"revoked"),"unknown id: no inbox, no revoked audit event")
+ check(claimedCount()==beforeClaimed and same(beforeProfile,data[key(u)]),"unknown id: no claimedGifts entry, profile unchanged")
+ S.claim(u) check(claimedCount()==beforeClaimed,"unknown id: the next claim has nothing to apply")
+ check(revokeLogs()==logs0+1,"unknown id: exactly one [BD-GIFT] log line")
+ -- again and again: still nothing, still the same answer
+ for _=1,3 do ok,status=S.revoke(ADMIN,R2,"Anope") check(not ok and status=="unknown_gift","repeat of an unknown id stays unknown_gift") end
+ check(same(before,giftsData),"unknown id repeated: still nothing written")
+ -- a real gift, wrong recipient: also unknown (nothing proves it was sent to them)
+ local sent,_,pendingId=S.send({source="admin",from=ADMIN,to=R3,item="skin_plush"}) check(sent and pendingId~=nil,"real pending gift to someone else")
+ local snap=copy(giftsData)
+ ok,status=S.revoke(ADMIN,R2,pendingId) check(not ok and status=="unknown_gift" and same(snap,giftsData),"a real id for another recipient is unknown and writes nothing")
+ -- forged id formats are refused as bad input before any store request
+ local requests=g.requests
+ for _,bad in {"nope","Xabc","a123","","bad id","A b","../x",string.rep("A",200),5,true,{}} do
+  ok,status=S.revoke(ADMIN,R2,bad) check(not ok and status=="bad_request","forged id format is refused: "..tostring(bad))
+ end
+ check(g.requests==requests and same(snap,giftsData),"forged ids: no store request at all")
+ -- a real pending gift revokes
+ ok,status=S.revoke(ADMIN,R3,pendingId) check(ok and status=="revoked_pending" and pending(R3)==0 and giftsData["inbox_"..R3].revoked[pendingId]=="skin_plush","a real pending gift is taken back")
+ check(auditHas(R3,"revoked"),"...and audited once")
+ ok,status=S.revoke(ADMIN,R3,pendingId) check(ok and status=="already_revoked","repeat of a pending take back is already_revoked")
+ -- a real claimed gift revokes, and a repeat is idempotent before and after the recipient's server applies the tombstone
+ local _,_,claimedId=S.send({source="admin",from=ADMIN,to=R2,item="skin_bricks"})
+ S.claim(u) check(data[key(u)].ownedSkins.Bricks==true and data[key(u)].claimedGifts[claimedId]~=nil,"claimed")
+ ok,status=S.revoke(ADMIN,R2,claimedId) check(ok and status=="revoked" and giftsData["inbox_"..R2].revoked[claimedId]=="skin_bricks","a claimed gift is taken back (item read from the audit trail)")
+ ok,status=S.revoke(ADMIN,R2,claimedId) check(ok and status=="already_revoked","repeat before the next claim: already_revoked")
+ S.claim(u) check(data[key(u)].ownedSkins.Bricks==nil and data[key(u)].claimedGifts[claimedId]=="revoked","the next claim removes the skin (GF16 receipt tombstone on the profile)")
+ local settled=copy(giftsData) local settledClaimed=claimedCount()
+ ok,status=S.revoke(ADMIN,R2,claimedId) check(ok and status=="already_revoked","repeat after the tombstone moved to the profile: still already_revoked")
+ check(same(settled,giftsData) and claimedCount()==settledClaimed,"...and writes nothing (no new tombstone, no new slot)")
+ -- a re-delivered receipt still cannot re-add a taken-back Robux gift (GF16)
+ S.send({source="robux",giftId="Rrev-590",from=1000,to=R3,item="skin_clay"})
+ ok,status=S.revoke(ADMIN,R3,"Rrev-590") check(ok and status=="revoked_pending","a real Robux gift revokes")
+ ok,status=S.send({source="robux",giftId="Rrev-590",from=1000,to=R3,item="skin_clay"}) check(not ok and status=="revoked","...and its re-delivered receipt is still refused")
+ -- a store outage is try_again, never unknown_gift, and writes nothing
+ g.outage=true
+ ok,status=S.revoke(ADMIN,R2,"Aabc123") g.outage=false
+ check(not ok and status=="try_again","an unreadable audit trail is try_again, not unknown_gift")
+ Repository.release(u)
+end
+print("GiftService revoke needs a real gift passed: unknown id writes nothing, forged ids refused, pending + claimed revoke, repeat idempotent")
+
+
 ------------------------------------------------------------------ corrupt inbox entries, crystal cap, race duplicate
 do
  local S=server()
@@ -1088,6 +1145,7 @@ do
   local okc,status,summary=S.claim(u)
   check(okc and summary.applied==1 and wallet(u)==w0+250,"first join: granted once")
   check(noticeOf(u).line=="A gift from the Be Dino team!" and noticeOf(u).message=="Thank you!" and noticeOf(u).canMute==false,"popup: the fixed team label, no admin name")
+  check(noticeOf(u).item=="250 crystals","popup: the custom admin amount is named (BD-579), not just 'Crystals'")
   Repository.release(u)
   local l0=W.lookups
   for _,name in {"ab","a b c",string.rep("x",21),"","bad-name!",5,"semi;colon"} do
@@ -1151,6 +1209,10 @@ do
   S.claim(u)
   check(data[key(u)].ownedSkins.Bricks==nil and data[key(u)].claimedGifts[revokedClaimed]=="revoked","the next claim takes the skin back and tombstones the id")
   Repository.release(u)
+  local snapAdmin=copy(giftsData)
+  r=call(admin,{action="revoke",to=9203,giftId="Anever-sent-590"}) check(not r.ok and r.reason=="unknown_gift" and same(snapAdmin,giftsData),"admin page: an id that was never sent answers unknown_gift and writes nothing (BD-590)")
+  check(PageRules.explain(r.reason)=="No gift with that number.","...and the page says so in plain words")
+  r=call(admin,{action="revoke",to=9203,giftId="nope"}) check(not r.ok and r.reason=="bad_request" and same(snapAdmin,giftsData),"admin page: a forged id format is refused")
   for _,bad in {{to=9203,giftId="bad id"},{to=0,giftId="Aabc"},{to=9203,giftId="Aabc",item="egg"},{to=9203},{giftId="Aabc"},{to=1.5,giftId="Aabc"},{to=9203,giftId=5}} do
    local req={action="revoke"} for k,v in bad do req[k]=v end
    local rr=call(admin,req) check(not rr.ok and rr.reason=="bad_request","revoke refuses bad input")
