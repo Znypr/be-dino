@@ -129,6 +129,22 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | starPop | image, owner upload | - | 85961871126391 | src/shared/EffectAssets.luau:Requested.starPop (BD-430) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
 | meadow_grass_v2_roughness | image, owner upload | - | 114907673456194 | resources/visual-upgrade-bindings.json:worldMaterials.BeDino_MeadowV2.roughness (BD-461) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
 | speedLine | image, owner upload | - | 114909357103518 | src/shared/EffectAssets.luau:Requested.speedLine (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tile_auras | image, owner upload | - | 127940018051829 | src/shared/AssetSlots.luau:Images.shop_tile_auras (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tab_auras | image, owner upload | - | 109229843043473 | src/shared/AssetSlots.luau:Images.shop_tab_auras (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tile_crystals | image, owner upload | - | 94423396531378 | src/shared/AssetSlots.luau:Images.shop_tile_crystals (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tab_conditions | image, owner upload | - | 140462636182851 | src/shared/AssetSlots.luau:Images.shop_tab_conditions (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tile_conditions | image, owner upload | - | 130901808508825 | src/shared/AssetSlots.luau:Images.shop_tile_conditions (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tab_trails | image, owner upload | - | 72647013267135 | src/shared/AssetSlots.luau:Images.shop_tab_trails (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tab_crystals | image, owner upload | - | 125502357333604 | src/shared/AssetSlots.luau:Images.shop_tab_crystals (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tile_eggs | image, owner upload | - | 138952777704690 | src/shared/AssetSlots.luau:Images.shop_tile_eggs (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_cond_normal | image, owner upload | - | 103096217790136 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_cond_astra | image, owner upload | - | 138241248461995 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_cond_rainbow | image, owner upload | - | 102778499611458 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_cond_dirty | image, owner upload | - | 129645205829983 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_green_spotted | image, owner upload | - | 114313437384311 | src/shared/AssetSlots.luau:Images.egg_green_spotted (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shop_tile_trails | image, owner upload | - | 102339516183331 | src/shared/AssetSlots.luau:Images.shop_tile_trails (BD-047, BD-336) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_cond_cracked | image, owner upload | - | 136011492360593 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| egg_stage | image, owner upload | - | 126492279883649 | src/shared/ProgressionConfig.luau:ConditionStageAssetIds (BD-208, BD-394) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
 
 Notes
 
