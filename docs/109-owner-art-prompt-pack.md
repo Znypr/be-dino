@@ -35,14 +35,14 @@ Roblox upload (all groups): Studio, View > Asset Manager > Bulk Import, owner ac
 - What: jungle waterfall stage with a stone pedestal, no egg (Blender render, owner-approved). docs/77 `egg_stage_jungle`, BD-208.
 - Used: Eggs page background (pedestal top centre about x 50 %, y 72 %); replaces the code tile-floor PLACEHOLDER in `src/client/EggPicture.luau` and `EggsScreen.luau`.
 - File: `resources/ui/v2/stage/egg-stage-jungle-v1.jpg` (opaque JPG, upload as is). No prompt needed.
-- Bind: CODE (BD-208 agent swaps the floor for the image; key `egg_stage`).
+- Bind: AUTO. The BD-208 reader is wired (Eggs page and Conditions shop); key `egg_stage`; `tools/upload_batch.py` lists the file.
 - After upload: lead records the id in docs/77, spawns the BD-208 bind agent, Studio check desktop + phone, removes the PLACEHOLDER comments.
 
 ### A2. Five condition eggs (renders exist, upload only)
 - What: outlined egg PNGs, transparent 1024 px: cracked, dirty, normal, rainbow, astra (docs/77 `egg_condition_layers`, BD-208).
 - Used: Eggs page egg on the pedestal, Buy Egg confirm, Conditions tab (replace the tinted code egg in `EggPicture.luau`).
 - Files: `resources/ui/v2/stage/eggs/egg-01_cracked.png`, `egg-02_dirty.png`, `egg-03_normal.png`, `egg-04_rainbow.png`, `egg-05_astra.png`. No prompt needed.
-- Bind: CODE (BD-208): keys `egg_cond_cracked|dirty|normal|rainbow|astra` in `UIIconAssets` via `tools/bind_ui_icons.py`.
+- Bind: AUTO. The BD-208 reader is wired: keys `egg_cond_<condition>` (ConditionStageAssetIds) via `tools/bind_assets.py`; `tools/upload_batch.py` lists all five.
 - After upload: paste five ids, docs/77 lines, bind agent wires `EggPicture`, Studio screenshot of all five on the pedestal.
 
 ### B1. Shared trail ribbon texture

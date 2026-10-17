@@ -23,3 +23,6 @@ build/fx-anime-frames/
 
 # Lead one-shot upload batch (tools/upload_batch.py): copies of repo PNGs plus manifest.json, never committed.
 build/upload-batch/
+
+# VFX lab intermediate Blender frames (tools/render_vfx_lab_fire.py); the assembled sheets live in resources/effects/vfx-lab/
+build/vfx-lab-frames/
