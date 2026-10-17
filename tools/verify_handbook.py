@@ -20,7 +20,7 @@ from pathlib import Path
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 
 # --------------------------------------------------------------------------------------------------------------------
-# (a) KNOWN OFFENDERS (baseline, docs/116 C-37). EMPTY since BD-495: the 18 literals that pre-dated the check were raised to the floors
+# (a) KNOWN OFFENDERS (baseline, docs/116 C-37). EMPTY since BD-501: the 18 literals that pre-dated the check were raised to the floors
 # (text 14 px, tap target 44 px) with their layouts adjusted and checked in Studio. Key = (file, kind) -> (how many offenders are known, reason).
 # kind: "text-literal" (a TextSize / helper size under 14), "text-min" (a UITextSizeConstraint Min/Max under 14), "button" (a size under 44).
 # A NEW offender fails with every line listed; a fixed one (count goes down) fails until the number is lowered, so the list can only

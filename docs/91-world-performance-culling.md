@@ -14,7 +14,7 @@ Studio frame rate (~15 fps, all windows open) is not meaningful for phones; real
 
 ## What was added
 - `src/client/WorldCulling.client.luau` (new script; Bootstrap untouched). Decorative kit props under `BeDinoArena.WorldKit` are tracked by position and parented to nil beyond a radius (hysteresis x1.15, re-evaluated every 0.4 s after the player moves 6 studs). Nearest props are kept first inside a **part budget**.
-- Never culled: collision proxies (`*Collider`), terrain, hub, crystals, server food logic. Food pickups are only hidden locally with `LocalTransparencyModifier` (radius x1.25), so server writes still apply.
+- Never culled: collision proxies (`*Collider`; **phone class only since BD-496 (2026-10-17): culled by the same radius**, docs/146 s10), terrain, hub, crystals, server food logic. Food pickups are only hidden locally with `LocalTransparencyModifier` (radius x1.25), so server writes still apply.
 - `Config.WorldCulling`: `Phone` radius 190 / budget 1,400, `Tablet` 280 / 2,400, `Desktop` 440 / 5,000 (PROVISIONAL, untested on devices). Class = non-touch Desktop, touch with short side >= 600 Tablet, else Phone. Set workspace attribute `PartBudgetOverride` to test another budget live.
 - Admin panel (F2): "World parts" readout (class, visible props/total, budget, radius, instance count).
 

@@ -1,4 +1,4 @@
-# UI floor sweep (BD-495): before / after, desktop Studio play
+# UI floor sweep (BD-501): before / after, desktop Studio play
 
 Playtest build (`python tools/build.py --profile playtest`) opened in its own Studio window, game view 1156 x 841 (desktop, not compact).
 Eggs and dinos came from the dev-only `DemoTrigger` hatch party in a private local copy of the build (the demo flag is off in every committed build and was not changed in the repo).

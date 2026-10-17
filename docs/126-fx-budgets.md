@@ -13,7 +13,7 @@ It exits non-zero when any moment exceeds a budget, so a new effect that pushes 
 ## Budgets (PROVISIONAL, per whole scene)
 | Counter | Phone | Tablet | Desktop | Meaning |
 |---|---:|---:|---:|---|
-| live3d | 3300 | 5600 | 7600 | particles alive at once, all emitters |
+| live3d | 3300 | 5600 | 7600 | particles alive at once in the whole scene, all emitters incl. weather (Rate x mean Lifetime). Not the "about 300" of docs/107, which is the cosmetic-only figure (auras, trails, mutations; model 168): [115](115-decisions-log.md) PB1 |
 | big | 120 | 220 | 520 | alive sprites with peak size >= 6 studs (overdraw) |
 | beams | 24 | 72 | 160 | enabled Beams |
 | trails | 14 | 20 | 40 | enabled Trails |

@@ -132,14 +132,78 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 ### 8.1 Any 3D asset or prop
 1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
-3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). No numeric scale table exists yet (BD-407, built as BD-471).
+3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). Species sizes follow the BD-232 rule (about 10% growth per unlock tier; ground by height from the 6.6 Compy, fly by bulk, water by length, T-Rex on top; LEAD decision in docs/115, SZ1). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
 7. Palette fit (section 5); amber for currency crystals.
-8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live particles, 12 players + 5 NPCs.
-9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled).
+8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live COSMETIC particles (auras, trails, mutations) and 3,300 live particles in the whole scene including weather (two measures, not one budget: [115](115-decisions-log.md) PB1), 12 players + 5 NPCs. Phone guards (BD-495..497, [146](146-phone-forecast-2026-10-17.md) s10): the 12 nearest cave lights and 4 shaft beams, no cosmetic glow light in the hub, weather density 0.25.
+9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled; on a PHONE the far ones are culled with the props beyond the cull radius, BD-496).
 10. Registry line in [77](77-asset-registry.md); no invented asset IDs.
+### 8.1.1 Scale ladder table (BD-407, CODE numbers)
+Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Not Studio evidence:** 19 of 22 species heights are ESTIMATES until the Studio bounding-box measurement in BD-471 replaces them. A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
+<!-- scale-ladder:begin -->
+All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
+
+**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 22 of 22 species, BD-471 and BD-232, 2026-10-17).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly by bulk (cube root of W x H x L), water by length, the T-Rex on top. In the cave hub every dinosaur is exactly 1x (docs/115).
+
+| Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | run height x1.52 | mid height x2 | long height x3 | max height x4 | bigMax height x4.8 |
+| --- | ---: | --- | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| compy | 1 | height | 6.60 | 2.2 | 3.49 x 6.60 x 7.69 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| triceratops | 3 | height | 7.99 | 2.86 | 5.79 x 8.00 x 8.58 | MEASURED | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
+| tyrannosaurus | 5 | height | 9.66 | 3.47 | 5.31 x 9.67 x 10.41 | MEASURED | 14.7 | 19.3 | 29.0 | 38.7 | 46.4 |
+| raptor | 1 | height | 6.60 | 1.65 | 3.49 x 6.60 x 7.74 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| stegosaurus | 2 | height | 7.26 | 3.9 | 5.25 x 7.25 x 11.70 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
+| ankylosaurus | 4 | height | 8.78 | 3.6 | 7.78 x 8.78 x 14.40 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
+| archaeopteryx | 2 | bulk | 6.10 | 1.77 | 7.17 x 5.31 x 5.92 | MEASURED | 8.1 | 10.6 | 15.9 | 21.2 | 25.5 |
+| baryonyx | 3 | height | 7.99 | 3.11 | 3.99 x 7.99 x 9.33 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
+| brachiosaurus | 3 | height | 7.99 | 2.91 | 3.73 x 8.00 x 8.73 | MEASURED | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
+| dimorphodon | 1 | bulk | 5.55 | 1.71 | 5.76 x 5.13 x 5.73 | MEASURED | 7.8 | 10.3 | 15.4 | 20.5 | 24.6 |
+| elasmosaurus | 4 | height | 8.78 | 3.58 | 3.95 x 8.78 x 10.74 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
+| gallimimus | 1 | height | 6.60 | 3.89 | 2.42 x 6.61 x 7.78 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| ichthyosaurus | 3 | length | 8.60 | 2.87 | 3.78 x 4.31 x 8.61 | MEASURED | 6.6 | 8.6 | 12.9 | 17.2 | 20.7 |
+| microraptor | 1 | bulk | 5.55 | 1.52 | 7.11 x 4.56 x 5.29 | MEASURED | 6.9 | 9.1 | 13.7 | 18.2 | 21.9 |
+| mosasaurus | 5 | length | 10.41 | 3.47 | 3.37 x 3.55 x 10.41 | MEASURED | 5.4 | 7.1 | 10.6 | 14.2 | 17.0 |
+| pachycephalosaurus | 2 | height | 7.26 | 2.81 | 4.51 x 7.25 x 8.43 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
+| parasaurolophus | 2 | height | 7.26 | 3.03 | 5.30 x 7.27 x 9.09 | MEASURED | 11.1 | 14.5 | 21.8 | 29.1 | 34.9 |
+| plesiosaurus | 3 | length | 8.60 | 2.87 | 4.81 x 7.99 x 8.61 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
+| pteranodon | 2 | bulk | 6.10 | 1.54 | 7.07 x 4.62 x 6.89 | MEASURED | 7.0 | 9.2 | 13.9 | 18.5 | 22.2 |
+| quetzalcoatlus | 4 | bulk | 7.38 | 2.04 | 8.20 x 6.12 x 8.04 | MEASURED | 9.3 | 12.2 | 18.4 | 24.5 | 29.4 |
+| spinosaurus | 5 | height | 9.66 | 4.02 | 5.53 x 9.66 x 12.06 | MEASURED | 14.7 | 19.3 | 29.0 | 38.6 | 46.4 |
+| therizinosaurus | 4 | height | 8.78 | 2.56 | 4.91 x 8.78 x 10.24 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
+
+Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Size rule: growth 1.1 per tier, tolerance 2%, height tier 1 = 6.6, bulk top 8.12, length top 10.41.
+
+**World, food and hub (height in studs unless stated).**
+
+| Rung | Size | Where it comes from |
+| --- | --- | --- |
+| Food berry / fruit / egg / amber (largest side) | 0.7 / 1 / 1.3 / 1.5, drawn x0.86 to x1.16 | WIRED: `FoodService.TYPES` |
+| Golden Drumstick (flag off) | 1.9; the drumstick mesh is drawn x1.45, so up to 3.2 | WIRED: `SpecialFoods`, `FoodService` |
+| Food pickup reach | 2.25 | MIRRORED: `Config.FoodPickupRadius` |
+| Egg Nest pad (w x h x d) | 5 x 1 x 5 | WIRED: Arena legacy hub; MIRRORED: `CaveHubLayout.Kinds.nest` |
+| Nest ledge behind the station (w x h x d) | 12 x 12 x 6.4 | MIRRORED: `CaveHubLayout.Kinds.hub_nest_ledge` |
+| Ground cover (grass, flowers) | 1.9 to 4.8 | MIRRORED: kit extent x `BiomePlacement.Scales.groundcover` |
+| Small band plants (ferns, bushes, mushrooms) | 4.2 to 12 | MIRRORED: `BiomePlacement.SmallBand` |
+| Rocks (boulders to 10.6, spires and ledges to the top) | 1.7 to 25.6 | MIRRORED: kit extent x `BiomePlacement.Scales.rock` (0.85 to 1.8) |
+| Ground rocks, Blender (small / medium / mossy; ids empty) | 1.2 / 2.3 / 3.2 | MIRRORED: `WorldGeneratedMeshes.Props` |
+| Landmarks (statue, fossil, arch, altar) | 9.4 to 25.8 | MIRRORED: kit extent x `BiomePlacement.LandmarkScale` 1.4 |
+| Normal trees | 4.7 to 42 | MIRRORED: kit extent 5.24 to 26.22 x `Scales.tree` 0.9 to 1.6 |
+| V3 Blender trees (broadleaf, conifer, palm) | 4.7 to 42 | fitted inside the same kit box (`Arena.generatedProp`), so the same range |
+| Colossal ancient trees | 80 to 140, crown at most 100; ancient mesh 117.59 / 117.29 / 105.03 | MIRRORED: `BiomePlacement.Colossal`, `WorldGeneratedMeshes.Colossal` |
+| Dino door: gate mouth (w x h) | 30 x 20; frame mesh 39.79 x 25.79 x 9.77 | MIRRORED: `CaveHubLayout.get().gate`, `CaveTerrainRules.GateHeight`, `Kinds.cave_gate_frame` |
+| Hub tunnel (width, ceiling, path) | 22, 30, 8 | MIRRORED: `CaveHubLayout.TunnelRadius`, tunnel height, `PathHalf` |
+| Station pad radius | fame 12, fusion 20, gate 15, heart 18, index 20, nests 17, potions 15, settings 10, style 18 | MIRRORED: `CaveHubLayout` stations |
+| Signs (w x h x d): stone / arrow / legacy board | 5.5 x 5.5 x 2 / 5 x 5 x 0.8 / 30 x 7 x 1 | MIRRORED: `CaveHubLayout.Kinds`; the legacy board is WIRED in `Arena` |
+| Station props (w x h x d) | Potion stall 14 x 10 x 7; Forge altar 8 x 5 x 5; Shop counter 8.8 x 7 x 4.5; Lectern 3 x 4 x 3; Wall frame 3.8 x 4.5 x 0.7 | MIRRORED: `CaveHubLayout.Kinds` |
+<!-- scale-ladder:end -->
+Code against docs, found while building the table (the code value is in the table; none of this changes the game):
+- Tree height: docs/139 s3.3 lists 5.0 to 41.9 (seed 1404 placements, truncated); the rule bounds are kit extent x scale, 5.235 x 0.9 = 4.7 and 26.222 x 1.6 = 41.96 (table 4.7 to 42).
+- Rocks: docs/139 s3.3 lists a 20.8 maximum (seed 1404 placements); the rule bound is the spire 14.228 x 1.8 = 25.6. Ground cover: docs/139 lists 1.3 to 4.8; the code gives 1.184 x 1.6 = 1.9 to 4.8.
+- docs/139 s3.3 shrubs 1.1 to 10.2 and giants 33.5 to 99 are the pre-BD-473 layout; the code is the Small band 4.2 to 12 and the colossal band 80 to 140 (docs/139 s17 already says so).
+- Hub dino size: docs/139 s3.1 calls 1x a side effect of the GrowthScore reset; docs/115 (BD-480) makes it a guaranteed rule, which is what the table uses.
+- Dino door: `CaveHubLayout.Kinds.hub_gate_arch` is 24 x 24 x 8.7 and `CaveHubProps` records a final size of 16 x 15.9 x 5.8, but no station places that prop any more; the door is the terrain mouth 30 x 20 (`CaveTerrainRules.GateHeight`) with the `cave_gate_frame` mesh 39.79 x 25.79 x 9.77 (docs/140 gives the opening as 29.2 x 19.6).
+- Only Compy, Gallimimus and Tyrannosaurus heights are Studio-measured (the `LowPolyDinoAssets` comment still mentions the old 1.2 x 3.4 x 4.0 Gallimimus at scale 2.0). The other 19 are ESTIMATES until BD-471.
 ### 8.2 Any UI screen
 Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-copy-and-asset-standards.md); checked on phone landscape (844x390) and desktop; one idea per screen; final art is an asset task, not code drawing; shared `TextStyle`; lead screenshots it before merge.
 ### 8.3 Any FX
@@ -263,7 +327,7 @@ Robux buys **looks and convenience**, never exclusive power. Enforced in CI by `
 - Keep 3 agents running (lead instruction; kanban log says 3-4, [78](78-lead-handoff.md) says at most 2: C-19). Sonnet by default; Fable for hard tasks (BD-397).
 - Do not rewrite history: mark SUPERSEDED, keep rows; never mark Done without evidence; status only in the kanban.
 - Say plainly what was not verified (Studio, phone, hearing).
-- **Automated handbook check (BD-408, CI):** `python tools/verify_handbook.py` fails on (a) a UI rule constant or literal under the s4.4 floors (text 14 px, tap target 44 px; the counted baseline `UI_KNOWN` of pre-existing offenders, docs/116 C-37, is empty since BD-495, so nothing under the floors is allowed), (b) a cue louder than `Sfx.MaxCueVolume` or a played/listed cue missing from `Sfx.Sounds`, (c) any hex in s5 (and the s6 island/cave colour numbers) that differs from the code table that owns it (`UITheme`, `RarityColors`, `EggColors`, `MutationLook`, `ProgressionConfig` auras/trails, `BiomeMap`, `WeatherLooks`, `CaveLightingRules`, `CaveLavaRules`, `CaveTerrainRules`, `ClassInfo`), (d) a missing PR template. When it reports a palette mismatch, change the side that is older: the doc when the code is the newer owner-approved value (check [115](115-decisions-log.md)), the code when it breaks the handbook.
+- **Automated handbook check (BD-408, CI):** `python tools/verify_handbook.py` fails on (a) a UI rule constant or literal under the s4.4 floors (text 14 px, tap target 44 px; the counted baseline `UI_KNOWN` of pre-existing offenders, docs/116 C-37, is empty since BD-501, so nothing under the floors is allowed), (b) a cue louder than `Sfx.MaxCueVolume` or a played/listed cue missing from `Sfx.Sounds`, (c) any hex in s5 (and the s6 island/cave colour numbers) that differs from the code table that owns it (`UITheme`, `RarityColors`, `EggColors`, `MutationLook`, `ProgressionConfig` auras/trails, `BiomeMap`, `WeatherLooks`, `CaveLightingRules`, `CaveLavaRules`, `CaveTerrainRules`, `ClassInfo`), (d) a missing PR template. When it reports a palette mismatch, change the side that is older: the doc when the code is the newer owner-approved value (check [115](115-decisions-log.md)), the code when it breaks the handbook.
 
 ## 13. Handbook compliance checklist (paste into every PR body)
 ```

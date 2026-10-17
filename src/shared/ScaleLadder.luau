@@ -1,0 +1,177 @@
+--!strict
+-- BD-407 (docs/114 section 8.1): THE numeric scale ladder. Every size is in STUDS. Pure data and two helpers (no Instances, no requires), so
+-- the game, the offline verifier and docs/114 section 8.1.1 read one table.
+--
+-- Where each number comes from (tools/verify_scale_ladder.py fails when any of it drifts):
+--   WIRED: the game code READS this table (FoodService, SpecialFoods, Arena legacy hub). Changing a number here changes the game.
+--   MIRRORED: the owner module stays the source (LowPolyDinoAssets, HubScaleRules, Config, WorldKitData, BiomePlacement, CaveHubLayout,
+--   WorldGeneratedMeshes, CaveTerrainRules) because many harnesses load it without a require. The verifier recomputes the value
+--   from that module and fails if it differs from this table.
+-- Labels: CODE = what the source does today, MEASURED = a Studio bounding box (docs/07-kanban.md BD-329/BD-337, docs/108),
+-- ESTIMATE = arithmetic on CODE, can be 30% off. BD-471 measured all 22 species in Studio (Dino.species[..].measured, all true).
+local ScaleLadder = {}
+ScaleLadder.Version = 1
+ScaleLadder.Unit = "studs"
+
+-- ---------------------------------------------------------------- dinosaurs
+-- BD-232 (owner rule: "Sizes follow about 10% growth per unlock tier; fly and water species are scaled by bulk up to the T-Rex"; LEAD
+-- decision 2026-10-17, owner delegated, docs/115). Sizing is THE size rule; each species row has its unlock tier (Config.SpeciesRarities),
+-- its basis and its target in studs. scale = the LowPolyDinoAssets clone-time scale (MIRRORED, CODE; the one place a species size is set),
+-- and width/height/length = the Studio bounding box of LowPolyDinos.clone(species) at spawn (growth scale 1), template pose, 2 decimals
+-- (BD-471 method, re-measured after the BD-232 scale change; docs/evidence/2026-10-17-species-sizes/). That box IS the in-game spawn size:
+-- the clone bakes `scale` into the parts and DinosaurVisual.render only multiplies by the growth scale (1 at spawn, HubScaleRules 1 in the hub).
+-- measured = true for ALL 22 species. measured = false would mean ESTIMATE = scale x heightPerScaleEstimate (do not use for a new species).
+-- The legacy (non-low-poly) Compy is about 5.5 studs (docs/68); only the low-poly rows are in this table.
+ScaleLadder.HeightPerScaleEstimate = 2.84
+ScaleLadder.Dino = {
+    hubScale = 1, -- OWNER 2026-10-16 (docs/115, BD-480): every dinosaur is exactly 1x in the cave hub, whatever BIG, potions or growth
+    maxScale = 4, -- growth cap, HubScaleRules.MaxGrowthScale: s = min(4, sqrt(1 + growth / 50))
+    bigMultiplier = 1.2, -- Config.BigScaleMultiplier, so the largest drawn size is maxScale x bigMultiplier = 4.8
+    collider = {width = 2.6, length = 3.2, topPerScale = 2.6}, -- Config.DinoCollider*: torso collider, studs per unit of scale
+    -- Growth stages: growth = GrowthScore (food x Config.GrowthPerFood 0.1), scale = HubScaleRules.growthScale(growth) rounded to 2 decimals.
+    -- spawn 0 food, run = a normal 5-minute run (about 650 food), mid 1,500 food, long 4,000 food, max 7,500 food (the cap), bigMax = max with BIG.
+    stages = {
+        {id = "spawn", growth = 0, scale = 1, big = false},
+        {id = "run", growth = 65, scale = 1.52, big = false},
+        {id = "mid", growth = 150, scale = 2, big = false},
+        {id = "long", growth = 400, scale = 3, big = false},
+        {id = "max", growth = 750, scale = 4, big = false},
+        {id = "bigMax", growth = 750, scale = 4.8, big = true},
+    },
+    order = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"}, -- Config.SpeciesOrder
+    species = {
+        compy = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.69, measured = true},
+        triceratops = {scale = 2.86, tier = 3, basis = "height", target = 7.99, width = 5.79, height = 8.00, length = 8.58, measured = true},
+        tyrannosaurus = {scale = 3.47, tier = 5, basis = "height", target = 9.66, width = 5.31, height = 9.67, length = 10.41, measured = true},
+        raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, measured = true},
+        stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, measured = true},
+        ankylosaurus = {scale = 3.6, tier = 4, basis = "height", target = 8.78, width = 7.78, height = 8.78, length = 14.40, measured = true},
+        archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, measured = true},
+        baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, measured = true},
+        brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, measured = true},
+        dimorphodon = {scale = 1.71, tier = 1, basis = "bulk", target = 5.55, width = 5.76, height = 5.13, length = 5.73, measured = true},
+        elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, measured = true},
+        gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, measured = true},
+        ichthyosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 3.78, height = 4.31, length = 8.61, measured = true},
+        microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, measured = true},
+        mosasaurus = {scale = 3.47, tier = 5, basis = "length", target = 10.41, width = 3.37, height = 3.55, length = 10.41, measured = true},
+        pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, measured = true},
+        parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, measured = true},
+        plesiosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 4.81, height = 7.99, length = 8.61, measured = true},
+        pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, measured = true},
+        quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, measured = true},
+        spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, measured = true},
+        therizinosaurus = {scale = 2.56, tier = 4, basis = "height", target = 8.78, width = 4.91, height = 8.78, length = 10.24, measured = true},
+    },
+}
+
+-- ---------------------------------------------------------------- the size rule (BD-232)
+-- Unlock tier = Config.SpeciesRarities (1 Common .. 5 Legendary; a species is unlocked by hatching it). Basis by class: Ground and Armored
+-- (Elasmosaurus is a normal Ground dino, docs/101) use HEIGHT; Fly uses BULK; Water uses LENGTH, so a long low swimmer is not forced tall.
+--   height target(tier) = Sizing.height.tier1 x growthPerTier^(tier - 1)            (Compy, tier 1, is 6.6)
+--   bulk   target(tier) = Sizing.bulk.top   / growthPerTier^(topTier - tier)        (the T-Rex's bulk is the top, tier 5)
+--   length target(tier) = Sizing.length.top / growthPerTier^(topTier - tier)        (the T-Rex's length is the top, tier 5)
+-- bulk = cube root of the bounding-box volume (width x height x length), in studs, so it compares with a height. The tolerance is the
+-- allowed relative gap between a species' measured size and its target (scale is rounded to 2 decimals, so the real gap is under 0.5%).
+ScaleLadder.Sizing = {
+    growthPerTier = 1.1,
+    tolerance = 0.02,
+    topTier = 5,
+    height = {tier1 = 6.6},
+    bulk = {top = 8.12}, -- T-Rex bulk at spawn: (5.31 x 9.67 x 10.41) ^ (1/3)
+    length = {top = 10.41}, -- T-Rex length at spawn
+}
+
+-- ---------------------------------------------------------------- world: plants, trees, rocks, landmarks
+-- heights are kit extent height x the placement scale (an upper bound: generated meshes are fitted INSIDE the kit extent box). MIRRORED.
+ScaleLadder.Plants = {
+    groundcover = {minHeight = 1.9, maxHeight = 4.8}, -- grass and flowers: BiomePlacement.Scales.groundcover 1.6-3.0 x kit extent 1.18-1.61
+    small = {minHeight = 4.2, maxHeight = 12}, -- the Small band (ferns, bushes, mushrooms, horsetail): BiomePlacement.SmallBand (BD-473)
+}
+ScaleLadder.Trees = {
+    -- normal trees: every WorldKitData tree extent (5.235 to 26.222) x BiomePlacement.Scales.tree 0.9 to 1.6
+    normal = {scale = {0.9, 1.6}, kitHeight = {5.235, 26.222}, minHeight = 4.7, maxHeight = 42},
+    -- V3 Blender trees (broadleaf, conifer, palm) are fitted into the SAME kit extent box (Arena.generatedProp), so they share the normal range
+    v3 = {minHeight = 4.7, maxHeight = 42},
+    -- colossal ancient trees: sized from a target height by BiomePlacement.colossalScale (nothing is placed between 42 and 80)
+    colossal = {minHeight = 80, maxHeight = 140, maxCrown = 100, ancientMesh = {broadleaf = 117.59, pine = 117.29, palm = 105.03}}, -- ancientMesh: WorldGeneratedMeshes.Colossal LOD0 size height at the intended size
+}
+ScaleLadder.Rocks = {
+    -- boulders s/m/l and the tall spire and ledge formations x BiomePlacement.Scales.rock 0.85 to 1.8
+    island = {scale = {0.85, 1.8}, minHeight = 1.7, boulderMaxHeight = 10.6, maxHeight = 25.6},
+    -- Blender ground rocks (WorldGeneratedMeshes.Props size height at scale 1; ids empty until uploaded)
+    groundV3 = {small = 1.2, medium = 2.3, mossy = 3.2},
+}
+ScaleLadder.Landmarks = {scale = 1.4, minHeight = 9.4, maxHeight = 25.8} -- BiomePlacement.LandmarkScale x the four landmark kit extents
+
+-- ---------------------------------------------------------------- food and egg props
+-- size = the LARGEST side of the pickup: the ball diameter (Legacy art) or the longest side of the kit MeshPart before the natural-size
+-- variety below. WIRED: FoodService.TYPES and SpecialFoods read these numbers.
+ScaleLadder.Food = {
+    berry = {size = 0.7},
+    fruit = {size = 1.0},
+    egg = {size = 1.3},
+    amber = {size = 1.5},
+    goldenDrumstick = {size = 1.9}, -- BD-207 special food (flag off)
+    drumstickScale = 1.45, -- the generated drumstick mesh is drawn 1.45 times its kind size
+    variety = {0.86, 1.16}, -- natural size variety of the kit mesh (FoodService random:NextNumber)
+    pickupRadius = 2.25, -- Config.FoodPickupRadius, reach in studs
+}
+ScaleLadder.Nest = {
+    pad = {5, 1, 5}, -- {w, h, d}: CaveHubLayout.Kinds.nest (cave hub) and the Arena legacy-hub EggNest (WIRED); a flat walk-over mat
+    ledge = {12, 12, 6.4}, -- hub_nest_ledge, the big rock behind the Egg Nests station
+}
+
+-- ---------------------------------------------------------------- hub: gate, tunnels, stations, signs
+-- {w, h, d} in studs unless named. MIRRORED from CaveHubLayout.Kinds / byId / TunnelRadius, CaveTerrainRules.GateHeight.
+ScaleLadder.Hub = {
+    gate = {mouthWidth = 30, mouthHeight = 20, frame = {39.79, 25.79, 9.77}}, -- the dino door; frame = cave_gate_frame mesh (Blender, id empty until uploaded)
+    tunnel = {width = 22, ceiling = 30, pathWidth = 8}, -- CaveHubLayout.TunnelRadius x 2, tunnel ceiling height, laid-stone path
+    stationPadRadius = {heart = 18, gate = 15, nests = 17, potions = 15, fusion = 20, style = 18, index = 20, settings = 10, fame = 12},
+    sign = {stone = {5.5, 5.5, 2}, arrow = {5, 5, 0.8}, legacyBoard = {30, 7, 1}}, -- legacyBoard = Arena SanctuarySign, WIRED
+    station = {
+        stallPotion = {14, 10, 7}, forgeAltar = {8, 5, 5}, counterStone = {8.8, 7, 4.5},
+        lecternBook = {3, 4, 3}, wallFrame = {3.8, 4.5, 0.7},
+    },
+}
+
+-- ---------------------------------------------------------------- helpers
+-- Size of a species on its own basis (height, bulk or length), from a box.
+function ScaleLadder.sizeOf(basis: string, width: number, height: number, length: number): number
+    if basis == "length" then return length end
+    if basis == "bulk" then return (width * height * length) ^ (1 / 3) end
+    return height
+end
+
+-- The rule: target size in studs for a basis and unlock tier (1 to 5), not rounded.
+function ScaleLadder.targetSize(basis: string, tier: number): number
+    local s = ScaleLadder.Sizing
+    if basis == "height" then return s.height.tier1 * s.growthPerTier ^ (tier - 1) end
+    local top = if basis == "bulk" then s.bulk.top else s.length.top
+    return top / s.growthPerTier ^ (s.topTier - tier)
+end
+
+-- Height of a species at a drawn scale (the low-poly model scales uniformly with the dino).
+function ScaleLadder.dinoHeight(speciesId: string, scale: number): number
+    local row = ScaleLadder.Dino.species[speciesId]
+    return if row then row.height * scale else 0
+end
+
+-- Scale of a growth stage by id ("spawn", "run", "mid", "long", "max", "bigMax"), nil for an unknown id.
+function ScaleLadder.stageScale(stageId: string): number?
+    for _, stage in ScaleLadder.Dino.stages do
+        if stage.id == stageId then return stage.scale end
+    end
+    return nil
+end
+
+-- The tallest species at scale 1 (the one a door or gate must still clear in the hub).
+function ScaleLadder.tallestDinoAtOne(): (string, number)
+    local bestId, best = "", 0
+    for id, row in ScaleLadder.Dino.species do
+        if row.height > best then bestId, best = id, row.height end
+    end
+    return bestId, best
+end
+
+return ScaleLadder

@@ -4,9 +4,10 @@
 -- Effect on raw food points is EXPLICIT and PROVISIONAL: a special pickup is worth Config.SpecialFoodPoints raw food points
 -- (a "big meal"). It feeds the same FoodCatchRules.award conversion, so FoodCatchRate is NOT changed here.
 local Config = require(script.Parent.Config)
+local ScaleLadder = require(script.Parent.ScaleLadder) -- BD-407: the pickup size lives in the one scale ladder
 local SpecialFoods = {}
 -- Kid-friendly name and one-line benefit. Art: existing registered food_drumstick mesh (BD-387); no new art needed.
-SpecialFoods.GOLDEN_DRUMSTICK = {id = "golden_drumstick", name = "Golden Drumstick", benefit = "A giant tasty snack!", size = 1.9, rgb = {255, 205, 80}}
+SpecialFoods.GOLDEN_DRUMSTICK = {id = "golden_drumstick", name = "Golden Drumstick", benefit = "A giant tasty snack!", size = ScaleLadder.Food.goldenDrumstick.size, rgb = {255, 205, 80}}
 function SpecialFoods.enabled(): boolean
     return Config.SpecialFoodsEnabled == true
 end
