@@ -204,6 +204,19 @@ oldAccepts("progression.discovered (BD-436 discovery log)",function(p) p.progres
 oldAccepts("revealSkip on the five-tier scale (Build 020 has no such field)",function(p) p.revealSkip={1,5} end)
 oldAccepts("future additive settings keys",function(p) p.settings.futureOption=true p.settings.v=2 end)
 oldAccepts("nest with weatherId and unknown nest fields",function(p) p.eggNests[1].weatherId="rain" p.eggNests[1].futureField={1,2,3} end)
+-- BD-451 (docs/134, RB1): the gifting fields are add-only. A profile that never received a gift has neither (tools/verify_gifts.py proves a load never
+-- creates them); one that did carries claimedGifts + ownedSkins, which Build 020 loads, keeps byte-for-byte and never reads.
+do
+ local p=copy(rich) p.claimedGifts={Rgift1=1790000000,Rgift2="revoked"} p.ownedSkins={Plush=true,Clay=true}
+ local id=6990
+ local u=fresh(p,id)
+ check(OldRepo.load(u) and u.attrs.ProfileState=="Loaded","RB1: Build 020 loads a profile with claimedGifts + ownedSkins")
+ OldRepo.renew(u) OldRepo.release(u)
+ check(same(p.claimedGifts,data[key(id)].claimedGifts) and same(p.ownedSkins,data[key(id)].ownedSkins),"Build 020 keeps the gifting fields byte-for-byte")
+ local un=newUser(id)
+ check(NewRepo.load(un) and same(p.claimedGifts,data[key(id)].claimedGifts) and same(p.ownedSkins,data[key(id)].ownedSkins),"current code loads it again and leaves the fields alone (gift flags are off)")
+ NewRepo.release(un)
+end
 print("lock-out classes asserted: rarest>3 and post-Build-020 potions are rejected by Build 020; additive fields are kept")
 
 ------------------------------------------------------------------ (2b) BD-436: lazy backfill of the discovery log from owned dinos

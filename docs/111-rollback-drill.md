@@ -91,6 +91,7 @@ store it does read.
 | `progression.shop` | BD-051 | Ignored and kept |
 | `progression.discovered` (`colours`, `patterns`, `mutations` id sets) | BD-436 | Ignored and kept (asserted: byte-identical after Build 020 load, claim, renew, release; roll-forward keeps every id) |
 | `progression.potions` / `buffs` with ids added after Build 020 (loot, uncommon, epic) | BD-051, docs/68 | **Build 020 rejects unknown potion ids** |
+| `claimedGifts` (`{[giftId] = unix time or "revoked"}`) and `ownedSkins` (`{[skinId] = true}`) | BD-451 gifting core (docs/134) | Ignored and kept. Created ONLY by the first applied gift (a load, renew or release never adds them, so a profile that never received a gift is unchanged); asserted by `verify_gifts` (RB1) and `verify_rollback`: Build 020 loads both kinds of profile and preserves the fields byte-for-byte |
 | `equippedVariantKey` | BD-150 | Ignored and kept |
 | low-poly / culling / world-kit settings | client only, **not persisted** | Nothing to roll back (no attribute or profile field) |
 

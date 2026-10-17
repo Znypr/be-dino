@@ -288,6 +288,13 @@ return table.freeze({
     -- BD-072/073 (docs/66): mini objectives (daily/short/tutorial goals paid in Crystals/XP). false = the profile is never read or written for it,
     -- no remote exists. Pinned OFF in the default AND playtest release profiles (tools/release_profiles.py); no UI until BD-075.
     ObjectivesEnabled = false,
+    -- BD-451 gifting core (docs/134, docs/115 GF1b..GF17). ALL THREE default false and are pinned OFF in the default AND playtest release profiles
+    -- (tools/release_profiles.py). false = no Gifts DataStore request, no profile read or write, no remote, no popup. GiftClaimEnabled is the
+    -- claim path (inbox -> profile) and is required by both senders; GiftingEnabled = Robux gifts (BD-453, needs the owner's explicit go-ahead);
+    -- AdminGiftsEnabled = free admin gifts (BD-452, also needs AdminPanelEnabled). Enabling any of them is an owner decision (docs/134 s12).
+    GiftingEnabled = false,
+    AdminGiftsEnabled = false,
+    GiftClaimEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
     IdentityPersistentEnabled = false,
