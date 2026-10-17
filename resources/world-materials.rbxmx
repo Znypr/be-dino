@@ -25,6 +25,23 @@
         </Content>
       </Properties>
     </Item>
+    <Item class="MaterialVariant" referent="BeDino_MeadowV2">
+      <Properties>
+        <string name="Name">BeDino_MeadowV2</string>
+        <token name="BaseMaterial">1280</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">12</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://85444193168969</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://136360120089645</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://114907673456194</url>
+        </Content>
+      </Properties>
+    </Item>
     <Item class="MaterialVariant" referent="BeDino_Stone">
       <Properties>
         <string name="Name">BeDino_Stone</string>

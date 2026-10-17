@@ -79,9 +79,9 @@
     {
       "name": "BeDino_MeadowV2",
       "base": "Grass",
-      "color": "",
-      "normal": "",
-      "roughness": "",
+      "color": "85444193168969",
+      "normal": "136360120089645",
+      "roughness": "114907673456194",
       "metal": "",
       "tile": 12,
       "bound": false,

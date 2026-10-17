@@ -87,6 +87,16 @@ return table.freeze({
     TrailIconAssetIds={
         -- white=nil, fern=nil, tidal=nil, ember=nil, violet=nil, electric=nil, frost=nil, solar=nil, nova=nil, astra=nil
         -- bind:begin TrailIconAssetIds (tools/bind_assets.py writes here)
+        astra = "rbxassetid://81320582648014",
+        electric = "rbxassetid://80830681763211",
+        ember = "rbxassetid://96824687229527",
+        fern = "rbxassetid://83110978985156",
+        frost = "rbxassetid://71078322710374",
+        nova = "rbxassetid://72795088168090",
+        solar = "rbxassetid://74556480306160",
+        tidal = "rbxassetid://74997682105205",
+        violet = "rbxassetid://77755278927267",
+        white = "rbxassetid://104044876766486",
         -- bind:end TrailIconAssetIds
     },
     -- BD-394: slots for the owner's Blender "egg stage" render (resources/ui/v2/stage: egg-stage-jungle-v1.jpg + five condition
