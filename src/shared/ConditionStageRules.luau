@@ -25,4 +25,23 @@ function Rules.resolve(ids: any, conditionId: string): {stage: string?, egg: str
     local egg = if stage then Rules.assetId(ids, conditionId) else nil
     return {stage = stage, egg = egg}
 end
+
+-- BD-208 / BD-094: the Eggs page "hero" stage. The jungle image is square (1024 x 1024) and so are the five condition eggs, drawn on the
+-- SAME square canvas with the egg centred (about 30% to 70% across, 21% to 74% down). The stage frame is therefore a SQUARE and both images
+-- use ScaleType Fit, so nothing is ever stretched or cropped on a phone. The egg is enlarged around the pedestal (top centre at about
+-- 50% across, 72% down), keeping its base on the stone: EggScale 1.25 stays inside the frame (top edge at about 6%).
+Rules.Hero = {MaxSide = 300, MinSide = 120, EggScale = 1.25, PedestalX = .5, PedestalY = .74}
+-- The square side for the stage: as large as the free box allows, never wider than MaxSide. Always an integer.
+function Rules.heroSide(width: number, height: number): number
+    return math.floor(math.clamp(math.min(width, height), Rules.Hero.MinSide, Rules.Hero.MaxSide))
+end
+-- Which condition egg picture an Eggs page egg uses: a real condition id, else "normal" (unknown or missing data is never an error).
+function Rules.conditionKey(conditionId: any): string
+    if type(conditionId) == "string" then
+        for _, key in Rules.Keys do
+            if key ~= "stage" and key == conditionId then return key end
+        end
+    end
+    return "normal"
+end
 return Rules

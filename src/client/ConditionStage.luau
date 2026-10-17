@@ -37,4 +37,31 @@ function Stage.egg(tile: GuiObject, conditionId: string): boolean
     return true
 end
 
+
+-- BD-208: the Eggs page hero stage. Draws the SQUARE jungle image (ScaleType Fit, nothing stretched) in a rounded, clipped frame
+-- of `side` pixels and, when this condition's egg picture is bound too, that egg on the pedestal. Returns nil when the stage is NOT
+-- bound, so the caller keeps today's tile floor and tinted egg exactly. `egg` is nil when only the stage is bound (the caller then
+-- puts its own egg on the stone). Z order: image < frame + 1 (egg, chips and the mutation glow sit above the picture).
+function Stage.hero(parent: GuiObject, side: number, conditionId: string): {frame: Frame, egg: ImageLabel?}?
+    local ids = (Progression :: any).ConditionStageAssetIds
+    local pick = Rules.resolve(ids, Rules.conditionKey(conditionId))
+    if not pick.stage then return nil end
+    local frame = Instance.new("Frame")
+    frame.Name, frame.BackgroundColor3, frame.BorderSizePixel, frame.ClipsDescendants = "OfficialStage", Color3.fromRGB(96, 168, 82), 0, true
+    frame.Size, frame.ZIndex, frame.Parent = UDim2.fromOffset(side, side), parent.ZIndex + 1, parent
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 18) corner.Parent = frame
+    local backdrop = image(frame, "StageImage", pick.stage, math.max(1, frame.ZIndex - 1))
+    backdrop.ScaleType = Enum.ScaleType.Fit
+    local egg: ImageLabel? = nil
+    if pick.egg then
+        local hero = Rules.Hero
+        local item = image(frame, "OfficialEgg", pick.egg, frame.ZIndex + 1)
+        item.ScaleType = Enum.ScaleType.Fit
+        item.AnchorPoint, item.Position = Vector2.new(hero.PedestalX, hero.PedestalY), UDim2.fromScale(hero.PedestalX, hero.PedestalY)
+        item.Size = UDim2.fromScale(hero.EggScale, hero.EggScale)
+        egg = item
+    end
+    return {frame = frame, egg = egg}
+end
+
 return Stage
