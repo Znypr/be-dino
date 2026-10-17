@@ -35,6 +35,15 @@ def module(path: str) -> str:
     return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
 
 
+def gift_rules_module() -> str:
+    """GiftRules requires the one skin catalogue (BD-456): bind the real SkinCatalog for that require inside the inlined module."""
+    catalog = module('src/shared/SkinCatalog.luau')
+    rules = (ROOT / 'src/shared/GiftRules.luau').read_text(encoding='utf-8')
+    parts = ['(function()', 'local SkinCatalogModule=' + catalog, 'local script={Parent={SkinCatalog="SkinCatalog"}}',
+            'local require=function(id) assert(id=="SkinCatalog") return SkinCatalogModule end', rules, 'end)()']
+    return chr(10).join(parts)
+
+
 def strip_comments(text: str) -> str:
     return re.sub(r'--.*$', '', text, flags=re.M)
 
@@ -1434,7 +1443,7 @@ def fill(text: str) -> str:
         ('@@OLD_REPO@@', FIXTURE + 'ProfileRepository.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
-        text = text.replace(token, module(path))
+        text = text.replace(token, gift_rules_module() if token == '@@GIFT_RULES@@' else module(path))
     return text
 
 

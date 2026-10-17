@@ -288,6 +288,10 @@ return table.freeze({
     -- BD-072/073 (docs/66): mini objectives (daily/short/tutorial goals paid in Crystals/XP). false = the profile is never read or written for it,
     -- no remote exists. Pinned OFF in the default AND playtest release profiles (tools/release_profiles.py); no UI until BD-075.
     ObjectivesEnabled = false,
+    -- BD-604 / BD-228 (docs/149, docs/115 SS1..SS6): secret silly creatures (Chickosaurus, Pigeon, Dodo, Duck, Penguin, Budgiesaurus, Foxosaurus). false = no secret
+    -- roll, no extra egg field, no lazy collection entry, no Index secret cards: eggs, profiles and the Index are byte-for-byte as before. Pinned OFF in the
+    -- default AND playtest release profiles (tools/release_profiles.py); on, a secret can still only hatch once its model slot in Shared/SecretSpeciesConfig is filled.
+    SecretSpeciesEnabled = false,
     -- BD-451 gifting core (docs/134, docs/115 GF1b..GF17). ALL THREE default false and are pinned OFF in the default AND playtest release profiles
     -- (tools/release_profiles.py). false = no Gifts DataStore request, no profile read or write, no remote, no popup. GiftClaimEnabled is the
     -- claim path (inbox -> profile) and is required by both senders; GiftingEnabled = Robux gifts (BD-453, needs the owner's explicit go-ahead);
@@ -295,6 +299,11 @@ return table.freeze({
     GiftingEnabled = false,
     AdminGiftsEnabled = false,
     GiftClaimEnabled = false,
+    -- BD-456 dino skins data model + equip (docs/137 s7, s11, s15). false (pinned OFF in the default AND playtest release profiles,
+    -- tools/release_profiles.py) = no SkinAction remote, no profile read or write for skins, nothing created. On: the account
+    -- default skin and a per-dino skin can be set from the entitlements in profile.ownedSkins (shared with gifting). No species has a skin model yet
+    -- (SkinCatalog.Models are empty), so only the Base look can be equipped until BD-455/BD-458 add models. No Robux, no UI (BD-457/BD-459).
+    DinoSkinsEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
     IdentityPersistentEnabled = false,

@@ -205,6 +205,8 @@ Files: `src/server/AdminGifts.luau` (started by `AdminService`, not by Bootstrap
 - **Studio pass 2026-10-17 (BD-579, numbers only, [evidence](evidence/2026-10-17-gifts/README.md)):** the page, send, claim, popup, Settings row, take back, history and unpublished username lookup all worked with one account; the popup now names a custom crystal amount. Pictures, a 2-account claim, the Roblox-block refusal and the real DataStore are still owed (BD-589, BD-591).
 - **Not testable offline (BD-579):** the real username lookup and thumbnail, the page layout on desktop and phone, a 2-account claim in Studio.
 
+**BD-456 (2026-10-17):** the skin gift items are now built from the one skin catalogue `src/shared/SkinCatalog.luau` ([137](137-dino-skins-spec.md) s16); the items, labels and the `ownedSkins` record are unchanged.
+
 ## Handbook check
 Robux line s11a kept (no power, no random); no trading; flags off; no art made; Place1.rbxl untouched; economy numbers unchanged. Audience rule ([114](114-handbook.md) s2: children, parents nearby) is why strangers get a wordless, mutable, one-way gift only. Nothing here was built or verified in Studio, and every Roblox API named above that is not already used in the repo is marked for Studio verification.
 

@@ -94,6 +94,7 @@ require(script.Parent.RareHatchService).start() -- BD-428
 require(script.Parent.FusionService).start(ProfileRepository)
 require(script.Parent.ObjectiveService).start(ProfileRepository) -- BD-073: returns at once (no remote, no profile access) while Config.ObjectivesEnabled is false
 require(script.Parent.GiftService).start(ProfileRepository) -- BD-451 (docs/134): returns at once (no remote, no DataStore request, no profile access) while Config.GiftClaimEnabled is false
+require(script.Parent.SkinService).start(ProfileRepository) -- BD-456 (docs/137): returns at once (no SkinAction remote, no profile access) while Config.DinoSkinsEnabled is false
 workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()
 require(script.Parent.HubTravelService).start() -- BD-287: creates the HubTravel remote only while Config.CaveHub is true
