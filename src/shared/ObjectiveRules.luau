@@ -353,7 +353,7 @@ local function build(cfg: any)
     ---------------------------------------------------------------- read-only view for the UI (BD-075)
     local function row(entry: any, progress: number, claimed: boolean, carried: boolean)
         local crystals, xp = rewardOf(entry)
-        return {id = entry.id, name = entry.name, progress = math.min(progress, entry.goal), goal = entry.goal,
+        return {id = entry.id, name = entry.name, note = entry.note, progress = math.min(progress, entry.goal), goal = entry.goal,
             reward = {crystals = crystals, xp = xp}, done = progress >= entry.goal, claimed = claimed, carried = carried}
     end
 

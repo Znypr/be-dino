@@ -8,7 +8,7 @@ local Catalogue = {
     -- Tutorial: ordered, one-time, one shown at a time (UI shows the first unclaimed). Total 160 Crystals (docs/66).
     {id = "T1", group = "tutorial", name = "Eat 10 food", event = "food_eaten", goal = 10, reward = {crystals = 10}},
     {id = "T2", group = "tutorial", name = "Finish your first run", event = "run_end", goal = 1, reward = {crystals = 20}},
-    {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}},
+    {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}, note = "Cracked eggs count too"}, -- OB3 (docs/115): a failed Cracked egg counts as opened
     {id = "T4", group = "tutorial", name = "Equip a dino in the Index", event = "dino_equipped", goal = 1, reward = {crystals = 10}},
     {id = "T5", group = "tutorial", name = "Use leap once", event = "leap_used", goal = 1, reward = {crystals = 10}},
     {id = "T6", group = "tutorial", name = "Buy a potion", event = "potion_bought", goal = 1, reward = {crystals = 25}},

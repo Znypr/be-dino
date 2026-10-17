@@ -333,6 +333,14 @@ assert(Rules.runCounts(30,1)==true and Rules.runCounts(300,50)==true)
 assert(Rules.runCounts(29.9,1)==false and Rules.runCounts(5,3)==false and Rules.runCounts(0,0)==false and Rules.runCounts(300,0)==false)
 for _,junk in {"x",{},0/0,-1} do assert(Rules.runCounts(junk,1)==false and Rules.runCounts(60,junk)==false,"junk never counts") end
 assert(Rules.runCounts(nil,1)==false and Rules.runCounts(60,nil)==false)
+-- OB3: the one catalogue row whose copy says "hatch" tells the player a failed Cracked egg counts; short, docs/72 length
+for _,entry in C.Catalogue do
+ if entry.note~=nil then assert(entry.id=="T3" and entry.note=="Cracked eggs count too" and #entry.note<=30,"only T3 carries a note") end
+end
+assert(C.ById.T3.note~=nil,"T3 says hatch, so it carries the Cracked note")
+assert(Rules.view(newState(DAY0+100),DAY0+100).tutorial.id=="T1")
+do local s=newState(DAY0+100) for _,id in {"T1","T2"} do s.tutorial.claimed[id]=true end
+ local v=Rules.view(s,DAY0+100) assert(v.tutorial.id=="T3" and v.tutorial.note=="Cracked eggs count too","the view carries the note") end
 -- OB2: a "seen" report is accepted only for a catalogue row that declares it (T9 "fusion_menu"); the rest is the server's
 assert(Rules.seenEntry("fusion_menu")==C.ById.T9 and C.ById.T9.event=="fusion_menu_opened")
 for _,forged in {"T9","D5","fusion","index","",5,{},false} do assert(Rules.seenEntry(forged)==nil,"forged seen id") end
