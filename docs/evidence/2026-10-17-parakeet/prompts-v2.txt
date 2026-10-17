@@ -1,0 +1,10 @@
+Prompts for generate_mesh, v2 (2026-10-17). Shared style tail (same as the other secret birds): low poly, few large flat-shaded facets, matte, solid glossy black round eyes with a white highlight dot (not hollow), friendly kids game, standing pose facing forward.
+
+A (slim and tall):
+budgerigar parakeet bird, slim upright body tapering into a very LONG POINTED TAIL as long as the body, small rounded head not oversized, bright yellow face and forehead, small blue cere bump above a small grey-yellow beak, a blue-violet cheek patch painted flat on the face, three round black dots on the yellow throat in a row, green chest and belly, black-and-yellow scalloped wings folded flat along the sides, grey-blue legs with long toes, solid black eyes, low poly, flat-shaded facets, matte
+
+B (slightly chunkier, friendlier):
+cute chunky budgerigar parakeet, rounded friendly body, medium round head, long pointed blue-green tail with dark bars as long as the body, yellow face and forehead, small blue cere on top of a tiny grey-yellow beak, blue-violet cheek patch painted flat on the face, three black throat dots, bright green body, black-and-yellow scalloped wings folded along the sides, grey-blue legs, solid black round eyes, low poly, flat-shaded facets, matte
+
+C (perched pose):
+budgerigar parakeet perched on two grey-blue legs, body leaning forward at a slight angle like sitting on a branch, slim body tapering into a long pointed tail hanging down behind, small round head, yellow face, blue cere and small grey-yellow beak, blue-violet cheek patch painted flat on the face, three black throat dots, green body, black-and-yellow scalloped wings folded along the sides, solid black eyes, low poly, flat-shaded facets, matte
