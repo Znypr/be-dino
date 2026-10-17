@@ -39,6 +39,12 @@ def load_budgets():
     return json.loads(BUDGET_FILE.read_text(encoding='utf-8'))['phone']
 
 
+def load_guards():
+    """The BD-495..497 phone guards (docs/146 s10): numbers from tools/qa/phone_budgets.json, enforced by src/shared/PhoneGuards.luau."""
+    g = json.loads(BUDGET_FILE.read_text(encoding='utf-8'))['guards']
+    return {k: v['value'] for k, v in g.items() if isinstance(v, dict)}
+
+
 # ------------------------------------------------------------------ 1. world
 def spots(half):
     return [(gx, gz) for gx in range(-half, half + 1, 64) for gz in range(-half, half + 1, 64)]
@@ -87,6 +93,7 @@ def world_scenario(runner, mode, density_keep=None, radius=None):
         inside = [i for d, i in near if d <= r2][:c['budget']]
         uniq = len({kit[props[i]['id']].get('vis', props[i]['id']) for i in inside})
         col_in = sum(kit[props[i]['id']]['colliders'] for i in inside)
+        col_radius = sum(kit[props[i]['id']]['colliders'] for d, i in near if d <= r2)   # BD-497: every collider the phone guard keeps (radius x hysteresis, no part budget)
         col = colossal.get(('Phone', 'default'), {}).get(sp)
         low = fixed + est.GEN_LOW * gen
         high = fixed + est.GEN_HIGH * gen
@@ -96,7 +103,7 @@ def world_scenario(runner, mode, density_keep=None, radius=None):
             high += col['tris'] - col['today'] * est.GEN_HIGH
             uniq += 2 if (col['lod0'] + col['lod1']) else 0
         parts = kept + colliders + c_food(res, c) + 600 + dinos['low_parts_peak'] + (colossal_extra if all_mode else 0)
-        rows.append(dict(spot=sp, col_in=col_in, within=within, kept=kept, tris=tris, tris_low=low, tris_high=high, gen=gen, unique_meshes=uniq,
+        rows.append(dict(spot=sp, col_in=col_in, col_radius=col_radius, within=within, kept=kept, tris=tris, tris_low=low, tris_high=high, gen=gen, unique_meshes=uniq,
                          parts=parts))
     spawn = rows[-1]
     worst_t = max(rows[:-1], key=lambda r: r['tris'])
@@ -321,9 +328,11 @@ def lowpoly_dino_mib(species, cap=LOWPOLY_PART_PX):
 # ------------------------------------------------------------------ 4. FX
 def fx_scenes(runner, cave_res):
     rows = fxr.run_model(runner)
-    m = fxr.moments(rows)['phone']
+    m = fxr.moments(rows)['phone']   # phone weather density from the guards file (0.25)
     names = ['hatch', 'open', 'party']
     out = {k: v[1] for k, v in zip(names, m)}
+    before = fxr.moments(rows, phone_density=fxr.PHONE_WEATHER_DENSITY_BEFORE)['phone']   # the 0.5 of docs/146 s4 (before BD-497)
+    out.update({k + '_before': v[1] for k, v in zip(names, before)})
     lod = (ROOT / 'src/shared/EffectsLod.luau').read_text()
     live = re.search(r'phone = table\.freeze\(\{beams = (\d+), trails = (\d+), lights = (\d+)', lod)
     cos = dict(beams=int(live.group(1)), trails=int(live.group(2)), lights=int(live.group(3)))
@@ -332,6 +341,14 @@ def fx_scenes(runner, cave_res):
     out['cave'] = dict(lights_static=lights_static, lights_cosmetic=cos['lights'], lights=lights_static + cos['lights'], beams_static=cl['beams'],
                        beams_cosmetic=cos['beams'], beams=cl['beams'] + cos['beams'], trails=cos['trails'],
                        particles_per_s=cf['motes'] + cf['gate'] + cf['lava_phone'], shadows=cl['shadows'], near_max=cl['near_max'])
+    # BD-495: the guarded phone numbers. Static lights capped to the nearest N, no cosmetic lights inside the hub, shaft beams per shaft shared from the cap.
+    g = load_guards()
+    shafts = cl['beams'] // 2   # 2 beams per hole (haze + core)
+    beams_static = min(cl['beams'], (g['caveBeams'] // shafts) * shafts) if shafts else 0
+    out['cave'].update(lights_static_guarded=min(lights_static, g['caveLights']), lights_cosmetic_guarded=g['hubCosmeticLights'],
+                       beams_static_guarded=beams_static)
+    out['cave']['lights_guarded'] = out['cave']['lights_static_guarded'] + out['cave']['lights_cosmetic_guarded']
+    out['cave']['beams_guarded'] = beams_static + cos['beams']
     return out
 
 
@@ -354,7 +371,7 @@ def forecast(runner):
     tx = texture_scenes(TEX_CAP, ca)
     tx512, tx256 = texture_scenes(512, ca), texture_scenes(256, ca)
     fx = fx_scenes(runner, cv)
-    return dict(budgets=B, today=today, allf=allf, sens=sens, cave=cv, tex=tx, tex512=tx512, tex256=tx256, fx=fx)
+    return dict(guards=load_guards(), budgets=B, today=today, allf=allf, sens=sens, cave=cv, tex=tx, tex512=tx512, tex256=tx256, fx=fx)
 
 
 def line(name, v, cap, unit=''):
@@ -440,7 +457,7 @@ def report(F):
     P('Context, SHIPPED art (docs/105: 1024 px texture per dino part): 4 distinct species %.0f MiB, 8 %.0f MiB, 12 %.0f MiB RGBA8 (%.0f / %.0f / %.0f if GPU-compressed).'
       % (lowpoly_dino_mib(4), lowpoly_dino_mib(8), lowpoly_dino_mib(12), lowpoly_dino_mib(4) / GPU_COMPRESS, lowpoly_dino_mib(8) / GPU_COMPRESS, lowpoly_dino_mib(12) / GPU_COMPRESS))
 
-    P('\n== 4. FX peaks (Phone class, tools/fx_budget_report.py model + static cave lights) ==')
+    P('\n== 4. FX peaks (Phone class, tools/fx_budget_report.py model + static cave lights; weather at the guarded phone density from phone_budgets.json) ==')
     fx = F['fx']
     P('| Scene | live3d particles | big sprites | beams | trails | lights |')
     P('|---|---:|---:|---:|---:|---:|')
@@ -449,14 +466,44 @@ def report(F):
         m = fx[k]
         P('| %s | %.0f | %.0f | %.0f | %.0f | %.0f |' % (labels[k], m['live3d'], m['big'], m['beams'], m['trails'], m['lights']))
     c = fx['cave']
-    P('| Cave hub (static + cosmetics at their global caps) | ~%.0f/s | 0 | %d + %d = %d | %d | %d + %d = %d |' % (c['particles_per_s'], c['beams_static'], c['beams_cosmetic'],
+    P('| Cave hub (static + cosmetics at their global caps; BEFORE the BD-495 guard, see section 5) | ~%.0f/s | 0 | %d + %d = %d | %d | %d + %d = %d |' % (c['particles_per_s'], c['beams_static'], c['beams_cosmetic'],
                                                                                                         c['beams'], c['trails'], c['lights_static'], c['lights_cosmetic'], c['lights']))
     P('Phone budgets: live3d %s, big %s, beams %s, trails %s, lights %s' % tuple(fxr.BUDGETS['phone'][k] for k in ('live3d', 'big', 'beams', 'trails', 'lights')))
+
+    P('\n== 5. PHONE GUARDS, before / after (BD-495 .. BD-497, docs/146 s10; the same model, ESTIMATE, not a phone) ==')
+    for r in guard_rows(F):
+        P(r)
 
     P('\n== Budget check (fake ids, Phone) ==')
     for r in checks(F):
         P(r[0])
     return '\n'.join(out)
+
+
+def guard_rows(F):
+    """Markdown rows: what each phone guard changes in the model. Before = the numbers of docs/146 s1 to s4 (no guard), after = guards on."""
+    B, G, a, fx = F['budgets'], F['guards'], F['allf'], F['fx']
+    wp = a['worst_parts']
+    parts_after = wp['parts'] - (a['colliders'] - wp['col_radius'])
+    c = fx['cave']
+    rows = ['| Guard | Metric | Before | After | Phone budget |', '|---|---|---:|---:|---:|']
+    rows.append('| BD-495 cave lights | enabled lights in the hub (30 static + 16 cosmetic cap before; nearest %d + %d cosmetic after) | %d | %d | %d |'
+                % (G['caveLights'], G['hubCosmeticLights'], c['lights'], c['lights_guarded'], B['lights']['value']))
+    rows.append('| BD-495 cave beams | enabled beams in the hub (8 shaft + 24 cosmetic cap before; %d shaft after) | %d | %d | %d |'
+                % (G['caveBeams'], c['beams'], c['beams_guarded'], B['beams']['value']))
+    for key, label in (('hatch', 'hatch reveal + blizzard'), ('open', 'open world + blizzard')):
+        b, n = fx[key + '_before'], fx[key]
+        rows.append('| BD-497 weather density 0.5 -> %g | live3d particles, %s | %s | %s | %s |'
+                    % (G['weatherDensity'], label, f"{b['live3d']:,.0f}", f"{n['live3d']:,.0f}", f"{fxr.BUDGETS['phone']['live3d']:,}"))
+    wb, wn = fx['open_before']['live3d'] - fx['party']['live3d'], fx['open']['live3d'] - fx['party']['live3d']
+    rows.append('| BD-497 weather density | of which weather particles (blizzard) | %s | %s | |' % (f"{wb:,.0f}", f"{wn:,.0f}"))
+    rows.append('| BD-497 weather density | big sprites, open world | %.0f | %.0f | %d |' % (fx['open_before']['big'], fx['open']['big'], fxr.BUDGETS['phone']['big']))
+    rows.append('| BD-496 invisible colliders culled | parts in scene at the worst-parts spot %s | %s | %s | %s |'
+                % (wp['spot'], f"{wp['parts']:,}", f"{parts_after:,}", f"{B['parts']['value']:,}"))
+    rows.append('| BD-496 invisible colliders culled | parts loaded at join (unchanged: they exist, only the phone stops drawing the far ones) | %s | %s | %s |'
+                % (f"{a['join_parts']:,}", f"{a['join_parts']:,}", f"{B['parts']['value']:,}"))
+    rows.append('(colliders kept at that spot: %d of %d inside radius x hysteresis; food pooling is NOT built, kanban BD-498)' % (wp['col_radius'], a['colliders']))
+    return rows
 
 
 # ------------------------------------------------------------------ CI check
@@ -490,12 +537,19 @@ def checks(F):
         ok = fn(F)
         out.append(('%s %s' % ('OK  ' if ok else 'FAIL', name), not ok))
     a, fx = F['allf'], F['fx']
+    G, c = F['guards'], F['fx']['cave']
+    out.append(('%s phone guards: nearest %d cave lights + %d cosmetic lights in the hub = %d <= phone light budget %d' % (
+        'OK  ' if c['lights_guarded'] <= B['lights']['value'] else 'FAIL', G['caveLights'], G['hubCosmeticLights'], c['lights_guarded'], B['lights']['value']),
+        c['lights_guarded'] > B['lights']['value']))
+    out.append(('%s phone guards: weather density %g <= 0.25 (risk 5) and shaft beams %d <= 4 (risk 3)' % (
+        'OK  ' if G['weatherDensity'] <= 0.25 and G['caveBeams'] <= 4 else 'FAIL', G['weatherDensity'], G['caveBeams']),
+        not (G['weatherDensity'] <= 0.25 and G['caveBeams'] <= 4)))
     warns = [
         ('world tris worst spot', a['worst_tris']['tris'], B['triangles']['value']),
         ('world parts worst-parts spot', a['worst_parts']['parts'], B['parts']['value']),
         ('world parts loaded at join', a['join_parts'], B['parts']['value']),
-        ('cave lights (static + cosmetic)', fx['cave']['lights'], B['lights']['value']),
-        ('cave beams (static + cosmetic)', fx['cave']['beams'], B['beams']['value']),
+        ('cave lights (guarded: nearest N + hub cosmetic)', fx['cave']['lights_guarded'], B['lights']['value']),
+        ('cave beams (guarded shaft beams + cosmetic cap)', fx['cave']['beams_guarded'], B['beams']['value']),
         ('hatch moment live3d particles', fx['hatch']['live3d'], fxr.BUDGETS['phone']['live3d']),
     ] + [('texture MiB %s (RGBA8, new art + generated meshes + 6 dino species)' % n, s['new'] + s['world'] + lowpoly_dino_mib(6), B['textureMib']['value'])
          for n, s in F['tex']['scenes'].items()]

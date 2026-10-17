@@ -23,7 +23,7 @@ BUDGETS = [
     ("memMb", "memory MB", 1200, "max", "docs/107 s1 total client memory"),
     ("parts", "parts", 3000, "max", "docs/107 s1 parts attached and in range (whole workspace here, so a strict reading)"),
     ("emitters", "emitters", 40, "max", "PROVISIONAL, about 300 live particles / 8 per emitter (docs/107 s1, docs/123 T1)"),
-    ("particleRate", "particles/s", 300, "max", "docs/107 s1 live particles about 300 (lifetimes 0.5-1 s, so rate ~ live)"),
+    ("particleRate", "particles/s", 300, "max", "docs/107 s1 COSMETIC live particles about 300 (lifetimes 0.5-1 s, so rate ~ live); a proxy, weather lives 3-12 s: read with fx_probe live3d vs the whole-scene 3,300 (docs/115 PB2)"),
     ("beams", "beams", 24, "max", "docs/123 T3: 3-4 beams per dino, EffectsLod Lite 6 dinos (PROVISIONAL)"),
     ("lights", "lights", 16, "max", "docs/107 s1 dynamic lights, docs/104"),
     ("editableMiB", "EditableImage MiB", 24, "max", "tools/verify_world_budget.py cap (of the 80 MiB engine budget, docs/105)"),

@@ -14,6 +14,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("CaveLightingRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
 local Lava = require(script.Parent:WaitForChild("CaveLavaClient"))
+local PhoneGuard = require(script.Parent:WaitForChild("CavePhoneGuard")) -- BD-495: phone only, 12 nearest cave lights and 4 shaft beams (no-op elsewhere)
 
 local Cave = {}
 local player = Players.LocalPlayer
@@ -105,6 +106,7 @@ end
 
 function Cave.step(dt: number)
     if not Config.CaveHub then return end
+    PhoneGuard.step(dt)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local p = if root and root:IsA("BasePart") then (root :: BasePart).Position else nil

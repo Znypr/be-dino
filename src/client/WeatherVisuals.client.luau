@@ -19,7 +19,7 @@ local Cave=require(script.Parent.CaveAtmosphere) -- BD-286: cave-only look and w
 local player=Players.LocalPlayer
 local random=Random.new()
 local phone=UserInputService.TouchEnabled and not UserInputService.MouseEnabled
-local DENSITY=if phone then .5 else 1
+local Guards=require(Shared.PhoneGuards) -- BD-497: phone weather density .25 (docs/146 risk 5), tablet .5, desktop 1; Reduce Motion still emits nothing
 local TEX_SMOKE="rbxasset://textures/particles/smoke_main.dds"
 local TEX_SPARK="rbxasset://textures/particles/sparkles_main.dds"
 local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
@@ -66,6 +66,7 @@ local deviceClass=(function():string
     local size=workspace.CurrentCamera.ViewportSize
     return if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
 end)()
+local DENSITY=if phone then Guards.weatherDensity(deviceClass) else 1 -- same classes as WorldCulling: touch + short side under 600 = Phone
 local CLEAR=WL.clearFor(deviceClass) -- desktop/tablet: far clear fog, no 374-stud milky wall
 local fogCap=(function():number
     local culling=require(Shared.Config).WorldCulling
