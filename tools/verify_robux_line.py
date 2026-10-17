@@ -19,6 +19,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 SRC = ROOT / "src"
 # Documented in docs/114 section 11a. Time-savers may stack up to this multiplier and never above the normal limit.
 CONVENIENCE_CAP = 1.25
@@ -27,7 +30,7 @@ FORBIDDEN = re.compile(
     r"class|multiplier|boost|exclusive|weapon|armor|shield|fusion)\b", re.I)
 FLAG_KEY = re.compile(r"(Robux|Pack|Paid|GamePass|Product|Purchase)", re.I)
 PURCHASE_API = re.compile(r"PromptProductPurchase|PromptGamePassPurchase|PromptPurchase|UserOwnsGamePassAsync|ProcessReceipt")
-ALLOWED_PURCHASE_FILES = {"src/client/Bootstrap.client.luau", "src/server/Bootstrap.server.luau", "src/server/ProfileRepository.luau"}
+ALLOWED_PURCHASE_FILES = {"src/client/Bootstrap.client.luau", "src/server/Bootstrap.server.luau", "src/server/ProfileRepository.luau", "src/server/ProfileShop.luau"}
 
 
 def strip(text: str) -> str:
@@ -65,7 +68,7 @@ def check(read) -> list[str]:
             for num in re.findall(r"=\s*(\d+\.?\d*)", ln):
                 if float(num) > CONVENIENCE_CAP and re.search(r"Mult|Boost|Factor", ln, re.I):
                     errs.append(f"Robux-linked multiplier above cap {CONVENIENCE_CAP}: {ln.strip()[:100]}")
-    repo = strip(read("src/server/ProfileRepository.luau"))
+    repo = strip(chr(10).join(read(rel) for rel in profile_sources.files()))  # docs/150: ProfileRepository + its parts
     boot = strip(read("src/server/Bootstrap.server.luau"))
     purchase = block(repo, "function ProfileRepository.purchase", r"^end\b")
     receipt = block(boot, "ProcessReceipt=function", r"^end\b")
@@ -104,7 +107,7 @@ def main() -> int:
     if "--selftest" in sys.argv:
         bad = {
             "flag": ("Config.luau", "CrystalPacksEnabled = false", "CrystalPacksEnabled = true"),
-            "power": ("ProfileRepository.luau", "progress.crystals+=crystals", "progress.crystals+=crystals progress.speed+=1"),
+            "power": ("ProfileShop.luau", "progress.crystals+=crystals", "progress.crystals+=crystals progress.speed+=1"),
             "policy": ("ProgressionService.luau", "ArePaidRandomItemsRestricted", "X"),
         }
         for name, (suffix, a, b) in bad.items():

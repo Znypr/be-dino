@@ -9,6 +9,9 @@ import re
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 BODY = r'''
 local D = M.Defaults
@@ -79,7 +82,7 @@ def static_checks():
         errors.append('controls must be 48 px high (44 px touch minimum)')
     if 'ProfileRepository' in menu:
         errors.append('menu must not touch the server module')
-    repo = read('src/server/ProfileRepository.luau')
+    repo = profile_sources.repository_text()
     if 'function ProfileRepository.setSettings' not in repo or 'SettingsJson' not in repo or 'profile.settings' not in repo:
         errors.append('ProfileRepository must save profile.settings and publish SettingsJson')
     if 'ProfileSchemaVersion = 1' not in read('src/shared/Config.luau'):

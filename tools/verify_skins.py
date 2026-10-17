@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import release_profiles  # noqa: E402
 import verify_gifts  # noqa: E402  (the shared token filler, GiftRules binding and Build 020 fixture paths)
 import verify_rewards  # noqa: E402  (the mocked DataStore prefix)
+import profile_sources  # noqa: E402
 
 FLAG = 'DinoSkinsEnabled'
 module = verify_gifts.module
@@ -72,7 +73,7 @@ def static_errors() -> list[str]:
     catalog = strip_comments(read('src/shared/SkinCatalog.luau'))
     picker = strip_comments(read('src/shared/SkinPickerModel.luau'))
     service = strip_comments(read('src/server/SkinService.luau'))
-    repo = strip_comments(read('src/server/ProfileRepository.luau'))
+    repo = strip_comments(profile_sources.repository_text())  # docs/150: ProfileRepository plus its parts
     for name, text in (('SkinCatalog', catalog), ('SkinPickerModel', picker)):
         for word in IMPURE:
             if word in text:
@@ -113,7 +114,7 @@ def static_errors() -> list[str]:
     for path in sorted((ROOT / 'src').rglob('*.luau')):
         text = strip_comments(path.read_text(encoding='utf-8'))
         rel = path.relative_to(ROOT).as_posix()
-        if rel not in ('src/server/SkinService.luau', 'src/server/ProfileRepository.luau') and re.search(r'\.(applySkin|skinView)\(', text):
+        if rel not in ('src/server/SkinService.luau', 'src/server/ProfileRepository.luau', 'src/server/ProfileSkins.luau') and re.search(r'\.(applySkin|skinView)\(', text):
             errors.append(f'{rel} calls ProfileRepository.applySkin/skinView: only SkinService may')
     boot = read('src/server/Bootstrap.server.luau')
     if boot.count('SkinService') != 1 or 'SkinService).start(ProfileRepository)' not in boot:

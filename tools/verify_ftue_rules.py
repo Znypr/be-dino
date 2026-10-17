@@ -12,6 +12,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 
 def module(path):
@@ -156,7 +159,7 @@ def static_checks():
     rules = (ROOT / 'src/shared/FtueRules.luau').read_text(encoding='utf-8')
     for banned in ('Instance.new', 'game:GetService', 'workspace', 'os.clock', 'task.', 'require('):
         assert banned not in rules, 'FtueRules stays pure: ' + banned
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    repo = profile_sources.repository_text()
     assert 'FtueRules.safeEggsLeft(cached)' in repo and 'EggGenetics.roll(' in repo, 'settlement applies safe eggs'
     assert repo.index('sortByRarity(runEggs)') < repo.index('FtueRules.safeEggsLeft(cached)'), 'safe eggs are chosen after the rarity sort'
     assert 'safeEggs' not in repo.replace('safeEggsLeft', ''), 'no new persistent field'

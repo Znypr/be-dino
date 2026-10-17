@@ -1,6 +1,6 @@
 """BD-608 (docs/151): adversarial remote audit, offline. Every server entry point a client can reach is attacked with the real handler code.
 
-Runs the REAL src/server modules (ProfileRepository, ChestService, CollectionService, MutationService, ProgressionService, FusionService,
+Runs the REAL src/server modules (ProfileRepository and its parts, ChestService, CollectionService, MutationService, ProgressionService, FusionService,
 ObjectiveService, GiftService, AdminService, AdminGifts, RunLifecycle, HubTravelService, LeapService, ClassMovementService, CombatService,
 FeedbackService, QaService, VisualTestService, DemoTriggerService, PrivateState, CaveShowOff, the ProcessReceipt path) inside the
 verify_load virtual-clock harness style (mock DataStore with latency, the per-server request budget, failed writes and lost acknowledgements).
@@ -42,6 +42,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (BD-607: the repository is split into parts)
 import release_profiles  # noqa: E402
 import verify_load  # noqa: E402
 
@@ -201,7 +202,7 @@ NO_LEASE_CHECK = {"load"}  # load ACQUIRES the lease
 def write_problems() -> list[str]:
     """Every profile write is lease-checked and either budgeted or deliberately not (docs/151 section 3)."""
     problems: list[str] = []
-    lines = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8").splitlines()
+    lines = profile_sources.repository_text().splitlines()  # the main file followed by every part (docs/150)
     func, start = None, 0
     seen: set[str] = set()
     for i, line in enumerate(lines):
@@ -269,20 +270,23 @@ def static_problems() -> list[str]:
     for rel, pattern, label in GUARDS:
         if not re.search(pattern, (ROOT / rel).read_text(encoding="utf-8")):
             problems.append(f"static: guard missing - {label} ({rel})")
+    demo_guards = len(re.findall(r'if\s+not\s+demoActive\s+then\s+return\s+false,\s*"disabled"\s+end', profile_sources.repository_text()))
+    if demo_guards != 3:
+        problems.append(f"static: demoGrantEggs, demoEquip and demoAddCrystals must each start with the demoActive guard (found {demo_guards} of 3)")
     return problems
 
 
 # ------------------------------------------------------------------ self test: mutants must be caught
 MUTANTS = [
     ("lost acknowledgement drops the hatch page again (BD-609 reverted)", "claim-lost", {
-        "src/server/ProfileRepository": ("if #pageOutcomes > 0 and not (duplicateOutcome and revealBuffer[player] and #revealBuffer[player] > 0) then",
+        "src/server/ProfileEggs": ("if #pageOutcomes > 0 and not (duplicateOutcome and revealBuffer[player] and #revealBuffer[player] > 0) then",
                                          "if not duplicateOutcome and #pageOutcomes > 0 then")},
      "claim-lost-ack: every credited egg after the head is still waiting"),
     ("ClaimNest stops validating its argument", "slot-fuzz", {
         "src/server/ChestService": ('if typeof(nestId) ~= "string" or #nestId < 1 or #nestId > 80 then', "if #nestId < 1 or #nestId > 80 then")},
      "slot-fuzz: no error escaped from any handler"),
     ("a purchase token no longer makes the purchase idempotent", "races", {
-        "src/server/ProfileRepository": ("local existing=findOperation(profile,operationId)\n            if existing then\n                if existing.outcome.action~=action",
+        "src/server/ProfileShop": ("local existing=findOperation(profile,operationId)\n            if existing then\n                if existing.outcome.action~=action",
                                          "local existing=nil\n            if existing then\n                if existing.outcome.action~=action")},
      "races: 20 buyEgg with ONE token buy one egg"),
     ("a test-grant remote is created without its flag", "published-pins", {

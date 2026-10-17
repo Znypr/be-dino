@@ -16,6 +16,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_odds_copy as base  # noqa: E402
 
@@ -111,7 +114,7 @@ def script():
 def static_checks():
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     odds = (ROOT / 'src/shared/OddsCopy.luau').read_text(encoding='utf-8')
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8').replace('\r\n', '\n')
+    repo = profile_sources.repository_text()
     # panel wiring: egg odds get the safe-eggs count, upgrade odds do not; the note is drawn at the shared >= 14 size
     assert re.search(r'OddsCopy\.eggGroups\(progression\(\)\.conditionLevel or 0,require\(Shared\.FtueRules\)\.safeEggsLeftView\(', boot), 'Egg Odds passes the safe-eggs view'
     assert 'OddsCopy.upgradeGroups(oddsLevelOverride :: number)' in boot, 'Upgrade Odds does not'
