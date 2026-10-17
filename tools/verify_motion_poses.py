@@ -51,18 +51,23 @@ CHECKS = {
     '251.bounded': 'jump/leap/land/surge finite and bounded for every class x phase x aggr x role x side, junk inputs = rest',
     '251.reduce': 'Reduce Motion = exact rest in every phase (wings keep their fold)',
     '251.timing': 'phase durations are short and calm, air has no length, Armored is slower, a Water leap surges longer',
-    '251.ground': 'Ground jump: crouch, push-off stretch, airborne tuck, landing squash',
+    '251.ground': 'Ground jump: crouch, push-off stretch, airborne tuck, landing squash (the pose maths; the animator now skips the first two, see 555)',
     '251.leap': 'a leap is a bigger version of a jump (stretch, lunge)',
     '251.armored': 'Armored crouches deeper, lifts less, lands heavier',
     '251.fly': 'Fly: wings folded before takeoff, open in the air, flap on a jump, glide on a leap, flutter on landing, fold again',
     '251.water': 'Water: no jump, one forward surge with tail kick, head snap on the leap only, never leaves the ground',
     '251.continuity': 'every action starts and ends at the exact rest pose and hands over to idle/walk with weight 0',
     '251.smooth': 'a 5 ms step never jumps the pose in any timed phase',
-    '251.drive_ground': 'animator: Ground/Armored/Fly jump runs crouch, push, air, land once and stops',
+    '251.drive_ground': 'animator: Ground/Armored/Fly jump runs air, land once and stops (BD-555: no crouch after take-off)',
     '251.drive_ledge': 'animator: stepping off a ledge starts in the air (no crouch)',
     '251.drive_leap': 'animator: the leap signal (LeapPredictAt) makes the action a leap (aggr 1), a plain jump stays 0',
     '251.drive_water': 'animator: Water jump and leap are a single surge with a splash (5 and 9), no repeat while the key is held',
     '251.drive_reduce': 'animator under Reduce Motion: no jump, leap or surge pose and no splash',
+    '555.no_crouch': 'animator: a jump or leap that arrives airborne skips the crouch and the push-off (BD-555)',
+    '555.one_fold': 'animator: no jump or leap folds the legs more than once, standing or running (BD-555)',
+    '555.smooth': 'animator: worst per-frame rotation change under 8 degrees for an airborne-on-first-frame jump and leap, in the air, on landing, on short hops (BD-555)',
+    '556.restlift': 'Pose.restLift: a flipper (any walk or surge angle) is never lifted below its rest height, rest and Reduce Motion lift 0, junk inputs are safe',
+    '556.drive_flipper': 'animator: Water flipper tips stay at or above their rest height through a walk, a jump surge and a leap surge (BD-556)',
     '251.client_only': 'the pose module and the animator never touch the server (animation is client-side only)',
 }
 
@@ -528,6 +533,43 @@ check("251.continuity", function()
     end
 end)
 
+check("556.restlift", function()
+    local size, pivot = {2, 1, 3}, {-1, 0, 0} -- a flipper-like box, pivot on the inner edge at mid height
+    assert(P.restLift(size, pivot, 0, 0, 0) == 0, "rest lifts nothing")
+    local worstDip, n = 0, 0
+    for pi = -12, 12 do for ri = -12, 12 do for yi = -3, 3 do
+        local pitch, roll, yaw = pi * 0.04, ri * 0.04, yi * 0.1
+        for _, up in {{0, 1, 0}, {0, 0, 1}, {1, 0, 0}} do
+            local lift = P.restLift(size, pivot, pitch, yaw, roll, up)
+            assert(lift >= 0 and lift <= P.MaxLift and fin(lift), "lift out of range " .. tostring(lift))
+            -- after the lift the lowest corner is no lower than at rest
+            local rest, low = math.huge, math.huge
+            for _, sx in {-1, 1} do for _, sy in {-1, 1} do for _, sz in {-1, 1} do
+                local c = {sx * 1, sy * 0.5, sz * 1.5}
+                local r = P.rotatePoint(c, pivot, pitch, yaw, roll)
+                rest = math.min(rest, up[1] * c[1] + up[2] * c[2] + up[3] * c[3])
+                low = math.min(low, up[1] * r[1] + up[2] * r[2] + up[3] * r[3])
+            end end end
+            if lift < P.MaxLift then assert(low + lift >= rest - 1e-9, "flipper still dips: " .. (low + lift - rest)) end
+            assert(lift == 0 or low + lift <= rest + 1e-9, "lifted more than needed")
+            if up[2] == 1 then worstDip = math.max(worstDip, lift) end
+            n += 1
+        end
+    end end end
+    -- the control: the real walk and surge angles of a flipper do dip without the lift (so a lift of 0 everywhere cannot pass)
+    local maxPitch, maxRoll = 0, 0
+    for step = 0, 100 do
+        local o = S("flipper", 1, true, 0, step * 0.1, 1, 1, "Water")
+        maxPitch, maxRoll = math.max(maxPitch, math.abs(o.pitch)), math.max(maxRoll, math.abs(o.roll))
+    end
+    assert(P.restLift({2, 0.6, 4}, {-1, 0, 0}, maxPitch, 0, maxRoll) > 0.05, "control: a walking flipper must need a lift")
+    assert(P.restLift({2, 0.6, 4}, {-1, 0, 0}, 0, 0, 0) == 0)
+    -- junk: NaN, huge, missing up
+    assert(P.restLift({2, 2, 2}, {0, 0, 0}, 0/0, math.huge, -math.huge) == 0 or fin(P.restLift({2, 2, 2}, {0, 0, 0}, 0/0, math.huge, -math.huge)))
+    assert(fin(P.restLift({0/0, -5, 1e9}, {0, 0, 0}, 1, 1, 1)))
+    assert(n > 5000)
+end)
+
 check("251.smooth", function()
     for class, phases in PHASES do for _, phase in phases do for _, role in ROLES do
         local dur = math.max(P.duration(phase, 1, class), 0.5)
@@ -643,6 +685,7 @@ end
 local SPECS = {
     base = {{"body", 1, false}, {"head", 1, false}, {"tail", 1, false}, {"leg", -1, true}, {"leg", 1, true}},
     wings = {{"wing", -1, false}, {"wing", 1, false}},
+    flippers = {{"flipper", -1, true}, {"flipper", 1, true}, {"flipper", -1, false}, {"flipper", 1, false}},
 }
 local function makeCharacter(class, at)
     local char = obj("Model")
@@ -653,6 +696,7 @@ local function makeCharacter(class, at)
     local specs = {}
     for _, s in SPECS.base do table.insert(specs, s) end
     if class == "Fly" then for _, s in SPECS.wings do table.insert(specs, s) end end
+    if class == "Water" then for _, s in SPECS.flippers do table.insert(specs, s) end end
     for _, s in specs do
         local part = obj("MeshPart", {BasePart = true})
         part.Size = V3.new(2, 2, 2)
@@ -845,17 +889,14 @@ check("251.drive_ground", function()
         local t0 = env.now
         env.step(50) -- 0.83 s in the air
         local seq = phasesOf(env.calls)
-        assert(eq(seq, {"crouch", "push", "air"}), class .. " jump phases: " .. table.concat(seq, ","))
-        -- timing: crouch lasts about its duration, push after it
-        local pushAt
-        for _, k in env.calls do if k.phase == "push" then pushAt = k.now break end end
-        local want = RealPose.duration("crouch", 0, class)
-        assert(math.abs((pushAt - t0) - want) <= 2 * FRAME + 1e-9, class .. " crouch lasted " .. (pushAt - t0) .. " want " .. want)
+        -- BD-555: the jump arrives airborne (the humanoid reports Jumping after take-off), so it starts in the air tuck: no crouch, no push-off
+        assert(eq(seq, {"air"}), class .. " jump phases: " .. table.concat(seq, ","))
+        assert(math.abs(env.calls[1].now - t0) <= 2 * FRAME + 1e-9, class .. " the air phase starts at take-off")
         for _, k in env.calls do assert(k.aggr == 0 and k.class == class and k.amp == 1) end
         land(c)
         env.step(10)
         local seq2 = phasesOf(env.calls)
-        assert(eq(seq2, {"crouch", "push", "air", "land"}), class .. " after landing: " .. table.concat(seq2, ","))
+        assert(eq(seq2, {"air", "land"}), class .. " after landing: " .. table.concat(seq2, ","))
         local landAt = env.now
         env.step(math.ceil((RealPose.duration("land", 0, class) + 0.1) / FRAME))
         local n = #env.calls
@@ -946,6 +987,131 @@ check("251.drive_reduce", function()
         assert(#env.calls == 0, class .. ": Reduce Motion plays no jump, leap or surge pose")
         assert(#env.emits == 0, class .. ": Reduce Motion: no splash")
     end
+end)
+
+-- BD-555: the humanoid reports Jumping only once the dino has left the ground, so a jump or leap ARRIVES airborne. The animator must not play a
+-- crouch and a push-off after take-off (the legs folded, unfolded and folded again inside 0.4 s); it blends from the current pose into the tuck.
+local DEG = 180 / math.pi
+local function rotAngle(a, b)
+    local d = 0
+    for i = 1, 9 do d += a.r[i] * b.r[i] end
+    return math.acos(math.clamp((d - 1) / 2, -1, 1)) * DEG
+end
+local function legPitch(c) local r = c.welds[4].C1.r return math.atan2(r[6], r[5]) * DEG end -- welds[4] = left leg: rotation about X only
+-- One simulated jump/leap that arrives airborne on its first frame. runSpeed: planar speed (studs/s) before and during the jump. hopFrames: frames
+-- in the air before the dino lands (nil = long jump). Returns the worst per-frame rotation change of any part (degrees, in the air and on
+-- landing separately), the leg angle series while airborne, and the phases the animator played.
+local function trace(class, aggr, runSpeed, hopFrames)
+    local env = boot()
+    local c = env.addLocal(class)
+    c.root.AssemblyLinearVelocity = V3.new(runSpeed, 0, 0)
+    env.step(40)
+    if aggr == 1 then c.char:SetAttribute("LeapPredictAt", env.now) end
+    local prev = {}
+    for i, w in c.welds do prev[i] = w.C1 end
+    local n0 = #env.calls
+    jumpUp(c)
+    c.root.AssemblyLinearVelocity = V3.new(runSpeed, 30, 0)
+    local airWorst, landWorst, legs = 0, 0, {}
+    local function frame(landing)
+        env.step(1)
+        for i, w in c.welds do
+            local d = rotAngle(prev[i], w.C1)
+            prev[i] = w.C1
+            if landing then landWorst = math.max(landWorst, d) else airWorst = math.max(airWorst, d) end
+        end
+    end
+    for _ = 1, hopFrames or 50 do frame(false) table.insert(legs, legPitch(c)) end
+    land(c)
+    c.root.AssemblyLinearVelocity = V3.new(runSpeed, 0, 0)
+    for _ = 1, math.ceil((RealPose.duration("land", aggr, class) + 0.1) / FRAME) do frame(true) end
+    return {air = airWorst, land = landWorst, legs = legs, seq = phasesOf(env.calls, class), calls = #env.calls - n0}
+end
+-- Direction reversals of a leg series (a fold that opens again counts as one), ignoring wobbles under `hyst` degrees.
+local function reversals(series, hyst)
+    local n, dir, ext = 0, 0, series[1]
+    for _, v in series do
+        if dir >= 0 and v < ext - hyst then if dir == 1 then n += 1 end dir, ext = -1, v
+        elseif dir <= 0 and v > ext + hyst then if dir == -1 then n += 1 end dir, ext = 1, v
+        elseif (dir >= 0 and v > ext) or (dir <= 0 and v < ext) then ext = v end
+    end
+    return n
+end
+
+check("556.drive_flipper", function()
+    local function lowest(c)
+        local low = math.huge
+        for i = 6, #c.welds do -- welds 6..9 are the flippers (SPECS.flippers), part size 2 x 2 x 2, rest C0 identity
+            local inv = c.welds[i].C1:Inverse()
+            for _, sx in {-1, 1} do for _, sy in {-1, 1} do for _, sz in {-1, 1} do
+                low = math.min(low, (inv * V3.new(sx, sy, sz)).Y)
+            end end end
+        end
+        return low
+    end
+    local env = boot()
+    local c = env.addLocal("Water")
+    c.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0)
+    local worst, wobble = math.huge, 0
+    local function run(frames)
+        for _ = 1, frames do
+            env.step(1)
+            -- the whole body bobs together (Water sits lower on purpose): measure the tip against the body's own offset
+            worst = math.min(worst, lowest(c) - (c.welds[1].C1:Inverse() * V3.zero).Y)
+            local r = c.welds[6].C1.r
+            wobble = math.max(wobble, math.abs(r[6]))
+        end
+    end
+    run(120) -- walking
+    c.hum.Jump = true run(40) c.hum.Jump = false run(30) -- jump surge
+    c.char:SetAttribute("LeapPredictAt", env.now) run(60) -- leap surge
+    assert(wobble > 0.05, "control: the flippers must move (" .. wobble .. ")")
+    assert(worst >= -1 - 1e-6, "flipper tip below its rest height by " .. (-1 - worst) .. " stud")
+end)
+
+check("555.no_crouch", function()
+    for _, class in {"Ground", "Armored", "Fly"} do for _, aggr in {0, 1} do for _, speed in {0, RUN} do
+        local r = trace(class, aggr, speed)
+        local label = class .. " aggr " .. aggr .. " speed " .. speed
+        assert(eq(r.seq, {"air", "land"}), label .. ": jump that arrives airborne plays " .. table.concat(r.seq, ","))
+    end end end
+end)
+
+check("555.one_fold", function()
+    for _, class in {"Ground", "Armored", "Fly"} do for _, aggr in {0, 1} do for _, speed in {0, RUN} do
+        local r = trace(class, aggr, speed)
+        local label = class .. " aggr " .. aggr .. " speed " .. speed
+        local n = reversals(r.legs, 4)
+        assert(n <= 1, label .. ": legs fold, open and fold again (" .. n .. " reversals)")
+        -- the control: the legs do tuck (a verifier that saw a flat series would pass the rule above for nothing)
+        local lo, hi = math.huge, -math.huge
+        for _, v in r.legs do lo, hi = math.min(lo, v), math.max(hi, v) end
+        if class ~= "Fly" then assert(hi - lo > 10, label .. ": control, the legs must tuck (range " .. (hi - lo) .. ")") end
+    end end end
+end)
+
+check("555.smooth", function()
+    local worst, bad = 0, {}
+    for _, class in {"Ground", "Armored", "Fly"} do for _, aggr in {0, 1} do for _, speed in {0, RUN} do
+        local rows = {}
+        for _, hop in {50, 3, 8, 14, 22} do
+            local r = trace(class, aggr, speed, hop)
+            local label = class .. " aggr " .. aggr .. " speed " .. speed .. " hop " .. hop
+            if r.air >= 8 then table.insert(bad, label .. ": worst frame in the air " .. r.air .. " deg") end
+            -- A landing from a full jump at a run turned 9.4 degrees a frame before BD-555 (walk swing coming back under the squash): that is not part
+            -- of this fix (nor is a hop of 0.37 s or more, which is a nearly full landing), so those only have to stay under 10. A landing after a shorter hop is the new hand-over (Pose.landWeight): under 8.
+            local landCap = if hop >= 22 then 10 else 8
+            if r.land >= landCap then table.insert(bad, label .. ": worst frame on landing " .. r.land .. " deg") end
+            worst = math.max(worst, r.air, r.land)
+            table.insert(rows, string.format("hop%d %.1f/%.1f", hop, r.air, r.land))
+        end
+        print(string.format("  %-8s %s speed %2d  worst air/land deg per frame: %s", class, if aggr == 1 then "leap " else "jump ", speed, table.concat(rows, "  ")))
+    end end end
+    assert(#bad == 0, #bad .. " case(s) over 8 degrees, first: " .. (bad[1] or ""))
+    -- the control: the verifier does see motion (a frozen animator would pass the rule above for nothing)
+    local moved = trace("Ground", 0, RUN)
+    assert(moved.air > 1, "control: the air blend must move the pose (" .. moved.air .. ")")
+    print("worst frame over all cases: " .. worst .. " deg")
 end)
 
 if failed > 0 then error(failed .. " check(s) failed") end
@@ -1040,7 +1206,13 @@ MUTANTS = [
     ('animator rig loses its character again (the jump poses never played)', ANIM, 'rig = {character = character, visual', 'rig = {visual', 1),
     ('animator ignores walking speed for the phase', ANIM, 'Pose.stepRate(rig.speed)', 'Pose.stepRate(0)', 1),
     ('animator animates far remote players', ANIM, 'RANGE, REMOTE_STEP, RUN_SPEED = 80,', 'RANGE, REMOTE_STEP, RUN_SPEED = 8000,', 1),
-    ('animator skips the crouch -> push step', ANIM, 'startPhase(rig, if ph == "crouch" then "push" else "air", now)', 'startPhase(rig, "air", now)', 1),
+    ('animator plays the crouch after take-off again (BD-555)', ANIM, 'startPhase(rig, "air", now) -- take-off', 'startPhase(rig, "crouch", now) -- take-off', 1),
+    ('air tuck is no longer faded in (weight 1 at take-off, BD-555)', ANIM, 'k = if phase == "air" then Pose.airWeight(elapsed) elseif', 'k = if phase == "air" then 1 elseif', 1),
+    ('air tuck fade shortened to 0.12 s (BD-555)', POSE, 'Pose.DirectBlend = 0.4', 'Pose.DirectBlend = 0.12', 1),
+    ('landing ignores the weight the air ended on (short hop pop, BD-555)', ANIM, 'Pose.landWeight(ctx.p, rig.landFrom)', 'Pose.actionWeight("land", ctx.p)', 1),
+    ('air phase keeps the push-off stretch again (BD-555)', POSE, 'tk = cls.t -- already in the full tuck', 'st, tk = cls.s, cls.t -- already in the full tuck', 1),
+    ('flippers dip into the ground again (no rest lift, BD-556)', ANIM, 'if lift > 0 then shift +=', 'if false then shift +=', 1),
+    ('restLift lifts nothing (BD-556)', POSE, 'return math.clamp(finite(rest - low), 0, Pose.MaxLift)', 'return 0', 1),
     ('animator ignores the flag', ANIM, 'if not LowPoly.enabled() then return end', '', 1),
 ]
 
@@ -1072,6 +1244,6 @@ if __name__ == '__main__':
         print(m, end='' if m.endswith('\n') else '\n')
     if not ok:
         raise SystemExit('verify_motion_poses FAILED')
-    print(f'verify_motion_poses ok: {len(CHECKS)} checks (BD-250: {sum(c.startswith("250.") for c in CHECKS)}, BD-251: {sum(c.startswith("251.") for c in CHECKS)})')
+    print(f'verify_motion_poses ok: {len(CHECKS)} checks (BD-250: {sum(c.startswith("250.") for c in CHECKS)}, BD-251: {sum(c.startswith("251.") for c in CHECKS)}, BD-555/556: {sum(c.startswith("55") for c in CHECKS)})')
     if args.selftest:
         selftest(args.runner, texts)

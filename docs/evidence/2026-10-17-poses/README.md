@@ -61,3 +61,17 @@ Look rating = how it reads for a 7 to 10 year old (1 to 5, honest). PASS = nothi
 * The real E key and Space press (keyboard tool did not reach the game); the leap and dash were scripted as described above. Fly and Water leaps were seen on the pose sheet only, not logged live. The Water dash velocity from the server (`ClassDash`) did not move the dino in my setup (horizontal speed stayed 0), so the surge was seen without the forward travel and its splash was not in a frame.
 * Water with Reduce Motion ON (the offline verifier covers it), Armored class, Plush/Clay/Bricks defeat skins (no models exist), remote players and NPC predators, phone, a second client, frame time on a phone.
 * The ledge walk-off of a Fly dino (state Freefall at once) was not reproduced; the nearest test (a 4 stud step) started the crouch first and opened the wings in 0.1 s without a pop.
+
+## Follow-up: BD-555 jump fix (PR claude/bd555-jump-calm)
+
+Same method as above, one Studio window per build (main before, the fix after), Play, 60 fps, a `RenderStepped` log of the rotation change of every part weld, `ChangeState(Jumping)` plus `Humanoid.Jump` (a bare `Jump = true` from a script did not lift the dino). Compy, 1.5 s per jump, includes the landing.
+
+| Case | Before (main) worst frame | After worst frame | Leg direction changes before / after |
+|---|---|---|---|
+| Jump standing | 13.8 deg (leg) | 5.1 deg (arm) | 3 / 0 |
+| Jump moving (Move(), no visible extra speed) | 12.6 deg (leg) | 5.2 deg (arm) | 3 / 0 |
+| Jump with the leap flag | 12.9 deg (leg) | 6.4 deg (arm) | 3 / 0 |
+
+| # | Image | Result | Look | Notes |
+|---|---|---|---|---|
+| 18 | [18-compy-jump-air-after-bd555.jpg](18-compy-jump-air-after-bd555.jpg) | PASS | 5 | Compy 0.3 s into a jump (root anchored in the air for the shot): legs and arms tucked, tail up, head up, no crouch pose. |

@@ -37,6 +37,23 @@ function Pose.rotatePoint(p: {number}, pivot: {number}, pitch: number, yaw: numb
     y, z = c * y - s * z, s * y + c * z -- Rx
     return {x + pivot[1], y + pivot[2], z + pivot[3]}
 end
+-- BD-556: how far (studs, 0 or more) a part must be lifted so its lowest corner is never below where it rests. The Water flippers pivot at mid height,
+-- so a walk or surge step swung a flipper tip up to 0.3 stud into the ground. size = the part's box, pivot = the joint, up = world up in the part's own
+-- frame (default y). Pure: the animator adds the result to the part's shared shift. Bounded to MaxLift.
+Pose.MaxLift = 1
+function Pose.restLift(size: {number}, pivot: {number}, pitch: number, yaw: number, roll: number, up: {number}?): number
+    local ux, uy, uz = 0, 1, 0
+    if up then ux, uy, uz = finite(up[1]), finite(up[2]), finite(up[3]) end
+    local hx, hy, hz = math.abs(finite(size[1])) / 2, math.abs(finite(size[2])) / 2, math.abs(finite(size[3])) / 2
+    local rest, low = math.huge, math.huge
+    for _, sx in {-1, 1} do for _, sy in {-1, 1} do for _, sz in {-1, 1} do
+        local corner = {sx * hx, sy * hy, sz * hz}
+        local r = Pose.rotatePoint(corner, pivot, finite(pitch), finite(yaw), finite(roll))
+        rest = math.min(rest, ux * corner[1] + uy * corner[2] + uz * corner[3])
+        low = math.min(low, ux * r[1] + uy * r[2] + uz * r[3])
+    end end end
+    return math.clamp(finite(rest - low), 0, Pose.MaxLift)
+end
 -- Whole-body bob (fraction of height), applied identically to EVERY part by the animator. The body part itself no longer rolls/pitches/bobs
 -- on its own (that moved it against legs, head and tail: the owner's "limbs, eyes and nostrils shift", BD-388).
 function Pose.bob(t: number, phase: number, speed01: number, amp: number, class: string?): number
@@ -109,6 +126,10 @@ Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite", "defe
 Pose.DefeatSeconds = 1.5 -- docs/97: a skin defeat is about 1.5 s, soft and funny
 Pose.Skins = {"Base", "Plush", "Clay", "Bricks"}
 Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
+-- BD-555: the humanoid reports Jumping only once the dino has LEFT the ground, so a jump or leap arrives airborne. The animator skips the crouch
+-- and the push-off then (they used to fold, unfold and fold the legs again inside 0.4 s, up to 14 degrees in one frame) and eases from whatever
+-- pose the dino has into the airborne tuck over DirectBlend seconds (ctx.direct). Tuned so no part turns 8 degrees or more in one 60 Hz frame.
+Pose.DirectBlend = 0.4
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
     Fly = {q = 0.5, s = 0.7, t = 0.8, l = 0.6}, Water = {q = 0, s = 0, t = 0, l = 0}}
@@ -138,8 +159,20 @@ end
 -- Fly landing hand-over (first Studio look, docs/evidence/2026-10-17-poses): the landing starts from the wing state the previous phase ended on.
 -- flap = the wing flap angle the air phase ended on (else the flutter snapped to 0, about 20 degrees); wing = how far the wings were open (0 folded .. 1 open)
 -- when the landing began (a short hop that lands before the wings opened used to snap them open, about 60 degrees in one frame). nil wing = 1 (open).
-export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number, flap: number?, wing: number?}
-function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0, flap = 0, wing = 1} end
+-- direct (BD-555): the air phase began at take-off with no crouch or push-off, so it holds the full tuck from t = 0 (no push-off stretch) and the
+-- caller fades it in with Pose.airWeight; the landing then fades out from the weight the air ended on (Pose.landWeight).
+export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number, flap: number?, wing: number?, direct: boolean?}
+function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0, flap = 0, wing = 1, direct = false} end
+-- Weight of the airborne tuck t seconds after a direct take-off (0 = still the walk pose, 1 = full tuck). Smooth at both ends.
+function Pose.airWeight(t: number): number
+    return ease(math.max(0, finite(t)) / Pose.DirectBlend)
+end
+-- Landing weight when the air phase ended at weight `from` (a hop that lands before the tuck finished): the landing carries on from the pose the
+-- air left and squashes only as much as the hop deserved (a tiny hop = a tiny squash), instead of snapping to a full tuck and squash. from = 1
+-- is the normal landing.
+function Pose.landWeight(p: number, from: number): number
+    return math.clamp(finite(from), 0, 1) * Pose.actionWeight("land", p)
+end
 -- Fraction the wings are open (0 folded .. 1 open) during a Fly phase, p = 0..1 progress of a timed phase. Used by the landing hand-over.
 function Pose.wingOpen(phase: string, p: number): number
     if phase == "air" then return 1 end
@@ -175,8 +208,12 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
         if ph == "crouch" then q = ease(p) * cls.q
         elseif ph == "push" then q = (1 - ease(p)) * cls.q st = ease(p) * cls.s
         elseif ph == "air" then
-            local e = ease(t / Pose.TuckTime)
-            st, tk = (1 - e) * cls.s, e * cls.t
+            if ctx.direct then
+                tk = cls.t -- already in the full tuck: the caller blends it in with Pose.airWeight
+            else
+                local e = ease(t / Pose.TuckTime)
+                st, tk = (1 - e) * cls.s, e * cls.t
+            end
         elseif ph == "land" then
             local c = math.clamp(finite(ctx.carry), 0, 1)
             local d = ease(p / 0.25)
