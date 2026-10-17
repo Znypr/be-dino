@@ -112,7 +112,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runner', required=True)
     ap.add_argument('--list', action='store_true')
+    ap.add_argument('--fake-ids', action='store_true', help='BD-463/464: preview the placement with every Blender plant / ground prop id filled (made-up ids)')
     args = ap.parse_args()
+    if args.fake_ids:
+        est.PROPS_IDS = 'fake'
     res = dump(args.runner)
     a = analyse(res)
     ext, props = res['ext'], res['props']

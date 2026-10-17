@@ -237,6 +237,117 @@ BiomePlacement.Colossal = {minHeight = 80, maxHeight = 140, skew = 1.5, maxCrown
 -- cell, centred in a forest sub-biome, away from every route, keep-out (spawn meadow included), pool and grove core.
 BiomePlacement.Clearing = {cell = 48, chance = 1, rMin = 32, rMax = 54, routeMargin = 8, groveGap = 36, shrubKeep = .35, wobble = .14, spacing = .9, forest = {fern = true, conifer = true, marsh = true}}
 
+-- BD-463 / BD-464 step 2 (docs/140 "Placement"): the Blender plants (plant_*_v3) and ground props (ground_*_v3). EVERY rule below is gated on
+-- options.props (= WorldGeneratedMeshes.Props): a key is used only when its assetId is a valid pasted id (BiomePlacement.validAssetId). With
+-- every id empty (today) or options.props == nil, generate() runs EXACTLY the pre-BD-463 grammar (verify_world_props.py pins a digest of it).
+-- Each new item REPLACES existing small clutter, it never adds count:
+--   * grass tufts and flower clusters replace the old thin grass/flower placements of their cell (about 6 old per new tuft, 8 per flower cluster:
+--     a tuft is 90-120 tris against 16-20), and the clump companions of a replaced cell are dropped too;
+--   * the fern plant replaces about 3 of 4 old ferns (fern and conifer biomes only);
+--   * jungle-leaf plants take the place of a tree-foot undergrowth item; ground-prop groups (1-3 per decorated tree, from rock, log, stump,
+--     mushrooms and bush) take the place of the undergrowth of that tree. Their extra triangles go on a DEBT that is paid by dropping accepted
+--     small clutter in the later layers (boulders _s in the rock layer, bushes and mushroom clusters in the shrub layer), each valued at the
+--     LOW estimate of its mesh (Payers), so the world never gets heavier even if the real generated meshes are small.
+-- Layer per kind: ground rock/log/stump = "rock" (solid, embedded like a rock, one box collider on the big ones), bush, mushrooms, jungle and fern =
+-- "shrub" (the 4-12 stud Small band of BD-473, sized by smallScale), grass and flowers = "groundcover". Lanes, keep-outs, water, the spawn
+-- keep-out (SmallBand.spawnClear), clearings and the arena edge follow the same rules as the old clutter of that layer.
+BiomePlacement.NewProps = {
+    ground_rock_small_v3 = {kind = "rock", layer = "rock", family = "ground_rock", scale = {1.5, 3.0}, collider = false},
+    ground_rock_medium_v3 = {kind = "rock", layer = "rock", family = "ground_rock", scale = {1.0, 2.0}, collider = true},
+    ground_rock_mossy_v3 = {kind = "rock", layer = "rock", family = "ground_rock", scale = {1.0, 1.9}, collider = true},
+    ground_log_fallen_v3 = {kind = "rock", layer = "rock", family = "ground_log", scale = {1.0, 1.7}, collider = true},
+    ground_stump_roots_v3 = {kind = "rock", layer = "rock", family = "ground_stump", scale = {1.0, 1.7}, collider = true},
+    ground_mushrooms_v3 = {kind = "shrub", layer = "shrub", family = "ground_mushrooms", scale = false, collider = false},
+    ground_bush_round_v3 = {kind = "shrub", layer = "shrub", family = "ground_bush", scale = false, collider = false},
+    ground_bush_berry_v3 = {kind = "shrub", layer = "shrub", family = "ground_bush", scale = false, collider = false},
+    plant_grass_broad_v3 = {kind = "groundcover", layer = "groundcover", family = "grass", scale = {1.1, 1.9}, collider = false},
+    plant_grass_arch_v3 = {kind = "groundcover", layer = "groundcover", family = "grass", scale = {1.1, 1.9}, collider = false},
+    plant_grass_low_v3 = {kind = "groundcover", layer = "groundcover", family = "grass", scale = {1.3, 2.2}, collider = false},
+    plant_jungle_leaf_v3 = {kind = "shrub", layer = "shrub", family = "jungle", scale = false, collider = false},
+    plant_flowers_daisy_v3 = {kind = "groundcover", layer = "groundcover", family = "flowers", scale = {1.3, 2.1}, collider = false},
+    plant_flowers_yellow_v3 = {kind = "groundcover", layer = "groundcover", family = "flowers", scale = {1.3, 2.1}, collider = false},
+    plant_flowers_red_v3 = {kind = "groundcover", layer = "groundcover", family = "flowers", scale = {1.3, 2.1}, collider = false},
+    plant_fern_arch_v3 = {kind = "shrub", layer = "shrub", family = "fern", scale = false, collider = false},
+}
+-- Plant families: keep = share of the old grass / flower / fern cells that turn into ONE new plant (the rest are dropped), weights per sub-biome.
+BiomePlacement.Plants = {
+    grass = {
+        keep = .31, ref = 105, -- about 1 tuft per 6-7 old placements (measured by tools/verify_world_props.py): a tuft is 90-120 tris, an old tuft 16-20, so this stays tri-neutral; a shape heavier than ref is kept less often (keep x ref / tris)
+        meadow = {{"plant_grass_broad_v3", .55}, {"plant_grass_arch_v3", .3}, {"plant_grass_low_v3", .15}},
+        fern = {{"plant_grass_broad_v3", .6}, {"plant_grass_arch_v3", .35}, {"plant_grass_low_v3", .05}},
+        conifer = {{"plant_grass_arch_v3", .55}, {"plant_grass_broad_v3", .4}, {"plant_grass_low_v3", .05}},
+        marsh = {{"plant_grass_broad_v3", .5}, {"plant_grass_arch_v3", .45}, {"plant_grass_low_v3", .05}},
+        badlands = {{"plant_grass_arch_v3", .4}, {"plant_grass_low_v3", .35}, {"plant_grass_broad_v3", .25}},
+        volcanic = {{"plant_grass_low_v3", .5}, {"plant_grass_arch_v3", .5}},
+    },
+    flowers = { -- rare accents: red is the warm accent
+        keep = .25, ref = 230, -- about 1 cluster per 8 old flowers (a cluster is 3 blooms, 200-260 tris against 36)
+        meadow = {{"plant_flowers_daisy_v3", .4}, {"plant_flowers_yellow_v3", .38}, {"plant_flowers_red_v3", .22}},
+        fern = {{"plant_flowers_yellow_v3", .45}, {"plant_flowers_daisy_v3", .4}, {"plant_flowers_red_v3", .15}},
+        conifer = {{"plant_flowers_daisy_v3", .5}, {"plant_flowers_yellow_v3", .4}, {"plant_flowers_red_v3", .1}},
+        marsh = {{"plant_flowers_yellow_v3", .45}, {"plant_flowers_daisy_v3", .45}, {"plant_flowers_red_v3", .1}},
+        badlands = {{"plant_flowers_red_v3", .5}, {"plant_flowers_yellow_v3", .5}},
+        volcanic = {{"plant_flowers_red_v3", 1}},
+    },
+    fern = {keep = .3, key = "plant_fern_arch_v3", biomes = {fern = true, conifer = true}}, -- 1 fern plant per ~3.3 old ferns (48-52 tris each, the plant is 189)
+    jungle = {key = "plant_jungle_leaf_v3", share = {fern = .6, marsh = .55, meadow = .25, conifer = .2}}, -- share of the tree-foot undergrowth items
+}
+-- Ground-prop groups at tree bases: chance = share of the trees of that sub-biome that get a group, counts = how many props (1-3), kinds = weights.
+BiomePlacement.GroundGroups = {
+    chance = {meadow = .35, fern = .5, conifer = .5, marsh = .4, badlands = .3, volcanic = .15},
+    counts = {{1, .5}, {2, .32}, {3, .18}},
+    kinds = {
+        meadow = {{"ground_bush_round_v3", .2}, {"ground_bush_berry_v3", .16}, {"ground_rock_mossy_v3", .14}, {"ground_stump_roots_v3", .14}, {"ground_mushrooms_v3", .12}, {"ground_rock_small_v3", .1}, {"ground_log_fallen_v3", .09}, {"ground_rock_medium_v3", .05}},
+        fern = {{"ground_mushrooms_v3", .24}, {"ground_log_fallen_v3", .18}, {"ground_stump_roots_v3", .16}, {"ground_rock_mossy_v3", .16}, {"ground_bush_round_v3", .12}, {"ground_bush_berry_v3", .08}, {"ground_rock_small_v3", .06}},
+        conifer = {{"ground_stump_roots_v3", .24}, {"ground_rock_medium_v3", .2}, {"ground_log_fallen_v3", .16}, {"ground_rock_small_v3", .14}, {"ground_mushrooms_v3", .1}, {"ground_rock_mossy_v3", .1}, {"ground_bush_round_v3", .06}},
+        marsh = {{"ground_mushrooms_v3", .26}, {"ground_log_fallen_v3", .26}, {"ground_stump_roots_v3", .16}, {"ground_rock_mossy_v3", .14}, {"ground_bush_round_v3", .1}, {"ground_rock_small_v3", .08}},
+        badlands = {{"ground_rock_medium_v3", .34}, {"ground_rock_small_v3", .3}, {"ground_stump_roots_v3", .2}, {"ground_log_fallen_v3", .12}, {"ground_bush_round_v3", .04}},
+        volcanic = {{"ground_rock_medium_v3", .4}, {"ground_rock_small_v3", .36}, {"ground_stump_roots_v3", .14}, {"ground_log_fallen_v3", .1}},
+    },
+}
+-- Old clutter that pays the debt of the new ground props and jungle plants: id -> triangles it is valued at. The generated meshes (bushes, boulders)
+-- are valued at the LOW estimate of tools/estimate_world_budget.py (GEN_LOW = 500; the mid estimate is 1,630), kit meshes at their baked triangles.
+BiomePlacement.Payers = {
+    world_boulder_mossy_s = 500, world_boulder_bare_s = 500, world_bush_a = 500, world_bush_b = 500, world_mushrooms_a = 60,
+}
+-- BD-463/464: true for a pasted Roblox asset id (digits only, no leading zero, 9-18 long); same rule as WorldGeneratedMeshes.validId.
+function BiomePlacement.validAssetId(id: any): boolean
+    if type(id) ~= "string" then return false end
+    return #id >= 9 and #id <= 18 and string.match(id, "^[1-9]%d*$") == id
+end
+-- The NewProps keys (-> their WorldGeneratedMeshes.Props entry) whose asset id is valid. Empty when props is nil or every id is "".
+function BiomePlacement.liveProps(props: any): {[string]: any}
+    local live: {[string]: any} = {}
+    if type(props) ~= "table" then return live end
+    for key in BiomePlacement.NewProps do
+        local entry = props[key]
+        if type(entry) == "table" and BiomePlacement.validAssetId(entry.assetId) and type(entry.size) == "table" and type(entry.tris) == "number" then live[key] = entry end
+    end
+    return live
+end
+-- kit table (WorldKitData shape) plus a virtual entry per live prop: extent = the mesh size, triangles = the FBX triangles, one box collider on
+-- the big solid ones. Returns `kit` itself when nothing is live.
+function BiomePlacement.withProps(kit: any, props: any): any
+    local live = BiomePlacement.liveProps(props)
+    if next(live) == nil then return kit end
+    local out = table.clone(kit)
+    for key, entry in live do
+        local spec = BiomePlacement.NewProps[key]
+        local x, h, z = entry.size[1], entry.size[2], entry.size[3]
+        local colliders = if spec.collider then {{0, h * .4, 0, x * .7, h * .8, z * .7, 0}} else {}
+        out[key] = {kind = spec.kind, family = spec.family, size = "m", triangles = entry.tris, extent = {x, h, z}, colliders = colliders}
+    end
+    return out
+end
+-- meshes table (id -> true for ids that are real MeshParts) plus every live prop (a new prop is a MeshPart by definition). Returns `meshes` itself when nothing is live.
+function BiomePlacement.propMeshes(meshes: any, props: any): any
+    local live = BiomePlacement.liveProps(props)
+    if next(live) == nil then return meshes end
+    local out = table.clone(meshes)
+    for key in live do out[key] = true end
+    return out
+end
+
 -- Scale that gives a kit mesh `height` studs, never wider than `maxWidth`.
 function BiomePlacement.scaleFor(data: any, height: number, maxWidth: number): number
     return math.min(height / data.extent[2], maxWidth / math.max(data.extent[1], data.extent[3]))
@@ -394,22 +505,25 @@ export type Placement = {id: string, x: number, y: number, z: number, yaw: numbe
 -- options: {seed, density, extent, height=(x,z)->y, kit=WorldKitData, meshes=WorldKitMeshAssets (ids that are real MeshParts),
 -- map=BiomeMap, layout=IslandLayout (pools)}
 function BiomePlacement.generate(options): {Placement}
-    local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, options.kit
+    -- BD-463/464 step 2: kit gains a virtual entry per live new prop (identical table when none is live, see liveProps)
+    local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, BiomePlacement.withProps(options.kit, options.props)
     local map, layout = options.map, options.layout
     local placed: {Placement} = {}
     local clearings = BiomePlacement.clearings(options) -- BD-473: no tree, colossal tree or log inside these
     local meshes = options.meshes or {}
+    local costMeshes = BiomePlacement.propMeshes(meshes, options.props) -- partCost sees the new props as MeshParts; substitute() keeps the original table
     local parts = 0
     local budget = BiomePlacement.PartBudget * density
     local grid: {[number]: {Placement}} = {}
     local CELL = 40
     local function key(x: number, z: number): number return math.floor(x / CELL) * 4096 + math.floor(z / CELL) end
     local blockingLayer = {tree = true, colossal = true, log = true, rock = true, landmark = true}
-    local function clear(x: number, z: number, r: number, blocking: boolean): boolean
+    local function clear(x: number, z: number, r: number, blocking: boolean, skip: Placement?): boolean
         local gx, gz = math.floor(x / CELL), math.floor(z / CELL)
         for ix = gx - 1, gx + 1 do
             for iz = gz - 1, gz + 1 do
                 for _, p in grid[ix * 4096 + iz] or {} do
+                    if p == skip then continue end
                     local need = if blocking or blockingLayer[p.layer] then r + p.radius else (r + p.radius) * .6
                     if (p.x - x) ^ 2 + (p.z - z) ^ 2 < need * need then return false end
                 end
@@ -433,7 +547,7 @@ function BiomePlacement.generate(options): {Placement}
         end
         local p = {id = id, x = x, y = y or (lo - sink * data.extent[2] * scale), z = z, yaw = yaw, roll = roll or 0, scale = scale, radius = r, layer = layer, biome = biome}
         table.insert(placed, p)
-        parts += BiomePlacement.partCost(id, kit, meshes)
+        parts += BiomePlacement.partCost(id, kit, costMeshes)
         local k = key(x, z)
         grid[k] = grid[k] or {}
         table.insert(grid[k], p)
@@ -453,8 +567,101 @@ function BiomePlacement.generate(options): {Placement}
         add(site.id, bx, bz, BiomePlacement.hash(seed, 99, i) * math.pi * 2, sc, "landmark", .04, "meadow", nil, nil, math.sqrt(data.extent[1] ^ 2 + data.extent[3] ^ 2) * .5 * sc) -- BD-410: keep-clear radius = half the footprint DIAGONAL (a yawed box reaches that far)
     end
     local undergrowth, undergrowthCap = 0, math.floor(BiomePlacement.UndergrowthCap * density)
+    -- BD-463/464 step 2: which new families have at least one live (valid-id) key. All false = the pre-BD-463 grammar, unchanged.
+    local live = BiomePlacement.liveProps(options.props)
+    local Plants: any, Groups: any, Spec: any = BiomePlacement.Plants, BiomePlacement.GroundGroups, BiomePlacement.NewProps
+    local hasGrass, hasFlowers, hasFern, hasJungle, hasGround = false, false, false, false, false
+    for key in live do
+        local family = Spec[key].family
+        if family == "grass" then hasGrass = true
+        elseif family == "flowers" then hasFlowers = true
+        elseif family == "fern" then hasFern = true
+        elseif family == "jungle" then hasJungle = true
+        else hasGround = true end
+    end
+    local pendingGroups: {{tree: Placement, trunk: number, biome: string, ix: number, iz: number, li: number, n: number, slots: {{c: number, key: string}}}} = {}
+    local debt, debtN = 0, 0 -- triangles and placements of new ground props / jungle plants still to be paid by dropping accepted small clutter (Payers) in the later layers
+    local function pickLive(list: {{any}}?, roll: number): string?
+        if list == nil then return nil end
+        local total = 0
+        for _, e in list do if live[e[1]] ~= nil then total += e[2] end end
+        if total <= 0 then return nil end
+        local acc, target, last = 0, roll * total, nil :: string?
+        for _, e in list do
+            if live[e[1]] ~= nil then
+                acc += e[2]
+                last = e[1]
+                if target < acc then return e[1] end
+            end
+        end
+        return last
+    end
+    local function newScale(key: string, u: number): number
+        local range = Spec[key].scale
+        if range then return range[1] + (range[2] - range[1]) * u end
+        return BiomePlacement.smallScale(kit[key], u) -- the 4-12 stud Small band (BD-473)
+    end
+    -- Ground-prop group at a tree foot: 1-3 props from rock, log, stump, mushrooms and bush around the trunk. Solid ones (rock layer) keep route and
+    -- keep-out clearance like any blocking prop, soft ones (bush, mushrooms) like the Small band. The parent tree is skipped in the spacing test.
+    local function footGroup(tree: Placement, trunk: number, biome: string, ix: number, iz: number, li: number, n: number, slots: {{c: number, key: string}}): number
+        local base = BiomePlacement.hash(seed, li, ix, iz, 102) * math.pi * 2
+        local placedNow = 0
+        for _, slot in slots do
+            local c, key = slot.c, slot.key
+            local data, spec = kit[key], Spec[key]
+            local sc = newScale(key, BiomePlacement.hash(seed, li, ix, iz, 106 + c))
+            local r = math.max(data.extent[1], data.extent[3]) * .5 * sc * .8
+            local solid = spec.layer == "rock"
+            -- a solid prop's invisible box (70 percent of its footprint) reaches half its diagonal from the pivot, and the parent trunk box reaches
+            -- colliderReach from the tree pivot: keep those two apart so the boxes never intersect (verify_world_overlap)
+            local reachSelf = if solid then .35 * math.sqrt(data.extent[1] ^ 2 + data.extent[3] ^ 2) * sc else r
+            local reachTree = if solid then math.max(trunk, BiomePlacement.colliderReach(kit[tree.id], tree.scale)) else trunk
+            local a = base + (c - 1) * math.pi * 2 / n + (BiomePlacement.hash(seed, li, ix, iz, 110 + c) - .5) * .9
+            local d = reachTree + math.max(r, reachSelf) + .5 + 1.8 * BiomePlacement.hash(seed, li, ix, iz, 113 + c)
+            local ux, uz = tree.x + math.cos(a) * d, tree.z + math.sin(a) * d
+            if parts + BiomePlacement.partCost(key, kit, costMeshes) <= budget
+                and BiomePlacement.pathClearance(ux, uz) >= (if solid then r * .7 else math.max(1.5, r * BiomePlacement.SmallBand.pathShare))
+                and BiomePlacement.keepOutClearance(ux, uz, solid) >= (if solid then r * .5 else 0)
+                and (solid or math.sqrt(ux ^ 2 + (uz - 30) ^ 2) >= BiomePlacement.SmallBand.spawnClear)
+                and math.max(math.abs(ux), math.abs(uz)) + r + 1 < extent and not inWater(ux, uz, if solid then r * .5 else 1.5)
+                and not BiomePlacement.inClearing(clearings, ux, uz, 0)
+                and BiomePlacement.slope(height, ux, uz) <= (if solid then 38 else 30)
+                and clear(ux, uz, if solid then r else r * BiomePlacement.SmallBand.spacingShare, solid, tree) then
+                add(key, ux, uz, BiomePlacement.hash(seed, li, ix, iz, 117 + c) * math.pi * 2, sc, spec.layer, if solid then .12 else .02, biome)
+                debt += data.triangles
+                debtN += 1
+                placedNow += 1
+            end
+        end
+        return placedNow
+    end
+    -- Tufts grow in clumps: one or two smaller companions a stride away (irregular, never gridded). `dry` (BD-463 step 2, a replaced cell) only
+    -- COUNTS the companions the old grammar would have placed so the layer cap stays where it was; with dry == false this is the old code.
+    local count = 0
+    local function groundcoverClump(dry: boolean, ix: number, iz: number, li: number, layer: any, cap: number, id: string, n: number, scale: number, x: number, z: number, biome: string)
+        for c = 1, (if BiomePlacement.hash(seed, li, ix, iz, 12) < .4 then 2 else 1) do
+            local a = BiomePlacement.hash(seed, li, ix, iz, 20 + c) * math.pi * 2
+            local d = 1.1 + 1.7 * BiomePlacement.hash(seed, li, ix, iz, 30 + c)
+            local cx, cz = x + math.cos(a) * d, z + math.sin(a) * d
+            local cs = scale * (.6 + .35 * BiomePlacement.hash(seed, li, ix, iz, 40 + c))
+            local cid = if n > .3 and BiomePlacement.hash(seed, li, ix, iz, 50 + c) < .25 then (if id == "world_flowers_a" then "world_grass_a" else id) else id
+            cid = BiomePlacement.substitute(cid, kit, meshes)
+            if kit[cid] and parts + BiomePlacement.partCost(cid, kit, costMeshes) <= budget and count < cap
+                and BiomePlacement.pathClearance(cx, cz) >= 1 and BiomePlacement.keepOutClearance(cx, cz, false) >= 0
+                and math.max(math.abs(cx), math.abs(cz)) + 2 < extent and not inWater(cx, cz, 1)
+                and BiomePlacement.slope(height, cx, cz) <= layer.maxSlope and clear(cx, cz, 1.2, false) then
+                if not dry then add(cid, cx, cz, BiomePlacement.hash(seed, li, ix, iz, 60 + c) * math.pi * 2, cs, "groundcover", .03, biome) end
+                count += 1
+            end
+        end
+    end
     for li, layer in BiomePlacement.Layers do
-        local count, cap = 0, math.floor(layer.cap * density)
+        count = 0
+        if layer.name == "rock" then
+            for _, g in pendingGroups do footGroup(g.tree, g.trunk, g.biome, g.ix, g.iz, g.li, g.n, g.slots) end
+            pendingGroups = {}
+        end
+        local cap = math.floor(layer.cap * density)
         local cells = math.floor(2 * extent / layer.cell)
         -- Visit cells in a seeded shuffled order so count caps thin the whole map evenly.
         local order = {}
@@ -503,6 +710,7 @@ function BiomePlacement.generate(options): {Placement}
                 local roll = BiomePlacement.hash(seed, li, ix, iz, 5)
                 local id: string
                 local lay = layer.name
+                local dropOld, replaced, oldId = false, false, ""
                 local sinkRoll = BiomePlacement.hash(seed, li, ix, iz, 10)
                 if lay == "tree" or lay == "colossal" then
                     local family = pick(if lay == "tree" then def.trees else def.colossals, n)
@@ -522,10 +730,24 @@ function BiomePlacement.generate(options): {Placement}
                 elseif lay == "shrub" then
                     id = pick(def.shrubs, n)
                     if layout and biome == "marsh" and n > .75 and layout.poolProximity(x, z) > .15 then id = "world_horsetail_a" end
+                    -- BD-463 step 2: in fern and conifer biomes about 1 in 3 old ferns becomes the fern plant, the rest are dropped (the plant has 4x the triangles)
+                    if hasFern and Plants.fern.biomes[biome] and (id == "world_fern_a" or id == "world_fern_b") then
+                        if BiomePlacement.hash(seed, li, ix, iz, 92) < Plants.fern.keep then id, replaced = Plants.fern.key, true else dropOld = true end
+                    end
                 else
                     id = pick(def.cover, n)
                     -- Flower meadows: where the bloom field is high the tufts turn into flowers.
                     if def.bloom > 0 and field(seed, 4, x, z, 40) > 1 - def.bloom * .55 and n > .15 then id = "world_flowers_a" end
+                    -- BD-463 step 2: a cell of old grass / flowers (with its clump companions, 1.84 placements) turns into ONE broad tuft / flower cluster
+                    -- with chance Plants.x.keep, otherwise it is dropped. It still passes the old checks first, and it still counts toward the layer cap.
+                    local plan = if id == "world_flowers_a" then (if hasFlowers then Plants.flowers else nil) elseif hasGrass then Plants.grass else nil
+                    if plan ~= nil then
+                        local newKey = pickLive(plan[biome], BiomePlacement.hash(seed, li, ix, iz, 91))
+                        if newKey ~= nil then
+                            oldId = id
+                            if BiomePlacement.hash(seed, li, ix, iz, 90) < plan.keep * math.min(1, plan.ref / kit[newKey].triangles) then id, replaced = newKey, true else dropOld = true end
+                        end
+                    end
                 end
                 id = BiomePlacement.substitute(id, kit, meshes)
                 local data = kit[id]
@@ -537,12 +759,12 @@ function BiomePlacement.generate(options): {Placement}
                 elseif lay == "colossal" then
                     scale = BiomePlacement.colossalScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: 80-140 studs
                 else
-                    local range = BiomePlacement.Scales[lay]
+                    local range = if replaced then Spec[id].scale else BiomePlacement.Scales[lay]
                     scale = range[1] + (range[2] - range[1]) * BiomePlacement.hash(seed, li, ix, iz, 6)
                 end
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
                 local blockingR = if lay == "tree" or lay == "colossal" then r * .42 else r
-                local needed = if layer.blocking then blockingR * .7 elseif lay == "shrub" then math.max(1, r * BiomePlacement.SmallBand.pathShare) else 1
+                local needed = if layer.blocking then blockingR * .7 elseif lay == "shrub" then math.max(1, r * BiomePlacement.SmallBand.pathShare) elseif replaced then math.max(1, r * .9) else 1
                 if lay == "log" then r = data.extent[2] * .5 * scale * .85 end
                 if BiomePlacement.pathClearance(x, z) < (if lay == "log" then r else needed) or BiomePlacement.keepOutClearance(x, z, layer.blocking) < r * .5 then continue end
                 if math.max(math.abs(x), math.abs(z)) + r > extent then continue end
@@ -560,45 +782,77 @@ function BiomePlacement.generate(options): {Placement}
                     count += 1
                     continue
                 end
+                if dropOld then
+                    -- BD-463 step 2: the old clutter of this accepted cell is replaced by nothing (the new plants are broader and heavier). It still counts
+                    -- toward the layer cap, with its dry-run clump companions, so the cap does not hand the freed slots to other cells.
+                    count += 1
+                    if lay == "groundcover" and BiomePlacement.hash(seed, li, ix, iz, 11) < .6 and count < cap then groundcoverClump(true, ix, iz, li, layer, cap, oldId, n, scale, x, z, biome) end
+                    continue
+                end
+                -- BD-463/464 step 2: small clutter that pays the debt of the new ground props (valued at the LOW triangle estimate, see Payers)
+                if (debt > 0 or debtN > 0) and (lay == "rock" or lay == "shrub") and BiomePlacement.Payers[id] ~= nil then
+                    debt -= BiomePlacement.Payers[id]
+                    debtN -= 1
+                    count += 1
+                    continue
+                end
                 local sink = if lay == "rock" then .12 elseif lay == "tree" or lay == "colossal" then .03 else .02 + .03 * sinkRoll
                 add(id, x, z, yaw, scale, lay, sink, biome)
                 count += 1
                 -- BD-167 undergrowth: ferns, bushes and mushrooms gather around a tree foot (small, never on the trunk, never on a
                 -- walkway), limited by its own cap and the part budget. Layer "shrub" so PropGround treats them as plants.
-                if lay == "tree" and undergrowth < undergrowthCap and BiomePlacement.hash(seed, li, ix, iz, 70) < BiomePlacement.UndergrowthChance then
+                local grouped = false
+                if lay == "tree" and hasGround and BiomePlacement.hash(seed, li, ix, iz, 100) < (Groups.chance[biome] or 0) then
+                    -- BD-464 step 2: a ground-prop group (1-3 slots, each a kind rolled over ALL kinds) REPLACES this tree's undergrowth when at least one
+                    -- slot's kind is live, so uploading one prop adds only its own share. It also uses up the undergrowth cap the old items would have used.
+                    -- The props themselves are placed just before the rock layer (footGroup) so they never take a tree, colossal-tree or log spot.
+                    local n = pick(Groups.counts, BiomePlacement.hash(seed, li, ix, iz, 101))
+                    local slots: {{c: number, key: string}} = {}
+                    for c = 1, n do
+                        local key = pick(Groups.kinds[biome], BiomePlacement.hash(seed, li, ix, iz, 103 + c))
+                        if live[key] ~= nil then table.insert(slots, {c = c, key = key}) end
+                    end
+                    if #slots > 0 then
+                        grouped = true
+                        table.insert(pendingGroups, {tree = placed[#placed], trunk = math.max(PropGround.trunkRadius(data, scale, r * .4), .6), biome = biome, ix = ix, iz = iz, li = li, n = n, slots = slots})
+                        if BiomePlacement.hash(seed, li, ix, iz, 70) < BiomePlacement.UndergrowthChance then
+                            undergrowth += if BiomePlacement.hash(seed, li, ix, iz, 71) < .45 then 2 else 1
+                        end
+                    end
+                end
+                if lay == "tree" and not grouped and undergrowth < undergrowthCap and BiomePlacement.hash(seed, li, ix, iz, 70) < BiomePlacement.UndergrowthChance then
                     local trunk = math.max(PropGround.trunkRadius(data, scale, r * .4), .6)
                     for c = 1, (if BiomePlacement.hash(seed, li, ix, iz, 71) < .45 then 2 else 1) do
                         local a = BiomePlacement.hash(seed, li, ix, iz, 72 + c) * math.pi * 2
                         local d = trunk + 1.6 + 2.6 * BiomePlacement.hash(seed, li, ix, iz, 74 + c)
                         local ux, uz = x + math.cos(a) * d, z + math.sin(a) * d
-                        local uid = BiomePlacement.substitute(pick(def.shrubs, BiomePlacement.hash(seed, li, ix, iz, 76 + c)), kit, meshes)
-                        if kit[uid] and parts + BiomePlacement.partCost(uid, kit, meshes) <= budget and undergrowth < undergrowthCap
-                            and BiomePlacement.pathClearance(ux, uz) >= 1.5 and BiomePlacement.keepOutClearance(ux, uz, false) >= 0
+                        local picked = pick(def.shrubs, BiomePlacement.hash(seed, li, ix, iz, 76 + c))
+                        local uid = BiomePlacement.substitute(picked, kit, meshes)
+                        -- BD-463 step 2: a jungle-leaf plant takes the place of some tree-foot items; ferns turn into the fern plant (1 in 3) or are dropped
+                        local isNew, skipItem = false, false
+                        if hasJungle and BiomePlacement.hash(seed, li, ix, iz, 120 + c) < (Plants.jungle.share[biome] or 0) then
+                            uid, isNew = Plants.jungle.key, true
+                        elseif hasFern and Plants.fern.biomes[biome] and (uid == "world_fern_a" or uid == "world_fern_b") then
+                            if BiomePlacement.hash(seed, li, ix, iz, 123 + c) < Plants.fern.keep then uid, isNew = Plants.fern.key, true else skipItem = true end
+                        end
+                        if skipItem then
+                            undergrowth += 1
+                        elseif kit[uid] and parts + BiomePlacement.partCost(uid, kit, costMeshes) <= budget and undergrowth < undergrowthCap
+                            and BiomePlacement.pathClearance(ux, uz) >= (if isNew then math.max(1.5, math.max(kit[uid].extent[1], kit[uid].extent[3]) * .5 * BiomePlacement.SmallBand.pathShare) else 1.5)
+                            and BiomePlacement.keepOutClearance(ux, uz, false) >= 0
+                            and (not isNew or math.sqrt(ux ^ 2 + (uz - 30) ^ 2) >= BiomePlacement.SmallBand.spawnClear)
                             and math.max(math.abs(ux), math.abs(uz)) + 3 < extent and not inWater(ux, uz, 1.5)
                             and BiomePlacement.slope(height, ux, uz) <= 30 and clear(ux, uz, 1.6, false) then
                             local us = BiomePlacement.smallScale(kit[uid], BiomePlacement.hash(seed, li, ix, iz, 78 + c))
                             add(uid, ux, uz, BiomePlacement.hash(seed, li, ix, iz, 80 + c) * math.pi * 2, us, "shrub", .02 + .03 * sinkRoll, biome)
                             undergrowth += 1
+                            -- a jungle plant replaces the undergrowth item it was rolled over (count-neutral), so it owes only the extra triangles
+                            if uid == Plants.jungle.key then debt += math.max(0, kit[uid].triangles - (BiomePlacement.Payers[picked] or kit[picked].triangles)) end
                         end
                     end
                 end
                 if lay == "groundcover" and BiomePlacement.hash(seed, li, ix, iz, 11) < .6 and count < cap then
-                    -- Tufts grow in clumps: one or two smaller companions a stride away (irregular, never gridded).
-                    for c = 1, (if BiomePlacement.hash(seed, li, ix, iz, 12) < .4 then 2 else 1) do
-                        local a = BiomePlacement.hash(seed, li, ix, iz, 20 + c) * math.pi * 2
-                        local d = 1.1 + 1.7 * BiomePlacement.hash(seed, li, ix, iz, 30 + c)
-                        local cx, cz = x + math.cos(a) * d, z + math.sin(a) * d
-                        local cs = scale * (.6 + .35 * BiomePlacement.hash(seed, li, ix, iz, 40 + c))
-                        local cid = if n > .3 and BiomePlacement.hash(seed, li, ix, iz, 50 + c) < .25 then (if id == "world_flowers_a" then "world_grass_a" else id) else id
-                        cid = BiomePlacement.substitute(cid, kit, meshes)
-                        if kit[cid] and parts + BiomePlacement.partCost(cid, kit, meshes) <= budget and count < cap
-                            and BiomePlacement.pathClearance(cx, cz) >= 1 and BiomePlacement.keepOutClearance(cx, cz, false) >= 0
-                            and math.max(math.abs(cx), math.abs(cz)) + 2 < extent and not inWater(cx, cz, 1)
-                            and BiomePlacement.slope(height, cx, cz) <= layer.maxSlope and clear(cx, cz, 1.2, false) then
-                            add(cid, cx, cz, BiomePlacement.hash(seed, li, ix, iz, 60 + c) * math.pi * 2, cs, "groundcover", .03, biome)
-                            count += 1
-                        end
-                    end
+                    groundcoverClump(replaced, ix, iz, li, layer, cap, if replaced then oldId else id, n, scale, x, z, biome)
                 end
             end
         end

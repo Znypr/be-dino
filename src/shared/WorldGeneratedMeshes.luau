@@ -32,30 +32,37 @@ Generated.Replacements = {
     tree_pine_v3 = {assetId = "", placed = true, replaces = "tree_pine"}, -- world_tree_pine_v3.fbx, 462 tris
     tree_palm_v3 = {assetId = "", placed = true, replaces = "tree_palm"}, -- world_tree_palm_v3.fbx, 700 tris
 }
--- BD-464 step 1 (docs/140, docs/120): Blender ground props for tree bases and clearings (assets/blender/world/fbx_v3/ground_*_v3.fbx).
--- NEW kinds, not replacements: assetId = "" means NOT uploaded yet, nothing is loaded and nothing is placed. Nothing reads these keys for
--- placement until step 2 (placement grammar plus the net-neutral replacement of small clutter, after the owner uploads and picks).
--- Pasting an id here only makes ImportedResources load the mesh into ReplicatedStorage.GeneratedWorld; Arena does not place it yet.
--- BD-463 step 1 (docs/140, docs/120) adds the eight plant_*_v3 kinds (grass tufts, jungle plant, flower clusters, fern) to this table the same way:
--- empty ids, placed = false, nothing places them until BD-463 step 2 (placement that REPLACES some existing clutter, net-neutral on the phone triangle budget).
+-- BD-464 step 1 + BD-463 step 1 (docs/140, docs/120): Blender ground props (ground_*_v3) and plants (plant_*_v3) from assets/blender/world/fbx_v3.
+-- NEW kinds, not replacements. assetId = "" means NOT uploaded yet: nothing is loaded and nothing is placed, and the world is EXACTLY what it was
+-- before these entries existed. BD-463/464 step 2 (docs/140 "Placement"): BiomePlacement uses a key only when its assetId is a valid numeric id
+-- (BiomePlacement.validAssetId), and each placed prop REPLACES existing small clutter (net-neutral phone triangle budget). placed = true means
+-- "a placement rule reads this key once its id is filled in" (like Replacements above); it is NOT a claim that anything is on the island today.
+-- tris = triangle count of the FBX; size = {x, height, z} studs of the mesh at scale 1 (Blender X, Z up, Y; the FBX pivot is the bbox bottom
+-- centre), used as the kit-style extent for spacing, grounding and the budget. ImportedResources.loadGeneratedWorld loads a non-empty id into
+-- ReplicatedStorage.GeneratedWorld; Arena places only the keys whose template really loaded.
 Generated.Props = {
-    ground_rock_small_v3 = {assetId = "", placed = false}, -- ground_rock_small_v3.fbx, 68 tris
-    ground_rock_medium_v3 = {assetId = "", placed = false}, -- ground_rock_medium_v3.fbx, 278 tris
-    ground_rock_mossy_v3 = {assetId = "", placed = false}, -- ground_rock_mossy_v3.fbx, 262 tris
-    ground_log_fallen_v3 = {assetId = "", placed = false}, -- ground_log_fallen_v3.fbx, 199 tris
-    ground_stump_roots_v3 = {assetId = "", placed = false}, -- ground_stump_roots_v3.fbx, 199 tris
-    ground_mushrooms_v3 = {assetId = "", placed = false}, -- ground_mushrooms_v3.fbx, 303 tris
-    ground_bush_round_v3 = {assetId = "", placed = false}, -- ground_bush_round_v3.fbx, 340 tris
-    ground_bush_berry_v3 = {assetId = "", placed = false}, -- ground_bush_berry_v3.fbx, 304 tris
-    plant_grass_broad_v3 = {assetId = "", placed = false}, -- plant_grass_broad_v3.fbx, 120 tris
-    plant_grass_arch_v3 = {assetId = "", placed = false}, -- plant_grass_arch_v3.fbx, 105 tris
-    plant_grass_low_v3 = {assetId = "", placed = false}, -- plant_grass_low_v3.fbx, 90 tris
-    plant_jungle_leaf_v3 = {assetId = "", placed = false}, -- plant_jungle_leaf_v3.fbx, 168 tris
-    plant_flowers_daisy_v3 = {assetId = "", placed = false}, -- plant_flowers_daisy_v3.fbx, 258 tris
-    plant_flowers_yellow_v3 = {assetId = "", placed = false}, -- plant_flowers_yellow_v3.fbx, 201 tris
-    plant_flowers_red_v3 = {assetId = "", placed = false}, -- plant_flowers_red_v3.fbx, 201 tris
-    plant_fern_arch_v3 = {assetId = "", placed = false}, -- plant_fern_arch_v3.fbx, 189 tris
+    ground_rock_small_v3 = {assetId = "", placed = true, tris = 68, size = {2.8, 1.2, 2.4}}, -- ground_rock_small_v3.fbx, 68 tris, Blender 2.8 x 2.4 x 1.2
+    ground_rock_medium_v3 = {assetId = "", placed = true, tris = 278, size = {4.9, 2.3, 4.0}}, -- ground_rock_medium_v3.fbx, 278 tris, Blender 4.9 x 4.0 x 2.3
+    ground_rock_mossy_v3 = {assetId = "", placed = true, tris = 262, size = {5.6, 3.2, 4.5}}, -- ground_rock_mossy_v3.fbx, 262 tris, Blender 5.6 x 4.5 x 3.2
+    ground_log_fallen_v3 = {assetId = "", placed = true, tris = 199, size = {7.9, 3.0, 2.8}}, -- ground_log_fallen_v3.fbx, 199 tris, Blender 7.9 x 2.8 x 3.0
+    ground_stump_roots_v3 = {assetId = "", placed = true, tris = 199, size = {7.1, 3.0, 5.9}}, -- ground_stump_roots_v3.fbx, 199 tris, Blender 7.1 x 5.9 x 3.0
+    ground_mushrooms_v3 = {assetId = "", placed = true, tris = 303, size = {5.3, 2.9, 4.1}}, -- ground_mushrooms_v3.fbx, 303 tris, Blender 5.3 x 4.1 x 2.9
+    ground_bush_round_v3 = {assetId = "", placed = true, tris = 340, size = {6.0, 2.7, 4.2}}, -- ground_bush_round_v3.fbx, 340 tris, Blender 6.0 x 4.2 x 2.7
+    ground_bush_berry_v3 = {assetId = "", placed = true, tris = 304, size = {6.3, 2.1, 4.1}}, -- ground_bush_berry_v3.fbx, 304 tris, Blender 6.3 x 4.1 x 2.1
+    plant_grass_broad_v3 = {assetId = "", placed = true, tris = 120, size = {2.0, 2.2, 2.3}}, -- plant_grass_broad_v3.fbx, 120 tris, Blender 2.0 x 2.3 x 2.2
+    plant_grass_arch_v3 = {assetId = "", placed = true, tris = 105, size = {2.4, 2.1, 2.3}}, -- plant_grass_arch_v3.fbx, 105 tris, Blender 2.4 x 2.3 x 2.1
+    plant_grass_low_v3 = {assetId = "", placed = true, tris = 90, size = {2.4, 1.2, 2.3}}, -- plant_grass_low_v3.fbx, 90 tris, Blender 2.4 x 2.3 x 1.2
+    plant_jungle_leaf_v3 = {assetId = "", placed = true, tris = 168, size = {4.1, 3.5, 4.2}}, -- plant_jungle_leaf_v3.fbx, 168 tris, Blender 4.1 x 4.2 x 3.5
+    plant_flowers_daisy_v3 = {assetId = "", placed = true, tris = 258, size = {2.3, 2.4, 2.4}}, -- plant_flowers_daisy_v3.fbx, 258 tris, Blender 2.3 x 2.4 x 2.4
+    plant_flowers_yellow_v3 = {assetId = "", placed = true, tris = 201, size = {2.3, 2.3, 2.1}}, -- plant_flowers_yellow_v3.fbx, 201 tris, Blender 2.3 x 2.1 x 2.3
+    plant_flowers_red_v3 = {assetId = "", placed = true, tris = 201, size = {2.6, 2.5, 2.3}}, -- plant_flowers_red_v3.fbx, 201 tris, Blender 2.6 x 2.3 x 2.5
+    plant_fern_arch_v3 = {assetId = "", placed = true, tris = 189, size = {4.9, 2.1, 4.9}}, -- plant_fern_arch_v3.fbx, 189 tris, Blender 4.9 x 4.9 x 2.1
 }
+-- BD-463/464 step 2: true for a pasted Roblox asset id (digits only, no leading zero, 9-18 long). "" and anything else mean "not uploaded yet".
+function Generated.validId(id: any): boolean
+    if type(id) ~= "string" then return false end
+    return #id >= 9 and #id <= 18 and string.match(id, "^[1-9]%d*$") == id
+end
 -- BD-474 (docs/140 "Colossal ancient trees"): colossal ancient trees for the `colossal` placement layer (BiomePlacement.Colossal, 80-140 studs), Blender FBX in
 -- assets/blender/world/fbx_v3/. Today the layer shows the stand-ins (the _l kit models, i.e. the existing generated meshes scaled 3-8x).
 -- assetId = "" means NOT uploaded: nothing is loaded, colossalFor() returns nil and the stand-in keeps being used. Fill a LOD0 id AND its _lod1 id

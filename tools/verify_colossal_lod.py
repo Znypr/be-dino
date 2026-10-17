@@ -303,7 +303,7 @@ def static_checks():
     assert 'else Ground.samplePoints(p.x, p.z, Ground.footprintRadius(rayLayer, size.X, size.Z))' in arena, 'other props keep the 5-ray rule'
     assert 'else Ground.corrected(p.y, hits, rayLayer, size.Y, 1)' in arena, 'other props keep the corrected() rule'
     assert 'ColossalRules.groundPoints(' in arena and 'ColossalRules.groundY(' in arena and 'ColossalRules.colliders(' in arena and 'ColossalRules.lod1Offset(' in arena
-    assert 'made, ancientColliders(made))' in arena and 'if fitted then' in arena and 'for _, c in KitData[id].colliders do' in arena, 'kit colliders stay for every other prop'
+    assert 'ancientColliders(made))' in arena and 'if fitted then' in arena and 'for _, c in (kitAll or KitData)[id].colliders do' in arena, 'kit colliders stay for every other prop'
     # client: colossal models are separate, ordinary props are untouched
     assert 'item:IsA("Model") and item:GetAttribute("ColossalKey") ~= nil and addColossal(folder, item, tries)' in cull
     assert 'ColossalRules.assign(items, colossalSettings, settings.Hysteresis, budget - used)' in cull and 'if colossalSettings and #colossals > 0 then' in cull

@@ -48,7 +48,8 @@ function Service.record(player: Player, outcome: any)
         local event = getRemote()
         local eggId = tostring(outcome.eggId or "")
         if eggId == "" or state.seen[eggId] then return end -- one celebration and one announcement per egg
-        event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or 1})
+        event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or 1,
+            mutation = info.mutation, mutationId = if info.mutation then tostring(outcome.eventMutationId) else nil}) -- BD-433: lets the client light the own dino's rim
         local text = Rare.text(player.DisplayName, info, speciesName)
         local flushAt = nil
         if os.clock() - announced.last(player.UserId, ANNOUNCE_KEY) >= Rare.Cooldown then

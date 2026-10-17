@@ -15,7 +15,7 @@
 - [ ] Art rule: no code-drawn final art, generated meshes only, flags off by default, Place1.rbxl untouched
 
 ## Quality gates (docs/117 section 4; world, cave, assets, lighting or palette changes)
-- [ ] `python tools/verify_world_overlap.py` and `tools/verify_cave_overlap.py` pass
+- [ ] `python tools/verify_world_overlap.py` and `tools/verify_cave_overlap.py` pass; placement changes also pass `tools/verify_world_props.py` (empty ids change nothing, fake ids stay inside the budget and lanes)
 - [ ] `python tools/qa/palette_report.py` passes (no NEW offenders; fixed ones removed from KNOWN)
 - [ ] Grounding, palette and budget probes re-run in my own Studio copy and `tools/qa/ground_report.py` / `budget_report.py` pass with `--input`, or marked "not verified"
 - [ ] Screenshots per place checked with `tools/qa/luminance.py` (island, cave heart, cave station), or marked "not verified"
