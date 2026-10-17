@@ -8,7 +8,10 @@ local function add(s) table.insert(out, s) end
 if not gui then return "no BeDinoUI" end
 add("attrs ObjectivesRect=" .. tostring(gui:GetAttribute("ObjectivesRect")) .. " ObjectivesOpenRect=" .. tostring(gui:GetAttribute("ObjectivesOpenRect")))
 local goal = gui:FindFirstChild("NextGoal", true)
-if goal then add("GOAL LINE: '" .. tostring(goal.Text) .. "' visible=" .. tostring(goal.Visible) .. " abs=" .. tostring(goal.AbsolutePosition) .. " size=" .. tostring(goal.AbsoluteSize)) end
+if goal then -- NextGoal is a Frame: its text is in a TextLabel child
+	add("GOAL FRAME visible=" .. tostring(goal.Visible) .. " abs=" .. tostring(goal.AbsolutePosition) .. " size=" .. tostring(goal.AbsoluteSize))
+	for _, d in goal:GetDescendants() do if d:IsA("TextLabel") then add("  goal text '" .. d.Text .. "' textBounds=" .. tostring(d.TextBounds) .. " label=" .. tostring(d.AbsoluteSize)) end end
+end
 for _, d in gui:GetDescendants() do
 	if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" then
 		local vis = d.Visible

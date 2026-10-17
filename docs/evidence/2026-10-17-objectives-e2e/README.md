@@ -1,23 +1,34 @@
-# Objectives end-to-end check (BD-078), 2026-10-17: PREP ONLY, NOT RUN
+# Objectives end-to-end check (BD-078), 2026-10-17
 
-Label: **PREP, no Studio evidence yet.** The owner paused all Studio work before the pass started, so no step below has a result. Nothing here changes game code or any flag (`ObjectivesEnabled` stays `false` in source).
+Label: **STUDIO EVIDENCE, CURRENT BUILD BEHAVIOR, private copy only.** `ObjectivesEnabled` is `false` in source and in every committed build; it was flipped to `true` with `sed` only in the unpublished local file `C:/Users/znypr/dtmp/objectives-e2e.rbxlx` (`python tools/build.py --profile playtest` from origin/main plus the merged BD-074 hooks and OB1-OB3; the flag line is the only edit). One Studio window of its own (opened 21:20:58, closed 21:32:11 Windows clock, own process ended), Play, one player, memory-only profile ("STUDIO PREVIEW, progress not saved, test currency", wallet starts at 1,000,000). Window 1920 x 1040, viewport 1140 x 785, 14 to 61 fps. **Desktop Studio, one player: no phone, no touch, no published server, no real DataStore.**
 
-## What is ready
-- Local playtest build `C:/Users/znypr/dtmp/objectives-e2e.rbxlx` (outside the repo): `python tools/build.py --profile playtest` from origin/main `2094ffd1`, then `sed` flipped `ObjectivesEnabled = false` to `true` in that output file only (verified 1 true, 0 false).
-- [read-gui.client.luau](read-gui.client.luau): a read-only Client probe that prints the panel texts, CLAIM buttons, the goal line and the rects. For NUMBERS-ONLY mode.
-- Baseline on origin/main (before any change): `verify_doc_ids`, `verify_objectives`, `verify_objective_hooks`, `verify_objectives_panel`, `verify_kanban_merge`, `verify_sources` all pass.
+How it was driven (no debug hooks, no injected events): the dino walked to the Island Gate and ate real food (walker adapted from the s1-pass one: [walker-run.client.luau](walker-run.client.luau); the same code was pasted into `execute_luau`); runs started and ended with the same remotes the buttons use (`RequestStartRun`, `RequestEndRun`); eggs were opened with `ClaimChest` exactly as `hatchState.next` does; claims went through `ObjectiveAction` (the T1 claim by a real click on CLAIM; the rest through the same remote with fresh tokens); the Fusion menu was opened by a real click on FUSION; the panel was opened by a real click on its header. Reads: the `ObjectiveAction {action="view"}` answer, the panel and goal-line texts ([read-gui.client.luau](read-gui.client.luau)), `PrivateState` (wallet `Crystals`, `ChestQueueJson`) and the server clock. (An attempt to spy on `ObjectiveService.record` from a server snippet saw nothing because a snippet's `require` is a second module copy; it was dropped and nothing relies on it.)
 
-## Plan (no debug hooks; real events through the remotes and handlers the UI uses)
-| # | Step | What to read |
-| --- | --- | --- |
-| 1 | Fresh profile (a new Play session in the playtest build is memory-only) | `ObjectiveAction {action="view"}`: tutorial row T1 at 0/10 |
-| 2 | Real run: walk through the gate, eat food (T1 via the FoodService hook), 30 s or more and at least 1 food, then `RequestEndRun` (HOME) | `view` progress for T1 and T2; OB1 counts the run |
-| 3 | Panel shows progress and CLAIM; goal line reads "Done! Claim in Tasks" | `read-gui.client.luau` |
-| 4 | `ObjectiveAction {action="claim", id, token}`: wallet (`Crystals`) rises by exactly the reward; same token again = `duplicate`, new token = `already_claimed` | wallet before and after |
-| 5 | Open the Fusion menu (click FUSION): T9 completes once via `{action="seen", id="fusion_menu"}` | `view`, second open = no change |
-| 6 | Hatch (`ClaimChest`, as `hatchState.next` does): T3 counts it; a head egg with `LastChestFailed=true` counts too (compare the progress delta with the queue shrink) | `ChestQueueJson`, `LastChestFailed` |
-| 7 | Instant run (start, then HOME at once) does not count: T2 (or D2 if rolled) unchanged | `view` before and after |
-| 8 | 30-minute window text ("New tasks in N min") against `os.time()` | panel header text, `shortResetsIn` |
-| 9 | Output has no errors | `get_console_output` |
+## Step table
 
-Not started: no Studio window was opened, no pass/fail exists. Resume when the lead says "Studio free".
+| # | Step | Result | Numbers |
+| --- | --- | --- | --- |
+| 1 | Fresh profile | **PASS** | `view`: tutorial T1 "Eat 10 food" 0/10, short S2 / S1 / S5, daily D6 / D1 / D4, all 0; wallet 1,000,000; `crystalsLeftToday` 600; `shortResetsIn` 501 s, `dailyResetsIn` 16,701 s |
+| 2 | Real run: eat food, 30 s or more, go Home | **PASS** | 7.0 s gate walk, then a 40.3 s run: 900 growth = 21 eggs (`CatchScore` 21). T1 reached 10/10 through the FoodService hook (already 10/10 at the 20 s read). Home: `RunState` Settled after 2.2 s, wallet +45 from the run settlement (1,000,000 to 1,000,045), S2 40/40 done; **T2 "Finish your first run" became claimable at once** (OB1: 40 s and food counted) |
+| 3 | Panel shows progress and CLAIM; goal line | **PASS** | Folded pill: "Eat 10 food" + green "Done!"; open: rows with count, "+10 crystals", CLAIM 100 x 44 ([02](02-panel-open-claimable.jpg)). Goal line text `Goal  Done! Claim in Tasks` ([04](04-folded-hatch-done-goal-line.jpg)); **real measured width: textBounds 189 px in a 221.7 px label** (docs/66 s19 only had an estimate); in a 296 x 304 window by accident the same line fitted as `Done! Claim it` |
+| 4 | Claim: wallet +reward exactly; second claim refused | **PASS** | Real CLAIM click on T1: 1,000,045 to 1,000,055 (+10 exactly). Second claim, new token: `already_claimed`, wallet unchanged (twice). T2 claimed with token K: +20 (1,000,055 to 1,000,075); the same token again: `duplicate`, no change; a new token: `already_claimed` |
+| 5 | Open the Fusion menu: T9 once | **PASS** | Real click on FUSION opened "Make a Gold dino" ([05](05-fusion-menu-open.jpg)). A second `{action="seen", id="fusion_menu"}` answered `already_seen` (so the menu's report had been accepted once); forged id "T9" answered `unknown_objective`. T9 then claimed: +20 (1,000,075 to 1,000,095). See observation A |
+| 6 | Hatch: T3 counts, Cracked counts | **PASS** | One `ClaimChest` opened a page of **10 eggs** (queue ids 2 to 13): T3 3/3 done, S1 10/10, **D1 10/60**, D4 1/1 (new species). Revealing the 9 buffered eggs one by one kept D1 at 10 (no double count). Three of the ten were failed Cracked eggs (`LastChestFailed` true for 8, 9, 13: "0x raptor", "0x microraptor", "0x compy"): they are inside the 10, so **a failed Cracked egg counted as opened**. Picture [03](03-cracked-egg-splat-counted.jpg): "Oops! Splat!", "Egg 10 of 21". The T3 row shows its note "Cracked eggs count too" ([06](06-panel-open-window-text-note.jpg)). T3 claimed +15 |
+| 7 | Instant run does not count | **PASS** | S3 "Finish a run" (it rolled in with the window after the rollover below; D2 was never rolled today; same OB1 rule `runCounts`): before 0/1; instant run (about 2 s, 0 food, `LastRunCatchScore` 0): **0/1**; a 12.1 s run that ate food (7 eggs): **0/1**; a 35.1 s run with food (17 eggs): **1/1**. S3 claimed +15. An earlier instant run (1.7 s, before S3 existed) is a second sample in the telemetry (`duration_s` 2, `food` 0) |
+| 8 | 30-minute window text | **PASS** | Panel header `New tasks in 6 min`, `3 min`, `New tasks soon` (at 37 s left), `New tasks in 30 min` (at 1,788 s): always `ceil(seconds / 60)` (`ObjectivePanelRules.resetText`). Server clock `os.time()` 1792265249: `1800 - t % 1800` = 151 s and `86400 - t % 86400` = 16,351 s equal the view's `shortResetsIn` 151 and `dailyResetsIn` 16,351. **Real rollover watched:** at the boundary `short` changed from S2 S1 S5 to S3 S2 S4 (window seed), and the two finished unclaimed rows S2 and S1 moved to `carry` and stayed claimable: S2 +10, S1 +15 exactly; `crystalsLeftToday` 600 to 575 (25 claimed) |
+| 9 | Output has no errors | **PASS** | Only the known UIBlox `FoundationProvider` warnings; no script error, no `[Be Dino] ObjectiveAction failed` warning. `[BD-TELEMETRY] run_end` lines for the 5 runs (48, 2, 2, 13, 36 s) |
+
+Wallet ledger: after the first settlement 1,000,045; claims T1 10, T2 20, T9 20, T3 15, S2 10, S1 15 bring it to 1,000,135; the 12 s and 35 s runs settled +17 and +38 crystals (1,000,190); S3 +15 = 1,000,205. Every claim delta equalled the catalogue reward; no claim paid twice.
+
+## Observations (no code changed)
+- **A. Order of the tutorial.** The panel and `view` show only the first unclaimed tutorial row, but `claim` takes any done id: T9 was claimable and paid while T4 to T8 were unclaimed (the total is 160 Crystals either way, and the server still checks done and once). The panel just cannot show T9 early. Not a bug; worth knowing when reading `view`.
+- **B. `view` clamps progress to the goal** (`math.min(progress, goal)`), so a counter above the goal (cap 2 x goal) is invisible. The negative instant-run test therefore needed a row still at 0/1 (S3), not T2.
+- **C. Modal over the panel.** While the Fusion menu was open, clicks aimed at the panel header landed in the menu; closing the menu with its X first fixed it. Expected.
+- **D.** The goal line shows "Done! Claim in Tasks" over any fusion goal by the BD-076 rule; the opposite case (a ready fusion goal with nothing claimable) was not on screen here.
+
+## Not proven here
+- **A phone**: touch, finger-size CLAIM, the 190 px pill, thumbstick overlap (BD-078 / BD-085). Narrow canvases do take the shortened copy (`Done! Claim it` at 296 px).
+- **UTC midnight** (daily) rollover, and a leave / rejoin with unflushed progress (the 30 s flush and the claim flush ran; a leave was not tested).
+- **Two players, a published server, the real DataStore.**
+- **Owner**: the PROVISIONAL rewards and caps (`MaxClaimCrystals` 100, `WindowCrystalCapPerDay` 600), the OB1 numbers (30 s, 1 food) and the LEAD decisions (Cracked counts as opened, event egg = weather egg, T9 earned by opening the menu).
+- Hooks not exercised in this pass: T4 equip, T5 / S4 leap, T6 / D3 potion, T7 level, S5 event egg, D5 fusion step, D6 rare (covered offline by `verify_objective_hooks`).
