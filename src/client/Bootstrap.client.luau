@@ -517,7 +517,9 @@ render=function(name: string)
         local cardsHeight=if touch then 402-cardsY-targetHeight-12 else 270
         local buyY=cardsHeight-targetHeight-10
         if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
-        if require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab) then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
+        local noCrystalsHint=require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab)
+        local hintInFooter=noCrystalsHint and (cosmeticTab=="auras" or cosmeticTab=="trails") -- BD-445 / BD-529: the aura and trail pages own the bottom line, so the hint takes its place instead of drawing over it
+        if noCrystalsHint and not hintInFooter then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
         -- BD-532 (docs/115 EG1): the server refuses random crystal items under this exact rule (Shared/PaidRandomGate); the egg and the condition
         -- upgrade are greyed out "Coming soon" BEFORE the tap instead of answering "Not available yet" after it. The policy gate is not loosened.
         local PaidRandomGate=require(Shared.PaidRandomGate)
@@ -543,7 +545,11 @@ render=function(name: string)
                 local soon=button(body,string.upper(PaidRandomGate.ComingSoon),270,cardsY+targetHeight+130,535,targetHeight,C.card,function() end)
                 soon.Name,soon.AutoButtonColor,soon.TextTransparency="BuyEggComingSoon",false,.15
             else
-                button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end).Name="BuyEggButton"
+                local eggShort=num("Crystals")<ProgressionConfig.RandomEggPrice -- BD-530: no confirm screen with a negative balance
+                button(body,if eggShort then "NEED "..ProgressionConfig.RandomEggPrice.." CRYSTALS" else "BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,if eggShort then C.card else C.accent,function()
+                    if eggShort then notify("Need "..ProgressionConfig.RandomEggPrice.." Crystals",C.gold) return end
+                    open("eggPurchase")
+                end).Name="BuyEggButton"
             end
             -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
             if Config.FastTravelPerk and Config.CaveHub and require(Shared.FtueP1).fastTravelEntryShown(num("AccountLevel"),type(p.perks)=="table" and p.perks.fastTravel==true) then -- BD-447
@@ -670,7 +676,7 @@ render=function(name: string)
             button(body,"<",0,footerY,110,targetHeight,if trailPage<=1 then C.card else C.blue,function() if trailPage<=1 then return end trailPage=math.max(1,trailPage-1) open("auras") end).TextTransparency=if trailPage<=1 then .6 else 0
             button(body,">",714,footerY,110,targetHeight,if trailPage>=4 then C.card else C.blue,function() if trailPage>=4 then return end trailPage=math.min(4,trailPage+1) open("auras") end).TextTransparency=if trailPage>=4 then .6 else 0
         end
-        label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
+        label(body,(if hintInFooter then require(Shared.FtueP1).NoCrystalsHint else "Level "..num("AccountLevel").." • "..num("Crystals").." Crystals")..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
     elseif name=="oddsSimple" then
         -- BD-270: short, kid-readable odds (src/shared/OddsCopy). Every group adds up to 100%.
         local OddsCopy=require(Shared.OddsCopy)
