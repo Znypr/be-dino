@@ -180,6 +180,9 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     end
     mesh.CFrame = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
     if Props.Solid[key] then mesh.CanCollide, mesh.CanQuery = true, true end
+    if (Props.Matte :: any)[key] then -- BD-296 rock forms / gate arch frame: their own warm vertex colours, shown matte and untinted
+        mesh.Material, mesh.Color = Enum.Material.SmoothPlastic, Color3.new(1, 1, 1)
+    end
     local warm = (Props.Warm :: any)[src.key] or (Props.Warm :: any)[key] or (Props.Tone :: any)[src.key] or (Props.Tone :: any)[key]
     if warm then -- BD-285 QA: blue / pink generated rocks -> flat warm basalt
         for _, child in mesh:GetChildren() do
@@ -233,12 +236,16 @@ function CaveProps.build(parent: Instance): Folder
         -- one load per distinct source (a published model, a Blender ground prop once uploaded, or a kit mesh): a layout key resolves to its first
         -- available source (CaveHubProps.sourceFor); a key with none (the log / stump before the owner uploads them) places nothing
         local kitKeys = kitKeySet()
+        -- BD-296: the Blender ground props and the cave wall rock forms / gate arch frame are both generated-id tables (ids empty until uploaded)
+        local generated: {[string]: any} = {}
+        for key, entry in GeneratedMeshes.Props do generated[key] = entry end
+        for key, entry in GeneratedMeshes.CaveForms do generated[key] = entry end
         local sources: {[string]: any} = {}
         local keys: {string} = {}
         local rowSource: {[string]: any} = {}
         for _, p in L.props do
             if rowSource[p.key] == nil then
-                local src = Props.sourceFor(p.key, GeneratedMeshes.Props, kitKeys)
+                local src = Props.sourceFor(p.key, generated, kitKeys)
                 rowSource[p.key] = src or false
                 if src then
                     local id = src.kind .. ":" .. src.key

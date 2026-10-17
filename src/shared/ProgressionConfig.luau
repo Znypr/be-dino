@@ -106,6 +106,12 @@ return table.freeze({
     ConditionStageAssetIds={
         -- stage=nil, normal=nil, cracked=nil, dirty=nil, rainbow=nil, astra=nil
         -- bind:begin ConditionStageAssetIds (tools/bind_assets.py writes here)
+        astra = "rbxassetid://138241248461995",
+        cracked = "rbxassetid://136011492360593",
+        dirty = "rbxassetid://129645205829983",
+        normal = "rbxassetid://103096217790136",
+        rainbow = "rbxassetid://102778499611458",
+        stage = "rbxassetid://126492279883649",
         -- bind:end ConditionStageAssetIds
     },
     -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).

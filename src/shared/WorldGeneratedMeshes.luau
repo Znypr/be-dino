@@ -58,6 +58,20 @@ Generated.Props = {
     plant_flowers_red_v3 = {assetId = "", placed = true, tris = 201, size = {2.6, 2.5, 2.3}}, -- plant_flowers_red_v3.fbx, 201 tris, Blender 2.6 x 2.3 x 2.5
     plant_fern_arch_v3 = {assetId = "", placed = true, tris = 189, size = {4.9, 2.1, 4.9}}, -- plant_fern_arch_v3.fbx, 189 tris, Blender 4.9 x 4.9 x 2.1
 }
+-- BD-296 (docs/140 "Cave wall rock forms", docs/120): six cave wall rock forms and the gate arch frame, Blender FBX in assets/blender/world/fbx_v3/cave_*_v3.fbx.
+-- Their OWN table (not Props) so the island's BiomePlacement / Arena never sees them: only CaveProps reads it, through CaveHubProps.Slots (cave_form_*,
+-- cave_gate_frame). assetId = "" means NOT uploaded: nothing is loaded, nothing is placed and the arch lantern light is not added, so the cave is exactly
+-- what it is today. ImportedResources.loadGeneratedWorld loads a non-empty id into ReplicatedStorage.GeneratedWorld like the other keys.
+-- tris = triangle count of the FBX; size = {x, height, depth} studs at scale 1 (Blender X, Z up, Y; pivot = bbox bottom centre, the wall side is the back).
+Generated.CaveForms = {
+    cave_rockform_slabs_v3 = {assetId = "", placed = false, tris = 336, size = {15.01, 12.68, 6.36}}, -- cave_rockform_slabs_v3.fbx, 336 tris
+    cave_rockform_buttress_v3 = {assetId = "", placed = false, tris = 380, size = {12.5, 18.66, 7.82}}, -- cave_rockform_buttress_v3.fbx, 380 tris
+    cave_rockform_ledge_v3 = {assetId = "", placed = false, tris = 308, size = {17.49, 11.25, 8.77}}, -- cave_rockform_ledge_v3.fbx, 308 tris
+    cave_rockform_tumble_v3 = {assetId = "", placed = false, tris = 364, size = {18.44, 9.61, 8.65}}, -- cave_rockform_tumble_v3.fbx, 364 tris
+    cave_rockform_fins_v3 = {assetId = "", placed = false, tris = 350, size = {10.85, 19.2, 7.57}}, -- cave_rockform_fins_v3.fbx, 350 tris
+    cave_rockform_terrace_v3 = {assetId = "", placed = false, tris = 362, size = {20.44, 7.58, 7.83}}, -- cave_rockform_terrace_v3.fbx, 362 tris
+    cave_gate_arch_v3 = {assetId = "", placed = false, tris = 456, size = {39.79, 25.79, 9.77}}, -- cave_gate_arch_v3.fbx, 456 tris
+}
 -- BD-463/464 step 2: true for a pasted Roblox asset id (digits only, no leading zero, 9-18 long). "" and anything else mean "not uploaded yet".
 function Generated.validId(id: any): boolean
     if type(id) ~= "string" then return false end

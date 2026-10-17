@@ -1,0 +1,4 @@
+wall_v1 tris=0 luminance=0.179
+wall_v2 tris=2100 luminance=0.182
+arch_v1 tris=0 luminance=0.172
+arch_v2 tris=456 luminance=0.191

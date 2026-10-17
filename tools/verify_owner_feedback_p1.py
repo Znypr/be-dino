@@ -34,8 +34,15 @@ local half = S.resolve({cracked = "rbxassetid://5"}, "cracked") assert(half.stag
 local full = S.resolve({stage = "rbxassetid://1", cracked = "rbxassetid://5"}, "cracked") assert(full.stage == "rbxassetid://1" and full.egg == "rbxassetid://5")
 local part = S.resolve({stage = "rbxassetid://1", cracked = "rbxassetid://5"}, "dirty") assert(part.stage == "rbxassetid://1" and part.egg == nil, "missing condition egg: live egg on the stage")
 assert(#S.Keys == 6 and S.Files.cracked:find("egg%-01_cracked") and S.Files.astra:find("egg%-05_astra") and S.Files.stage:find("egg%-stage%-jungle%-v1"))
-local count = 0 for _ in ProgressionConfig.ConditionStageAssetIds do count += 1 end
-assert(count == 0, "no asset id is invented before the owner uploads the stage")
+-- 2026-10-17: the stage and the five condition eggs are uploaded (lead, owner standing approval) and bound by bind_assets; every id must
+-- be a real rbxassetid for one of the six known keys (never an invented key or a malformed value).
+local count = 0
+for key, id in ProgressionConfig.ConditionStageAssetIds do
+ count += 1
+ assert(table.find(S.Keys, key) ~= nil, "unknown stage key " .. tostring(key))
+ assert(type(id) == "string" and id:match("^rbxassetid://[1-9]%d+$"), "stage id is a real asset id: " .. tostring(key))
+end
+assert(count == 0 or count == 6, "either nothing uploaded yet or all six stage images bound")
 assert(ConditionOverlays.ShopZoom >= 1.6 * 1.15, "shop eggs are zoomed well past the old 1.6")
 
 -- ---- BD-395 PropGround (the pure rule; verify_world_art runs it over the whole generated island)
