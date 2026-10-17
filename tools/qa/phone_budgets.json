@@ -1,7 +1,11 @@
 {
-  "_note": "ONE source of truth for PHONE budgets. Read by tools/fx_budget_report.py (and by tools/qa/phone_report.py once PR #257 lands). All PROVISIONAL until measured on a real phone (BD-085).",
+  "_note": "ONE source of truth for PHONE budgets. Read by tools/fx_budget_report.py, tools/qa/phone_report.py (rows with the same key) and tools/qa/phone_forecast.py (docs/146). All PROVISIONAL until measured on a real phone (BD-085).",
   "phone": {
     "lights": {"value": 16, "why": "stricter of 24 (docs/126) and 16 (docs/107 s1): dynamic lights are the likeliest low-end phone frame cliff"},
-    "beams": {"value": 24, "why": "stricter of 48 (docs/126) and 24 (docs/123 T3: 3-4 beams per dino, Lite 6 dinos)"}
+    "beams": {"value": 24, "why": "stricter of 48 (docs/126) and 24 (docs/123 T3: 3-4 beams per dino, Lite 6 dinos)"},
+    "parts": {"value": 3000, "why": "docs/107 s1 rule of thumb: parts attached and in range on a 3 GB phone (phone_report.py reads it as the whole workspace, a strict reading)"},
+    "triangles": {"value": 250000, "why": "docs/107 s1 rule of thumb: triangles in the scene"},
+    "memMb": {"value": 1200, "why": "docs/107 s1: total client memory on a 3 GB phone (crashes start near 1.5 GB)"},
+    "textureMib": {"value": 200, "why": "PROPOSAL (docs/146): about one sixth of the 1,200 MB client rule for ALL decoded images and mesh textures together, counted as RGBA8 before any GPU compression; replace with the Developer Console texture / PlaceMemory reading from BD-085"}
   }
 }

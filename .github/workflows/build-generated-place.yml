@@ -85,10 +85,12 @@ jobs:
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_views.py --runner /tmp/luau/luau
           python tools/verify_world_budget.py --runner /tmp/luau/luau
+          python tools/qa/phone_forecast.py --runner /tmp/luau/luau --check
           python tools/verify_world_overlap.py --runner /tmp/luau/luau
           python tools/verify_world_props.py --runner /tmp/luau/luau
           python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
           python tools/verify_colossal_lod.py --runner /tmp/luau/luau
+          python tools/verify_scale_ladder.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
           python tools/verify_cave_terrain.py --runner /tmp/luau/luau
           python tools/verify_cave_lighting.py --runner /tmp/luau/luau
