@@ -400,14 +400,14 @@ local sent = {}
 for i = before + 1, #calls do if calls[i].action == "claim" then table.insert(sent, calls[i]) end end
 assert(#sent == 1 and sent[1].id == "T1" and type(sent[1].token) == "string" and #sent[1].token >= 1 and #sent[1].token <= Cfg.ClaimTokenMax, "claim request {action, id, token}")
 for k in sent[1] do assert(k == "action" or k == "id" or k == "token", "no other field is ever sent (no amounts, no progress)") end
-assert(title.Text == "Try again" and Rules.copyOk(title.Text), "a lost answer says what to do next")
+assert(wait.Text == "Try again" and Rules.copyOk(wait.Text) and title.Text == "TASKS", "a lost answer says what to do next")
 assert(claim.Text == "CLAIM" and claim.Active == true, "the button is back")
 local firstToken = sent[1].token
 claim.Activated:fire() pump()
 local retry
 for i = #calls, 1, -1 do if calls[i].action == "claim" then retry = calls[i] break end end
 assert(retry.token == firstToken, "the retry after a lost answer uses the SAME token (claim-once)")
-assert(title.Text == "+10 crystals", "paid: the grant the server answered, nothing computed here: " .. title.Text)
+assert(wait.Text == "+10 crystals", "paid: the grant the server answered, nothing computed here: " .. wait.Text)
 view = afterClaimView
 tick()
 local claimsSoFar = 0 for _, c in calls do if c.action == "claim" then claimsSoFar += 1 end end
@@ -427,7 +427,7 @@ remote.InvokeServer = function(_, request)
  return {ok = false, reason = "not_done"}
 end
 claim2.Activated:fire() pump()
-assert(title.Text == "Not done yet")
+assert(wait.Text == "Not done yet")
 local tokenA
 for i = #calls, 1, -1 do if calls[i].action == "claim" then tokenA = calls[i].token break end end
 assert(tokenA ~= firstToken, "a new task has its own token")

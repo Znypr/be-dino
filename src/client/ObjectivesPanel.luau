@@ -127,8 +127,10 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         -- Header text: icon (8..36), title, then the chip (folded) or the "New tasks soon" words (open).
         title.Position = UDim2.fromOffset(42, 0)
         if open then
-            title.Text = if showMessage then message else Rules.Title
-            wait.Text = if left ~= nil then Rules.resetText(left) elseif folded.empty then Rules.resetText(0) else ""
+            title.Text = Rules.Title
+            -- The claim answer takes the wide right-hand label for 2.5 s (the 38% title slot cut "+10 crystals" to "+10 crys..." in Studio).
+            wait.Text = if showMessage then message elseif left ~= nil then Rules.resetText(left) elseif folded.empty then Rules.resetText(0) else ""
+            wait.TextColor3 = if showMessage then C.accent else C.gold
             wait.Visible, chip.Visible = true, false
             wait.AnchorPoint, wait.Position, wait.Size = Vector2.new(1, 0.5), UDim2.new(1, -10, 0.5, 0), UDim2.new(0.62, -10, 1, 0)
             title.Size = UDim2.new(0.38, -42, 1, 0)
@@ -140,7 +142,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
             title.Size = UDim2.new(1, -42 - (if folded.chip ~= "" then 68 else 8), 1, 0)
         end
         title.TextSize = if open then 17 else TEXT
-        title.TextColor3 = if showMessage then C.accent elseif folded.claimable and not open then C.accent else C.gold
+        title.TextColor3 = if folded.claimable and not open then C.accent else C.gold
         -- Rows.
         body.Visible = open
         for i, r in rows do
