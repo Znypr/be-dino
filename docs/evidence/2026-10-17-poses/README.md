@@ -96,7 +96,7 @@ Hip dip: `Pose.hipDip` lifts every part by the compression for 0.3 s after touch
 
 Build: `python tools/build.py --profile playtest` of main with #409 and #410 (the dash hold). Set-up honesty: `EquippedSpeciesId` was forced to `mosasaurus` from a server script (every 0.1 s) and `Dinosaur.refreshForPlayer` re-rendered, so the visual is the REAL Mosasaurus (`LPClass` Water, 7 posed parts) and the class logic is Water (WalkSpeed 18.7, JumpPower 0). The run was started with `RequestStartRun`. The Studio keyboard tool does not reach the game, so the dash was driven as the client script does on Space: `Humanoid.Jump = true` for 0.1 s plus the `ClassDash` remote. A Heartbeat logger (60 frames/s) recorded the rotation of every part weld (Euler XYZ of the inverse of `Weld.C1`), the root position and velocity.
 
-**NO IMAGE. The Studio window never rendered** (RenderStepped fired 0 times, `ViewportSize` 1 x 1 and every `screen_capture` timed out, in Edit and in Play, in two fresh windows, on screen 3 and briefly elsewhere). It looked like a frozen render surface, not a code problem; the logs below come from Heartbeat, which ran at 60 Hz. The surge IMAGE is still owed; the numbers are the evidence for now.
+**(No image at the time of this log; the pictures were taken later, see "Pictures taken" at the end.) The Studio window never rendered** (RenderStepped fired 0 times, `ViewportSize` 1 x 1 and every `screen_capture` timed out, in Edit and in Play, in two fresh windows, on screen 3 and briefly elsewhere). It looked like a frozen render surface, not a code problem; the logs below come from Heartbeat, which ran at 60 Hz. The surge IMAGE was owed then; it exists now (images 19 to 23 below).
 
 | Measurement | Result |
 |---|---|
@@ -133,3 +133,35 @@ The real hip compression is **0.51 to 0.53 stud** for one frame (state Landed). 
 | 0.383 | Running | 2.956 | -0.049 | 0.006 |
 
 So the lift (0.44 stud at its peak) holds the feet at or just above the floor from the second landing frame on (without it the lowest corner would be about 0.4 stud under the floor at t = 0.316 and 0.2 at 0.333). **One frame is not covered:** the touch-down frame itself (-0.55 for 16 ms), because the animator runs in Heartbeat and only sees the compressed root position that frame; the weld change shows from the next frame. A fix would be to predict the dip from the fall speed; not done, it is one frame. The first Studio run showed the touch-down frame can still read as airborne for the animator, so rays are now cast while FALLING too (none while rising); `556.drive_hipdip` has a case for it (a mutant proves it).
+
+## Pictures taken (BD-556, 2026-10-17 20:50 to 21:05, Studio rendering about 11 fps)
+
+Build: `origin/main` (1a690653, which has #409, #410, #566 and the BD-555 jump calm), profile `playtest`, one Studio window of my own in Play, memory-only
+profile. Set-up honesty: `EquippedSpeciesId` was forced to `mosasaurus` from a server script every 0.1 s and a toggle of `EquippedBig` made the server re-render the
+visual, so this is the REAL Mosasaurus (`LPClass` Water, 4 flippers, WalkSpeed 18.7, JumpPower 0). The run was started with `RequestStartRun`. Weather was stopped
+(`AdminAction stopWeather`) for the shots.
+
+**How a 0.4 s pose was photographed (the phase cannot be hit by chance at 11 fps).** The dino was pinned in place (a Heartbeat that puts the root back at (0, 5.05, 30) every
+frame, so the dash velocity written by the client does nothing visible) and `Humanoid.Jump` was pulsed every 0.55 s, which is what the animator reads as the jump
+input (the real `LowPolyAnimator` and real `LowPolyPose` ran). A watcher read the real tail / flipper welds each frame and, the moment a threshold was crossed,
+set the `LowPolyAnimator` script `Disabled = true`, which freezes every weld at that frame; the shot was taken, and the script was re-enabled. So each "frozen" picture is
+a real frame of the real surge, held still. Nothing was posed by hand, and no pose maths was run outside the game.
+
+| # | Image | Moment | Verdict | Notes |
+|---|---|---|---|---|
+| 19 | [19-mosasaurus-surge-top-wave-frozen.jpg](19-mosasaurus-surge-top-wave-frozen.jpg) | top view, frozen when tail yaw crossed 20 degrees (measured 23.3; head -3.7, body +3.8) | PASS (the wave reads) | Seen from above the surge is a clear head-to-tail S-curve: head swung right, body angled, tail swept left. This is the picture the old straight-body surge could not give. |
+| 20 | [20-mosasaurus-surge-side-flippers-frozen.jpg](20-mosasaurus-surge-side-flippers-frozen.jpg) | side view (camera 13 studs to the right), frozen at flipper pitch 18.4 degrees and tail yaw 14.2 | PASS for the flippers, weak for the wave | The front flipper is swept back and the rear flipper forward (the rowing stroke), tail raised a little, head tilted. From the side the yaw wave is foreshortened: a child sees the flipper stroke and the splash, not the S-curve; use 19 and 21 for the wave. |
+| 21 | [21-mosasaurus-surge-top-wave-2-frozen.jpg](21-mosasaurus-surge-top-wave-2-frozen.jpg) | top view, same freeze as 20 | PASS | Second frame of the wave, smaller bend (tail 14 degrees): head right, tail left-down. |
+| 22 | [22-mosasaurus-rest-top-control.jpg](22-mosasaurus-rest-top-control.jpg) | CONTROL, top view, no surge playing | control | The root was anchored; the animator did not see a jump (humanoid state stayed Running), so the body is straight. Compare with 19 and 21. |
+| 23 | [23-mosasaurus-hard-landing-frame.jpg](23-mosasaurus-hard-landing-frame.jpg) | side view, low camera, 2 frames after touch-down from a 16.5 stud drop (root frozen at y 4.78, rest 5.05, humanoid state Landed then Running) | PASS | The four flipper tips and the feet sit ON the grass, not in it, with the hip-dip lift in. The touch-down frame itself (not covered, see above) cannot be photographed this way. |
+
+Not obtained or not claimed:
+* **The real Space key did not move the dino.** `user_keyboard_input` Space (key press and a 250 ms hold) produced no dash and no displacement (0.00 studs) in this window,
+  whereas `Humanoid.Jump = true` did (the `JumpRequest` path fires `ClassDash`). The Studio window is never given keyboard focus on purpose (no foreground steal), which is the likely reason.
+  So the live Space path is still unchecked by a real keypress; the animator and dash were driven through `Humanoid.Jump`.
+* **A frame of the moving dash.** Unpinned, a dash travels about 16 studs in 0.35 s in the direction the camera faces (the capture tool re-points the camera, so a fixed shot lost the dino).
+  A moving dash frame was not taken; the numbers above and in the BD-572 evidence stand.
+* **The surge on a phone-size or touch screen**, and Reduce Motion in a picture (the weld identity is asserted offline).
+* The touch-down frame of the hard landing (16 ms, -0.55 stud) is still unlit by the lift, as already noted.
+* Observed while flying the camera: a green and a purple wedge appeared in two screen corners in the low side view (23), probably a scene object close to the camera (not checked), not the dino.
+
