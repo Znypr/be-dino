@@ -999,6 +999,7 @@ function FusionMenu.open()
         Theme.animate(frame, .16, {Position = UDim2.new(0, leftInset + 6, .5, 0)})
     end
     if not FusionMenu.available() then state.mode = "unavailable" render() return end
+    if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end -- OB2 (docs/115): one-time T9 report; flag off = never required
     if fuseInFlight then
         state.mode = "fusing"
         renderStatus("Your fusion is still being saved...\nTrying again can never fuse twice.", C.gold)

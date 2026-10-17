@@ -69,6 +69,10 @@ SITES = [
 # Files that may mention ObjectiveService at all (everything else, in particular src/client, must not).
 ALLOWED_FILES = {REPO, FOOD, LEAP, FUSION, SERVICE, 'src/server/Bootstrap.server.luau', 'src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau'}
 CLIENT_PANEL_FILES = {'src/client/ObjectivesPanel.luau'}
+# OB2 (docs/115): the ONE other client file that may use ObjectiveAction. It sends only {action = "seen", id = <menu id>}, and only
+# FusionMenu calls it (with "fusion_menu", behind the flag).
+CLIENT_SEEN_FILES = {'src/client/ObjectiveSeen.luau'}
+FUSION_MENU = 'src/client/FusionMenu.luau'
 
 
 def read_lines(path: str) -> list[str]:
@@ -175,6 +179,29 @@ def static_report() -> tuple[list[str], list[str]]:
                     or 'applyHatch(profileValue, nextEgg, 1, table.clone(nextEgg.reward), now, freshSpecies)' not in body:
                 errors.append('eggs hatched: both applyHatch calls must pass freshSpecies (species is judged inside the transaction)')
 
+    # OB2: T9 is produced by the server-validated "seen" report, not by the fusion quote. The chain must exist: the remote shape,
+    # the service branch, and the repository function that queues the catalogue row's own event for a declared seen id only.
+    service_text = (ROOT / SERVICE).read_text(encoding='utf-8')
+    repo_lines = read_lines(REPO)
+    try:
+        seen_start, seen_end = function_range(repo_lines, r'^function ProfileRepository\.objectiveSeen\(')
+        seen_body = '\n'.join(repo_lines[seen_start:seen_end])
+        for needle in ('rules.seenEntry(seenId)', '"unknown_objective"', '"no_dino"', 'rules.seenDone(', '"already_seen"',
+                       'ProfileRepository.objectiveRecord(player, {kind = entry.event, amount = 1, id = rules.seenEventId(seenId)})'):
+            if needle not in seen_body:
+                errors.append(f'objectiveSeen: missing {needle!r}')
+        order = [seen_body.find(n) for n in ('"unknown_objective"', '"no_dino"', 'rules.seenDone(', 'ProfileRepository.objectiveRecord(')]
+        if order != sorted(order) or -1 in order:
+            errors.append('objectiveSeen: checks must run in order: known id, owns a dino, not seen yet, then record')
+    except AssertionError as exc:
+        errors.append(f'objectiveSeen: {exc}')
+    if 'seen = {action = true, id = true}' not in service_text or 'repository.objectiveSeen(player, request.id)' not in service_text:
+        errors.append('ObjectiveService: the "seen" request shape and its handler are missing')
+    seen_rows = [oid for oid, _, event in catalogue() if event == 'fusion_menu_opened']
+    if seen_rows != ['T9'] or 'seen = "fusion_menu"' not in (ROOT / 'src/shared/ObjectiveConfig.luau').read_text(encoding='utf-8'):
+        errors.append('only T9 listens for fusion_menu_opened and it declares seen = "fusion_menu"')
+    produced.setdefault('fusion_menu_opened', []).append('ProfileRepository.objectiveSeen (client {action="seen", id="fusion_menu"}, server-validated)')
+
     # No stray hooks: every .record( / recordX( call in the server tree is declared above.
     for path in sorted((ROOT / 'src').rglob('*.luau')):
         rel = path.relative_to(ROOT).as_posix()
@@ -186,8 +213,25 @@ def static_report() -> tuple[list[str], list[str]]:
         # BD-075: the client panel may read the view and send claims through ObjectiveAction; it never reports events.
         if rel.startswith('src/client/') and re.search(r'ObjectiveService', code):
             errors.append(f'{rel}: client code must not reference ObjectiveService (facts are reported by the server only)')
-        if rel.startswith('src/client/') and re.search(r'ObjectiveAction', code) and rel not in CLIENT_PANEL_FILES:
-            errors.append(f'{rel}: only the objectives panel may use ObjectiveAction (view/claim), no client-reported events')
+        if rel.startswith('src/client/') and re.search(r'ObjectiveAction', code) and rel not in CLIENT_PANEL_FILES | CLIENT_SEEN_FILES:
+            errors.append(f'{rel}: only the objectives panel (view/claim) and ObjectiveSeen (seen) may use ObjectiveAction, no client-reported events')
+        if rel in CLIENT_SEEN_FILES:
+            actions = re.findall(r'action\s*=\s*"([a-z_]+)"', code)
+            if actions != ['seen'] or code.count('InvokeServer') != 1 or code.count('{action = "seen", id = seenId}') != 1:
+                errors.append(f'{rel}: must send exactly one request shape, {{action = "seen", id = seenId}} (found actions {actions})')
+            if not re.search(r'function ObjectiveSeen\.report\(seenId: string\)\n    if Config\.ObjectivesEnabled ~= true then return end\n', code):
+                errors.append(f'{rel}: report() must return first thing while Config.ObjectivesEnabled is not true (flag off sends nothing)')
+        if rel.startswith('src/') and 'ObjectiveSeen' in code and rel not in CLIENT_SEEN_FILES | {FUSION_MENU}:
+            errors.append(f'{rel}: only FusionMenu may use ObjectiveSeen')
+        if rel == FUSION_MENU:
+            if 'ObjectiveAction' in code:
+                errors.append(f'{rel}: FusionMenu must not touch ObjectiveAction itself (it calls ObjectiveSeen.report)')
+            uses = re.findall(r'^.*ObjectiveSeen.*$', code, re.M)
+            if len(uses) != 1 or 'if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end' not in uses[0]:
+                errors.append(f'{rel}: exactly one use, `if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end`')
+            open_fn = '\n'.join(read_lines(FUSION_MENU)[slice(*function_range(read_lines(FUSION_MENU), r'^function FusionMenu\.open\('))])
+            if 'ObjectiveSeen' not in open_fn or open_fn.index('FusionMenu.available()') > open_fn.index('ObjectiveSeen'):
+                errors.append(f'{rel}: the report belongs in FusionMenu.open, after the availability check')
         if rel in CLIENT_PANEL_FILES and re.search(r'action\s*=\s*"(record|event|progress)"', code):
             errors.append(f'{rel}: the panel may only view and claim, never report progress')
         if rel in ALLOWED_FILES and rel != SERVICE:
@@ -231,7 +275,7 @@ def dynamic_script() -> str:
 SERVICE_BOOT = r'''
 ObjectiveServiceM=(function()
  local folderChildren={}
- local rs={Shared={Config="Config",ObjectiveConfig="ObjectiveConfig"}}
+ local rs={Shared={Config="Config",ObjectiveConfig="ObjectiveConfig",ObjectiveRules="ObjectiveRules"}}
  function rs:FindFirstChild(name) return folderChildren[name] end
  local services={ReplicatedStorage=rs,Players={GetPlayers=function() return {} end,PlayerRemoving={Connect=function() end}}}
  local game={GetService=function(_,name) return services[name] end}
@@ -246,7 +290,7 @@ ObjectiveServiceM=(function()
   end})
  end}
  local script={Parent={}}
- local require=function(id) if id=="Config" then return GameConfig elseif id=="ObjectiveConfig" then return ObjectiveConfigM end error("unexpected "..tostring(id)) end
+ local require=function(id) if id=="Config" then return GameConfig elseif id=="ObjectiveConfig" then return ObjectiveConfigM elseif id=="ObjectiveRules" then return ObjectiveRulesM end error("unexpected "..tostring(id)) end
  local task={spawn=function() end,wait=function() end}
  local warn=function() end
  return @@OBJ_SERVICE@@
@@ -313,6 +357,9 @@ do
  local offers=Rules.shopOffers(Rules.shopWindow(fakeNow))
  assert(Repository.progressionAction(a,"buyPotion",offers[1].id.."@"..Rules.shopWindow(fakeNow),"off-potion",false))
  assert(Repository.commitRunSettlement(a,"off-run",12,nil,200))
+ -- OB2: a forged "seen" report with the flag off: the service ignores it (no remote exists, no profile access), the repository refuses
+ local offSeen=ObjectiveServiceM.handle(a,{action="seen",id="fusion_menu"}) assert(offSeen.ok==false and offSeen.reason=="disabled","flag off: the server ignores a seen report")
+ local offOk,offStatus=Repository.objectiveSeen(a,"fusion_menu") assert(offOk==false and offStatus=="disabled","flag off: the repository refuses a seen report")
  local ops=data[key(a)].recentOperations
  for _,op in ops do assert(op.kind~="objective","no objective operation was written") end
  Repository.release(a)
@@ -324,7 +371,10 @@ end
 
 ------------------------------------------------------------------ B. flag ON: the real code paths advance the right counters
 GameConfig.ObjectivesEnabled=true
-assert(ObjectiveServiceM.start(Repository)~=nil,"the service starts with the flag on")
+local objectiveRemote=ObjectiveServiceM.start(Repository)
+assert(objectiveRemote~=nil,"the service starts with the flag on")
+local clockNow=1000
+ObjectiveServiceM.setClock(function() return clockNow end)
 take()
 
 -- B1. settlement: run end + event eggs + level, id-keyed so a replay counts once
@@ -423,7 +473,7 @@ do
  take()
  ObjectiveServiceM.recordFusionUse(f)
  local list=take()
- assert(#list==2 and sum(list,"fusion_menu_opened")==1 and sum(list,"fusion_step_added")==1)
+ assert(#list==1 and sum(list,"fusion_step_added")==1 and sum(list,"fusion_menu_opened")==0,"a fusion quote/commit counts D5 only; T9 is the client's seen report (OB2)")
  ObjectiveServiceM.recordHatched(f,{{speciesId="compy"},{speciesId="mosasaurus"},{speciesId="mosasaurus",failed=true}},{mosasaurus=true})
  list=take()
  assert(sum(list,"egg_hatched")==3 and sum(list,"rare_hatched")==1 and sum(list,"species_new")==1,"recordHatched: 3 opened, 1 rare (the failed one is not), 1 new")
@@ -442,7 +492,8 @@ do
  ObjectiveServiceM.record(z,"leap_used",1)                                     -- T5 (the Leap site: verify_progression)
  local window=Rules.shopWindow(fakeNow)
  assert(Repository.progressionAction(z,"buyPotion",Rules.shopOffers(window)[1].id.."@"..window,"z-potion",false)) -- T6
- ObjectiveServiceM.recordFusionUse(z)                                          -- T9 (the Fusion sites)
+ local seenAnswer=objectiveRemote.OnServerInvoke(z,{action="seen",id="fusion_menu"}) -- T9 (OB2: the client's one-time "seen" report)
+ assert(seenAnswer.ok==true and seenAnswer.status=="seen","T9 completes on one seen request: "..tostring(seenAnswer.reason))
  local kinds={}
  for _,c in take() do kinds[c.kind]=true end
  local view=Repository.objectiveView(z)
@@ -466,7 +517,7 @@ do
   assert(crystals(z)==before+granted,"every claim paid once: "..crystals(z).." vs "..(before+granted))
  end
  assert(table.concat(order,",")=="T1,T2,T3,T4,T5,T6,T7,T8,T9" and granted==160,"the whole tutorial (160 Crystals) was claimed once each: "..table.concat(order,","))
- for _,eventKind in {"food_eaten","run_end","level_reached","egg_hatched","rare_hatched","species_new","dino_equipped","leap_used","potion_bought","fusion_menu_opened"} do
+ for _,eventKind in {"food_eaten","run_end","level_reached","egg_hatched","rare_hatched","species_new","dino_equipped","leap_used","potion_bought"} do
   assert(kinds[eventKind],eventKind.." was recorded during the session")
  end
  -- the Short + Daily rows of this window: drive them with their own event kinds, claim each once
@@ -491,6 +542,149 @@ do
  end
  assert(crystals(z)==wallet+rewards and rewards>0,"window rows paid once")
  print("Flag-on passed: settlement/event eggs/level, batched hatches (page = one event), species_new inside the transaction, Cracked counts as opened, equip, potion, fusion use; replays count once; tutorial T1-T9 (160 Crystals) and the window rows claim exactly once")
+end
+
+------------------------------------------------------------------ D. OB1: only a run that ate food AND lasted RunMinSeconds counts for T2 / S3 / D2
+do
+ local OR=ObjectiveRulesM
+ local cfg=OR.Config
+ assert(cfg.RunMinSeconds==30 and cfg.RunMinFood==1,"OB1 numbers: 30 s and 1 food")
+ -- a daily window whose three picks include D2
+ local day=nil
+ for d=20833,20833+200 do for _,id in OR.pick("daily",d) do if id=="D2" then day=day or d end end end
+ assert(day~=nil,"a daily window with D2 exists")
+ local saved=fakeNow
+ fakeNow=day*86400+100
+ local u=user(7420)
+ assert(Repository.load(u))
+ take()
+ local function slot(view) for _,row in view.daily do if row.id=="D2" then return row end end end
+ local function runEnds(list) return count(list,"run_end") end
+ -- three instant runs: no food, 5 s / 200 s without any food event / food but 29 s: none counts
+ assert(Repository.commitRunSettlement(u,"ob1-a",0,nil,5))
+ assert(Repository.commitRunSettlement(u,"ob1-b",0,nil,200))
+ ObjectiveServiceM.record(u,"food_eaten",3)
+ take()
+ assert(Repository.commitRunSettlement(u,"ob1-c",0,nil,29))
+ assert(runEnds(take())==0,"three instant runs report no run_end")
+ assert(select(2,Repository.objectiveFlush(u))=="flushed")
+ local view=Repository.objectiveView(u)
+ assert(slot(view).progress==0 and not slot(view).done,"three instant runs do not finish D2")
+ assert((stored(u).tutorial.progress.T2 or 0)==0,"nor T2")
+ -- exactly at the line counts: 30 s and 1 food (a catch implies food, so catchScore 1 with no food event counts too)
+ ObjectiveServiceM.record(u,"food_eaten",1)
+ take()
+ assert(Repository.commitRunSettlement(u,"ob1-d",0,nil,30))
+ local list=take() assert(runEnds(list)==1 and list[1].id=="run:ob1-d","30 s and 1 food counts")
+ assert(Repository.commitRunSettlement(u,"ob1-e",1,nil,60))
+ assert(runEnds(take())==1,"a committed catch implies food: counts")
+ -- the food of one run is not reused by the next
+ ObjectiveServiceM.record(u,"food_eaten",5)
+ take()
+ assert(Repository.commitRunSettlement(u,"ob1-f",0,nil,90)) assert(runEnds(take())==1)
+ assert(Repository.commitRunSettlement(u,"ob1-g",0,nil,90)) assert(runEnds(take())==0,"no new food since the last settlement: not a run")
+ -- a fresh player: three REAL runs finish D2, a replay of one counts once, the claim pays once
+ local r=user(7421)
+ assert(Repository.load(r))
+ for i=1,3 do
+  ObjectiveServiceM.record(r,"food_eaten",2)
+  assert(Repository.commitRunSettlement(r,"ob1-real-"..i,1,nil,45))
+ end
+ assert(Repository.commitRunSettlement(r,"ob1-real-1",1,nil,45))
+ assert(select(2,Repository.objectiveFlush(r))=="flushed")
+ view=Repository.objectiveView(r)
+ assert(slot(view).progress==3 and slot(view).done,"three real runs finish D2: "..slot(view).progress)
+ local before=crystals(r)
+ local ok,status,outcome=Repository.objectiveClaim(r,"D2","ob1-d2")
+ assert(ok and status=="claimed" and outcome.crystals==40 and crystals(r)==before+40,"D2 pays 40 once")
+ assert(select(2,Repository.objectiveClaim(r,"D2","ob1-d2-again"))=="already_claimed")
+ fakeNow=saved
+ print("OB1 passed: three instant runs do not finish D2 (or T2), exactly 30 s + 1 food counts, a catch implies food, food is not reused, three real runs finish D2 and pay once")
+end
+
+------------------------------------------------------------------ E. OB2: T9 "Open the Fusion menu" is earned by ONE server-validated seen report
+do
+ local function ask(u,request) clockNow+=100 ObjectiveServiceM.setClock(function() return clockNow end) return objectiveRemote.OnServerInvoke(u,request) end
+ local u=user(7430)
+ assert(Repository.load(u))
+ take()
+ -- the fusion quote path no longer completes T9
+ ObjectiveServiceM.recordFusionUse(u)
+ assert(select(2,Repository.objectiveFlush(u))=="flushed")
+ assert((stored(u).tutorial.progress.T9 or 0)==0,"a fusion use alone does not complete T9")
+ take()
+ -- forged ids and shapes are refused and queue nothing
+ for _,forged in {"T9","D5","fusion","FUSION_MENU","fusion_menu ","index"} do
+  local answer=ask(u,{action="seen",id=forged})
+  assert(answer.ok==false and answer.reason=="unknown_objective","forged seen id refused: "..forged.." -> "..tostring(answer.reason))
+ end
+ for _,forged in {"",string.rep("x",33)} do
+  local answer=ask(u,{action="seen",id=forged}) assert(answer.ok==false and answer.reason=="bad_request","empty or oversized id refused")
+ end
+ for _,bad in {{action="seen"},{action="seen",id="fusion_menu",amount=5},{action="seen",id="fusion_menu",objective="T9"},{action="seen",id=5},{action="seen",id={}},{action="seen",id="fusion_menu",token="t"}} do
+  local answer=ask(u,bad) assert(answer.ok==false and answer.reason=="bad_request","bad shape refused")
+ end
+ clockNow+=100 ObjectiveServiceM.setClock(function() return clockNow end)
+ assert(objectiveRemote.OnServerInvoke(u,{action="seen",id="fusion_menu"},"extra").reason=="bad_request","extra arguments refused")
+ assert(#take()==0 and select(2,Repository.objectiveFlush(u))=="nothing","nothing was recorded by refused requests")
+ -- the genuine report completes T9 ONCE
+ local first=ask(u,{action="seen",id="fusion_menu"})
+ assert(first.ok==true and first.status=="seen" and first.view~=nil,"first report: seen")
+ local again=ask(u,{action="seen",id="fusion_menu"})
+ assert(again.ok==true and again.status=="already_seen","a repeat report: already_seen")
+ assert(select(2,Repository.objectiveFlush(u))=="flushed")
+ assert(stored(u).tutorial.progress.T9==1,"T9 counted exactly once: "..tostring(stored(u).tutorial.progress.T9))
+ assert(ask(u,{action="seen",id="fusion_menu"}).status=="already_seen","still already_seen after the flush")
+ assert(select(2,Repository.objectiveFlush(u))=="nothing","a repeat queues nothing to write")
+ -- a reconnect (release and load) does not make it countable again
+ Repository.release(u) assert(Repository.load(u))
+ assert(ask(u,{action="seen",id="fusion_menu"}).status=="already_seen","after a reconnect: still once")
+ -- rewards: T9 pays the small tutorial amount (20 PROVISIONAL), once, through the normal claim
+ local before=crystals(u)
+ for _,id in {"T1","T2","T3","T4","T5","T6","T7","T8"} do
+  local entry=C.ById[id] ObjectiveServiceM.record(u,entry.event,entry.goal,nil,entry.minValue)
+ end
+ assert(select(2,Repository.objectiveFlush(u))=="flushed")
+ local granted=0
+ for _,id in {"T1","T2","T3","T4","T5","T6","T7","T8","T9"} do
+  local ok,status,outcome=Repository.objectiveClaim(u,id,"e-"..id) assert(ok and status=="claimed",id)
+  granted+=outcome.crystals
+ end
+ assert(granted==160 and crystals(u)==before+160,"tutorial still totals 160 with T9 = 20")
+ assert(ask(u,{action="seen",id="fusion_menu"}).status=="already_seen","after the claim: already_seen")
+ assert(select(2,Repository.objectiveFlush(u))=="nothing","nothing queued after the claim")
+ -- only after the player has a dino
+ local n=user(7431)
+ assert(Repository.load(n))
+ Repository.release(n)
+ data[key(n)].collection.compy.base=0
+ assert(Repository.load(n))
+ local none=ask(n,{action="seen",id="fusion_menu"})
+ assert(none.ok==false and none.reason=="no_dino","no dino yet: refused")
+ assert(select(2,Repository.objectiveFlush(n))=="nothing","a refused report queued nothing")
+ Repository.release(n)
+ data[key(n)].collection.compy.base=1
+ assert(Repository.load(n))
+ assert(ask(n,{action="seen",id="fusion_menu"}).status=="seen","with a dino: accepted")
+ -- rate limit: RequestsPerWindow per RateWindowSeconds, then it opens again
+ local m=user(7432)
+ assert(Repository.load(m))
+ clockNow+=1000 ObjectiveServiceM.setClock(function() return clockNow end)
+ local okCount,limited=0,0
+ for _=1,C.RequestsPerWindow+4 do
+  local answer=objectiveRemote.OnServerInvoke(m,{action="seen",id="fusion_menu"})
+  if answer.ok then okCount+=1 elseif answer.reason=="rate_limited" then limited+=1 end
+ end
+ assert(okCount==C.RequestsPerWindow and limited==4,"seen requests are rate limited: "..okCount.."/"..limited)
+ clockNow+=C.RateWindowSeconds ObjectiveServiceM.setClock(function() return clockNow end)
+ assert(objectiveRemote.OnServerInvoke(m,{action="seen",id="fusion_menu"}).ok==true,"window passed: allowed again")
+ assert(select(2,Repository.objectiveFlush(m))=="flushed" and stored(m).tutorial.progress.T9==1,"a spamming client still counts T9 once")
+ -- the flag turned off at runtime: the server ignores it again
+ GameConfig.ObjectivesEnabled=false
+ local off=objectiveRemote.OnServerInvoke(user(7433),{action="seen",id="fusion_menu"})
+ assert(off.ok==false and off.reason=="disabled","flag off: ignored")
+ GameConfig.ObjectivesEnabled=true
+ print("OB2 passed: T9 completes on one seen request and only once (also after a reconnect and a claim), forged ids and shapes refused, no dino refused, rate limited, a fusion use alone no longer completes T9, flag off ignored")
 end
 '''
 
