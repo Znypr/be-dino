@@ -142,6 +142,7 @@ jobs:
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
+          python tools/verify_potion_purchase.py --runner /tmp/luau/luau
           python tools/verify_ui_format.py --runner /tmp/luau/luau
           python tools/verify_weather.py --runner /tmp/luau/luau
           python tools/verify_env_polish.py --runner /tmp/luau/luau
