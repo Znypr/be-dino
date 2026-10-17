@@ -132,7 +132,7 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 ### 8.1 Any 3D asset or prop
 1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
-3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). No numeric scale table exists yet (BD-407, built as BD-471).
+3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
@@ -140,6 +140,70 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live particles, 12 players + 5 NPCs.
 9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled).
 10. Registry line in [77](77-asset-registry.md); no invented asset IDs.
+### 8.1.1 Scale ladder table (BD-407, CODE numbers)
+Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Not Studio evidence:** 19 of 22 species heights are ESTIMATES until the Studio bounding-box measurement in BD-471 replaces them. A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
+<!-- scale-ladder:begin -->
+All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
+
+**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED for three species and an ESTIMATE for the other 19 until BD-471 measures them in Studio).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).
+
+| Species | Model scale | Height at 1 | Source | run x1.52 | mid x2 | long x3 | max x4 | bigMax x4.8 |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| compy | 2.2 | 6.6 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| triceratops | 3 | 8.5 | ESTIMATE | 12.9 | 17.0 | 25.5 | 34.0 | 40.8 |
+| tyrannosaurus | 3.66 | 10.3 | MEASURED | 15.7 | 20.6 | 30.9 | 41.2 | 49.4 |
+| raptor | 2.1 | 6.0 | ESTIMATE | 9.1 | 12.0 | 18.0 | 24.0 | 28.8 |
+| stegosaurus | 2.64 | 7.5 | ESTIMATE | 11.4 | 15.0 | 22.5 | 30.0 | 36.0 |
+| ankylosaurus | 2.66 | 7.6 | ESTIMATE | 11.6 | 15.2 | 22.8 | 30.4 | 36.5 |
+| archaeopteryx | 1.76 | 5.0 | ESTIMATE | 7.6 | 10.0 | 15.0 | 20.0 | 24.0 |
+| baryonyx | 2.42 | 6.9 | ESTIMATE | 10.5 | 13.8 | 20.7 | 27.6 | 33.1 |
+| brachiosaurus | 3.87 | 11.0 | ESTIMATE | 16.7 | 22.0 | 33.0 | 44.0 | 52.8 |
+| dimorphodon | 1.9 | 5.4 | ESTIMATE | 8.2 | 10.8 | 16.2 | 21.6 | 25.9 |
+| elasmosaurus | 2.66 | 7.6 | ESTIMATE | 11.6 | 15.2 | 22.8 | 30.4 | 36.5 |
+| gallimimus | 2.9 | 4.9 | MEASURED | 7.4 | 9.8 | 14.7 | 19.6 | 23.5 |
+| ichthyosaurus | 2.3 | 6.5 | ESTIMATE | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
+| microraptor | 1.7 | 4.8 | ESTIMATE | 7.3 | 9.6 | 14.4 | 19.2 | 23.0 |
+| mosasaurus | 3.22 | 9.1 | ESTIMATE | 13.8 | 18.2 | 27.3 | 36.4 | 43.7 |
+| pachycephalosaurus | 1.98 | 5.6 | ESTIMATE | 8.5 | 11.2 | 16.8 | 22.4 | 26.9 |
+| parasaurolophus | 2.31 | 6.6 | ESTIMATE | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| plesiosaurus | 2.42 | 6.9 | ESTIMATE | 10.5 | 13.8 | 20.7 | 27.6 | 33.1 |
+| pteranodon | 2.31 | 6.6 | ESTIMATE | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| quetzalcoatlus | 2.8 | 8.0 | ESTIMATE | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
+| spinosaurus | 3.51 | 10.0 | ESTIMATE | 15.2 | 20.0 | 30.0 | 40.0 | 48.0 |
+| therizinosaurus | 3.19 | 9.1 | ESTIMATE | 13.8 | 18.2 | 27.3 | 36.4 | 43.7 |
+
+Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Estimate rule: model scale x 2.84.
+
+**World, food and hub (height in studs unless stated).**
+
+| Rung | Size | Where it comes from |
+| --- | --- | --- |
+| Food berry / fruit / egg / amber (largest side) | 0.7 / 1 / 1.3 / 1.5, drawn x0.86 to x1.16 | WIRED: `FoodService.TYPES` |
+| Golden Drumstick (flag off) | 1.9; the drumstick mesh is drawn x1.45, so up to 3.2 | WIRED: `SpecialFoods`, `FoodService` |
+| Food pickup reach | 2.25 | MIRRORED: `Config.FoodPickupRadius` |
+| Egg Nest pad (w x h x d) | 5 x 1 x 5 | WIRED: Arena legacy hub; MIRRORED: `CaveHubLayout.Kinds.nest` |
+| Nest ledge behind the station (w x h x d) | 12 x 12 x 6.4 | MIRRORED: `CaveHubLayout.Kinds.hub_nest_ledge` |
+| Ground cover (grass, flowers) | 1.9 to 4.8 | MIRRORED: kit extent x `BiomePlacement.Scales.groundcover` |
+| Small band plants (ferns, bushes, mushrooms) | 4.2 to 12 | MIRRORED: `BiomePlacement.SmallBand` |
+| Rocks (boulders to 10.6, spires and ledges to the top) | 1.7 to 25.6 | MIRRORED: kit extent x `BiomePlacement.Scales.rock` (0.85 to 1.8) |
+| Ground rocks, Blender (small / medium / mossy; ids empty) | 1.2 / 2.3 / 3.2 | MIRRORED: `WorldGeneratedMeshes.Props` |
+| Landmarks (statue, fossil, arch, altar) | 9.4 to 25.8 | MIRRORED: kit extent x `BiomePlacement.LandmarkScale` 1.4 |
+| Normal trees | 4.7 to 42 | MIRRORED: kit extent 5.24 to 26.22 x `Scales.tree` 0.9 to 1.6 |
+| V3 Blender trees (broadleaf, conifer, palm) | 4.7 to 42 | fitted inside the same kit box (`Arena.generatedProp`), so the same range |
+| Colossal ancient trees | 80 to 140, crown at most 100; ancient mesh 117.59 / 117.29 / 105.03 | MIRRORED: `BiomePlacement.Colossal`, `WorldGeneratedMeshes.Colossal` |
+| Dino door: gate mouth (w x h) | 30 x 20; frame mesh 39.79 x 25.79 x 9.77 | MIRRORED: `CaveHubLayout.get().gate`, `CaveTerrainRules.GateHeight`, `Kinds.cave_gate_frame` |
+| Hub tunnel (width, ceiling, path) | 22, 30, 8 | MIRRORED: `CaveHubLayout.TunnelRadius`, tunnel height, `PathHalf` |
+| Station pad radius | fame 12, fusion 20, gate 15, heart 18, index 20, nests 17, potions 15, settings 10, style 18 | MIRRORED: `CaveHubLayout` stations |
+| Signs (w x h x d): stone / arrow / legacy board | 5.5 x 5.5 x 2 / 5 x 5 x 0.8 / 30 x 7 x 1 | MIRRORED: `CaveHubLayout.Kinds`; the legacy board is WIRED in `Arena` |
+| Station props (w x h x d) | Potion stall 14 x 10 x 7; Forge altar 8 x 5 x 5; Shop counter 8.8 x 7 x 4.5; Lectern 3 x 4 x 3; Wall frame 3.8 x 4.5 x 0.7 | MIRRORED: `CaveHubLayout.Kinds` |
+<!-- scale-ladder:end -->
+Code against docs, found while building the table (the code value is in the table; none of this changes the game):
+- Tree height: docs/139 s3.3 lists 5.0 to 41.9 (seed 1404 placements, truncated); the rule bounds are kit extent x scale, 5.235 x 0.9 = 4.7 and 26.222 x 1.6 = 41.96 (table 4.7 to 42).
+- Rocks: docs/139 s3.3 lists a 20.8 maximum (seed 1404 placements); the rule bound is the spire 14.228 x 1.8 = 25.6. Ground cover: docs/139 lists 1.3 to 4.8; the code gives 1.184 x 1.6 = 1.9 to 4.8.
+- docs/139 s3.3 shrubs 1.1 to 10.2 and giants 33.5 to 99 are the pre-BD-473 layout; the code is the Small band 4.2 to 12 and the colossal band 80 to 140 (docs/139 s17 already says so).
+- Hub dino size: docs/139 s3.1 calls 1x a side effect of the GrowthScore reset; docs/115 (BD-480) makes it a guaranteed rule, which is what the table uses.
+- Dino door: `CaveHubLayout.Kinds.hub_gate_arch` is 24 x 24 x 8.7 and `CaveHubProps` records a final size of 16 x 15.9 x 5.8, but no station places that prop any more; the door is the terrain mouth 30 x 20 (`CaveTerrainRules.GateHeight`) with the `cave_gate_frame` mesh 39.79 x 25.79 x 9.77 (docs/140 gives the opening as 29.2 x 19.6).
+- Only Compy, Gallimimus and Tyrannosaurus heights are Studio-measured (the `LowPolyDinoAssets` comment still mentions the old 1.2 x 3.4 x 4.0 Gallimimus at scale 2.0). The other 19 are ESTIMATES until BD-471.
 ### 8.2 Any UI screen
 Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-copy-and-asset-standards.md); checked on phone landscape (844x390) and desktop; one idea per screen; final art is an asset task, not code drawing; shared `TextStyle`; lead screenshots it before merge.
 ### 8.3 Any FX

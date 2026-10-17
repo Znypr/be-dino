@@ -17,6 +17,7 @@ local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
 local ColossalRules = require(ReplicatedStorage.Shared.ColossalRules)
+local ScaleLadder = require(ReplicatedStorage.Shared.ScaleLadder) -- BD-407: legacy-hub nest and sign sizes live in the one scale ladder
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -436,10 +437,10 @@ function Arena.build()
             if kitMode then kitProp(hub, "world_tree_conifer_m", CFrame.new(x, 6, cz + 15) * CFrame.Angles(0, x, 0), 1.2) else tree(hub,Vector3.new(x,6,cz+15),1.2,x) end
         end
         for i = 1,5 do
-            local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
+            local nest = part(hub,"EggNest",Vector3.new(ScaleLadder.Nest.pad[1], ScaleLadder.Nest.pad[2], ScaleLadder.Nest.pad[3]),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
             nest.Shape = Enum.PartType.Cylinder
         end
-        local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
+        local sign = part(hub,"SanctuarySign",Vector3.new(ScaleLadder.Hub.sign.legacyBoard[1], ScaleLadder.Hub.sign.legacyBoard[2], ScaleLadder.Hub.sign.legacyBoard[3]),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
         local surface = Instance.new("SurfaceGui")
         surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign
         local label = Instance.new("TextLabel")
