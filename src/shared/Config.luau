@@ -39,6 +39,11 @@ return table.freeze({
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
     FoodPickupRadius = 2.25,
+    -- BD-515 (docs/115 MR1): eating happens at the MOUTH (head point + head-size radius, Shared/MouthReach) instead of the dino root. Only applies while
+    -- LowPolyDinos is on (the measured sizes are the low-poly models'). false = the root rule of Build 020: 2.25 + 0.75 per growth scale from the root.
+    FoodPickupAtMouth = true,
+    -- BD-515 (docs/115 MR3): the same head-point rule for the instant "bigger eats smaller" predation. OFF: shipped behaviour (root to root), verified offline only.
+    PredationAtMouth = false,
     FoodTickSeconds = 0.08, -- PROVISIONAL: was 0.15; shorter pickup latency
     FoodSectorCount = 20, -- world v2: 400 clusters of 8 over a 2.56x larger island (was 256)
     FoodClusterItems = 9, -- BD-207/BD-167 density v3 (owner 2026-10-16 "more food"): 9 per cluster = 3,600 pickups (was 8 = 3,200, 6 before BD-387); fits the 9,150 join cap, phone culling keeps the visible part budget (docs/107)

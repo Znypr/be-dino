@@ -8,6 +8,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
+local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: eating happens at the mouth (the same pure function a client preview can use)
 local ScaleLadder = require(ReplicatedStorage.Shared.ScaleLadder) -- BD-407: food sizes in studs live in the one scale ladder
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local AdminMutationScale = require(ReplicatedStorage.Shared.AdminMutationScale) -- BD-237: per-player admin Mutation chance (docs/115)
@@ -248,8 +249,13 @@ function FoodService.start(dinosaur,repository)
                     if plausible then
                         -- BD-354: per-candidate values hoisted out of the food loop (was 2,400 foods x players GetAttribute calls per tick).
                         local scale = character:GetAttribute("VisualScale") or 1
-                        local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
-                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, position = position, radius = radius, radiusSq = radius * radius})
+                        -- BD-515 (docs/115 MR1): the pickup point is the HEAD point (root + forward x head offset of the species), the radius follows the
+                        -- head size. Only for the low-poly dinos (the sizes in ScaleLadder are theirs); the legacy visual keeps the root and 2.25 + 0.75 per scale.
+                        local speciesId = if Config.FoodPickupAtMouth == true and Config.LowPolyDinos == true then character:GetAttribute("SpeciesId") else nil
+                        local look = root.CFrame.LookVector
+                        local headX, headZ = MouthReach.point(position.X, position.Z, look.X, look.Z, speciesId, scale)
+                        local radius = MouthReach.radius(speciesId, scale)
+                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, position = position, headX = headX, headZ = headZ, radius = radius, radiusSq = radius * radius})
                     end
                 else previous[player] = nil end
             end
@@ -267,13 +273,15 @@ function FoodService.start(dinosaur,repository)
             local claims = {}
             for _, candidate in candidates do
                 local position = candidate.position
-                PointGrid.query(grid, position.X, position.Z, candidate.radius, function(food)
+                local headX, headZ = candidate.headX, candidate.headZ
+                local headPoint = Vector3.new(headX, position.Y, headZ) -- BD-515: reach and line of sight are measured from the mouth
+                PointGrid.query(grid, headX, headZ, candidate.radius, function(food)
                     if food.hidden then return end
                     local foodPosition = food.part.Position
-                    local dx, dz = foodPosition.X - position.X, foodPosition.Z - position.Z
-                    if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - position.Y) < 6 then
+                    local dx, dz = foodPosition.X - headX, foodPosition.Z - headZ
+                    if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - position.Y) < MouthReach.VerticalLimit then
                         local horizontal = math.sqrt(dx * dx + dz * dz)
-                        local blocked = workspace:Raycast(position, foodPosition - position, pickupParams)
+                        local blocked = workspace:Raycast(headPoint, foodPosition - headPoint, pickupParams)
                         local held = claims[food]
                         if not blocked and (not held or horizontal < held.distance or (horizontal == held.distance and candidate.player.UserId < held.candidate.player.UserId)) then
                             claims[food] = {distance = horizontal, candidate = candidate}

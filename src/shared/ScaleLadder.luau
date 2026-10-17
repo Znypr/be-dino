@@ -21,6 +21,10 @@ ScaleLadder.Unit = "studs"
 -- (BD-471 method, re-measured after the BD-232 scale change; docs/evidence/2026-10-17-species-sizes/). That box IS the in-game spawn size:
 -- the clone bakes `scale` into the parts and DinosaurVisual.render only multiplies by the growth scale (1 at spawn, HubScaleRules 1 in the hub).
 -- measured = true for ALL 22 species. measured = false would mean ESTIMATE = scale x heightPerScaleEstimate (do not use for a new species).
+-- BD-515 (docs/115 MR1-MR3): snout = how far the snout tip is ahead of the model centre (the root) at spawn, and headLength = the length of the
+-- `head` MeshPart along the body, both from the same Studio measurement (the part's bounding box in the model frame, 2 decimals). snout equals
+-- length / 2 for all species but Microraptor (its template wings reach further forward than the head). The generated head parts include neck,
+-- crest or frill, so Shared/MouthReach clamps the head to 20% to 25% of the body length. The eating point and radius come from these two numbers.
 -- The legacy (non-low-poly) Compy is about 5.5 studs (docs/68); only the low-poly rows are in this table.
 ScaleLadder.HeightPerScaleEstimate = 2.84
 ScaleLadder.Dino = {
@@ -40,28 +44,28 @@ ScaleLadder.Dino = {
     },
     order = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"}, -- Config.SpeciesOrder
     species = {
-        compy = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.69, measured = true},
-        triceratops = {scale = 2.86, tier = 3, basis = "height", target = 7.99, width = 5.79, height = 8.00, length = 8.58, measured = true},
-        tyrannosaurus = {scale = 3.47, tier = 5, basis = "height", target = 9.66, width = 5.31, height = 9.67, length = 10.41, measured = true},
-        raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, measured = true},
-        stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, measured = true},
-        ankylosaurus = {scale = 3.6, tier = 4, basis = "height", target = 8.78, width = 7.78, height = 8.78, length = 14.40, measured = true},
-        archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, measured = true},
-        baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, measured = true},
-        brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, measured = true},
-        dimorphodon = {scale = 1.71, tier = 1, basis = "bulk", target = 5.55, width = 5.76, height = 5.13, length = 5.73, measured = true},
-        elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, measured = true},
-        gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, measured = true},
-        ichthyosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 3.78, height = 4.31, length = 8.61, measured = true},
-        microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, measured = true},
-        mosasaurus = {scale = 3.47, tier = 5, basis = "length", target = 10.41, width = 3.37, height = 3.55, length = 10.41, measured = true},
-        pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, measured = true},
-        parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, measured = true},
-        plesiosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 4.81, height = 7.99, length = 8.61, measured = true},
-        pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, measured = true},
-        quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, measured = true},
-        spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, measured = true},
-        therizinosaurus = {scale = 2.56, tier = 4, basis = "height", target = 8.78, width = 4.91, height = 8.78, length = 10.24, measured = true},
+        compy = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.69, snout = 3.84, headLength = 1.65, measured = true},
+        triceratops = {scale = 2.86, tier = 3, basis = "height", target = 7.99, width = 5.79, height = 8.00, length = 8.58, snout = 4.29, headLength = 4.76, measured = true},
+        tyrannosaurus = {scale = 3.47, tier = 5, basis = "height", target = 9.66, width = 5.31, height = 9.67, length = 10.41, snout = 5.20, headLength = 5.13, measured = true},
+        raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, snout = 3.87, headLength = 2.80, measured = true},
+        stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, snout = 5.85, headLength = 2.55, measured = true},
+        ankylosaurus = {scale = 3.6, tier = 4, basis = "height", target = 8.78, width = 7.78, height = 8.78, length = 14.40, snout = 7.20, headLength = 5.17, measured = true},
+        archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, snout = 2.96, headLength = 1.34, measured = true},
+        baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, snout = 4.67, headLength = 3.82, measured = true},
+        brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, snout = 4.37, headLength = 3.52, measured = true},
+        dimorphodon = {scale = 1.71, tier = 1, basis = "bulk", target = 5.55, width = 5.76, height = 5.13, length = 5.73, snout = 2.86, headLength = 3.06, measured = true},
+        elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, snout = 5.37, headLength = 4.38, measured = true},
+        gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, snout = 3.89, headLength = 2.52, measured = true},
+        ichthyosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 3.78, height = 4.31, length = 8.61, snout = 4.31, headLength = 3.95, measured = true},
+        microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, snout = 2.31, headLength = 0.32, measured = true},
+        mosasaurus = {scale = 3.47, tier = 5, basis = "length", target = 10.41, width = 3.37, height = 3.55, length = 10.41, snout = 5.21, headLength = 2.69, measured = true},
+        pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, snout = 4.21, headLength = 3.54, measured = true},
+        parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, snout = 4.54, headLength = 3.94, measured = true},
+        plesiosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 4.81, height = 7.99, length = 8.61, snout = 4.30, headLength = 4.04, measured = true},
+        pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, snout = 3.45, headLength = 2.29, measured = true},
+        quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, snout = 4.02, headLength = 3.41, measured = true},
+        spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, snout = 6.03, headLength = 4.54, measured = true},
+        therizinosaurus = {scale = 2.56, tier = 4, basis = "height", target = 8.78, width = 4.91, height = 8.78, length = 10.24, snout = 5.12, headLength = 2.75, measured = true},
     },
 }
 

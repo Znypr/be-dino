@@ -132,6 +132,7 @@ jobs:
           # world and art
           python tools/verify_camera_occlusion.py --runner /tmp/luau/luau
           python tools/verify_camera_framing.py --runner /tmp/luau/luau
+          python tools/verify_mouth_reach.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_budget.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_patterns.py --runner /tmp/luau/luau
           python tools/verify_pattern_atlas.py --runner /tmp/luau/luau
