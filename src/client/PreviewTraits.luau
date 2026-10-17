@@ -6,6 +6,7 @@ local MutationLook = require(game:GetService("ReplicatedStorage").Shared.Mutatio
 local FxUi = require(game:GetService("ReplicatedStorage").Shared.FxUi)
 local MutationBadge = require(script.Parent.MutationBadge)
 local Preview = require(game:GetService("ReplicatedStorage").Shared.DinosaurPreview)
+local LowPoly = require(game:GetService("ReplicatedStorage").Shared.LowPolyDinos)
 local PreviewTraits = {}
 -- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
 -- gentle rim; dinosaur models also get the soft body tint from MutationLook. Eggs get the colour hint only (the shell
@@ -14,7 +15,13 @@ function PreviewTraits.mutation(view: ViewportFrame, mutationId: any, isEgg: boo
     local look = MutationLook.get(mutationId)
     local old = view:FindFirstChild("MutationBadge")
     if old then old:Destroy() end
-    if not isEgg then MutationLook.apply(view, if look then look.id else nil) end
+    if not isEgg then
+        MutationLook.apply(view, if look then look.id else nil)
+        -- BD-518: a low-poly body is a baked texture and ignores Part.Color, so the tint is baked in (LowPolyTexture) instead
+        for _, item in view:GetDescendants() do
+            if item:IsA("Model") and item:GetAttribute("LowPoly") == true and item:GetAttribute("LPTier") == nil then LowPoly.setMutation(item, if look then look.id else nil) end
+        end
+    end
     if not look then return end
     -- BD-190: once the mutation icon is uploaded and bound (AssetSlots.Images.mutation_<id>) it replaces the plain colour dot (the icon
     -- carries its own light rim, so no stroke); 30 px so it stays readable at phone size. Empty slot = the dot below, unchanged.

@@ -10,6 +10,7 @@ local Texture = require(script.Parent.LowPolyTexture)
 local Pose = require(script.Parent.LowPolyPose)
 local Tier = require(script.Parent.LowPolyTier)
 local Lod = require(script.Parent.EffectsLod)
+local MutationLook = require(script.Parent.MutationLook)
 local Recolor = require(script.Parent.LowPolyRecolor)
 local Ready = require(script.Parent.LowPolyReady)
 local LowPoly = {}
@@ -228,6 +229,20 @@ local function shells(container: Instance, entry: any?)
         end
     end
 end
+-- BD-518: the event mutation (ember, frost ...) rides on the container attribute LPMutation and is BAKED into the body-colour pixels
+-- (MeshPart.Color is ignored on a baked texture, so MutationLook.apply alone shows nothing on a low-poly dino). Never on fused tiers.
+local function mutationOf(container: Instance, tier: any): string?
+    local id = container:GetAttribute("LPMutation")
+    if tier or type(id) ~= "string" or id == "" or not MutationLook.get(id) then return nil end
+    return id
+end
+function LowPoly.setMutation(container: Instance, id: any)
+    local want = if type(id) == "string" and id ~= "" and MutationLook.get(id) then id else nil
+    if container:GetAttribute("LPMutation") == want then return end
+    container:SetAttribute("LPMutation", want)
+    container:SetAttribute("LPLookKey", nil)
+    LowPoly.tint(container, nil)
+end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
     local entry = Tier.get(container:GetAttribute("LPTier"))
@@ -239,7 +254,8 @@ function LowPoly.tint(container: Instance, genes: any)
         local patternId = if genes.patternId and table.find(Genetics.Patterns, genes.patternId) then genes.patternId else "01_blank"
         local primary = if patternId == "01_blank" then Genetics.tint(genes) else Color3.fromRGB(a[1], a[2], a[3])
         spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
-            primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = ""}
+            primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = "",
+            mutation = mutationOf(container, entry)}
     elseif not entry then shells(container, nil) return end
     if not spec then -- no genes (Index stage tiles, fusion previews): a fused tier still bakes over the species' own colour, so the tier reads (BD-326)
         local own = Color3.new(1, 1, 1)

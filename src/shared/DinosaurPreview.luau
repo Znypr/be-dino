@@ -102,6 +102,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         model.Parent=world
         local fallback=viewport:FindFirstChild("DinoImageFallback")
         if fallback then fallback:Destroy() viewport:SetAttribute("PreviewFallback",nil) end
+        if lowPoly and not fused and gold~="silhouette" and traits then model:SetAttribute("LPMutation",traits.mutationId) end -- BD-518: Part.Color cannot tint a baked texture; the bake reads this
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
         elseif traits and traits.genes then Appearance.apply(model,traits.genes)

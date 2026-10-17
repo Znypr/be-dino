@@ -5,6 +5,16 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags)
+local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: same head-point rule as the food pickup, behind Config.PredationAtMouth (off)
+-- BD-381 rule: the LowPolyDinos flag is read only through LowPoly.enabled (verify_lowpoly_views); a test harness without it falls back to the root rule
+local lowPolyModule: any = false
+local function lowPolyOn(): boolean
+    if lowPolyModule == false then
+        local ok, lp = pcall(function() local shared: any = ReplicatedStorage.Shared return require(shared.LowPolyDinos) end)
+        lowPolyModule = if ok and type(lp) == "table" and type(lp.enabled) == "function" then lp else nil
+    end
+    return lowPolyModule ~= nil and lowPolyModule.enabled() == true
+end
 
 local CooldownMemory = require(script.Parent.CooldownMemory)
 
@@ -72,6 +82,9 @@ function PredationService.start(runLifecycle, dinosaur)
                             root = root,
                             score = numberAttribute(character, "GrowthScore", 0),
                             scale = numberAttribute(character, "VisualScale", 1),
+                            -- BD-515 (docs/115 MR3): the mouth is where a bite lands; only read while PredationAtMouth and LowPolyDinos are on
+                            speciesId = if Config.PredationAtMouth == true and lowPolyOn() then character:GetAttribute("SpeciesId") else nil,
+                            look = root.CFrame.LookVector,
                         })
                     end
                 else
@@ -99,6 +112,11 @@ function PredationService.start(runLifecycle, dinosaur)
 
                     local delta = victim.root.Position - attacker.root.Position
                     local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
+                    if attacker.speciesId ~= nil then
+                        -- BD-515: measured from the attacker's head point (root + forward x head offset); the radius is unchanged
+                        local headX, headZ = MouthReach.point(attacker.root.Position.X, attacker.root.Position.Z, attacker.look.X, attacker.look.Z, attacker.speciesId, attacker.scale, true)
+                        horizontal = Vector3.new(victim.root.Position.X - headX, 0, victim.root.Position.Z - headZ).Magnitude
+                    end
                     local radius = math.min(Config.PredationMaxRadius,
                         Config.PredationBaseRadius + math.max(0, attacker.scale - 1) * 1.25)
                     if horizontal > radius or math.abs(delta.Y) > Config.PredationVerticalLimit then continue end

@@ -17,6 +17,7 @@ local AssetService = game:GetService("AssetService")
 local Recolor = require(script.Parent.LowPolyRecolor)
 local Pattern = require(script.Parent.LowPolyPattern)
 local Tier = require(script.Parent.LowPolyTier)
+local Look = require(script.Parent.MutationLook)
 local Cache = require(script.Parent.PatternAtlasCache)
 local Texture = {}
 Texture.BigSize = Pattern.Size -- body and head: 256 px (eyes, facets)
@@ -35,7 +36,7 @@ local reading = 0
 -- Geometry of the TEMPLATE part (unscaled, unposed) so the 3D pattern reads its model-space position: meshId, cframe relative to the
 -- model centre, scale = part.Size / part.MeshSize, norm = 1 / longest model side.
 export type Geom = {meshId: string, cframe: CFrame, scale: Vector3, norm: number}
-export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string, own: boolean?}
+export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string, own: boolean?, mutation: string?}
 -- Test hook (Studio only, BD-309): workspace attribute LowPolyDenyEditable = "mesh" | "image" | "all" simulates a server that may
 -- not open the owner's assets (CreateEditableMeshAsync / CreateEditableImageAsync return nil), so the fallbacks can be exercised
 -- without a second account: "mesh" -> UV-space (jigsaw) patterns, "image" / "all" -> plain tint.
@@ -158,7 +159,7 @@ end
 -- Stable cache key: everything that changes the pixels. Pure (tested): same spec -> same key, any change -> a different key.
 function Texture.key(textureId: string, spec: Spec): string
     return string.format("%s|%s|%s|%s|%s|%d|%s", textureId, spec.patternId, q(spec.primary), q(spec.secondary), if spec.same then "s" else "d",
-        math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), (spec.tier or "base") .. (if spec.own then "|own" else ""))
+        math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), (spec.tier or "base") .. (if spec.own then "|own" else "") .. (if spec.mutation then "|m:" .. spec.mutation else ""))
 end
 -- Pure pixel pass (shared with the verifier through LowPolyRecolor/LowPolyPattern/LowPolyTier): writes the baked RGBA into out.
 -- size defaults to Pattern.Size.
@@ -172,6 +173,7 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
     end
     if spec.own then ar, ag, ab, br, bg, bb = base[1], base[2], base[3], base[1], base[2], base[3] end -- no genes: the tier tints the species' own colour
     local tier = Tier.get(spec.tier)
+    local mutationId = if tier then nil else spec.mutation -- fused tiers never get a mutation tint (docs/46, MutationLook)
     for y = 0, size - 1 do
         if onRow then onRow(y) end
         for x = 0, size - 1 do
@@ -192,6 +194,7 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
             elseif weights[i + 1] > 0 then
                 local m = mask[i + 1]
                 local tr, tg, tb = ar + (br - ar) * m, ag + (bg - ag) * m, ab + (bb - ab) * m
+                if mutationId then tr, tg, tb = Look.pull(tr, tg, tb, mutationId) end -- BD-518: Part.Color cannot tint a baked texture, so the event mutation is baked in
                 r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
             end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
