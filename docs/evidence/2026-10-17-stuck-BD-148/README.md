@@ -17,7 +17,7 @@ Run: Food worth x7, 172 s, 2000 food, 48 eggs, 2 nests, 93 crystals (BD-TELEMETR
 
 Not covered: 844x390 (phone-size) repeat of steps 1-3, a second player, a real save.
 
-Anomalies (new rows): (a) with only Common on AUTO, a plain Common Gallimimus (no BIG, Shiny, mutation, Rainbow/Astra) was still shown as "Egg 8 of 11" while eggs before it were skipped: BD-523. (b) the first hatch of a session once drew the egg at the top-left of the screen instead of the panel centre: BD-519 (image in the BD-170 folder). (c) the "Tell us!" button covers the EGGS plate bottom-left once a run has ended (06, 07): BD-522.
+Anomalies (new rows): (a) with only Common on AUTO, a plain Common Gallimimus (no BIG, Shiny, mutation, Rainbow/Astra) was still shown as "Egg 8 of 11" while eggs before it were skipped: BD-525. (b) the first hatch of a session once drew the egg at the top-left of the screen instead of the panel centre: BD-519 (image in the BD-170 folder). (c) the "Tell us!" button covers the EGGS plate bottom-left once a run has ended (06, 07): BD-524.
 
 Other rows seen in the same session (images here):
 - BD-440: the first screen has no goal line (02, 16); the goal line ("Level 2: 60/300 XP", later "Gold: 4/6 Raptor") appears after the first run, not mid-run (06, 07).
