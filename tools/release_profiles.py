@@ -112,6 +112,7 @@ COMMON_RULES = [
     _flag_off("GiftingEnabled", "BD-451/BD-453 Robux gifting (docs/134 s12); enabling needs the owner's explicit go-ahead and the go-live review"),
     _flag_off("AdminGiftsEnabled", "BD-451/BD-452 free admin gifts (docs/134); owner flips it for the first live test of the gift inbox"),
     _flag_off("GiftClaimEnabled", "BD-451 gift claim path (Gifts DataStore inbox -> profile); required by both gift senders, owner go-ahead only"),
+    _flag_off("DinoSkinsEnabled", "BD-456 dino skins data model + equip (docs/137); no species has a skin model yet and the owner decides when skins go on"),
     Rule("ProfileDataStoreName", "check", predicate=_store_name, reason="DataStore name limits"),
     Rule("PlaytestUniverseId", "check", predicate=_id_or_zero, reason="BD-004 record"),
     Rule("PlaytestPlaceId", "check", predicate=_id_or_zero, reason="BD-004 record"),

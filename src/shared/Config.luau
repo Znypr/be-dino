@@ -295,6 +295,11 @@ return table.freeze({
     GiftingEnabled = false,
     AdminGiftsEnabled = false,
     GiftClaimEnabled = false,
+    -- BD-456 dino skins data model + equip (docs/137 s7, s11, s15). false (pinned OFF in the default AND playtest release profiles,
+    -- tools/release_profiles.py) = no SkinAction remote, no profile read or write for skins, nothing created. On: the account
+    -- default skin and a per-dino skin can be set from the entitlements in profile.ownedSkins (shared with gifting). No species has a skin model yet
+    -- (SkinCatalog.Models are empty), so only the Base look can be equipped until BD-455/BD-458 add models. No Robux, no UI (BD-457/BD-459).
+    DinoSkinsEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
     IdentityPersistentEnabled = false,
