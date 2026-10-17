@@ -2,6 +2,8 @@
 
 > **Fastest path for the owner:** [136 quick prompts](136-owner-art-and-sound-quick-prompts.md) has a ready-to-paste ChatGPT or Blender prompt, exact size and layout, a "good looks like" line and the slot name to send back for every pending item below, in priority batches, plus Creator Store search words for each sound. It supersedes the prompt text of 109 where they differ.
 
+> **Upload size (TX1 narrowed 2026-10-17, audit C-41):** the 512 px max (256 px when it reads the same) is for **UI icons, badges and shop/egg art** only. Flipbook sheets (4 x 4 cells of 256 px = 1024 px) and ribbons (2048 x 512) keep the [109](109-owner-art-prompt-pack.md) spec; see the rule in [77](77-asset-registry.md).
+
 ## How to bind your uploads
 
 1. Save the ids in a text file, one per line, `name=rbxassetid://N` (names are in the "Bind in" column below; `python tools/bind_assets.py --list` shows them all), for example `ids.txt`:

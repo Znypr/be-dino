@@ -4,7 +4,7 @@ It runs the REAL pure modules (CombatConfig, ScaleLadder, HitSize) in Luau and f
   1. DEFAULT: CombatConfig.HitZoneRule is not "circle", or under the default rule HitSize.zone differs from today's (HitSize.radius, 0)
      for any of the 22 species at growth 1, 2, 3, 4 and 4.8 (flag-off identity: the proposal changes nothing until the owner flips it);
      an unknown rule name must read as "circle";
-  2. CAPSULE FORMULA: radius = clamp(width / 2 x scale, 1, 20), halfSpan = clamp((length - width) / 2 x scale, 0, 24) from the
+  2. CAPSULE FORMULA: radius = clamp(width / 2 x scale, 1, 20), halfSpan = clamp((length - width) / 2 x scale, 0, 32) from the
      ScaleLadder boxes (also compared to this file's own Python copy of the MEASURED boxes of verify_scale_ladder);
   3. NOT WIDER THAN THE BODY: the zone's full width 2 x radius is at most the body's real width x scale + 1 stud, and its full length
      is at most the body's real longest side x scale + 1 stud, for every species at every scale 1 to 4.8 in steps of 0.1;
@@ -33,7 +33,7 @@ from verify_scale_ladder import MEASURED  # noqa: E402  (width, height, length a
 
 TABLE_SCALES = (1, 2, 3, 4, 4.8)
 MARGIN = 1.0  # studs a zone may exceed the real body (the bite range already adds BiteRangeSlack 1.5 on top)
-RADIUS_MAX, SPAN_MAX, CIRCLE_MAX = 20.0, 24.0, 14.0
+RADIUS_MAX, SPAN_MAX, CIRCLE_MAX = 20.0, 32.0, 14.0
 problems: list = []
 
 
@@ -274,7 +274,7 @@ def static_checks():
     check(re.search(r"^\s*Enabled = false,", cfg, re.M) is not None, "CombatConfig.Enabled must stay false")
     check(re.search(r"^\s*CombatEnabled = false,", read("shared/Config.luau"), re.M) is not None, "Config.CombatEnabled must stay false (BD-252 gate)")
     check(f"HitCapsuleRadiusMax = {int(RADIUS_MAX)}," in cfg and f"HitCapsuleSpanMax = {int(SPAN_MAX)}," in cfg,
-          "the capsule caps in CombatConfig differ from this verifier (20 / 24)")
+          "the capsule caps in CombatConfig differ from this verifier (20 / 32)")
     hs = code("shared/HitSize.luau")
     check(re.search(r"\b(game|workspace|Instance|Config|GetService|GetAttribute)\b", hs) is None, "HitSize must be pure numbers (no Instances, no Config)")
     check(set(re.findall(r"require\(script\.Parent\.(\w+)\)", hs)) == {"ScaleLadder", "CombatConfig"}, "HitSize requires only ScaleLadder and CombatConfig")
