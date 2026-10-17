@@ -1,8 +1,9 @@
 --!strict
 -- BD-073 (docs/66 section 7): server surface of the mini objectives. Behind Config.ObjectivesEnabled (false in every committed
 -- build): while it is false start() returns at once, the ObjectiveAction remote does not exist, record() is a no-op and no
--- profile is ever read or written for objectives. No UI (BD-075) and no gameplay hooks (BD-074) yet: BD-074 will call
--- ObjectiveService.record(player, kind, amount, eventId, value) from the server events that already exist.
+-- profile is ever read or written for objectives. No UI (BD-075). BD-074: the server code paths that commit a gameplay fact call
+-- ObjectiveService.record(player, kind, amount, eventId, value) (or one of the recorders below) AFTER the commit, each behind the
+-- same one-boolean flag check; the full objective-to-hook table is docs/66 section 18, enforced by tools/verify_objective_hooks.py.
 --
 -- ObjectiveAction (RemoteFunction in ReplicatedStorage.BeDinoRemotes), request shapes (anything else is "bad_request"):
 --   {action = "view"}                         -> {ok = true, view = {...}}   (read-only)
@@ -93,10 +94,64 @@ end
 
 -- BD-074 hook API. A NO-OP (returns false) while the flag is off or the service was not started; otherwise queues the event in
 -- server memory (committed in batches by the repository). kind must be an ObjectiveConfig.EventKinds entry. eventId (e.g.
--- "egg:<outcomeId>", "run:<runId>") makes a replay count once. value is used by threshold objectives (level_reached).
+-- "run:<runId>") makes a replay count once. value is used by threshold objectives (level_reached). The ONE boolean check comes
+-- first: nothing is allocated and no profile is touched while Config.ObjectivesEnabled is false. Call sites guard with the same
+-- check, so with the flag off they do not even evaluate their arguments or require this module (tools/verify_objective_hooks.py).
 function ObjectiveService.record(player: any, kind: string, amount: number?, eventId: string?, value: number?): boolean
-    if not repository or Config.ObjectivesEnabled ~= true then return false end
+    if Config.ObjectivesEnabled ~= true or not repository then return false end
     return repository.objectiveRecord(player, {kind = kind, amount = amount, id = eventId, value = value})
+end
+
+-- Derived recorders for the facts that carry several objective events at once. Same rule as record(): flag off = return at once.
+-- Called only AFTER the transaction that committed the fact (ProfileRepository), never from client input.
+
+-- Species tier from which "Rare or better" (D6) counts: Config.SpeciesRarityNames = Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5.
+ObjectiveService.RareTier = 3
+
+-- A settled run (ProfileRepository.commitRunSettlement, after adopt). `eggs` are the run's committed eggs ({eventId = ...}); an egg
+-- caught during a weather event carries its weather id, a clear-weather egg "clear" (S5 "Catch an event egg"). `level` is the
+-- account level read from the committed profile (T7 uses a threshold). runSeconds rides along as the run length for later gating.
+-- All three events are id-keyed or threshold-merged, so a replayed settlement counts once.
+function ObjectiveService.recordRunSettled(player: any, runId: string, runSeconds: number?, eggs: {any}?, level: number?)
+    if Config.ObjectivesEnabled ~= true then return end
+    local length = if type(runSeconds) == "number" and runSeconds == runSeconds and runSeconds >= 0 and runSeconds < 1e9 then runSeconds else nil -- a non-finite length must not drop the event
+    ObjectiveService.record(player, "run_end", 1, "run:" .. runId, length)
+    local eventEggs = 0
+    if eggs then
+        for _, egg in eggs do
+            if egg.eventId ~= nil and egg.eventId ~= "clear" then eventEggs += 1 end
+        end
+    end
+    if eventEggs > 0 then ObjectiveService.record(player, "event_egg_caught", eventEggs, "events:" .. runId) end
+    if level ~= nil then ObjectiveService.record(player, "level_reached", 1, nil, level) end
+end
+
+-- Eggs opened by ONE committed claim (the head egg plus the rest of its hatch page: ProfileRepository.claimChest, after adopt).
+-- Batched on purpose: one event per kind per claim, never one per egg, so a 120-egg run cannot overflow the pending queue.
+-- Every opened egg counts as hatched, a failed (Cracked) one too; "Rare or better" needs a hatched dino of species tier >= RareTier.
+-- `freshSpecies` = set of species ids the player did not own before this claim (computed inside the transaction).
+function ObjectiveService.recordHatched(player: any, outcomes: {any}, freshSpecies: {[string]: boolean}?)
+    if Config.ObjectivesEnabled ~= true then return end
+    local opened, rare, fresh = 0, 0, 0
+    for _, outcome in outcomes do
+        opened += 1
+        if outcome.failed ~= true and (Config.SpeciesRarities[outcome.speciesId] or 0) >= ObjectiveService.RareTier then rare += 1 end
+    end
+    if freshSpecies then
+        for _ in freshSpecies do fresh += 1 end
+    end
+    if opened > 0 then ObjectiveService.record(player, "egg_hatched", opened) end
+    if rare > 0 then ObjectiveService.record(player, "rare_hatched", rare) end
+    if fresh > 0 then ObjectiveService.record(player, "species_new", fresh) end
+end
+
+-- A fusion the server verified: a quote for a full, owned donor set (FusionService) or a committed fusion (ProfileRepository).
+-- The server cannot see a menu being opened (only the player's client can), so T9 "Open the Fusion menu" and D5 "Add a dino toward
+-- a fusion step" both count on this server-verified use of the menu (docs/66 section 18).
+function ObjectiveService.recordFusionUse(player: any)
+    if Config.ObjectivesEnabled ~= true then return end
+    ObjectiveService.record(player, "fusion_menu_opened", 1)
+    ObjectiveService.record(player, "fusion_step_added", 1)
 end
 
 -- Test hook: deterministic clock for the rate limiter.

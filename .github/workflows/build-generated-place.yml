@@ -67,6 +67,7 @@ jobs:
           python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/verify_goals.py --runner /tmp/luau/luau
           python tools/verify_objectives.py --runner /tmp/luau/luau
+          python tools/verify_objective_hooks.py --runner /tmp/luau/luau
           python tools/verify_qa_kit.py --runner /tmp/luau/luau
           python tools/verify_demo_director.py --runner /tmp/luau/luau
           python tools/demo/record.py --selftest
