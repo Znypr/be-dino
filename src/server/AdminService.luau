@@ -16,11 +16,15 @@ local values: {[string]: number} = {}
 local admins: {[Player]: boolean} = {}
 local lastRequest: {[Player]: number} = {}
 
-local function publish(key: string, value: number)
+-- `caller` is the authorized admin who made the change. Their Mutation chance applies to their own catches only (BD-237, docs/115);
+-- a publish without a caller (server start, reset) puts every admin back to x1.
+local function publish(key: string, value: number, caller: Player?)
     values[key] = value
     workspace:SetAttribute("Admin_" .. key, value)
     if key == "foodMultiplier" then FoodService.setAdminFoodMultiplier(value) end
-    if key == "mutationChanceMultiplier" then FoodService.setAdminMutationMultiplier(value) end
+    if key == "mutationChanceMultiplier" then
+        if caller then FoodService.setAdminMutationMultiplier(caller, value) else FoodService.clearAllAdminMutationMultipliers() end
+    end
     if key == "gravity" then workspace.Gravity = value end
     if key == "jumpPower" then
         -- Server-validated range (Rules.sanitize); applies to live characters, Dinosaur.attach reads the attribute for new ones.
@@ -60,7 +64,7 @@ local function handle(player: Player, action: any, a: any, b: any): (boolean, st
     if action == "set" then
         local value = Rules.sanitize(a, b)
         if value == nil then return false, "bad_value" end
-        publish(a, value)
+        publish(a, value, player)
         print(string.format("[Be Dino admin] %s set %s = %s", player.Name, a, tostring(value)))
         return true, Rules.format(value, a)
     elseif action == "startWeather" then
@@ -103,7 +107,15 @@ function AdminService.start()
     end
     Players.PlayerAdded:Connect(function(player) task.spawn(authorize, player) end)
     for _, player in Players:GetPlayers() do task.spawn(authorize, player) end
-    Players.PlayerRemoving:Connect(function(player) admins[player] = nil lastRequest[player] = nil end)
+    Players.PlayerRemoving:Connect(function(player)
+        admins[player] = nil lastRequest[player] = nil
+        -- the leaving admin's own Mutation chance goes with them; the shared display value falls back to x1 so a later admin sees the truth
+        if FoodService.adminMutationScale(player) > 1 then
+            FoodService.clearAdminMutationMultiplier(player)
+            values.mutationChanceMultiplier = Rules.Settings.mutationChanceMultiplier.default
+            workspace:SetAttribute("Admin_mutationChanceMultiplier", values.mutationChanceMultiplier)
+        end
+    end)
 end
 
 return AdminService

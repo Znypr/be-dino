@@ -109,7 +109,10 @@ STATIC = [
     # BD-319 round 2: cross-player wiring that the offline cases above rely on.
     ("src/server/AdminService.luau", r"local function handle\(player: Player, action: any, a: any, b: any\): \(boolean, string\)\n    if admins\[player\] ~= true then return false, \"not_admin\" end", "the admin remote refuses non-admins before anything else"),
     ("src/server/AdminService.luau", r"admins\[player\] = nil lastRequest\[player\] = nil", "admin state is dropped when the player leaves"),
-    ("src/server/FoodService.luau", r"RunEggTags\.apply\(events,weatherId,before,after,function\(\) return eventRandom:NextNumber\(\) end,adminMutationMultiplier\)", "the admin mutation scale reaches only the per-catch weather roll"),
+    ("src/server/FoodService.luau", r"RunEggTags\.apply\(events,weatherId,before,after,function\(\) return eventRandom:NextNumber\(\) end,FoodService\.adminMutationScale\(candidate\.player\)\)", "the admin mutation scale reaches only the per-catch weather roll, and only for the catching player's own scale"),
+    ("src/server/FoodService.luau", r"adminMutationScales = AdminMutationScale\.new\(\)[\s\S]{0,700}AdminMutationScale\.get\(adminMutationScales, player\)", "the admin mutation scale is kept per Player (shared AdminMutationScale book), not server-wide"),
+    ("src/server/FoodService.luau", r"PlayerRemoving:Connect\(function\(player\) previous\[player\] = nil AdminMutationScale\.clear\(adminMutationScales, player\)", "FoodService drops a leaving player's mutation scale too"),
+    ("src/server/AdminService.luau", r"FoodService\.clearAdminMutationMultiplier\(player\)", "the leaving admin's mutation scale is cleared"),
     ("src/server/ProfileRepository.luau", r"ProgressionRules\.eventEgg\(nest\.weatherId, rng:NextNumber\(\)\)", "nest eggs roll at the shipped chance (no admin scale)"),
     ("src/server/RunLifecycle.luau", r"local runNestWeather: \{\[string\]: \{string\}\} = \{\}", "the nest weather ledger is server-only and keyed by run id"),
     ("src/server/RunLifecycle.luau", r"runNestWeather\[runId\] = nil\n    local killEggs", "settlement consumes (clears) the run's nest weather ledger"),

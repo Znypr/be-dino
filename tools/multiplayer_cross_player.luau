@@ -11,7 +11,8 @@
 --   S  settlement exactly once per player when several settle in the SAME tick, and equal to the same player alone
 --   W  the nest weather ledger is kept per run / per player (BD-479)
 --   H  the cave hub is exactly 1x for the player inside it and nobody else (BD-480)
---   A  admin Mutation chance x10 is set only by the admin, stays in server memory and never reaches a profile (BD-237)
+--   A  admin Mutation chance x10 is set only by the admin, applies to the admin's own catches only (everyone else rolls x1),
+--      is cleared when the admin leaves, stays in server memory and never reaches a profile (BD-237, docs/115)
 --   C  per-client caps (contact shadows, effects LOD, FX pool, moment rim) are counted per client, never across players
 
 local CROSS_COUNTS = {2, 4, 8}
@@ -424,10 +425,18 @@ do
             local players = {}
             server.game.CreatorType = Enum.CreatorType.User
             server.game.CreatorId = ids[1] -- the first player owns the experience, so only they are an admin
-            server.cache["src/server/FoodService"] = {
+            -- FoodService itself needs Color3 and the art models, so this stub mirrors its four one-line Mutation chance wrappers over the
+            -- real shared AdminMutationScale book (verify_multiplayer_sim / verify_admin pin the wrappers and the catch-roll call by source).
+            local Scale = server.require(node("src/shared/AdminMutationScale"))
+            local book = Scale.new()
+            local Food = {
                 setAdminFoodMultiplier = function(v) table.insert(R.calls.food, v) end,
-                setAdminMutationMultiplier = function(v) table.insert(R.calls.mutation, v) end,
+                setAdminMutationMultiplier = function(player, v) Scale.set(book, player, v) end,
+                clearAdminMutationMultiplier = function(player) Scale.clear(book, player) end,
+                clearAllAdminMutationMultipliers = function() Scale.clearAll(book) end,
+                adminMutationScale = function(player) return Scale.get(book, player) end,
             }
+            server.cache["src/server/FoodService"] = Food
             server.cache["src/server/ProgressionService"] = {
                 setAdminMultipliers = function() end,
                 adminStartWeather = function(id, seconds) table.insert(R.calls.weatherStart, {id, seconds}) return id == "rain" end,
@@ -449,7 +458,8 @@ do
             local oddsBefore = oddsSample()
             server.require(node("src/server/AdminService")).start()
             sleep(2)
-            R.startCalls = {#R.calls.mutation, #R.calls.food}
+            R.startScales = {}
+            for i, p in players do R.startScales[i] = Food.adminMutationScale(p) end
             R.isAdmin = {}
             for i, p in players do R.isAdmin[i] = p.attrs.IsAdmin end
             local function invoke(p, ...) return remote.OnServerInvoke(p, ...) end
@@ -458,7 +468,16 @@ do
             for i, p in players do task.spawn(function() answers[i] = {invoke(p, "set", "mutationChanceMultiplier", 10)} end) end
             sleep(1)
             R.answers.set = answers
-            R.afterSet = {#R.calls.mutation, R.calls.mutation[#R.calls.mutation]}
+            R.afterSet = {}
+            for i, p in players do R.afterSet[i] = Food.adminMutationScale(p) end
+            -- one earned weather egg per player at a roll that only the boosted chance hits (rain is 2%; x10 is 20%)
+            local Tags = server.require(node("src/shared/RunEggTags"))
+            local rainChance = Rules.item(server.require(node("src/shared/ProgressionConfig")).Weather, "rain").chance
+            R.eggRolls = {}
+            for i, p in players do
+                local _, hits = Tags.apply({}, "rain", 0, 1, function() return rainChance * 5 end, Food.adminMutationScale(p))
+                R.eggRolls[i] = hits
+            end
             -- non-admins try everything else
             sleep(1)
             R.others = {}
@@ -469,12 +488,13 @@ do
                 }
                 sleep(0.2)
             end
-            R.state = {mutation = #R.calls.mutation, weather = #R.calls.weatherStart, stop = R.calls.weatherStop, gravity = R.published.Admin_gravity}
+            R.state = {mutation = (function() local m = 0 for i = 2, n do m += Food.adminMutationScale(players[i]) - 1 end return m end)(), weather = #R.calls.weatherStart, stop = R.calls.weatherStop, gravity = R.published.Admin_gravity}
             -- the admin: out-of-range and bad values are clamped or refused; a too-fast second request is busy
             sleep(1) R.clamp = {invoke(players[1], "set", "mutationChanceMultiplier", 99)}
             sleep(1) R.low = {invoke(players[1], "set", "mutationChanceMultiplier", 0)}
             sleep(1) R.nan = {invoke(players[1], "set", "mutationChanceMultiplier", 0 / 0)}
             sleep(1) R.unknown = {invoke(players[1], "set", "bogus", 3)}
+            R.scaleAfterLow = Food.adminMutationScale(players[1]) -- the "0" request above clamped to x1 (cleared)
             sleep(1) invoke(players[1], "set", "mutationChanceMultiplier", 10)
             R.busy = {invoke(players[1], "set", "mutationChanceMultiplier", 5)}
             sleep(1)
@@ -484,6 +504,8 @@ do
             for _, p in players do env.RL.tryEnd(p, p.Character, "ManualExit") end
             sleep(40)
             R.oddsSame = deepEqual(oddsBefore, oddsSample())
+            R.scalesAtSettle = {}
+            for i, p in players do R.scalesAtSettle[i] = Food.adminMutationScale(p) end
             -- the creator leaves: the old Player can no longer use the panel; a new join of a non-admin stays a non-admin
             local old = players[1]
             for _, f in server.PlayersService.PlayerRemoving.fns do task.spawn(f, old) end
@@ -491,6 +513,8 @@ do
             local at = table.find(server.players, old)
             if at then table.remove(server.players, at) end
             sleep(30)
+            R.scaleAfterLeave = Food.adminMutationScale(old)
+            R.displayAfterLeave = R.published.Admin_mutationChanceMultiplier
             R.afterLeave = {invoke(old, "set", "foodMultiplier", 10)}
             local late = connect(env, ids[n] + 500)
             for _, f in server.PlayersService.PlayerAdded.fns do task.spawn(f, late) end
@@ -500,17 +524,28 @@ do
             for _, f in server.PlayersService.PlayerAdded.fns do task.spawn(f, back) end
             sleep(2)
             R.rejoinAdmin = back.attrs.IsAdmin
+            R.rejoinScaleBefore = Food.adminMutationScale(back)
+            R.lateScale = Food.adminMutationScale(late)
             R.rejoinAnswer = {invoke(back, "set", "mutationChanceMultiplier", 3)}
+            R.rejoinScale = Food.adminMutationScale(back)
+            R.othersAfterRejoin = {}
+            for i = 2, n do R.othersAfterRejoin[i] = Food.adminMutationScale(players[i]) end
         end)
         local tag = n .. " players: "
         check(tag .. "only the experience owner is an admin (IsAdmin hint)", R.isAdmin ~= nil and R.isAdmin[1] == true and (function() for i = 2, n do if R.isAdmin[i] ~= false then return false end end return true end)(), "")
         local nonAdminRefused = true
         for i = 2, n do local a = R.answers.set and R.answers.set[i] if not a or a[1] ~= false or a[2] ~= "not_admin" then nonAdminRefused = false end end
         check(tag .. "every non-admin who sets Mutation chance x10 is refused (not_admin)", nonAdminRefused and R.answers.set and R.answers.set[1][1] == true, "")
-        check(tag .. "x10 reached the catch roll exactly once, from the admin, and was published for display only", R.afterSet and R.afterSet[1] == R.startCalls[1] + 1 and R.afterSet[2] == 10 and R.published.Admin_mutationChanceMultiplier ~= nil, tostring(R.afterSet and R.afterSet[2]))
+        local othersX1 = true
+        for i = 2, n do if R.afterSet[i] ~= 1 or R.startScales[i] ~= 1 or R.scalesAtSettle[i] ~= 1 or R.othersAfterRejoin[i] ~= 1 then othersX1 = false end end
+        check(tag .. "x10 belongs to the admin's own catches only (scale 10 for the admin, 1 for every other player) and is published for display", R.startScales[1] == 1 and R.afterSet[1] == 10 and othersX1 and R.published.Admin_mutationChanceMultiplier ~= nil, tostring(R.afterSet[1]) .. "/" .. tostring(R.afterSet[2]))
+        local othersMiss = true
+        for i = 2, n do if R.eggRolls[i] ~= 0 then othersMiss = false end end
+        check(tag .. "with x10 up the admin's weather egg mutates at the roll that every non-admin's egg (x1) misses", R.eggRolls[1] == 1 and othersMiss, tostring(R.eggRolls[1]) .. "/" .. tostring(R.eggRolls[2]))
+        check(tag .. "the admin's own request for x1 clears their scale (back to the shipped chance)", R.scaleAfterLow == 1, tostring(R.scaleAfterLow))
         local refusedAll = true
         for i = 2, n do for _, k in {"reset", "weather", "stop", "gravity"} do local a = R.others[i][k] if a[1] ~= false or a[2] ~= "not_admin" then refusedAll = false end end end
-        check(tag .. "non-admins cannot reset, start or stop weather or change gravity, and nothing moved", refusedAll and R.state.mutation == R.afterSet[1] and R.state.weather == 0 and R.state.stop == 0 and R.state.gravity == 250, "")
+        check(tag .. "non-admins cannot reset, start or stop weather or change gravity, and nothing moved", refusedAll and R.state.mutation == 0 and R.state.weather == 0 and R.state.stop == 0 and R.state.gravity == 250, "")
         check(tag .. "admin value 99 is clamped to 10, 0 to 1; NaN and an unknown key are refused", R.clamp[1] == true and R.clamp[2] == "x10" and R.low[2] == "x1" and R.nan[1] == false and R.unknown[1] == false, tostring(R.clamp[2]) .. "/" .. tostring(R.low[2]) .. "/" .. tostring(R.nan[2]) .. "/" .. tostring(R.unknown[2]))
         check(tag .. "a second request inside 0.15 s is busy", R.busy[1] == false and R.busy[2] == "busy", tostring(R.busy[2]))
         local stored = 0
@@ -527,6 +562,7 @@ do
         for _, id in ids do scanKeys(profileOf(id)) end
         check(tag .. "no profile stores any admin value, also after settling runs with x10 up", stored == 0, tostring(stored))
         check(tag .. "x10 changes nothing a player is shown (odds catalog, event egg chance at the shipped scale)", R.oddsSame == true, "")
+        check(tag .. "when the admin leaves their scale is cleared and the display falls back to x1; a new join (non-admin or the rejoined owner) starts at x1, and no other player changed", R.scaleAfterLeave == 1 and R.displayAfterLeave == 1 and R.lateScale == 1 and R.rejoinScaleBefore == 1 and R.rejoinScale == 3, tostring(R.scaleAfterLeave) .. "/" .. tostring(R.displayAfterLeave) .. "/" .. tostring(R.lateScale) .. "/" .. tostring(R.rejoinScaleBefore) .. "/" .. tostring(R.rejoinScale))
         check(tag .. "after the owner left their old Player is refused, a new non-admin join is not an admin, the owner is admin again on rejoin", R.afterLeave and R.afterLeave[2] == "not_admin" and R.lateAdmin == false and R.rejoinAdmin == true and R.rejoinAnswer[1] == true, tostring(R.afterLeave and R.afterLeave[2]) .. "/" .. tostring(R.lateAdmin) .. "/" .. tostring(R.rejoinAdmin))
     end
 end
