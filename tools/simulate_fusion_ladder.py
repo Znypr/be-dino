@@ -7,9 +7,11 @@ The default run (`python tools/simulate_fusion_ladder.py`) prints the docs/90 ta
 (`ladder_v2`). Everything after this paragraph describes the OLDER same-pattern model, kept for comparison
 (`--legacy`).
 
-MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-approved ladder (2026-10-14):
-Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 4 eggs per 500 food (BD-165; was 40) (supersedes
-50/10/3 of 2026-10-13). The old candidates remain as a comparison: pass `--gold-donors 50
+MODEL, NOT MEASURED GAMEPLAY. The text from here to the end of this docstring is the OLDER same-pattern
+model (`--legacy`). SUPERSEDED / historical: its 15 / 4 / 2 ladder (owner 2026-10-14) and the 50/10/3 of
+2026-10-13 are NOT the owner target; the current ladder is 6 / 3 / 2 (AGENTS.md line 44, docs/90, audit
+docs/155 C-51). The `--legacy` scenario = Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 4 eggs
+per 500 food (BD-165; was 40). The old candidates remain as a comparison: pass `--gold-donors 50
 --emerald-donors 10 --diamond-donors 3` (previous ladder) or `--gold-donors 10 --emerald-donors
 2 3 4 5 --diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. See docs/57-fusion-ladder-options.md.
 `--hours` prints median hours of heavy play to the FIRST Gold / Emerald / Diamond of any one
@@ -22,7 +24,7 @@ Model (numbers read from the repo):
   * Species by Config.ChestSpeciesWeights (22 species, sum 100); pattern uniform over 8.
   * Every fusion needs same species AND same pattern, and the output keeps that cell, so a
     recipe with d Gold donors (Emerald) and e Emerald donors (Diamond) costs exactly
-    G*d*e Base dinos of ONE species+pattern (G = Gold donors, 15 by default) "cell" (176 cells).
+    G*d*e Base dinos of ONE species+pattern (G = Gold donors, 15 by default in this LEGACY model) "cell" (176 cells).
   * No pattern research, no Robux, no trading, no donors lost to protection rules.
 Pure standard library, deterministic seeds.
 """
@@ -40,7 +42,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = 8
-GOLD_DONORS = 15  # owner decision 2026-10-14 (50 on 2026-10-13; the oldest candidates used 10)
+GOLD_DONORS = 15  # LEGACY (--legacy model only), SUPERSEDED by 6 (AGENTS.md line 44, docs/90); was the owner decision 2026-10-14 (50 on 2026-10-13; the oldest candidates used 10)
 DINOS_PER_HOUR = 180  # planning assumption: 1 h of heavy play = 180 hatched dinos
 
 

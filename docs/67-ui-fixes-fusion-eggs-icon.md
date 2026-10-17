@@ -7,7 +7,7 @@ What changed
 - Dino Index: undiscovered species show a gray card, black silhouette (`DinosaurPreview` mode `"silhouette"`: no textures/effects, black ambient light), `???` name and rarity, "Not discovered", and a dimmed no-op VIEW DINO. Logic: `FusionSelection.indexCard`. The `Discovered: n/22` counter is unchanged.
 
 Check in Studio
-1. Nav FUSION and Index FUSION open the new menu (title "Pattern Fusion: 15 Base -> 1 NEW Gold"), clear of the rail at 1080x720 and phone landscape.
+1. Nav FUSION and Index FUSION open the new menu (title "Pattern Fusion: 15 Base -> 1 NEW Gold"; **SUPERSEDED / historical 2026-10-15:** the menu now says 6 Base, owner target [AGENTS.md](../AGENTS.md) line 44, [docs/155](155-fusion-ladder-source-vs-docs-audit.md)), clear of the rail at 1080x720 and phone landscape.
 2. Caught Eggs: gene-colored eggs per slot, gray empty slots, nest sprites; hatch reveal unchanged.
 3. GROWTH tile icon looks clean.
 4. Undiscovered Index cards are black silhouettes with `???`; discovered cards unchanged.
