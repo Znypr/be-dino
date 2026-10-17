@@ -63,6 +63,18 @@ return table.freeze({
         Phone = {radius = 190, budget = 1400},
         Tablet = {radius = 280, budget = 2400},
         Desktop = {radius = 440, budget = 5000},
+        -- BD-475 (docs/142): colossal ancient trees ONLY (a colossal layer prop whose BD-474 mesh ids are pasted; with empty ids nothing reads this).
+        -- radius = studs the colossal trees stay parented: DEFAULT = the normal radius above (today's behaviour), clamped to [normal, ceiling].
+        -- docs/139 Q12: raise it (phone ceiling 420) ONLY after the BD-085 phone numbers pass; until then they fade out by distance instead of popping.
+        -- lod0 = swap distance (LOD0 nearer, LOD1 farther), lod0Max = trees at LOD0 at once, triBudget = triangles of all colossal trees at once
+        -- (about what the stand-ins cost inside the normal radius), Fade = share of the radius over which a tree fades out (0 = pop).
+        -- The key order keeps `radius` off the front on purpose: verify_weather and estimate_world_budget read the first `Phone = {radius`.
+        Colossal = {
+            Fade = .2,
+            Phone = {lod0 = 110, lod0Max = 1, triBudget = 12000, ceiling = 420, radius = 190},
+            Tablet = {lod0 = 150, lod0Max = 2, triBudget = 24000, ceiling = 560, radius = 280},
+            Desktop = {lod0 = 220, lod0Max = 4, triBudget = 48000, ceiling = 800, radius = 440},
+        },
     },
     FoodKitVisualCap = 12, -- PROVISIONAL max native egg/amber kit models (about 115 parts each); other pickups keep the light ball
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
