@@ -82,6 +82,7 @@ def static_checks():
     assert 'GetAttribute("FeedbackRect")' in feedback and 'UDim2.new(0, 12, 1, -68)' not in feedback, 'Tell us! follows the layout rect (no fixed bottom-left spot over the egg plate)'
     import verify_movement_mobile  # BD-524: every path that can move the button (run end, respawn, toasts, Admin) uses the published rect
     verify_movement_mobile.static_feedback_paths()
+    verify_movement_mobile.static_modal_rail()  # BD-546: the menu card clears the left rail, wired through ModalCompact
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('--runner', required=True); args = parser.parse_args()

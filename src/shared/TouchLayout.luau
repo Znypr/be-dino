@@ -54,6 +54,13 @@ function TouchLayout.walletPlates(layout): Rect
     end
     return plates
 end
+-- BD-546: the x (px from the left of the canvas) a desktop modal must stay right of: the desktop layout's left rail plus a gap. 0 for the
+-- touch / phone layouts (their rail is a top row, and the phone modal fills the screen). PhoneScale.modal turns it into a scale and shift.
+function TouchLayout.modalClearLeft(layout): number
+    if layout.touch then return 0 end
+    local rail = layout.rail
+    return rail.x + rail.w * rail.scale + PhoneScale.ModalRailGap
+end
 -- Returns (x shift from the screen centre, top y). `shift` is the caller's own slide (the admin panel); `plates` may be nil.
 function TouchLayout.toastPlacement(width: number, toastScale: number, plates: Rect?, menuOpen: boolean, shift: number): (number, number)
     local T = TouchLayout.TOAST

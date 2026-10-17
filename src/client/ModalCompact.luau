@@ -15,11 +15,27 @@ local ctx: Ctx? = nil
 local scroller: ScrollingFrame? = nil
 local model: PhoneScale.Modal? = nil
 local pending = false
+local clearLeft = 0 -- BD-546: px a desktop panel stays right of (the left rail + gap), set by Bootstrap from TouchLayout.modalClearLeft
 
 function M.model(): PhoneScale.Modal
     local c = ctx :: Ctx
     local size = c.gui.AbsoluteSize
-    return PhoneScale.modal(size.X, size.Y)
+    return PhoneScale.modal(size.X, size.Y, clearLeft)
+end
+
+-- BD-546: where the panel sits. `yScale` is .5 settled, .52 while it slides in or out. Desktop slides right of the rail when the centre would
+-- cover it; phones (compact) and every canvas wide enough for a centred panel keep UDim2.fromScale(.5, y) exactly.
+function M.home(yScale: number): UDim2
+    local m = if ctx then M.model() else nil
+    return UDim2.new(0.5, if m then m.centerDx else 0, yScale, 0)
+end
+
+-- Called by Bootstrap after every HUD layout pass. A changed value re-lays the open panel at once (scale and position).
+function M.setClearLeft(px: number)
+    px = math.floor(px + 0.5)
+    if px == clearLeft then return end
+    clearLeft = px
+    M.layout()
 end
 
 local function ensureScroller(c: Ctx): ScrollingFrame
@@ -41,6 +57,7 @@ function M.layout()
     local m = M.model()
     model = m
     c.scale.Scale = m.scale
+    c.panel.Position = UDim2.new(0.5, m.centerDx, c.panel.Position.Y.Scale, 0) -- BD-546: x only; the open/close slide owns y
     if m.mode == "desktop" then
         c.panel.Size = UDim2.fromOffset(860, 520)
         c.header.Size = UDim2.fromOffset(852, 78)

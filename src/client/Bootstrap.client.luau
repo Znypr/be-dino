@@ -150,7 +150,7 @@ local function close()
     updateNavigation()
     Theme.animate(scale,.12,{Scale=scale.Scale*.96})
     Theme.animate(shade,.12,{BackgroundTransparency=1})
-    Theme.animate(panel,.12,{Position=UDim2.fromScale(.5,.52)})
+    Theme.animate(panel,.12,{Position=require(script.Parent.ModalCompact).home(.52)})
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
@@ -259,7 +259,7 @@ task.spawn(function()
 end)
 local function viewportScale(): number
     local size=gui.AbsoluteSize
-    return require(Shared.PhoneScale).modal(size.X,size.Y).scale -- BD-333: desktop = old (w-40)/860,(h-40)/520 rule; short canvases use the compact layout
+    return require(script.Parent.ModalCompact).model().scale -- BD-546: PhoneScale.modal plus the left-rail clearance. BD-333: desktop = the old (w-40)/860,(h-40)/520 rule; short canvases use the compact layout
 end
 -- BD-054: prefer the active input style; fall back to TouchEnabled on older clients.
 local function touchMode(): boolean
@@ -343,10 +343,10 @@ local function open(name: string)
     if not wasVisible then
         scale.Scale=viewportScale()*(if motion then .96 else 1)
         shade.BackgroundTransparency=1
-        panel.Position=UDim2.fromScale(.5,.52)
+        panel.Position=require(script.Parent.ModalCompact).home(.52)
     end
     Theme.animate(scale,.16,{Scale=viewportScale()})
-    Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
+    Theme.animate(panel,.16,{Position=require(script.Parent.ModalCompact).home(.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
     Theme.animate(blur,.16,{Size=blurTarget()})
     if name=="hatch" then -- BD-519: a slide still running from the last modal must not move the hatch body; it starts from the settled home
@@ -593,7 +593,16 @@ render=function(name: string)
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
             label(body,"You have "..num("Crystals").." Crystals",0,cardsY-4,824,34,26,C.gold)
-            if not Config.CrystalPacksEnabled then label(body,"Coming soon!",0,cardsY+28,824,26,19,C.accent) end
+            local cardRules=require(Shared.ShopCardState)
+            if cardRules.packsView(Config.CrystalPacksEnabled)==cardRules.SoonView then
+                -- BD-546: packs are off: one friendly card, no price button and no price lookup. Same flag as the server (Config.CrystalPacksEnabled).
+                local soon=box(body,142,cardsY+50,540,200,C.card:Lerp(C.purple,.25),24)
+                soon.Name="CrystalsComingSoon"
+                art(soon,"amber",224,14,92)
+                label(soon,cardRules.SoonTitle,0,110,540,46,36,C.gold)
+                label(soon,cardRules.SoonLine,0,156,540,32,22)
+                return
+            end
             local products={} for id,amount in Config.DeveloperProducts do table.insert(products,{id=id,amount=amount}) end
             table.sort(products,function(a,b) return a.amount<b.amount end)
             if #products==0 then label(body,"Crystal packs are not ready yet",0,cardsY+80,824,60,27)
@@ -1423,6 +1432,7 @@ local function scales()
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
         jump=if touch then coreTouchRect("JumpButton") else nil,
         goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active")}) -- BD-531: the hub Goals header takes space under the goal line
+    require(script.Parent.ModalCompact).setClearLeft(TouchLayout.modalClearLeft(layout)) -- BD-546: menu cards stay right of the desktop rail (phones unchanged)
     local function place(object: GuiObject,uiScale: UIScale,entry)
         object.AnchorPoint,object.Position,object.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
         uiScale.Scale=entry.scale
