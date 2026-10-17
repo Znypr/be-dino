@@ -8,6 +8,7 @@ local EggTraits = shared.EggTraits
 local ProgressionRules = shared.ProgressionRules
 local admit = shared.admit
 local adopt = shared.adopt
+local equippedOf = shared.equippedOf
 local findOperation = shared.findOperation
 local handleLeaseLost = shared.handleLeaseLost
 local isValidProfile = shared.isValidProfile
@@ -17,6 +18,7 @@ local objectives = shared.objectives
 local ownSession = shared.ownSession
 local profiles = shared.profiles
 local retry = shared.retry
+local secretSpecies = shared.secretSpecies
 local store = shared.store
 local syncAttributes = shared.syncAttributes
 local trimOperations = shared.trimOperations
@@ -31,7 +33,12 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
     if typeof(speciesId) ~= "string" or #speciesId < 1 or #speciesId > 32 then
         return false, "invalid_species"
     end
-    if not knownSpecies(speciesId) then return false, "unknown_species" end
+    -- BD-606 (SS7): a found secret species is equippable only while the flag is on and its model slot is filled; otherwise it is as unknown as before.
+    local secretEquip = false
+    if not knownSpecies(speciesId) then
+        if Config.SecretSpeciesEnabled == true and secretSpecies().canEquip(speciesId, true) then secretEquip = true
+        else return false, "unknown_species" end
+    end
 
     local cachedEntry = cached.collection[speciesId]
     if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + (cachedEntry.emerald or 0) + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
@@ -44,7 +51,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
             return false, "not_owned"
         end
     end
-    if cached.equippedSpeciesId == speciesId and cached.equippedVariantKey == variantKey then
+    local currentId, currentKey = equippedOf(cached)
+    if currentId == speciesId and currentKey == variantKey then
         syncAttributes(player, cached)
         return true, "already_equipped"
     end
@@ -72,8 +80,16 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
                     return nil
                 end
             end
-            profileValue.equippedSpeciesId = speciesId
-            profileValue.equippedVariantKey = variantKey
+            if secretEquip then
+                -- SS7: the stored pair stays a species Build 020 knows (RB1); the secret is the additive record beside it
+                profileValue.equippedSpeciesId = secretSpecies().EquipFallback
+                profileValue.equippedVariantKey = nil
+                profileValue.equippedSecret = secretSpecies().equipRecord(speciesId, variantKey)
+            else
+                profileValue.equippedSpeciesId = speciesId
+                profileValue.equippedVariantKey = variantKey
+                profileValue.equippedSecret = nil
+            end
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue

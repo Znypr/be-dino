@@ -142,6 +142,7 @@ function ProfileRepository.demoEquip(player: Player, speciesId: string): (boolea
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.equippedSpeciesId = speciesId -- owned or not: Studio demo only
             profileValue.equippedVariantKey = nil
+            profileValue.equippedSecret = nil
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue

@@ -2,7 +2,8 @@
 -- BD-428 (owner 2026-10-16): a rare hatch is a HUGE celebration for the hatcher and a short announcement for everyone.
 -- Pure rules, no Roblox services, so tests drive them with a fake clock. The SERVER decides from the settled hatch outcome
 -- (ProfileRepository.publishHatch -> RareHatchService); the client only draws what it is told.
--- Rare = a Legendary species (tier 5), a Shiny, or an event mutation. A Cracked (failed) egg is never rare.
+-- Rare = a Legendary species (tier 5), a Shiny, an event mutation, or (BD-606, docs/115 SS9, only while Config.SecretSpeciesEnabled) a SECRET species.
+-- A Cracked (failed) egg is never rare.
 -- Announcements are rate limited: eggs of one hatcher are coalesced for Window seconds and only the BEST one is announced,
 -- then that hatcher is quiet for Cooldown seconds (a 15-egg reveal takes about 75 s); the whole server has a small global cap.
 local R = {}
@@ -13,18 +14,21 @@ R.Cooldown = 45 -- seconds a hatcher stays quiet after an announcement
 R.GlobalMax = 4 -- announcements per GlobalWindow seconds across the whole server
 R.GlobalWindow = 10
 R.MaxName = 20 -- display names are cut to this many characters
+R.SecretScore = 4 -- a secret ranks with a Legendary when one window holds several rare eggs (docs/115 SS9)
 R.Celebrate = table.freeze({gap = 4}) -- the hatcher's own celebrations are at least this many seconds apart (client)
 
 -- score: higher is better. Legendary + Shiny beats Shiny beats Legendary beats a mutation alone.
-function R.classify(outcome: any, speciesRarity: number?): {kind: string, score: number, shiny: boolean, legendary: boolean, mutation: boolean}?
+-- `secret` (BD-606) is true only when the caller (RareHatchService) saw a secret species AND the flag is on; the default (nil/false) is exactly the old rule.
+function R.classify(outcome: any, speciesRarity: number?, secret: boolean?): {kind: string, score: number, shiny: boolean, legendary: boolean, mutation: boolean, secret: boolean}?
     if type(outcome) ~= "table" or outcome.failed == true then return nil end
     local shiny = outcome.shiny == true
     local legendary = (speciesRarity or 0) >= R.LegendaryTier
     local mutation = type(outcome.eventMutationId) == "string" and outcome.eventMutationId ~= ""
-    if not (shiny or legendary or mutation) then return nil end
-    local score = (if legendary then 4 else 0) + (if shiny then 5 else 0) + (if mutation then 2 else 0)
-    local kind = if shiny then "shiny" elseif legendary then "legendary" else "mutation"
-    return {kind = kind, score = score, shiny = shiny, legendary = legendary, mutation = mutation}
+    local isSecret = secret == true
+    if not (shiny or legendary or mutation or isSecret) then return nil end
+    local score = (if legendary then 4 else 0) + (if shiny then 5 else 0) + (if mutation then 2 else 0) + (if isSecret then R.SecretScore else 0)
+    local kind = if isSecret then "secret" elseif shiny then "shiny" elseif legendary then "legendary" else "mutation"
+    return {kind = kind, score = score, shiny = shiny, legendary = legendary, mutation = mutation, secret = isSecret}
 end
 
 -- Display names come from Roblox (already filtered by Roblox); still drop control characters and cut the length.
@@ -39,14 +43,17 @@ function R.cleanName(name: any): string
 end
 
 -- Short kid-friendly text. speciesName is the display name ("T-Rex"). Example: "Sam hatched a Shiny T-Rex!"
-function R.text(playerName: string, info: {shiny: boolean, legendary: boolean, mutation: boolean}, speciesName: string): string
+function R.text(playerName: string, info: {shiny: boolean, legendary: boolean, mutation: boolean, secret: boolean?}, speciesName: string): string
+    -- BD-606 (SS9): a secret is announced calmly and WITHOUT its name: the other players only learn that someone found one
+    if info.secret == true then return string.format("%s found a secret dino!", R.cleanName(playerName)) end
     local label = if info.shiny then "Shiny " elseif info.mutation then "Mutant " elseif info.legendary then "Legendary " else ""
     return string.format("%s hatched a %s%s!", R.cleanName(playerName), label, speciesName)
 end
 
 -- Own celebration line.
-function R.ownText(info: {shiny: boolean, legendary: boolean, mutation: boolean}, speciesName: string): string
+function R.ownText(info: {shiny: boolean, legendary: boolean, mutation: boolean, secret: boolean?}, speciesName: string): string
     local label = if info.shiny then "Shiny " elseif info.mutation then "Mutant " elseif info.legendary then "Legendary " else ""
+    if info.secret == true then return string.format("Secret find! You hatched a %s%s!", label, speciesName) end
     return string.format("You hatched a %s%s!", label, speciesName)
 end
 
@@ -73,6 +80,9 @@ function R.plan(effects: string, calm: boolean, kind: string): {confetti: number
     local sweep = R.Sweep[effects]
     if sweep == nil then sweep = R.Sweep.full end
     if calm then n, pop, sweep = 0, 0, 0 end
+    -- BD-606 (SS9): a secret find is a calm banner only: no confetti, star pops or light sweep at ANY Effects setting, and no extra sound (the reveal
+    -- already plays the calm Legendary sting), so Reduce Motion and Effects Off look exactly the same as Full.
+    if kind == "secret" then return {confetti = 0, banner = true, sound = "", pop = 0, sweep = 0} end
     return {confetti = n, banner = true, sound = "shiny_bang", pop = pop, sweep = sweep}
 end
 -- Pure: one sweep pass at `age` seconds -> (centre 0..1 across the banner, opacity 0..SweepAlpha). Eases in and out of both ends, soft at the

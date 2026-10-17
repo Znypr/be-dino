@@ -42,13 +42,17 @@ end
 function Service.record(player: Player, outcome: any)
     local ok, err = pcall(function()
         local species = outcome.speciesId
-        local info = Rare.classify(outcome, Config.SpeciesRarities[species])
+        -- BD-606 (SS9): a hatched secret species (the settled outcome says so) gets the calm "secret" announcement, only while the flag is on.
+        -- SecretSpeciesConfig is required only then, so with the flag off this function is exactly what it was.
+        local secret: any = if Config.SecretSpeciesEnabled == true and outcome.secret == true then require(ReplicatedStorage.Shared.SecretSpeciesConfig) else nil
+        local secretId = if secret ~= nil and secret.isSecret(species) then species else nil
+        local info = Rare.classify(outcome, Config.SpeciesRarities[species], secretId ~= nil)
         if not info then return end
-        local speciesName = Config.SpeciesDisplayNames[species] or species
+        local speciesName = Config.SpeciesDisplayNames[species] or (if secretId then secret.name(secretId) else species)
         local event = getRemote()
         local eggId = tostring(outcome.eggId or "")
         if eggId == "" or state.seen[eggId] then return end -- one celebration and one announcement per egg
-        event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or 1,
+        event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or (if secretId then secret.displayTier(secretId) else 1),
             mutation = info.mutation, mutationId = if info.mutation then tostring(outcome.eventMutationId) else nil}) -- BD-433: lets the client light the own dino's rim
         local text = Rare.text(player.DisplayName, info, speciesName)
         local flushAt = nil

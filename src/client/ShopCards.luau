@@ -94,7 +94,7 @@ function Cards.forHeader(ui, parent: GuiObject, y: number, speciesId: string)
     well.Name, well.ClipsDescendants = "DinoIcon", true
     local view = Preview.add(well, speciesId, "silhouette") -- the silhouette is black: a light well so it reads
     view.Name, view.ZIndex, view.Size = "DinoSilhouette", well.ZIndex + 1, UDim2.fromScale(1, 1)
-    local title = ui.label(strip, Copy.title(MainConfig.SpeciesDisplayNames[speciesId]), 54, 2, 270, Copy.HeaderHeight - 8, 26, C.gold)
+    local title = ui.label(strip, Copy.title(MainConfig.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId)), 54, 2, 270, Copy.HeaderHeight - 8, 26, C.gold)
     title.Name, title.TextXAlignment = "ForDinoName", Enum.TextXAlignment.Left
     local note = ui.label(strip, Copy.Note, 320, 2, 496, Copy.HeaderHeight - 8, 19, ShopCard.CalmText)
     note.Name, note.TextXAlignment = "ForDinoNote", Enum.TextXAlignment.Right

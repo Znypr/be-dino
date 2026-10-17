@@ -23,12 +23,14 @@ Run: python tools/verify_secret_species.py --runner C:/path/to/luau.exe
 from pathlib import Path
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
+import verify_odds_copy  # noqa: E402  (the real odds modules for part C)
 import verify_rewards  # noqa: E402  (reuses the mocked-DataStore prefix)
 import verify_rollback  # noqa: E402  (the frozen Build 020 reader)
 import release_profiles  # noqa: E402
@@ -693,6 +695,117 @@ check(OldRepo.load(uzo) and uzo.attrs.ProfileState=="Loaded","Build 020 loads a 
 OldRepo.release(uzo)
 check(OldConfig.SecretSpeciesEnabled==nil,"Build 020 has no secret flag at all")
 
+---------------------------------------------------------------- B9 equip and play a found secret (BD-606, SS7) and the RB1 fallback
+cfg.SecretSpeciesEnabled=true
+local eq=ready(mkSecret(),"chickosaurus") eq.Chance=1
+CURRENT_SECRET=eq
+local Re=makeRepo()
+local ue=newUser(7013)
+check(Re.load(ue),"load")
+check(ue.attrs.EquippedSpeciesId=="compy","a new profile plays the Compy")
+local okLocked,lockedWhy=Re.equipSpecies(ue,"chickosaurus")
+check(not okLocked and lockedWhy=="locked","a secret that was never found cannot be equipped (locked), got "..tostring(lockedWhy))
+check(Re.commitRunSettlement(ue,"equip-run",12,nil,300),"settle forced secret eggs")
+local hatchedSecret=0
+for _,h in claimAll(Re,ue) do if h.speciesId=="chickosaurus" and not h.failed then hatchedSecret+=1 end end
+local guardE=0
+while #(ue.attrs.ChestQueueJson or {})>0 and guardE<50 do
+ guardE+=1 local okc,hc=Re.claimChest(ue,ue.attrs.ChestQueueJson[1].id) if not okc then break end if hc.speciesId=="chickosaurus" and not hc.failed then hatchedSecret+=1 end
+end
+check(hatchedSecret>=1,"found at least one secret Chickosaurus ("..hatchedSecret..")")
+local okEq,whyEq=Re.equipSpecies(ue,"chickosaurus")
+check(okEq and whyEq=="equipped","a found secret species can be equipped (flag on, model ready): "..tostring(whyEq))
+check(ue.attrs.EquippedSpeciesId=="chickosaurus","the player now plays the secret species (attribute)")
+local stored=data[key(7013)]
+check(stored.equippedSpeciesId=="compy" and stored.equippedVariantKey==nil,"RB1: the stored equipped species is still a species Build 020 knows (the fallback), never the secret id")
+check(type(stored.equippedSecret)=="table" and stored.equippedSecret.speciesId=="chickosaurus","the secret is the additive record beside it")
+for k in stored do check(k~="equippedSpeciesId" or stored[k]=="compy","no field stores the secret id as the equipped species") end
+local okAgain,whyAgain=Re.equipSpecies(ue,"chickosaurus")
+check(okAgain and whyAgain=="already_equipped","equipping the same secret again changes nothing")
+-- an exact copy (variant key) of the secret
+local firstVariant=nil
+for vk,v in data[key(7013)].collection.chickosaurus.variants do if v.count>0 then firstVariant=vk break end end
+if firstVariant then
+ local okV,whyV=Re.equipSpecies(ue,"chickosaurus",firstVariant)
+ check(okV and whyV=="equipped" and data[key(7013)].equippedSecret.variantKey==firstVariant and data[key(7013)].equippedVariantKey==nil,"an exact secret copy is recorded in the secret record, the stored variant key stays empty")
+ check(ue.attrs.EquippedSpeciesId=="chickosaurus","still the secret species with its variant")
+ local okBad=Re.equipSpecies(ue,"chickosaurus","no-such-variant")
+ check(not okBad,"a variant the player does not own is refused")
+end
+Re.release(ue)
+local secretStored=copy(data[key(7013)])
+
+-- RB1: Build 020 loads the profile, keeps every field, and plays the fallback dino (no SchemaError)
+local uoe=newUser(7013)
+check(OldRepo.load(uoe) and uoe.attrs.ProfileState=="Loaded","RB1: Build 020 LOADS a profile that equipped a secret species")
+check(uoe.attrs.EquippedSpeciesId=="compy","RB1: Build 020 plays the fallback Compy (the equipped-species field falls back, it does not refuse)")
+local sameE,diffE=sameData(secretStored,data[key(7013)],VOLATILE)
+check(sameE,"RB1: Build 020 load keeps every field byte for byte (incl. equippedSecret); differing: "..tostring(diffE))
+check(OldRepo.renew(uoe),"Build 020 renew keeps the profile")
+OldRepo.release(uoe)
+check(data[key(7013)].equippedSecret~=nil and data[key(7013)].equippedSecret.speciesId=="chickosaurus","the secret record survived Build 020")
+
+-- the current build reads the record again (flag on, model ready, secret still owned)
+local Re2=makeRepo()
+local ue2=newUser(7013)
+check(Re2.load(ue2) and ue2.attrs.EquippedSpeciesId=="chickosaurus","the current build plays the secret again after Build 020 touched the profile")
+Re2.release(ue2)
+
+-- flag OFF: the record is ignored, the fallback dino is played, and a request for the secret is as unknown as before the feature
+cfg.SecretSpeciesEnabled=false
+local Re3=makeRepo()
+local ue3=newUser(7013)
+check(Re3.load(ue3) and ue3.attrs.EquippedSpeciesId=="compy","flag off: the Compy is played, nothing breaks")
+local okOff,whyOff=Re3.equipSpecies(ue3,"chickosaurus")
+check(not okOff and whyOff=="unknown_species","flag off: equipping a secret is refused exactly like an unknown species ("..tostring(whyOff)..")")
+Re3.release(ue3)
+check(ser(data[key(7013)].equippedSecret)==ser(secretStored.equippedSecret),"flag off: the profile is not rewritten by merely loading")
+
+-- flag on but the model slot withdrawn: the fallback is played, a request is refused
+cfg.SecretSpeciesEnabled=true
+local gone=ready(mkSecret(),"chickosaurus") gone.Species.chickosaurus.assetId=0
+CURRENT_SECRET=gone
+local Re4=makeRepo()
+local ue4=newUser(7013)
+check(Re4.load(ue4) and ue4.attrs.EquippedSpeciesId=="compy","an emptied model slot: the Compy is played")
+local okGone,whyGone=Re4.equipSpecies(ue4,"chickosaurus")
+check(not okGone and whyGone=="unknown_species","an emptied model slot: the equip is refused")
+Re4.release(ue4)
+
+-- a re-equip by an older build wins (the stored species is no longer the fallback)
+CURRENT_SECRET=ready(mkSecret(),"chickosaurus") CURRENT_SECRET.Chance=1
+data[key(7013)].equippedSpeciesId="triceratops"
+local Re5=makeRepo()
+local ue5=newUser(7013)
+check(Re5.load(ue5) and ue5.attrs.EquippedSpeciesId=="triceratops","a stale secret record never overrides a newer equip of another species")
+Re5.release(ue5)
+data[key(7013)].equippedSpeciesId="compy"
+
+-- equipping a normal species clears the record; the secret can be picked again
+local Re6=makeRepo()
+local ue6=newUser(7013)
+check(Re6.load(ue6) and ue6.attrs.EquippedSpeciesId=="chickosaurus","secret equipped again")
+local okN1,whyN1=Re6.equipSpecies(ue6,"compy")
+check(okN1 and whyN1=="equipped" and ue6.attrs.EquippedSpeciesId=="compy" and data[key(7013)].equippedSecret==nil,"equipping a normal species clears the secret record")
+local okN2=Re6.equipSpecies(ue6,"chickosaurus")
+check(okN2 and ue6.attrs.EquippedSpeciesId=="chickosaurus","and the secret can be equipped again")
+-- losing the last copy falls back to the Compy by itself
+Re6.release(ue6)
+data[key(7013)].collection.chickosaurus={base=0,gold=0,diamond=0,events={},variants={}}
+local Re7=makeRepo()
+local ue7=newUser(7013)
+check(Re7.load(ue7) and ue7.attrs.EquippedSpeciesId=="compy","a secret the player no longer owns (all copies fused away) falls back to the Compy")
+Re7.release(ue7)
+-- junk records are ignored, never an error
+for _,junk in {5,"chickosaurus",{speciesId=5},{speciesId="nope"},{speciesId="pigeon"},{speciesId="chickosaurus",variantKey=7}} do
+ data[key(7013)].equippedSecret=junk
+ local Rj=makeRepo()
+ local uj=newUser(7013)
+ check(Rj.load(uj) and uj.attrs.EquippedSpeciesId=="compy","a junk equippedSecret record is ignored")
+ Rj.release(uj)
+end
+cfg.SecretSpeciesEnabled=true
+
 print(string.format("secret species part B passed (%d checks)",checks))
 '''
 
@@ -752,6 +865,10 @@ def part_b():
 
 
 # ---------------------------------------------------------------------------------------------------------------- static checks
+def boot_text():
+    return read('src/client/Bootstrap.client.luau')
+
+
 def static():
     errors = []
 
@@ -792,10 +909,28 @@ def static():
     need('if Config.SecretSpeciesEnabled == true and outcome.secretSpeciesId ~= nil and not (chest.genes ~= nil and not chest.genes.hatchSuccess) then' in repo, 'the hatch hook is behind the flag and skips failed Cracked eggs')
     need('secretSpecies().resolve(outcome)' in repo, 'the hatch asks resolve (the model gate)')
     need('Config.SpeciesRarities[outcome.speciesId] or 0' in repo, 'a secret species never raises metrics.rarest')
-    # a secret is not equippable or mutable by request in this PR (so Build 020 loads every profile)
+    # a secret is never mutable by request and is never written into a field Build 020 validates (BD-606, SS7: the additive equippedSecret record)
     known = repo[repo.index('local function knownSpecies'):]
     known = known[:known.index('\nend')]
-    need('Secret' not in known, 'knownSpecies stays the normal 22 (no equip / mutate of a secret yet)')
+    need('Secret' not in known, 'knownSpecies stays the normal 22 (the equip goes through equippedSecret, the mutate stays refused)')
+    need('if Config.SecretSpeciesEnabled == true and secretSpecies().canEquip(speciesId, true) then secretEquip = true' in repo, 'the equip of a secret is behind the flag and the model-slot gate')
+    need('profileValue.equippedSpeciesId = secretSpecies().EquipFallback' in repo and 'profileValue.equippedSecret = secretSpecies().equipRecord(speciesId, variantKey)' in repo,
+         'a secret equip stores the fallback species and the additive record')
+    need(len(re.findall(r'equippedSpeciesId\s*=\s*speciesId', repo)) == 2, 'only the normal-species equip and the Studio demo equip assign equippedSpeciesId = speciesId')
+    need('local equippedId, equippedKey = equippedOf(profile)' in repo and 'equipped=(function() local id,key=equippedOf(profile)' in repo, 'the attribute, the traits and the per-dino cosmetics read the dino actually played')
+    need('equippedOf' in read('src/server/ProfileRepository.luau') and 'ctx.equipped' in read('src/server/CosmeticOwnership.luau'), 'CosmeticOwnership.apply reads ctx.equipped')
+    need('profile.equippedSecret ~= nil and Config.SecretSpeciesEnabled == true' in repo, 'equippedOf reads the record only with the flag on (the secret module is not required otherwise)')
+    mutate = repo[repo.index('function ProfileRepository.mutateSpecies'):]
+    need('if not knownSpecies(speciesId) then return false, nil, "unknown_species" end' in mutate[:600], 'mutateSpecies still refuses a secret id')
+    # BD-606 SS9: the announcement and the odds line stay behind the flag
+    svc = read('src/server/RareHatchService.luau')
+    need('Config.SecretSpeciesEnabled == true and outcome.secret == true' in svc and 'Rare.classify(outcome, Config.SpeciesRarities[species], secretId ~= nil)' in svc, 'RareHatchService announces a secret only behind the flag and the settled outcome')
+    need('require(ReplicatedStorage.Shared.SecretSpeciesConfig)' in svc and not re.search(r'^local \w+ = require\(.*SecretSpeciesConfig\)', svc, re.M), 'RareHatchService requires the secret module lazily, only behind the flag')
+    need('if plan.sound ~= "" then pcall(Sfx.play, plan.sound) end' in read('src/client/RareHatchClient.client.luau'), 'the client plays no sound for a secret find')
+    for path in ('src/shared/OddsCopy.luau', 'src/shared/ShopOdds.luau', 'src/shared/EggOutcomeOdds.luau', 'src/shared/EggOutcomeView.luau'):
+        need('SecretSpeciesConfig' not in read(path), path + ' never reads the secret module (the shop egg odds cannot mention a secret)')
+    need('if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do' in boot_text(), 'the Egg Odds panel shows the free-egg line only behind the flag and a ready model, never in the upgrade odds')
+    need(boot_text().count('freeEggNotes') == 1, 'the free-egg line has exactly one UI call site')
 
     # The pure module: no Roblox APIs and no Config reads (the flag is read by the callers).
     module_text = chr(10).join(line.split('--')[0] for line in read('src/shared/SecretSpeciesConfig.luau').splitlines())  # code only, no comments
@@ -822,10 +957,244 @@ def static():
     for name, asset in (('secret_dino_budgiesaurus', '111728956844490'), ('secret_dino_foxosaurus', '119604460832523')):
         need(re.search(rf'^\| {name} \|.*{asset}.*placeholder', registry, re.M | re.I) is not None, f'docs/77 pending line for {name} ({asset})')
     decisions = read('docs/115-decisions-log.md')
-    for n in range(1, 7):
-        need(re.search(rf'^\| SS{n} \| \*\*LEAD \(owner delegated 2026-10-16\)', decisions, re.M) is not None, f'docs/115 row SS{n}')
+    for n in range(1, 10):
+        need(re.search(rf'^\| SS{n} \| \*\*LEAD \(owner delegated 2026-10-16', decisions, re.M) is not None, f'docs/115 row SS{n}')
+    need('equippedSecret' in read('docs/111-rollback-drill.md'), 'docs/111 lists the additive equippedSecret field')
     need((ROOT / 'docs/149-secret-species.md').exists(), 'docs/149-secret-species.md exists')
     return errors
+
+
+# ---------------------------------------------------------------------------------------------------------------- part C (BD-606)
+# C1: the rare-find announcement and the odds line (pure rules, real modules).
+PART_C = r'''
+local R = @@RARE@@
+local function mk() return @@SECRET@@ end
+local Secret = mk()
+local Config = ConfigForC
+
+-- ===== SS9 announcement: calm, short, friendly, Reduce Motion safe, only when the caller says "secret" =====
+local plain = R.classify({}, 2, false)
+assert(plain == nil and R.classify({}, 2) == nil and R.classify({}, nil, nil) == nil, "an ordinary egg is never rare, with or without the new argument")
+local sec = R.classify({}, nil, true)
+assert(sec and sec.kind == "secret" and sec.secret == true and sec.score == R.SecretScore and not sec.legendary and not sec.shiny, "a secret hatch is a rare find of kind secret")
+assert(R.classify({failed = true}, nil, true) == nil, "a Cracked egg is never a rare find, secret or not")
+local shinySecret = R.classify({shiny = true}, nil, true)
+assert(shinySecret and shinySecret.kind == "secret" and shinySecret.score > sec.score and shinySecret.score > R.classify({shiny = true}, 1).score, "a Shiny secret ranks above both")
+-- the old kinds are untouched (new argument absent)
+assert(R.classify({}, 5).kind == "legendary" and R.classify({shiny = true}, 1).kind == "shiny" and R.classify({eventMutationId = "x"}, 1).kind == "mutation")
+-- copy: short, friendly, no loud words; others do not learn the name
+local own = R.ownText(sec, "Chickosaurus")
+local others = R.text("Sam", sec, "Chickosaurus")
+assert(own == "Secret find! You hatched a Chickosaurus!", own)
+assert(others == "Sam found a secret dino!" and not others:find("Chickosaurus"), others)
+for _, name in {"Chickosaurus", "Pigeon", "Dodo", "Duck", "Penguin", "Budgiesaurus", "Foxosaurus"} do
+    for _, info in {sec, shinySecret} do
+        local text = R.ownText(info, name)
+        assert(#text <= 48, "short: " .. text)
+        assert(#R.text(string.rep("x", 60), info, name) <= 48, "short for a long display name")
+        for _, text2 in {text, R.text("Sam", info, name)} do
+            assert(not text2:find("[A-Z][A-Z][A-Z]") and not text2:find("!!") and not text2:lower():find("legendary") and not text2:lower():find("guarantee"), "calm words: " .. text2)
+        end
+    end
+end
+assert(R.text("Sam", R.classify({}, 5), "T-Rex") == "Sam hatched a Legendary T-Rex!", "old announcements are unchanged")
+-- Effects settings x Reduce Motion: a secret is the same calm banner everywhere: no confetti, no star pops, no light sweep, no extra sound
+for _, effects in {"full", "lite", "off", "bogus"} do
+    for _, calm in {true, false} do
+        local plan = R.plan(effects, calm, "secret")
+        assert(plan.banner == true and plan.confetti == 0 and plan.pop == 0 and plan.sweep == 0 and plan.sound == "", "secret plan " .. effects .. " calm=" .. tostring(calm))
+    end
+end
+assert(R.plan("full", false, "shiny").sound == "shiny_bang" and R.plan("full", false, "shiny").confetti > 0, "the other kinds keep their celebration")
+-- the announcer treats a secret like any rare egg: one per window, the best wins, the hatcher is then quiet
+local st = R.newState()
+assert(R.offer(st, 1, "s1", sec, "secret text", 10) == 10 + R.Window)
+assert(R.offer(st, 1, "s2", R.classify({}, 1, false) or R.classify({}, 5), "legendary text", 10.5) == nil)
+local out = R.flush(st, 1, 10 + R.Window)
+assert(out and out.text == "secret text", "a secret ranks with a Legendary (ties keep the first)")
+
+-- ===== SS9 odds line: one honest sentence, free eggs only, only while secrets can really drop =====
+local Copy = OddsCopyForC
+local ShopOdds = ShopOddsForC
+local line = "A tiny chance of a secret dino in free eggs"
+assert(Copy.secretLine == line, "the line is exactly the owner-reviewed sentence")
+assert(#Copy.freeEggNotes(false) == 0 and #Copy.freeEggNotes(nil) == 0 and #Copy.freeEggNotes(0 :: any) == 0, "off: no line")
+local live = Copy.freeEggNotes(true)
+assert(#live == 1 and live[1] == line, "on: exactly the one line")
+local lower = line:lower()
+assert(lower:find("free eggs", 1, true) and lower:find("tiny chance", 1, true), "it says free eggs and a tiny chance")
+for _, banned in {"guarantee", "sure", "always", "buy", "price", "sold", "robux", "crystal", "shop", "pack", "%d", "%%", "x%d"} do
+    assert(not lower:find(banned), "the line must not say: " .. banned)
+end
+assert(#line <= 48, "short enough for a child")
+-- what a SHOP egg can be never mentions a secret, whatever the flag: groups, notes, the long list, the buy sentence, the upgrade odds
+local function noSecret(text) assert(not tostring(text):lower():find("secret"), "mentions a secret: " .. tostring(text)) end
+for level = 0, #Progression.ConditionWeights - 1 do
+    for _, group in Copy.eggGroups(level, 2) do
+        noSecret(group.title) noSecret(group.note or "")
+        for _, row in group.rows do noSecret(row.name) noSecret(row.text) end
+    end
+    for _, group in Copy.upgradeGroups(level) do
+        noSecret(group.title) noSecret(group.note or "")
+        for _, row in group.rows do noSecret(row.name) end
+    end
+    for _, isEgg in {true, false} do for _, note in Copy.notes(isEgg) do noSecret(note) end end
+    for _, text in ShopOdds.lines(level) do noSecret(text) end
+    noSecret(Copy.hatchSentence(level))
+end
+noSecret(Copy.fusionCalm) noSecret(Copy.fusionDetails)
+for _, row in Config.ChestSpeciesWeights do
+    assert(not Secret.isSecret(row.speciesId), "the shop species table has no secret")
+end
+-- "secretLive" exactly as Bootstrap computes it: the flag AND at least one model slot filled (an honest line: with every slot empty nothing can drop)
+local function secretLive(flag, S) return flag == true and #S.readyIds() > 0 end
+local empty = mk()
+local filled = mk() filled.Species.penguin.assetId = 7770001
+assert(secretLive(false, filled) == false and secretLive(true, empty) == false and secretLive(nil, filled) == false, "no line while off or while no model is ready")
+assert(secretLive(true, filled) == true and #Copy.freeEggNotes(secretLive(true, filled)) == 1, "the line shows only with the flag on and a ready model")
+assert(#Copy.freeEggNotes(secretLive(true, empty)) == 0, "flag on with every slot empty: still no line (nothing can drop)")
+print("secret species part C passed")
+'''
+
+
+def part_c():
+    base = verify_odds_copy.script()
+    prefix = base[:-len(verify_odds_copy.BODY)]
+    body = PART_C
+    body = body.replace('@@RARE@@', module('src/shared/RareHatch.luau'))
+    body = body.replace('@@SECRET@@', module('src/shared/SecretSpeciesConfig.luau'))
+    # the odds modules the prefix built: expose them under the names PART_C uses
+    glue = 'local ConfigForC, OddsCopyForC, ShopOddsForC = Config, Copy, ShopOdds\nlocal Progression = Progression\n'
+    return prefix + glue + body
+
+
+# C2: a secret species WITH a model, tested with FAKE ids for all seven (no real mesh id; the flag and the shipped files stay untouched).
+# The tree copy is a scratch directory; the shipped sources are only read.
+WIRING_TOOLS = ['verify_scale_ladder.py', 'verify_camera_framing.py', 'verify_hit_sizes.py', 'verify_mouth_reach.py', 'verify_lowpoly_dinos.py']
+FAKE_BASE = 9990000000000  # 13 digits, all fake: never a published asset
+SECRET_ROWS = re.compile(r'^(\s{12})(\w+) = \{scale = ([\d.]+), tier = (\d), basis = "(\w+)"', re.M)
+
+
+def edit(path, old, new, count=1):
+    text = path.read_text(encoding='utf-8')
+    assert text.count(old) == count, f'{path.name}: expected {count} of {old[:70]!r}, found {text.count(old)}'
+    path.write_text(text.replace(old, new), encoding='utf-8', newline='')
+
+
+def build_tree(dst, fill=True, measured=True, lowpoly=True):
+    """Copy src, the five sizing verifiers and docs/114 into dst; optionally fill all seven model slots with FAKE ids, add the
+    LowPolyDinoAssets entries and mark the ladder rows measured."""
+    shutil.copytree(ROOT / 'src', dst / 'src')
+    (dst / 'tools').mkdir()
+    for name in WIRING_TOOLS:
+        shutil.copy(ROOT / 'tools' / name, dst / 'tools' / name)
+    (dst / 'docs').mkdir()
+    shutil.copy(ROOT / 'docs/114-handbook.md', dst / 'docs/114-handbook.md')
+    ladder = (dst / 'src/shared/ScaleLadder.luau').read_text(encoding='utf-8')
+    rows = {m.group(2): (m.group(3), m.group(4)) for m in SECRET_ROWS.finditer(ladder)}
+    cfg_path = dst / 'src/shared/SecretSpeciesConfig.luau'
+    classes = dict(re.findall(r'\{ id = "(\w+)", name = "[^"]+", secret = true, class = "(\w+)"', cfg_path.read_text(encoding='utf-8')))
+    assert sorted(rows) == sorted(classes) and len(rows) == 7, (sorted(rows), sorted(classes))
+    fakes = {}
+    for index, sid in enumerate(classes, 1):
+        fakes[sid] = FAKE_BASE + index
+        if fill:
+            text = cfg_path.read_text(encoding='utf-8')
+            pattern = re.compile(r'(\{ id = "%s", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )0( \})' % sid)
+            assert pattern.search(text), sid
+            cfg_path.write_text(pattern.sub(lambda m: m.group(1) + str(fakes[sid]) + m.group(2), text), encoding='utf-8', newline='')
+    if fill and lowpoly:
+        lp = dst / 'src/shared/LowPolyDinoAssets.luau'
+        text = lp.read_text(encoding='utf-8').rstrip()
+        assert text.endswith('}')
+        lines = ''.join(f'    {sid} = {{assetId = {fakes[sid]}, version = "v1", scale = {rows[sid][0]}, tier = {rows[sid][1]}, class = "{classes[sid]}"}},\n' for sid in classes)
+        lp.write_text(text[:-1] + lines + '}\n', encoding='utf-8', newline='')
+    if fill and measured:
+        text = (dst / 'src/shared/ScaleLadder.luau').read_text(encoding='utf-8')
+        assert text.count(', measured = false}') == 7
+        (dst / 'src/shared/ScaleLadder.luau').write_text(text.replace(', measured = false}', ', measured = true}'), encoding='utf-8', newline='')
+    return fakes, classes, rows
+
+
+def run_tool(dst, name, runner, *extra):
+    result = subprocess.run([sys.executable, str(dst / 'tools' / name), '--runner', runner, *extra], capture_output=True, text=True, cwd=str(dst))
+    return result.returncode, (result.stdout + result.stderr)
+
+
+def wiring(runner):
+    errors = []
+    summary = []
+
+    def need(cond, msg):
+        if not cond:
+            errors.append(msg)
+
+    def fresh(**kw):
+        scratch = Path(tempfile.mkdtemp(prefix='ss_wiring_'))
+        fakes, classes, rows = build_tree(scratch, **kw)
+        return scratch, fakes, classes, rows
+
+    # 1. the shipped tree (all slots empty) passes every sizing verifier with the secret rows present
+    for name in WIRING_TOOLS:
+        code, out = run_tool(ROOT, name, runner)
+        need(code == 0, f'{name} fails on the shipped tree: {out[-400:]}')
+    # 2. all seven filled with FAKE ids, entries and measured rows: every verifier still passes
+    scratch, fakes, classes, rows = fresh()
+    try:
+        need(all(str(v).startswith('99900000000') for v in fakes.values()) and len(set(fakes.values())) == 7, 'the seven ids are fake and distinct')
+        code, out = run_tool(scratch, 'verify_scale_ladder.py', runner, '--write-doc')
+        need(code == 0, 'scale ladder (fake ids, regenerated doc) fails: ' + out[-600:])
+        for name in WIRING_TOOLS:
+            code, out = run_tool(scratch, name, runner)
+            need(code == 0, f'{name} fails with all seven secret species filled (FAKE ids): {out[-600:]}')
+            if name == 'verify_lowpoly_dinos.py':
+                need('(7 secret slots, 7 filled)' in out, 'verify_lowpoly_dinos must see the seven filled secret entries: ' + out[-300:])
+            if name == 'verify_hit_sizes.py':
+                need('7 secret species' in out, 'hit sizes must cover the secret species')
+        summary.append('7 fake-id secrets: scale ladder, camera framing, hit sizes, mouth reach, low-poly registry all pass')
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+    # 3. mutations: each broken wiring must be caught by the named verifier
+    def mutate(label, tool, expect, fn, **kw):
+        scratch, fakes, classes, rows = fresh(**kw)
+        try:
+            fn(scratch, fakes, classes, rows)
+            if tool == 'verify_scale_ladder.py':
+                run_tool(scratch, tool, runner, '--write-doc')  # regenerate the doc so only the mutation can fail
+            code, out = run_tool(scratch, tool, runner)
+            need(code != 0 and expect in out, f'MUTATION {label}: {tool} must fail with {expect!r} (exit {code}): {out[-400:]}')
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+
+    mutate('estimate in game', 'verify_scale_ladder.py', 'still an ESTIMATE', lambda d, f, c, r: None, measured=False)
+    mutate('filled slot without a LowPolyDinoAssets entry', 'verify_scale_ladder.py', 'has no entry', lambda d, f, c, r: None, lowpoly=False)
+    mutate('filled slot without a LowPolyDinoAssets entry (registry)', 'verify_lowpoly_dinos.py', 'no entry', lambda d, f, c, r: None, lowpoly=False)
+    mutate('model scale off the ladder', 'verify_scale_ladder.py', 'differs from the ladder',
+           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'penguin = {{assetId = {f["penguin"]}, version = "v1", scale = 1.85', f'penguin = {{assetId = {f["penguin"]}, version = "v1", scale = 2.5'))
+    mutate('model class wrong', 'verify_lowpoly_dinos.py', 'class',
+           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'tier = 1, class = "Water"}}', 'tier = 1, class = "Ground"}}'))
+    mutate('asset id differs from the slot', 'verify_scale_ladder.py', 'differs from the SecretSpeciesConfig slot',
+           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'assetId = {f["duck"]}', f'assetId = {f["duck"] + 5000}'))
+    mutate('invented LowPolyDinoAssets entry with an empty slot', 'verify_lowpoly_dinos.py', 'never invent ids',
+           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', 'compy = {assetId = 94548957808227', 'dodo = {assetId = 9990000000099, version = "v1", scale = 2.2, tier = 1, class = "Ground"},\n    compy = {assetId = 94548957808227'),
+           fill=False)
+    mutate('target off the size rule', 'verify_scale_ladder.py', 'SECRET penguin',
+           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'basis = "bulk", target = 5.55, width = 4.40', 'basis = "bulk", target = 6.60, width = 4.40'))
+    mutate('basis wrong for the class (Water by height)', 'verify_scale_ladder.py', 'does not fit class',
+           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'penguin = {scale = 1.85, tier = 1, basis = "bulk"', 'penguin = {scale = 1.85, tier = 1, basis = "height"'))
+    mutate('tier not Compy-sized', 'verify_scale_ladder.py', 'SS8 says 1',
+           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'chickosaurus = {scale = 2.2, tier = 1', 'chickosaurus = {scale = 2.2, tier = 3'))
+    mutate('box drifts from the verifier list', 'verify_scale_ladder.py', 'SECRET_BOXES',
+           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'width = 4.00, height = 6.60, length = 5.80', 'width = 9.00, height = 6.60, length = 5.80'))
+    mutate('box off the size rule', 'verify_scale_ladder.py', 'more than 2%',
+           lambda d, f, c, r: edit(d / 'tools/verify_scale_ladder.py', "'foxosaurus': (3.40, 6.60, 8.70)", "'foxosaurus': (3.40, 9.00, 8.70)") or edit(d / 'src/shared/ScaleLadder.luau', 'width = 3.40, height = 6.60, length = 8.70', 'width = 3.40, height = 9.00, length = 8.70'))
+    mutate('HitSize ignores the secret rows', 'verify_hit_sizes.py', 'Luau behavior checks failed',
+           lambda d, f, c, r: edit(d / 'src/shared/HitSize.luau', 'ScaleLadder.dinoRow(speciesId)', '(ScaleLadder.Dino.species :: any)[speciesId]'))
+    mutate('MouthReach ignores the secret rows', 'verify_mouth_reach.py', 'exceeds the cap',
+           lambda d, f, c, r: edit(d / 'src/shared/MouthReach.luau', 'ScaleLadder.dinoRow(speciesId)', '(ScaleLadder.Dino.species :: any)[speciesId]'))
+    summary.append('mutations caught: estimate in game, missing/invented/drifting LowPolyDinoAssets entry, wrong class, off-rule target/basis/tier/box, blind HitSize, blind MouthReach')
+    return errors, summary
 
 
 def main():
@@ -842,16 +1211,24 @@ def main():
     if args.dump:
         Path(args.dump, 'part_a.luau').write_text(part_a(), encoding='utf-8')
         Path(args.dump, 'part_b.luau').write_text(part_b(), encoding='utf-8')
+        Path(args.dump, 'part_c.luau').write_text(part_c(), encoding='utf-8')
         return
     status = 0
     with tempfile.TemporaryDirectory() as directory:
-        for name, build in (('part_a', part_a), ('part_b', part_b)):
+        for name, build in (('part_a', part_a), ('part_b', part_b), ('part_c', part_c)):
             path = Path(directory) / (name + '.luau')
             path.write_text(build(), encoding='utf-8')
             result = subprocess.run([args.runner, str(path)], capture_output=True, text=True)
             print(result.stdout, end='')
             print(result.stderr, end='')
             status = status or result.returncode
+    if status == 0:
+        wiring_errors, wiring_summary = wiring(args.runner)
+        for line in wiring_summary:
+            print(line)
+        for error in wiring_errors:
+            print('FAIL:', error)
+        status = 1 if wiring_errors else 0
     if status == 0:
         print('Secret species verified (offline Luau; Studio check of the Index cards pending, no model slot is filled yet)')
     raise SystemExit(status)

@@ -29,7 +29,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_scale_ladder import MEASURED  # noqa: E402  (width, height, length at spawn of all 22 species, Studio-measured BD-471 / BD-500)
+from verify_scale_ladder import MEASURED as _SHIPPED, SECRET_BOXES  # noqa: E402  (width, height, length at spawn of all 22 species, Studio-measured BD-471 / BD-500)
+MEASURED = {**_SHIPPED, **SECRET_BOXES}  # BD-606: plus the 7 secret species (design estimates until their meshes exist): HitSize reads ScaleLadder.dinoRow for both
 
 SCALES = (1, 2, 4)
 MIN_R, MAX_R = 1.0, 14.0
@@ -132,7 +133,7 @@ local HR=loadHitRadius(on)
 -- 1. LADDER + 2. SAME RULE, all 22 species at growth scale 1, 2, 4
 local lines={}
 for _,id in IDS do
-  local row=Ladder.Dino.species[id]
+  local row=Ladder.dinoRow(id) -- BD-606: 22 shipped species + 7 secret species
   for _,s in SCALES do
     local raw=HitSize.rawRadius(id,s)
     local derived=math.max(row.width,row.length)/2*s
@@ -206,7 +207,7 @@ assert(HR.lowPolyOn()==true)
 -- a LowPolyDinos module without enabled() (or not a table) counts as off
 assert(loadHitRadius({}).lowPolyOn()==false and loadHitRadius(5).lowPolyOn()==false)
 
-print("hit sizes passed: 22 species x scales 1/2/4 equal the ScaleLadder value, player = NPC, the shell is not measured, flag off keeps the old box rule")
+print("hit sizes passed: 22 species + 7 secret species x scales 1/2/4 equal the ScaleLadder value, player = NPC, the shell is not measured, flag off keeps the old box rule")
 '''
 
 
