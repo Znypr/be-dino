@@ -77,7 +77,8 @@ def static_errors() -> list[str]:
         errors.append('FusionMenu must not call ObjectiveAction itself (it calls ObjectiveSeen.report)')
     if len(re.findall(r'^.*ObjectiveSeen.*$', menu, re.M)) != 1 or             'if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end' not in menu:
         errors.append('FusionMenu: exactly one use of ObjectiveSeen, `if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end`')
-    if re.findall(r'action\s*=\s*"([a-z_]+)"', seen) != ['seen'] or seen.count('InvokeServer') != 1 or seen.count('{action = "seen", id = seenId}') != 1:
+    # two sends of one shape: the report and the single BD-616 retry after "not_opened"
+    if re.findall(r'action\s*=\s*"([a-z_]+)"', seen) != ['seen', 'seen'] or seen.count('InvokeServer') != 2 or seen.count('{action = "seen", id = seenId}') != 2:
         errors.append('ObjectiveSeen: the only request is {action = "seen", id = seenId}')
     if not re.search(r'function ObjectiveSeen\.report\(seenId: string\)\n    if Config\.ObjectivesEnabled ~= true then return end\n', seen):
         errors.append('ObjectiveSeen.report must return first thing while the flag is not true (flag off sends nothing)')
@@ -795,7 +796,8 @@ do
  local seenFolder = {FindFirstChild = function(_, name) if name == "ObjectiveAction" and hasRemote then return seenRemote end return nil end}
  local seenRepl = {Shared = {Config = "Config"}, FindFirstChild = function(_, name) lookups += 1 if name == "BeDinoRemotes" then return seenFolder end return nil end}
  local seenGame = {GetService = function(_, name) assert(name == "ReplicatedStorage") return seenRepl end}
- local seenTask = {spawn = function(fn) table.insert(queued, fn) end}
+ local waited = 0
+ local seenTask = {spawn = function(fn) table.insert(queued, fn) end, wait = function(s) waited += s return s end}
  local seenRequire = function(id) assert(id == "Config") return seenCfg end
  local function loadSeen() return (function(game, task, require) @@SEEN_SRC@@ end)(seenGame, seenTask, seenRequire) end
  local function drain() while #queued > 0 do table.remove(queued, 1)() end end
@@ -829,6 +831,18 @@ do
   Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
   assert(#sent == 2, reason .. ": asked again on the next open")
  end
+ -- BD-616: "not_opened" (the menu's own request had not landed yet) is asked once more after a short wait, then again on the next open
+ sent = {} Seen = loadSeen() waited = 0
+ seenAnswer = function(_) return {ok = false, reason = "not_opened"} end
+ Seen.report("fusion_menu") drain()
+ assert(#sent == 2 and waited > 0, "not_opened: one more try after a short wait (" .. #sent .. " sent)")
+ Seen.report("fusion_menu") drain()
+ assert(#sent == 4, "not_opened is not final: the next open asks again")
+ local lateCalls = 0
+ sent = {} Seen = loadSeen()
+ seenAnswer = function(_) lateCalls += 1 if lateCalls == 1 then return {ok = false, reason = "not_opened"} end return {ok = true, status = "seen"} end
+ Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+ assert(#sent == 2, "not_opened then seen: the retry succeeds and the report is final")
  sent = {} Seen = loadSeen()
  seenAnswer = function(_) return nil end
  Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()

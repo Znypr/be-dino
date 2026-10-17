@@ -269,7 +269,7 @@ def check_wiring():
     assert 'DinoIndexPanels.supported()' in boot and 'equip:FireServer(speciesId,Http:GenerateGUID(false),variantKey)' in boot
     # Server: the optional variant key is validated twice (event handler shape, repository ownership).
     service = read('src/server/CollectionService.luau')
-    assert 'invalid_variant' in service and 'profileRepository.equipSpecies(player, speciesId, variantKey)' in service
+    assert 'invalid_variant' in service and 'profileRepository.equipSpecies(player, speciesId, variantKey, inRun)' in service
     repo = profile_sources.repository_text()
     assert repo.count('not_owned') >= 1 and 'profileValue.equippedVariantKey = variantKey' in repo
     assert 'EggTraits.selected(collection[equippedId], equippedKey)' in repo and 'local function equippedOf' in repo  # BD-606: the dino actually played (a secret species sits beside the fallback pair)

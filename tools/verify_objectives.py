@@ -406,6 +406,7 @@ do
  -- flag off: nothing exists, nothing runs
  assert(Service.start({})==nil and touched==false,"flag off: start() returns at once and creates no remote")
  assert(Service.record(player,"run_end")==false)
+ Service.noteMenuUse(player,"fusion_menu") -- BD-616: flag off = no-op, so it cannot pre-open the menu for later (checked by the "not_opened" assert below)
  local off=Service.handle(player,{action="view"}) assert(off.ok==false and off.reason=="disabled")
  -- flag on, with a fake repository
  svcConfig.ObjectivesEnabled=true
@@ -438,7 +439,16 @@ do
  assert(Service.handle(player,{action="view"},"extra").reason=="bad_request","extra arguments are rejected")
  -- OB2: the "seen" request has its own strict shape: {action, id} and nothing else
  reset()
- local seenResponse=Service.handle(player,{action="seen",id="fusion_menu"}) assert(seenResponse.ok==true and seenResponse.status=="seen" and seenResponse.view~=nil)
+ -- BD-616 (T9): the client's statement alone earns nothing; the server must have answered that menu's own request first
+ local seenCalls=0
+ local realSeen=repo.objectiveSeen
+ repo.objectiveSeen=function(...) seenCalls+=1 return realSeen(...) end
+ local early=Service.handle(player,{action="seen",id="fusion_menu"}) assert(early.ok==false and early.reason=="not_opened" and seenCalls==0,"BD-616: a seen report before the menu's own request is refused ("..tostring(early.reason)..")")
+ Service.noteMenuUse(player,"fusion_menu")
+ local stranger={} reset()
+ local strangerSeen=Service.handle(stranger,{action="seen",id="fusion_menu"}) assert(strangerSeen.ok==false and strangerSeen.reason=="not_opened" and seenCalls==0,"BD-616: another player's menu use does not count")
+ reset()
+ local seenResponse=Service.handle(player,{action="seen",id="fusion_menu"}) assert(seenResponse.ok==true and seenResponse.status=="seen" and seenResponse.view~=nil and seenCalls==1)
  reset()
  local forgedSeen=Service.handle(player,{action="seen",id="T9"}) assert(forgedSeen.ok==false and forgedSeen.reason=="unknown_objective")
  for _,bad in {{action="seen"},{action="seen",id=5},{action="seen",id=""},{action="seen",id=string.rep("x",33)},{action="seen",id="fusion_menu",amount=1},{action="seen",id="fusion_menu",token="t"},{action="seen",id="fusion_menu",objective="T9"}} do

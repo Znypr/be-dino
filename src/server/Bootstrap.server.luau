@@ -156,6 +156,7 @@ local function setup(player: Player)
         local hub = CFrame.new(SpawnGeometry.hubPoint(Config))
         character:PivotTo(hub)
         task.spawn(function()
+            CollectionService.applyPending(player) -- BD-613: a dinosaur picked during the last run is equipped now, before the attach reads it
             Dinosaur.attach(character, Config.WalkSpeed, player)
             if player.Character == character then character:PivotTo(hub) end
         end)

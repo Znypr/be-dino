@@ -13,7 +13,7 @@
 --     after the player owns a dino; any other id is "unknown_objective". The client sends no amount and no objective id.
 -- The client never sends progress, rewards, windows or amounts. Every response is a table; failures are {ok = false, reason}.
 -- Reasons: bad_request, rate_limited, disabled, profile_not_loaded, invalid_token, unknown_objective, not_done, not_active,
--- already_claimed, token_conflict, newer_version, lease_lost, save_failed, no_dino, queue_full. Pure rules: shared/ObjectiveRules. Rewards are
+-- already_claimed, token_conflict, newer_version, lease_lost, save_failed, no_dino, queue_full, not_opened (BD-616). Pure rules: shared/ObjectiveRules. Rewards are
 -- PROVISIONAL Crystals/XP only (shared/ObjectiveConfig); never Robux, never random items.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,6 +29,9 @@ local repository: any = nil
 local windows: {[any]: {startedAt: number, count: number}} = {}
 -- OB1: food the server saw a player eat since their last settled run (memory only, weak keys, never persisted). Reset at every settlement.
 local runFood: {[any]: number} = setmetatable({}, {__mode = "k"}) :: any
+-- BD-616: menus whose own server request this server has answered for the player this session ("fusion_menu" = a FusionAction list).
+-- Memory only, weak keys. A "seen" report is accepted only for a menu in here, so a script that never used the menu earns nothing.
+local menusUsed: {[any]: {[string]: boolean}} = setmetatable({}, {__mode = "k"}) :: any
 local clock = os.clock
 
 local Shapes = {
@@ -82,6 +85,9 @@ local function handleAction(player: any, request: any)
         return {ok = true, view = view}
     end
     if request.action == "seen" then
+        -- BD-616: the report alone is a client statement; the server must also have answered that menu's own request (not_opened = ask again).
+        -- An unknown id falls through so the repository still answers "unknown_objective".
+        if ObjectiveRules.seenEntry(request.id) ~= nil and not (menusUsed[player] and menusUsed[player][request.id]) then return fail("not_opened") end
         local ok, status = repository.objectiveSeen(player, request.id)
         if not ok then return fail(status or "save_failed") end
         return {ok = true, status = status, view = repository.objectiveView(player)}
@@ -165,12 +171,20 @@ function ObjectiveService.recordHatched(player: any, outcomes: {any}, freshSpeci
     if fresh > 0 then ObjectiveService.record(player, "species_new", fresh) end
 end
 
--- A fusion the server verified: a quote for a full, owned donor set (FusionService) or a committed fusion (ProfileRepository).
--- D5 "Add a dino toward a fusion step" counts on this server-verified use. T9 "Open the Fusion menu" no longer does (OB2, docs/115):
--- it is earned by the client's one-time {action = "seen", id = "fusion_menu"} request, validated in handleAction above.
+-- A committed fusion (ProfileFusion.fuseDinosaurs, after the transaction). D5 "Add a dino toward a fusion step" counts on this only
+-- (BD-616: a free quote no longer does). T9 "Open the Fusion menu" is earned by the client's one-time {action = "seen", id = "fusion_menu"}
+-- request (OB2, docs/115), accepted only after noteMenuUse below.
 function ObjectiveService.recordFusionUse(player: any)
     if Config.ObjectivesEnabled ~= true then return end
     ObjectiveService.record(player, "fusion_step_added", 1)
+end
+
+-- BD-616: the server answered this menu's own request for the player (FusionService "list" -> "fusion_menu"). No-op while the flag is off.
+function ObjectiveService.noteMenuUse(player: any, menuId: string)
+    if Config.ObjectivesEnabled ~= true or not repository then return end
+    local used = menusUsed[player]
+    if not used then used = {} menusUsed[player] = used end
+    used[menuId] = true
 end
 
 -- Test hook: deterministic clock for the rate limiter.

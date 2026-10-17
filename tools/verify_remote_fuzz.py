@@ -26,7 +26,7 @@ reviewed entry has a row in docs/151; the debug flags are pinned off in tools/re
 
     python tools/verify_remote_fuzz.py --runner /path/to/luau            # everything (about a minute)
     python tools/verify_remote_fuzz.py --runner /path/to/luau --only races
-    python tools/verify_remote_fuzz.py --runner /path/to/luau --selftest  # five mutants must each make a named check fail
+    python tools/verify_remote_fuzz.py --runner /path/to/luau --selftest  # each mutant must make a named check fail
 
 Limits: mocks prove validation, ordering, idempotency and budget behaviour of the server code. They do not prove Roblox networking, the
 client-owned character physics (speed and teleport limits are Studio work), real DataStore latency, or anything about a phone.
@@ -91,6 +91,7 @@ GUARDS = [
     ("src/server/CollectionService.luau", r"if\s+Config\.CollectionTestGrantEnabled\s*==\s*true\s+then\s+getRemote\(folder\s*::\s*Folder,\s*\"TestGrantSpecies\"\)", "TestGrantSpecies exists only with its flag"),
     ("src/server/MutationService.luau", r"if\s+Config\.MutationTestSetupEnabled\s*==\s*true\s+then\s+getRemote\(folder,\s*\"TestSetMutationCopies\"\)", "TestSetMutationCopies exists only with its flag"),
     ("src/server/QaService.luau", r"if\s+not\s+Config\.QaOverlayEnabled\s+then\s+return\s+end", "QaMark exists only with its flag"),
+    ("src/server/Bootstrap.server.luau", r"CollectionService\.applyPending\(player\)[^\n]*\n\s*Dinosaur\.attach\(character", "a dinosaur picked during a run is applied on the next spawn, before the attach (BD-613)"),
     ("src/server/AdminService.luau", r"if\s+admins\[player\]\s*~=\s*true\s+then\s+return\s+false,\s*\"not_admin\"\s+end", "AdminAction refuses a non-admin first"),
 ]
 
@@ -105,7 +106,7 @@ CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_
 # Every scenario that a full run must have produced (a deleted scenario must not pass silently).
 SCENARIOS = ["slot-fuzz", "sanity", "empty-handed", "races", "races-no-write-budget", "races-lossy-store", "storm-1-hostile-of-12",
              "storm-2-hostile-of-12", "storm-4-hostile-of-12", "published-pins", "test-grants-flag-on", "test-grants-one-flag",
-             "demo-trigger-studio", "dormant-handlers", "fusion-and-isolation", "cross-player", "run-lifecycle", "findings",
+             "demo-trigger-studio", "dormant-handlers", "fusion-and-isolation", "cross-player", "run-lifecycle", "equip-next-run", "findings",
              "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action"]
 
 
@@ -295,6 +296,9 @@ MUTANTS = [
     ("AdminAction answers a non-admin", "published-pins", {
         "src/server/AdminService": ('if admins[player] ~= true then return false, "not_admin" end', "")},
      "published-pins: a non-admin gets not_admin"),
+    ("a dinosaur can be swapped in the middle of a run again (BD-613 reverted)", "equip-next-run", {
+        "src/server/CollectionService": ('local inRun = runState == "Active" or runState == "Ending"', "local inRun = false")},
+     "equip-next-run: a pick during a run answers next_run"),
 ]
 
 
@@ -320,7 +324,7 @@ def main(argv=None) -> int:
     parser.add_argument("--only", default="", help="run only scenarios whose name contains this text")
     parser.add_argument("--keep", help="write the generated script here")
     parser.add_argument("--storm-seconds", type=int, default=60, help="length of the request storms (default 60; 120 gives the numbers quoted in docs/151)")
-    parser.add_argument("--selftest", action="store_true", help="prove the checks bite: five source mutants must each fail a named check")
+    parser.add_argument("--selftest", action="store_true", help="prove the checks bite: the source mutants must each fail a named check")
     parser.add_argument("--verbose", action="store_true", help="print every check")
     args = parser.parse_args(argv)
     if args.selftest:

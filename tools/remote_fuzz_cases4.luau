@@ -43,6 +43,70 @@ runScenario("run-lifecycle", nil, function(server)
     reportErrors("run-lifecycle", takeErrors())
 end)
 
+-- BD-613 (LEAD decision, docs/115): a dinosaur picked while a run is Active or Ending is accepted ("next_run") but only applies at the next spawn.
+-- Before the fix this scenario's first check failed: EquipSpecies answered "equipped" with RunState = Active and re-rendered the dinosaur.
+runScenario("equip-next-run", nil, function(server)
+    startServices(server)
+    local CS = loadMod(server, "src/server/CollectionService")
+    local p = seeded(server, 1001, function(profile)
+        profile.collection.compy.base = 3
+        profile.collection.triceratops.base = 2
+    end)
+    local before = p.attrs.EquippedSpeciesId
+    local locked = nil
+    for id, e in profileOf(1001).collection do
+        if type(e) == "table" and id ~= "compy" and id ~= "triceratops" and (e.base or 0) + (e.gold or 0) + (e.emerald or 0) + (e.diamond or 0) == 0 then locked = id break end
+    end
+    startRunNow(server, p)
+    local c = charOf(p)
+    check("equip-next-run: the run is active", c:GetAttribute("RunState") == "Active", tostring(c:GetAttribute("RunState")))
+    sleep(2)
+    local refreshBefore, writesBefore = server.dinoCalls.refresh, M.writes
+    fireNow(server, "EquipSpecies", p, "triceratops", tok("midrun"))
+    sleep(2)
+    check("equip-next-run: a pick during a run answers next_run", p.attrs.LastEquipStatus == "next_run", tostring(p.attrs.LastEquipStatus))
+    check("equip-next-run: the dinosaur in play does not change during the run", p.attrs.EquippedSpeciesId == before and p.attrs.EquippedSpeciesId ~= "triceratops" and server.dinoCalls.refresh == refreshBefore,
+        tostring(p.attrs.EquippedSpeciesId) .. " refresh+" .. (server.dinoCalls.refresh - refreshBefore))
+    check("equip-next-run: nothing was written to the profile for the pending pick", profileOf(1001).equippedSpeciesId == before and M.writes == writesBefore, tostring(profileOf(1001).equippedSpeciesId) .. " writes+" .. (M.writes - writesBefore))
+    -- a species the player does not own is refused as before, even during a run, and does not replace the pending pick
+    if locked then
+        fireNow(server, "EquipSpecies", p, locked, tok("locked")) sleep(2)
+        check("equip-next-run: an unowned species is still refused during a run", p.attrs.LastEquipStatus == "locked", tostring(p.attrs.LastEquipStatus))
+    end
+    -- picking the dinosaur already in use cancels the pending pick
+    fireNow(server, "EquipSpecies", p, before, tok("back")) sleep(2)
+    check("equip-next-run: picking the dinosaur in use cancels the pending pick", p.attrs.LastEquipStatus == "already_equipped", tostring(p.attrs.LastEquipStatus))
+    CS.applyPending(p) sleep(1)
+    check("equip-next-run: a cancelled pick applies nothing at the spawn", p.attrs.EquippedSpeciesId == before and M.writes == writesBefore, tostring(p.attrs.EquippedSpeciesId))
+    -- the last pick wins, and it applies at the next spawn
+    fireNow(server, "EquipSpecies", p, "triceratops", tok("again")) sleep(2)
+    check("equip-next-run: the pick is pending again", p.attrs.LastEquipStatus == "next_run" and p.attrs.EquippedSpeciesId == before, tostring(p.attrs.LastEquipStatus))
+    c:SetAttribute("CatchScore", 0)
+    fireNow(server, "RequestEndRun", p)
+    sleep(12)
+    check("equip-next-run: after the run the player is back home on the old dinosaur until the spawn applies the pick", charOf(p):GetAttribute("RunState") == "Sanctuary" and p.attrs.EquippedSpeciesId == before, tostring(p.attrs.EquippedSpeciesId))
+    CS.applyPending(p) sleep(2)  -- Bootstrap.server calls this on every spawn, before Dinosaur.attach
+    check("equip-next-run: the next spawn equips the pick", p.attrs.EquippedSpeciesId == "triceratops" and profileOf(1001).equippedSpeciesId == "triceratops", tostring(p.attrs.EquippedSpeciesId))
+    local writesAfter = M.writes
+    CS.applyPending(p) sleep(1)
+    check("equip-next-run: the pick applies once", M.writes == writesAfter, "writes+" .. (M.writes - writesAfter))
+    -- at home an equip is immediate, as before
+    sleep(2)
+    fireNow(server, "EquipSpecies", p, "compy", tok("home")) sleep(2)
+    check("equip-next-run: at home an equip is immediate", p.attrs.LastEquipStatus == "equipped" and p.attrs.EquippedSpeciesId == "compy", tostring(p.attrs.LastEquipStatus))
+    -- Ending counts as in a run; a pick is dropped when the player leaves
+    startRunNow(server, p)
+    charOf(p):SetAttribute("RunState", "Ending")
+    sleep(2)
+    fireNow(server, "EquipSpecies", p, "triceratops", tok("ending")) sleep(2)
+    check("equip-next-run: a pick while the run is Ending is also next_run", p.attrs.LastEquipStatus == "next_run" and p.attrs.EquippedSpeciesId == "compy", tostring(p.attrs.LastEquipStatus))
+    disconnect(server, p)
+    sleep(30)
+    CS.applyPending(p)
+    check("equip-next-run: a pick does not survive the player leaving", profileOf(1001).equippedSpeciesId == "compy", tostring(profileOf(1001).equippedSpeciesId))
+    reportErrors("equip-next-run", takeErrors())
+end)
+
 -- Findings reproduced, not asserted as fixed: each line prints "FINDING" so the audit document can quote the exact numbers.
 runScenario("findings", nil, function(server)
     startServices(server)
@@ -50,18 +114,7 @@ runScenario("findings", nil, function(server)
         profile.collection.compy.base = 3
         profile.collection.triceratops.base = 2
     end)
-    -- F-EQUIP: a species can be swapped in the middle of a run (class speed, size and hit box all follow the equip)
-    startRunNow(server, p)
-    local c = charOf(p)
-    check("findings: the run is active", c:GetAttribute("RunState") == "Active", tostring(c:GetAttribute("RunState")))
-    sleep(2)
-    local refreshBefore = server.dinoCalls.refresh
-    fireNow(server, "EquipSpecies", p, "triceratops", tok("midrun"))
-    sleep(2)
-    local swapped = p.attrs.EquippedSpeciesId == "triceratops" and p.attrs.LastEquipStatus == "equipped"
-    report("FINDING equip-during-run: EquipSpecies while RunState=" .. tostring(c:GetAttribute("RunState")) .. " answered " .. tostring(p.attrs.LastEquipStatus) .. " and re-rendered the dinosaur " .. (server.dinoCalls.refresh - refreshBefore) .. "x (equipped now " .. tostring(p.attrs.EquippedSpeciesId) .. ")")
-    server.findingEquipInRun = swapped
-
+    -- F-EQUIP (BD-613) is fixed: see the "equip-next-run" scenario above.
     -- F-ZERO-RUN: a run that ate nothing still costs a settlement write; one player can cycle it every ~3 s
     local writesBefore = M.writes
     local cycles = 0

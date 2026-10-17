@@ -24,7 +24,25 @@ local function rateAllowed(bucket: string, player: Player): boolean
     return cooldowns.allow(player.UserId, bucket, os.clock(), Config.EquipRequestCooldownSeconds)
 end
 
+-- BD-613 (docs/115, LEAD decision): a dinosaur picked while a run is Active or Ending is accepted ("next_run") but only applied at the
+-- player's next spawn, so class speed, glide, dash, size and hit box cannot be swapped mid-run. Memory only, never saved, one pick per
+-- player (the last wins); a rejoin, a server restart or an equip at home drops it. The profile is not touched until the spawn.
+local pendingEquip: {[Player]: {speciesId: string, variantKey: string?}} = setmetatable({}, {__mode = "k"}) :: any
+local repository: any = nil
+
+-- Called by Bootstrap on every spawn, before the dinosaur is attached. Re-checks everything (ownership may have changed meanwhile);
+-- a pick that no longer holds is dropped silently and the player keeps the dinosaur they had.
+function CollectionService.applyPending(player: Player)
+    local pick = pendingEquip[player]
+    if not pick then return end
+    pendingEquip[player] = nil
+    if not repository or player.Parent == nil then return end
+    repository.equipSpecies(player, pick.speciesId, pick.variantKey)
+end
+
 function CollectionService.start(profileRepository, dinosaur)
+    repository = profileRepository
+    Players.PlayerRemoving:Connect(function(player: Player) pendingEquip[player] = nil end)
     local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
     if not folder then
         folder = Instance.new("Folder")
@@ -56,7 +74,16 @@ function CollectionService.start(profileRepository, dinosaur)
             return
         end
 
-        local ok, status = profileRepository.equipSpecies(player, speciesId, variantKey)
+        local runState = if player.Character then player.Character:GetAttribute("RunState") else nil
+        local inRun = runState == "Active" or runState == "Ending"
+        local ok, status = profileRepository.equipSpecies(player, speciesId, variantKey, inRun)
+        if ok and inRun then
+            -- BD-613: nothing changes now; "next_run" tells the child (NotifyQueue). Picking the dinosaur already in use cancels an earlier pick.
+            pendingEquip[player] = if status == "next_run" then {speciesId = speciesId, variantKey = variantKey} else nil
+            player:SetAttribute("LastEquipStatus", status)
+            return
+        end
+        if ok then pendingEquip[player] = nil end -- an equip at home replaces any pick made during the run
         player:SetAttribute("LastEquipStatus", status)
         if not ok then return end
 

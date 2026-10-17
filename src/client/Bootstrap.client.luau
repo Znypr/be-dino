@@ -1761,6 +1761,7 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
         elseif attribute=="LastNestClaimStatus" then
             if status=="not_ready" or status=="nest_pending" or status=="bank_full" then notify(NotifyQueue.statusText(status),C.gold,{icon="egg_nest",key="nest_status"})
             elseif status~="opened" and status~="duplicate" and status~="" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
+        elseif status=="next_run" then notify(NotifyQueue.statusText(status),C.gold,{key="ok"}) -- BD-613: picked during a run, applied at the next spawn
         elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Done!",C.accent,{key="ok"})
         elseif status~="" and status~="duplicate" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
     end)
