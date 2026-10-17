@@ -16,6 +16,7 @@ local admit = shared.admit
 local adopt = shared.adopt
 local availableChestCapacity = shared.availableChestCapacity
 local enqueueChestIds = shared.enqueueChestIds
+local equippedOf = shared.equippedOf
 local findOperation = shared.findOperation
 local identityAvailable = shared.identityAvailable
 local isValidProfile = shared.isValidProfile
@@ -75,7 +76,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
                 applied,status=true,"egg_purchased"
             elseif Config.PerDinoCosmeticsEnabled==true and (action=="buyAura" or action=="equipAura" or action=="buyTrail" or action=="equipTrail") then
                 -- BD-059 phase 2: bound to the equipped dino instance, same atomic token write as every other purchase.
-                applied,status,boundInstance=CosmeticOwnership.apply(profile,action,id,{rules=ProgressionRules,config=ProgressionConfig,identityOk=identityAvailable(profile.dinosaurIdentity)})
+                applied,status,boundInstance=CosmeticOwnership.apply(profile,action,id,{rules=ProgressionRules,config=ProgressionConfig,identityOk=identityAvailable(profile.dinosaurIdentity),equipped=(function() local id,key=equippedOf(profile) return {speciesId=id,variantKey=key} end)()})
             else applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount) end
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             if not applied then denied=status return nil end

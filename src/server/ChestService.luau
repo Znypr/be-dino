@@ -36,7 +36,9 @@ function ChestService.start(profileRepository)
     end
 
     local claimChest = getRemote(folder, "ClaimChest")
-    local testGrant = getRemote(folder, "TestGrantChests")
+    -- BD-610: the test-grant remote exists ONLY while its flag is on (pinned off in every release profile), so a published server has no
+    -- handler for it at all; the flag is still re-checked inside the handler.
+    local testGrant = if Config.ChestTestGrantEnabled == true then getRemote(folder, "TestGrantChests") else nil
 
     claimChest.OnServerEvent:Connect(function(player: Player, chestId, requestToken, ...)
         if select("#", ...) ~= 0 then return end
@@ -89,16 +91,18 @@ function ChestService.start(profileRepository)
         profileRepository.setSettings(player, selection)
     end)
 
-    testGrant.OnServerEvent:Connect(function(player: Player, ...)
-        if select("#", ...) ~= 0 then return end
-        if not Config.ChestTestGrantEnabled then return end
-        if not allowed(lastGrant, player) then
-            player:SetAttribute("LastChestTestGrantStatus", "rate_limited")
-            return
-        end
-        local _, status = profileRepository.grantChestTest(player)
-        player:SetAttribute("LastChestTestGrantStatus", status)
-    end)
+    if testGrant then
+        testGrant.OnServerEvent:Connect(function(player: Player, ...)
+            if select("#", ...) ~= 0 then return end
+            if not Config.ChestTestGrantEnabled then return end
+            if not allowed(lastGrant, player) then
+                player:SetAttribute("LastChestTestGrantStatus", "rate_limited")
+                return
+            end
+            local _, status = profileRepository.grantChestTest(player)
+            player:SetAttribute("LastChestTestGrantStatus", status)
+        end)
+    end
 end
 
 return ChestService
