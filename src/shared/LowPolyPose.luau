@@ -135,8 +135,21 @@ function Pose.actionWeight(phase: string, p: number): number
     return 1
 end
 -- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
-export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number}
-function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0} end
+-- Fly landing hand-over (first Studio look, docs/evidence/2026-10-17-poses): the landing starts from the wing state the previous phase ended on.
+-- flap = the wing flap angle the air phase ended on (else the flutter snapped to 0, about 20 degrees); wing = how far the wings were open (0 folded .. 1 open)
+-- when the landing began (a short hop that lands before the wings opened used to snap them open, about 60 degrees in one frame). nil wing = 1 (open).
+export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number, flap: number?, wing: number?}
+function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0, flap = 0, wing = 1} end
+-- Fraction the wings are open (0 folded .. 1 open) during a Fly phase, p = 0..1 progress of a timed phase. Used by the landing hand-over.
+function Pose.wingOpen(phase: string, p: number): number
+    if phase == "air" then return 1 end
+    if phase == "push" then return ease(math.clamp(finite(p), 0, 1)) end
+    return 0
+end
+-- Wing flap angle (radians) of a Fly in the air phase, t seconds in. A jump flaps, a leap glides on nearly still wings.
+function Pose.airFlap(t: number, aggr: number): number
+    return (1 - 0.8 * math.clamp(finite(aggr), 0, 1)) * math.sin(math.max(0, finite(t)) * 11) * 0.35
+end
 function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?): Out
     local a = math.clamp(finite(amp), 0, 1)
     local s = if side < 0 then -1 else 1
@@ -171,9 +184,11 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
             q = d * (1 - ease((p - 0.25) / 0.75)) * cls.l
         end
         if class == "Fly" then
-            if ph == "push" then W = ease(p) elseif ph == "air" then W = 1 elseif ph == "land" then W = 1 - ease(p) end
-            if ph == "air" then flap = (1 - 0.8 * aggr) * math.sin(t * 11) * 0.35 -- a leap glides on nearly still wings
-            elseif ph == "land" then flap = math.sin(t * 16) * 0.3 * (1 - p) end -- soft flutter landing
+            if ph == "push" then W = Pose.wingOpen("push", p) elseif ph == "air" then W = 1 elseif ph == "land" then W = math.clamp(finite(ctx.wing or 1), 0, 1) * (1 - ease(p)) end
+            if ph == "air" then flap = Pose.airFlap(t, aggr) -- a leap glides on nearly still wings
+            elseif ph == "land" then -- soft flutter landing; the last air flap fades out over the first 30% so the wings never snap
+                flap = math.sin(t * 16) * 0.3 * (1 - p) + math.clamp(finite(ctx.flap or 0), -0.4, 0.4) * (1 - ease(p / 0.3))
+            end
         end
     end
     local L = 1 + aggr
