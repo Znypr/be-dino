@@ -35,6 +35,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_load  # noqa: E402
 
@@ -126,7 +129,7 @@ CLIENT_ONLY_MODULES = ("EffectsLod", "ContactShadowRules", "MomentRimPlan", "FxR
 def static_checks() -> list[str]:
     problems = []
     for rel, pattern, label in STATIC:
-        text = (ROOT / rel).read_text(encoding="utf-8")
+        text = profile_sources.repository_text() if rel == "src/server/ProfileRepository.luau" else (ROOT / rel).read_text(encoding="utf-8")
         if not re.search(pattern, text):
             problems.append(f"static: {label} ({rel})")
     for path in sorted((ROOT / "src/server").glob("*.luau")):
@@ -134,7 +137,7 @@ def static_checks() -> list[str]:
         for name in CLIENT_ONLY_MODULES:
             if re.search(r"require\([^)\n]*\b" + name + r"\b", text):
                 problems.append(f"static: server script {path.name} requires client render-cap module {name} (caps must stay per client)")
-    repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
+    repo = profile_sources.repository_text()
     # BD-358: routine remote-triggered writes are admitted through the per-player bucket; priority writes never are.
     parts = re.split(r"\n(?=function ProfileRepository\.)", repo)
     bodies = {}
