@@ -26,7 +26,7 @@ SCALES = (1, 2, 4)
 
 # Studio sweep 2026-10-17 (own copy camfit.rbxlx, playtest build of this branch, Play, default zoom reset to the minimum, camera pitch -15,
 # FOV 70, viewport 1140 x 785): species -> {growth scale: (min zoom, fill of screen height %, dino top px from the top of the screen)}.
-# NOT in this table (cap 75 binds, open question BD-508): BIG at growth scale 4.8: Spinosaurus fill 72%, top 64 px (sail behind the HUD banner),
+# NOT in this table (cap 75 binds, open question BD-513): BIG at growth scale 4.8: Spinosaurus fill 72%, top 64 px (sail behind the HUD banner),
 # T-Rex fill 51%, top 150 px (head touches the hint line).
 STUDIO = {
     'ankylosaurus': {1: (18.84, 44, 266), 2: (37.68, 42, 241), 4: (75.0, 41, 222)},

@@ -9,6 +9,8 @@ WeatherTextures, and checks the client wiring statically. Never Studio, never a 
     emits nothing; the fx budget report reads the same number;
   * colliders (risk 2): only a phone culls colliders, beyond the cull radius, with the same hysteresis as the props; tablet / desktop keep every collider; static
     audit that the invisible colliders have no other reader (so culling the far ones cannot change anything but physics near the player, and the ground is Terrain);
+  * BD-507 cosmetic beams: inside the hub on a phone the cosmetic beam ceiling is the 24 beam budget minus the 4 shaft beams (20, hub total 24); outside the hub and on
+    tablet / desktop the live cap is unchanged (EffectsLod.fits / fit take an optional beamCap);
   * the numbers in src/shared/PhoneGuards.luau equal tools/qa/phone_budgets.json "guards" (one source of truth), the module is pure, and the client wiring is
     phone-gated (CavePhoneGuard / FxRig / WeatherVisuals / WorldCulling) and sits behind the existing CaveHub flag.
 Not Studio evidence: nothing here ran on a phone (BD-085)."""
@@ -157,6 +159,33 @@ assert(G.colliderWanted("Phone",true,0,190,1.15) and G.colliderWanted("Phone",tr
 assert(not G.colliderWanted("Phone",false,191,190,1.15) and not G.colliderWanted("Phone",true,190*1.15+.01,190,1.15),"beyond the radius: culled")
 assert(G.colliderWanted("Phone",true,200,190,1.15) and not G.colliderWanted("Phone",false,200,190,1.15),"hysteresis: a kept one stays to 1.15 x radius, a culled one returns at the radius")
 assert(G.colliderWanted("Phone",false,0,190,1.15),"a collider next to the dino is never culled")
+-- ---- BD-507: cosmetic beams in the hub on a phone leave room for the 4 shaft beams (hub total <= the 24 beam phone budget)
+local liveBeams=Lod.Live.phone.beams
+assert(G.cosmeticBeamCap("phone",true,liveBeams)==liveBeams-G.caveBeamCap("phone"),"phone hub: cosmetic beams = budget minus the shaft beams")
+assert(G.cosmeticBeamCap("Phone",true,liveBeams)+G.caveBeamCap("phone")<=liveBeams,"phone hub total (shaft + cosmetic) fits the phone beam budget")
+assert(G.cosmeticBeamCap("phone",false,liveBeams)==liveBeams,"phone outside the hub: the live cap is unchanged")
+for _,d in {"tablet","Tablet","desktop","Desktop",nil,"x"} do
+    assert(G.cosmeticBeamCap(d,true,72)==72 and G.cosmeticBeamCap(d,false,72)==72,"desktop / tablet: no change, in the hub or out: "..tostring(d))
+end
+assert(G.cosmeticBeamCap("phone",true,2)==0,"never negative")
+do -- the real scene budget: keep adding 3-beam rigs (a ring aura) until Lod says no
+    local function fill(cap: number?): number
+        local used={beams=0}
+        local rigs=0
+        while Lod.fits("phone",used,{beams=3},cap) do used.beams+=3 rigs+=1 end
+        return used.beams
+    end
+    local outside, inside = fill(nil), fill(G.cosmeticBeamCap("phone",true,liveBeams))
+    assert(inside<=G.cosmeticBeamCap("phone",true,liveBeams) and inside+G.caveBeamCap("phone")<=liveBeams,"hub: cosmetic + shaft beams <= the phone budget, with 3-beam rigs")
+    assert(outside<=liveBeams and outside>inside,"outside the hub a phone still gets the full cosmetic cap")
+    local exact=0 -- one-beam rigs fill the cap exactly
+    local used={beams=0}
+    while Lod.fit("phone","lite",used,function() return {beams=1} end,false,G.cosmeticBeamCap("phone",true,liveBeams))=="lite" do used.beams+=1 exact+=1 end
+    assert(exact==liveBeams-G.caveBeamCap("phone"),"Lod.fit honours the cap")
+    assert(Lod.fits("desktop",{beams=100},{beams=50},nil) and not Lod.fits("desktop",{beams=100},{beams=70},nil),"desktop beam cap unchanged (160)")
+    print(string.format("HUBBEAMS %d %d %d %d",G.caveBeamCap("phone"),G.cosmeticBeamCap("phone",true,liveBeams),G.caveBeamCap("phone")+G.cosmeticBeamCap("phone",true,liveBeams),liveBeams))
+end
+
 print("phone guards: caps, density, cosmetic lights, colliders and hysteresis ok")
 '''
 
@@ -166,6 +195,7 @@ def script():
             'local CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau') + '\n'
             'local Rules=' + wrapped('src/shared/CaveLightingRules.luau', 'CaveHubLayout=CaveHubLayout') + '\n')
     return (cave + 'local PhoneGuards=' + wrapped('src/shared/PhoneGuards.luau') + '\n'
+            'local Lod=' + wrapped('src/shared/EffectsLod.luau') + '\n'
             'local WT=' + wrapped('src/shared/WeatherTextures.luau') + '\n'
             'local W=' + wrapped('src/shared/WeatherLooks.luau') + '\n' + LUAU)
 
@@ -214,11 +244,25 @@ def static_checks(printed):
     server = read('src/server/CaveLighting.luau')
     assert 'Enabled' not in server.replace('IsLightingFx', ''), 'the server still builds every light and beam enabled (the guard is client side)'
 
+    # BD-505: Sanctuary lives under Workspace.BeDinoArena; a plain workspace:FindFirstChild("Sanctuary") is nil in every build, so the shaft-beam guard never ran
+    for rel in ('src/client/CavePhoneGuard.luau', 'src/client/CaveAtmosphere.luau'):
+        text = read(rel)
+        assert 'workspace:FindFirstChild("Sanctuary")' not in text and 'workspace.Sanctuary' not in text, rel + ' looks for Sanctuary in Workspace (it is under BeDinoArena)'
+        assert 'workspace:FindFirstChild("BeDinoArena")' in text, rel + ' finds Sanctuary through BeDinoArena'
+    assert 'hub.Name, hub.Parent = "Sanctuary", world' in read('src/server/Arena.luau'), 'the hub is parented to the arena (world), not to Workspace'
+
     # cosmetic glow lights
     rig = read('src/client/FxRig.luau')
     assert 'Guards.cosmeticLightWanted(self.device, true, reduced,' in rig and 'if hubInside and Guards.isPhone(self.device) then' in rig and 'function Rig.setInHub' in rig, 'FxRig asks PhoneGuards for its glow lights'
     cos = read('src/client/CosmeticVisuals.client.luau')
-    assert 'Rig.setInHub(Cave.inside())' in cos, 'CosmeticVisuals feeds the hub flag'
+    assert 'local inHub=Cave.inside()' in cos and 'Rig.setInHub(inHub)' in cos, 'CosmeticVisuals feeds the hub flag'
+    # BD-507: cosmetic beams in the hub on a phone leave room for the shaft beams (total <= 24); desktop / tablet pass the unchanged live cap
+    assert 'local hubPhone=inHub and Guards.isPhone(device)' in cos and 'Guards.cosmeticBeamCap(device,hubPhone,' in cos, 'CosmeticVisuals asks PhoneGuards for the hub beam cap'
+    assert cos.count('own or kind=="mutation",beamCap)') == 1 and 'state.hubPhone~=hubPhone' in cos, 'the cap reaches Lod.fit and a hub change rebuilds the rigs once'
+    m = re.search(r'^HUBBEAMS (\d+) (\d+) (\d+) (\d+)$', printed, re.M)
+    assert m, 'the Luau run printed no HUBBEAMS line'
+    shaft, cosmetic, total, live = map(int, m.groups())
+    assert (shaft, live, total) == (guards['caveBeams']['value'], phone['beams']['value'], phone['beams']['value']), 'hub beams: shaft + cosmetic cap == the phone beam budget'
 
     # weather
     weather = read('src/client/WeatherVisuals.client.luau')

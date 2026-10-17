@@ -58,7 +58,9 @@ local function evaluate(dev: string)
         if light.Enabled ~= want then light.Enabled = want end
     end
     state = nextState
-    local folder = if workspace:FindFirstChild("Sanctuary") then (workspace.Sanctuary :: Instance):FindFirstChild("CaveLighting") else nil
+    local arena = workspace:FindFirstChild("BeDinoArena") -- BD-505: Sanctuary lives under BeDinoArena, never directly in Workspace (the old lookup was always nil, so the shaft-beam guard never ran)
+    local sanctuary = if arena then arena:FindFirstChild("Sanctuary") else nil
+    local folder = if sanctuary then sanctuary:FindFirstChild("CaveLighting") else nil
     if folder then
         local shafts = {}
         local beams: {Beam} = {}
