@@ -1,8 +1,23 @@
 # BD-513 BIG camera cap and BD-508 found-egg toast: evidence (2026-10-17)
 
-Status: offline proof only. **No Studio images exist for this task.**
+Status: **Studio re-measure DONE 2026-10-17 (BD-513 PASS, BD-508 PASS)**; the offline proof below is kept, and "What blocked the Studio part" is history.
 
-## What blocked the Studio part
+## Studio results (2026-10-17)
+
+Build: `python tools/build.py --profile playtest --output C:/Users/znypr/dtmp/captures.rbxlx` (origin/main with PR #379, plus PR #383's branch), own Studio window, Play, real run on the island (`RunLifecycle.requestStart`), default gameplay camera (Custom) with `CameraMaxZoomDistance = CameraMinZoomDistance` (the camfit method, so the drawn distance is the minimum zoom the size rule asks for), view 1140 x 785 (60 frames/s). BIG = `GrowthScore` 750 and `BigDinosaur` true on the server, which `HubScaleRules` turns into scale 4 x 1.2 = **4.8**; species set with `Dinosaur.setSpecies`. Fill = the real model box (all visible parts, 8 corners each) projected with `WorldToViewportPoint`, height divided by the 785 px view height; the HUD line is 160 px.
+
+| Species | Scale | Min zoom | Fill of screen height | Box top (px) | Box bottom (px) | Picture |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| spinosaurus | 4.8 | 86.6 | **56.3%** (before 72%) | 161 | 603 | [01](01-big-spinosaurus-4.8.jpg) |
+| tyrannosaurus | 4.8 | 83.2 | **45.7%** (before 51%) | 180 | 539 | [02](02-big-trex-4.8.jpg) |
+| ankylosaurus | 4.8 | 90.0 | **42.3%** (before 49%) | 217 | 549 | [03](03-big-ankylosaurus-4.8.jpg) |
+
+The measured fills match the offline expectation (56 / 45 / 41). Only the Ankylosaurus sits at the cap (90.0, it asks for 89.2). **The Spinosaurus sail does not touch the banner:** the box top is 161 px (a box corner, 1 px under the 160 px line), the visible sail tip is at about 188 px and the hint line "Eat food to grow..." ends at about 178 px; the T-Rex head top is about 183 px, also just under the hint text (a few px of air). So no pitch-lift row was opened. The box bottom is below the visible feet because the box includes the far tail and legs in perspective.
+
+BD-508: Admin panel remote (`AdminAction`): Food worth x10, Mutation chance x10, `startWeather volcano`; the dino walked to food. [04](04-multi-egg-toast-ember.jpg) shows the toast "You found 3 eggs!" over "2 Ember eggs! Hatch them at Home" (1140 x 785 view). [05](05-toast-7-eggs-phone-836x390.jpg) is the same at the 836 x 390 phone window: "You found 7 eggs!" over "An Ember egg! Hatch them at Home". Both fit inside the card. PASS.
+
+## History: what blocked the Studio part earlier
+
 Builds `bigcam0.rbxlx` (origin/main) and `bigcam.rbxlx` (this branch), `--profile playtest`, were opened in new Studio windows and placed on screen 3 as required. In every window on the PC, including other agents' (`phonefit.rbxlx`, checked read-only), the 3D viewport never rendered: `RunService.RenderStepped` fired 0 times in 2 s, `Camera.ViewportSize` was 1 x 1, the window repainted only partly (no ribbon, blank viewport), `screen_capture` timed out or the MCP connection closed, with the window maximised, restored, moved to screen 1 and re-launched (twice). Studio itself was healthy (autosave ran, `execute_luau` and Play worked, server side `RunLifecycle.requestStart` and `Dinosaur.render(character, 4.8, "spinosaurus")` worked), so the dinosaur could be placed but the camera and the picture could not be produced. No image was faked or taken from another source. Re-run the capture when a Studio window renders: BIG Spinosaurus, T-Rex and Ankylosaurus at growth scale 4.8, camfit method (`docs/evidence/2026-10-17-camfit/README.md` s1: 1140 x 785, FOV 70, camera pulled to its minimum zoom).
 
 ## Numbers (offline, from `CameraFraming` and the 22 measured boxes)

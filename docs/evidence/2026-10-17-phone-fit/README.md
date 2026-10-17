@@ -1,6 +1,46 @@
 # BD-531 phone landscape fit and BD-532 Random Egg tile (2026-10-17)
 
-Branch claude/phone-fit-531-532. **Studio status: PENDING.** The Studio window of this agent never rendered (Camera.ViewportSize 1 x 1, `screen_capture` "Connection closed" / timed out): the Studio log shows `RenderSchedulerState: Pushing throttle render state` never popped, and the lead found that every new Studio window since about 10:00 opens with its main window disabled by a hidden dialog and the viewport undocked. So the property readings and the after pictures below are NOT taken yet; the lead runs them after the Studio restart. The "before" pictures are the round 2 pictures (836 x 390 window, mouse, not touch) in [../2026-10-17-stuck-BD-148/](../2026-10-17-stuck-BD-148/README.md), images 20 to 30.
+Branch claude/phone-fit-531-532 (code, PR #383), Studio evidence added on claude/evidence-phone-big. **Studio status: DONE 2026-10-17 (see "Studio results" below); the paragraph that follows is kept as history.**
+
+## Studio results (2026-10-17, after the Studio restart)
+
+Build: `python tools/build.py --profile playtest --output C:/Users/znypr/dtmp/captures.rbxlx` of origin/main + PR #383's branch (phone-fit merged in), own Studio window, Play, memory-only profile, admin = the Studio user. The window was resized with SetWindowPos (Studio's MCP cannot set a device) until `Camera.ViewportSize` read 836 x 390 (BeDinoUI.AbsoluteSize **836 x 332**) and 667 x 375 (**667 x 317**); `TouchEnabled` stays false, so the touch-only branches did not run (real phone = BD-085). Before every capture `RenderStepped` counted 60 frames in 1 s and the viewport size was read. Images are Studio `screen_capture` only; clicks are real mouse input (`user_mouse_input` takes GUI-space coordinates, y without the 58 px top bar). Run: Admin Food worth x10, Mutation chance x10, Volcanic Bloom (the tallest weather chip), then eating food.
+
+| Item | 836 x 390 | 667 x 375 |
+| --- | --- | --- |
+| Hub HUD (Admin, Goals header, goal line, weather chip, LEAP, EGGS plate) | **PASS**, 0 overlaps, [picture](after-836x390-hub-hud.jpg) | **PASS** for the named pieces; 1 overlap of a transient button: "Back to the middle" x weather/LEAP column 4 x 44 px, [picture](after-667x375-hub-hud.jpg) (BD-538) |
+| In-run HUD, EGGS plate visible, Admin beside it | **PASS**, 0 overlaps (only the "+1.2" growth pop-up crossed the SIZE bar for a moment), [picture](after-836x390-run-hud.jpg) | **PARTIAL**: plate and Admin fine; SIZE bar x weather chip 9 x 30 px, [picture](after-667x375-run-hud.jpg) (BD-538) |
+| Eggs screen, OPEN and AUTO with no scroll | **PASS**: `BodyScroll.CanvasSize` = (0, 0), [picture](after-836x390-eggs-screen.jpg) | **FAIL (minor)**: no vertical scroll, but a horizontal one (canvas 836 design px x 0.8 = 668 > 644), 5th nest slot cut, hint clipped, [picture](after-667x375-eggs-screen-horizontal-scroll.jpg) (BD-538) |
+| Go Home confirm | **PASS**, [picture](after-836x390-go-home-confirm.jpg) | buttons inside the body vertically **PASS**, same horizontal canvas as Eggs, [picture](after-667x375-go-home-confirm.jpg) (BD-538) |
+| BD-532 Random Egg tile "Coming soon" | **PASS** (full-size view 1156 x 841): [landing tile](bd532-shop-landing-eggs-tile-coming-soon.jpg), [Eggs tab, grey COMING SOON](bd532-shop-eggs-tab-coming-soon-grey.jpg), [after a tap: no confirm, balance unchanged](bd532-shop-eggs-tab-after-tap-no-confirm.jpg) | not captured |
+
+Also seen at both sizes: the "Tell us!" button (8, 276 / 8, 261, 120 x 48) is drawn on top of the lower-left of an open menu, here over the rarity and condition chips of the Eggs egg card (BD-524 family, in BD-538). The goal line reads "Level 2:..." (ellipsised at the 169 px wallet width) in the hub.
+
+### Key GUI rects (AbsolutePosition x, y; AbsoluteSize w x h; canvas = BeDinoUI)
+
+Hub, 836 x 332 (weather on): EGGS plate (8, 8) 130 x 40; rail (147, 8) 502 x 60; wallet (659, 8) 169 x 31; NextGoal (659, 43) 169 x 20; GoalsPanel header (659, 65) 169 x 44; weather + LEAP column (618, 117) 210 x 115; AdminToggle (136, 276) 120 x 48; TellUsButton (8, 276) 120 x 48. Overlaps: 0.
+
+In run, 836 x 332: EGGS plate (8, 8) 130 x 40; rail (147, 8) 502 x 60; wallet (659, 8) 169 x 31; SizeBar (293, 72) 250 x 34; weather + LEAP column (618, 76) 210 x 157; HomeButton (350, 280) 135 x 44; AdminToggle (136, 276) 120 x 48; Toasts (198, 80) 440 x 186. Overlaps: 0.
+
+Eggs screen, 836 x 332: modal (8, 4) 820 x 323; BodyScroll (12, 58) 812 x 266, CanvasSize (0, 0); nest slots at y 86, 65 px tall; OPEN (192, 201) 596 x 65; AUTO (192, 269) 124 x 47 (bottom 316 of the window bottom 324).
+
+Go home, 836 x 332: modal (8, 4) 820 x 323; GO HOME (302, 269) 233 x 47; CANCEL (546, 269) 233 x 47; X (746, 9) 76 x 45.
+
+Hub, 667 x 317: EGGS plate (8, 8) 130 x 40; rail (147, 8) 334 x 60; wallet (490, 8) 169 x 31; NextGoal (490, 43) 169 x 20; GoalsPanel (490, 65) 169 x 44; weather + LEAP column (449, 117) 210 x 100; BackToMiddle (214, 173) 240 x 48; AdminToggle (136, 261) 120 x 48; TellUsButton (8, 261) 120 x 48.
+
+In run, 667 x 317: rail (147, 8) 334 x 60; SizeBar (208, 72) 250 x 34; weather + LEAP column (449, 76) 210 x 142; HomeButton (282, 265) 105 x 46; AdminToggle (136, 261) 120 x 48. SizeBar x column overlap 9 x 30.
+
+Eggs screen, 667 x 317: modal (8, 4) 650 x 309; BodyScroll (12, 49) 644 x 261, CanvasSize (836, 0) = 668 x 261 absolute; OPEN (200, 169) 462 x 86; AUTO (200, 258) 104 x 46.
+
+Go home, 667 x 317: GO HOME (255, 258) 195 x 46; CANCEL (460, 258) 195 x 46; X (590, 8) 64 x 44; same BodyScroll as above.
+
+Shop Eggs tab (1156 x 783): `BuyEggComingSoon` "COMING SOON" (436, 456) 554 x 46, grey background (0.24, 0.23, 0.29), `Active` true (it swallows the tap, no confirm opens).
+
+## Original pending note (history)
+
+Studio status was PENDING at the time of writing:
+
+Branch claude/phone-fit-531-532. Studio status was PENDING at the time of writing: The Studio window of this agent never rendered (Camera.ViewportSize 1 x 1, `screen_capture` "Connection closed" / timed out): the Studio log shows `RenderSchedulerState: Pushing throttle render state` never popped, and the lead found that every new Studio window since about 10:00 opens with its main window disabled by a hidden dialog and the viewport undocked. So the property readings and the after pictures below are NOT taken yet; the lead runs them after the Studio restart. The "before" pictures are the round 2 pictures (836 x 390 window, mouse, not touch) in [../2026-10-17-stuck-BD-148/](../2026-10-17-stuck-BD-148/README.md), images 20 to 30.
 
 ## What the before pictures show, read against the code (offline, real `TouchLayout` in Luau)
 
