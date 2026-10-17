@@ -1,0 +1,14 @@
+Eaglesaurus prompts (BD-622), prepared 2026-10-18. Reference: docs/reference/eagle-owner-draft.webp.
+All TEXT only (generate_mesh has no image input), each under 490 characters. Run async.
+Settings for each: segmentation=explicit, partNames = body, head, crown tuft, left wing, right wing, left leg, right leg, tail (8 = the tool maximum; the small feathered arms are the "wings"), size about 6 x 8 x 9 (A), 6 x 8 x 8 (B), 5 x 9 x 8 (C).
+A = closest to the draft, B = chunkier and friendlier, C = simpler and more upright.
+Remember: clean the returned part names of stray quote/bracket/backslash characters by script; stage candidates in Folder "Eagle candidates" at about z=185.
+
+A (485 chars):
+bald eagle dinosaur in dino stance on two strong legs, leaning slightly forward, plump chestnut-brown body with layered scalloped feathers and tan edges, white head, short white feather tuft on crown, big yellow hooked beak, big round solid black eye with dark rim, small feathered arms held forward with dark curved claws, bright yellow scaly feet with big dark claws, white tail with tan tips, separate parts: body, head, tuft, two wings, two legs, tail, low-poly, flat facets, matte
+
+B (433 chars):
+cute chunky friendly eagle dinosaur on two thick legs, plump round chestnut-brown body, big round white head, short white feather tuft on top, big yellow hooked beak, big solid black round eye, tiny brown feathered arms with small dark claws held forward, chunky yellow feet with dark claws, short white tail, separate parts: body, head, tuft, two wings, two legs, tail, clean low-poly, few large flat facets, matte pastel, kids game
+
+C (346 chars):
+simple upright eagle dinosaur standing on two yellow legs with dark claws, chestnut-brown body, white head with a small white tuft, yellow hooked beak, solid black round eye, small brown arms held forward, short white tail, separate parts: body, head, tuft, two wings, two legs, tail, very simple low-poly, few large flat facets, matte, kids game
