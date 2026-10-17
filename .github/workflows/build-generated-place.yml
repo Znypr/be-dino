@@ -178,6 +178,7 @@ jobs:
           python tools/verify_previews.py --runner /tmp/luau/luau
           python tools/verify_artwork.py --runner /tmp/luau/luau
           python tools/verify_load.py --runner /tmp/luau/luau
+          python tools/verify_regression_walk.py --runner /tmp/luau/luau
           python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
           python tools/verify_session1_smoke.py --runner /tmp/luau/luau
           python tools/verify_private_state.py --runner /tmp/luau/luau
