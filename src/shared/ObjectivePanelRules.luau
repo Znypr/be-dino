@@ -156,6 +156,78 @@ function Rules.buttonState(row: any, busy: boolean): string
     return if busy then "wait" else "claim"
 end
 
+-- BD-076 (docs/66 s19): the one-line goal ("NextGoal") shows the TOP objective when the priority table in NextGoal.pick says so.
+-- Everything here is pure: the words, and a CONSERVATIVE width estimate so the line never relies on the engine cutting a word in half.
+-- The estimate is an em-fraction table for the HUD font (FredokaOne) plus 8 % slack; Studio measuring with TextService stays on BD-078.
+Rules.GoalReadyText = {"Done! Claim at the objectives panel", "Done! Claim in Tasks", "Done! Claim it", "Done!"} -- longest first; the first that fits is shown
+local MIN_FONT = 14 -- = PhoneScale.MinText (checked by tools/verify_objectives_panel.py): the line is never drawn smaller
+local EM_SMALL, EM_MID, EM_WIDE = 0.30, 0.44, 0.84
+local function em(ch: string): number
+    if ch == " " then return 0.28 end
+    if string.find(ch, "^[%.,:;!'|]$") then return 0.30 end
+    if ch == "/" then return 0.42 end
+    if string.find(ch, "^[ilj]$") then return EM_SMALL end
+    if string.find(ch, "^[tfr]$") then return EM_MID end
+    if string.find(ch, "^[mwMW]$") then return EM_WIDE end
+    if string.find(ch, "^%d$") then return 0.60 end
+    if string.find(ch, "^%u$") then return 0.68 end
+    return 0.58
+end
+-- Estimated on-screen width, in the same px as `fontPx` (a design-space size when the label sits under a UIScale).
+function Rules.textWidth(text: string, fontPx: number): number
+    local total = 0
+    for i = 1, #text do total += em(string.sub(text, i, i)) end
+    return total * fontPx * 1.08
+end
+
+-- fit = {width = px the label has, font = px (the smallest size the line is drawn at), prefix = the words the HUD puts in front ("Goal  " on a
+-- desktop, "" on a phone)}.
+function Rules.fitsLine(text: string, fit: any): boolean
+    local font = math.max(MIN_FONT, tonumber(fit.font) or MIN_FONT)
+    local prefix = if type(fit.prefix) == "string" then fit.prefix else ""
+    return Rules.textWidth(prefix .. text, font) <= (tonumber(fit.width) or 0)
+end
+
+local DANGLING: {[string]: boolean} = {}
+for _, word in {"a", "an", "the", "to", "of", "in", "for", "your", "any", "or", "toward", "with"} do DANGLING[word] = true end
+
+-- Words of the top row for the goal line, or nil when there is nothing to show. rows = Rules.select(...) (finished first, T8 already
+-- filtered against the PLAY line). A finished row says where to claim; an unfinished one says "Name: 1/3" (just the name for a one-step task). Over-long names lose WHOLE words
+-- from the end (and a dangling "a" / "toward"), then "..." marks the cut; never a word cut in half.
+function Rules.goalLine(rows: {any}, fit: any): any?
+    local first = rows[1]
+    if type(first) ~= "table" or type(fit) ~= "table" then return nil end
+    if first.claimable then
+        local chosen = Rules.GoalReadyText[#Rules.GoalReadyText]
+        for _, candidate in Rules.GoalReadyText do
+            if Rules.fitsLine(candidate, fit) then chosen = candidate break end
+        end
+        return {kind = "objective", text = chosen, claimable = true, ready = true, fraction = 1, id = first.id}
+    end
+    -- "0/1" says nothing, so a one-step task shows only its name; a counted task keeps its count ("Hatch 10 eggs: 3/10").
+    local progress = if math.max(1, whole(first.goal)) > 1 then Rules.progressText(first) else ""
+    local joiner, tail = if progress ~= "" then ": " else "", if progress ~= "" then " " .. progress else ""
+    local name = tostring(first.name or "")
+    local text: string? = nil
+    if name ~= "" and Rules.fitsLine(name .. joiner .. progress, fit) then
+        text = name .. joiner .. progress
+    else
+        local words = {}
+        for word in string.gmatch(name, "%S+") do table.insert(words, word) end
+        for n = #words - 1, 1, -1 do
+            local keep = n
+            while keep > 1 and DANGLING[string.lower(words[keep])] do keep -= 1 end
+            local candidate = table.concat(words, " ", 1, keep) .. "..." .. tail
+            if Rules.fitsLine(candidate, fit) then text = candidate break end
+        end
+    end
+    if text == nil then
+        local fallback = if progress ~= "" then "Task " .. progress else "Next task"
+        text = if Rules.fitsLine(fallback, fit) then fallback elseif progress ~= "" then progress else "Task"
+    end
+    return {kind = "objective", text = text, claimable = false, ready = false, fraction = first.fraction, id = first.id}
+end
+
 -- True when a string follows the docs/72 copy rules (used by tools/verify_objectives_panel.py on every string this module can produce).
 function Rules.copyOk(text: string): boolean
     if string.find(text, "%d+%s*m%s+%d+%s*s") or string.find(text, "%d+%s*h%s+%d+%s*m") then return false end -- "5m 0s", "2h 0m"

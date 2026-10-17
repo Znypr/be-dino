@@ -29,14 +29,20 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
         -- BD-440: hidden until the first egg (the Goals panel follows this frame's Visible)
         goalHUD.Visible=FtueRules.showGoals({activeEggs=PrivateState.get("ActiveChestCount"),waitingEggs=PrivateState.get("QueuedEggsWaiting"),
             lastRunEggs=PrivateState.get("LastRunEggCount"),copies=FtueRules.collectionCopies(ctx.decoded("CollectionJson","{}"))})
-        local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
-            maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
-            speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
         GoalsPanel.setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
         local counts=GoalsRules.indexCounts(ctx.decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return ctx.eventMutation(id)~=nil or ctx.ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#EggGenetics.Patterns,mutations=#ProgressionConfig.EventMutations},ctx.decoded("DiscoveryJson",""))
         GoalsPanel.setSpecies(counts)
-        if objectives then objectives.setPlayActive(not GoalsRules.play(counts).done) end -- BD-075: the PLAY line and the "second species" task never nag at once (docs/66 s16)
-        goalText.Text,goalText.TextColor3=(if ctx.touchMode() or PhoneScale.isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
+        local prefix=if ctx.touchMode() or PhoneScale.isCompact(gui.AbsoluteSize.Y) then "" else "Goal  "
+        local objective=nil -- BD-076: the top objective worded and fitted for this line (flag off: stays nil, the line is exactly the old one)
+        if objectives then
+            objectives.setPlayActive(not GoalsRules.play(counts).done) -- BD-075: the PLAY line and the "second species" task never nag at once (docs/66 s16)
+            local font=math.max(PhoneScale.MinText,if goalText.TextScaled then goalLimit.MinTextSize else goalText.TextSize) -- the smallest size Bootstrap draws the line at
+            objective=objectives.goalLine({width=goalText.Size.X.Offset,font=font,prefix=prefix})
+        end
+        local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
+            maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,objective=objective,
+            speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
+        goalText.Text,goalText.TextColor3=prefix..goal.text,if goal.ready then C.accent else C.gold
     end
     local goalQueued=false
     local function loadGoalDinos()
@@ -66,6 +72,10 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
     if Config.ObjectivesEnabled==true then -- BD-075: flag off (every committed build) = this module is never even required
         objectives=require(script.Parent.ObjectivesPanel)
         objectives.attach(gui,goalHUD)
+        objectives.onTopChanged(refreshGoal) -- BD-076: the one-line goal follows the top objective (only when it changes, not on every poll)
+        for _,changed in {goalLimit:GetPropertyChangedSignal("MaxTextSize"),goalLimit:GetPropertyChangedSignal("MinTextSize"),goalText:GetPropertyChangedSignal("TextSize"),goalText:GetPropertyChangedSignal("TextScaled")} do
+            changed:Connect(refreshGoal) -- Bootstrap restyles the line per canvas: re-fit the words to the new size and prefix
+        end
     end
     refreshGoal()
     loadGoalDinos()
