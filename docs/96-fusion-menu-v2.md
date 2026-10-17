@@ -23,7 +23,7 @@ Common ingredients: **big cards with pictures**, **tap to add**, **auto-fill**, 
 3. Everything a child needs is a picture or a number: dino preview, "2 of 6", "Shiny 8%".
 4. One sentence tells you what to do next: "Tap 6 Compy, or Fill for me." / "You need 6 Compy to make a Gold Compy. You have 2." / "Tap 4 more Compy." / "Ready! Tap FUSE."
 5. One big button that changes colour when it is ready: "Pick 4 more" (grey) -> "FUSE!" (green).
-6. No jargon: no "ROLLED", "UPGRADED", "INGREDIENTS", "recipe", "species", "quote"; a locked tier says "Soon"; an older copy without saved DNA says "Older dino: can't fuse" instead of "Unknown pattern".
+6. No jargon: no "ROLLED", "UPGRADED", "INGREDIENTS", "recipe", "species", "quote"; a locked tier says "Soon"; an older copy without saved DNA says "Older dino" and "Hatch new dinos to fuse" (BD-381) instead of "Unknown pattern".
 7. Exact odds stay exact: the same server numbers, the same largest-remainder rounding to 100%, now as chips ("Shiny 8%", "Green 60%") on the browse screen and again on the confirm screen, with the odds/recipe version in a small grey line.
 8. Phone first: three columns fit a 740 x 340 safe area, every button is at least 44 px, slots are real tap targets (tap to take a dino out), cards shrink to 132 x 150.
 9. Protect value: special dinos (Shiny, BIG, mutation, bought effects) are never auto-filled, are marked "Special" when chosen by hand, and the confirm screen lists exactly what goes away and needs an "I understand" tap first.

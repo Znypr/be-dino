@@ -10,6 +10,7 @@ local Texture = require(script.Parent.LowPolyTexture)
 local Pose = require(script.Parent.LowPolyPose)
 local Tier = require(script.Parent.LowPolyTier)
 local Recolor = require(script.Parent.LowPolyRecolor)
+local Ready = require(script.Parent.LowPolyReady)
 local LowPoly = {}
 LowPoly.FolderName = "LowPolyDinoModels"
 
@@ -27,6 +28,21 @@ local function template(speciesId: string): Model?
     local folder = ReplicatedStorage:FindFirstChild(LowPoly.FolderName)
     local item = if folder then folder:FindFirstChild(speciesId) else nil
     return if item and item:IsA("Model") then item else nil
+end
+-- BD-381: true while the template of a mapped species has not replicated yet and the server loader is still running. Callers that
+-- would otherwise fall back to the legacy model (previews) wait instead; the character visual self-heals through ResourceVisuals.
+local startedAt = os.clock()
+function LowPoly.pending(speciesId: string): boolean
+    if not LowPoly.has(speciesId) then return false end
+    return Ready.pending(true, true, template(speciesId) ~= nil, workspace:GetAttribute("LowPolyDinosLoaded") ~= nil, os.clock() - startedAt)
+end
+-- Fires `callback` once when `pending` turns false (template arrived, loader done or timeout). Returns immediately when not pending.
+function LowPoly.whenReady(speciesId: string, callback: () -> ())
+    if not LowPoly.pending(speciesId) then callback() return end
+    task.spawn(function()
+        while LowPoly.pending(speciesId) do task.wait(0.25) end
+        callback()
+    end)
 end
 -- Template geometry of one part (unscaled, unposed) for the 3D pattern bake: mesh id, CFrame relative to the model centre,
 -- mesh->part scale and 1 / the longest model side. nil when the template is gone (the bake then uses the UV-space pattern).

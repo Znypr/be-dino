@@ -120,7 +120,7 @@ end
 -- Card words for children (docs/96): short, plain, say what is wrong.
 Sel.ReasonText = {
     wrong_stage = "Not the right stage",
-    missing_pattern = "No pattern: can't fuse",
+    missing_pattern = "Hatch new dinos to fuse", -- BD-381: the card above says "Older dino" (no saved pattern); kids learn what to do, not a rule word
     species_mismatch = "Different dino",
     pattern_mismatch = "Different pattern",
     locked = "Locked",
