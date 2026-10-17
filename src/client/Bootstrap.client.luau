@@ -777,11 +777,17 @@ render=function(name: string)
             if owned>0 then
                 local x=(slot%3)*276 local y=338+math.floor(slot/3)*46
                 slot+=1
-                button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
                     chosenPotion=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
-                end).TextSize=16
+                end)
+                useButton.TextSize=16
+                -- BD-101: the owner's potion icon beside the name (a sibling above the button, so the text keeps its own padding);
+                -- no valid image id -> no icon and the button looks exactly as before.
+                if require(Shared.PotionArt).icon(scroller,item.id,UDim2.fromOffset(34,34),UDim2.fromOffset(x+5,y+20),useButton.ZIndex+1) then
+                    local pad=Instance.new("UIPadding") pad.PaddingLeft=UDim.new(0,40) pad.Parent=useButton
+                end
             end
         end
         if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
@@ -1298,6 +1304,7 @@ local weatherArt=Theme.icon(weatherTile,"weather")
 if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
 local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
 local buffsText=label(timers,"",0,145,286,68,16,C.gold)
+require(script.Parent.PotionChips).attach(buffsText) -- BD-101: potion icons beside the active-potion timer lines
 local function timerText(seconds) return UIFormat.duration(seconds) end
 local lastWeather=""
 local function refreshProgressionHUD()
@@ -1328,6 +1335,7 @@ local function refreshProgressionHUD()
     local boosts=UIFormat.boostLines(num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier"))
     if #boosts>0 then table.insert(lines,table.concat(boosts," • ")) end
     buffsText.Text=table.concat(lines,"\n")
+    require(script.Parent.PotionChips).update(p.buffs,now)
     if pendingShop and os.clock()-pendingShop.started>8 then
         -- Retry the same operation token so a delayed result cannot charge twice.
         pendingShop.started=os.clock()
