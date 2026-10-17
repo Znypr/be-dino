@@ -8,7 +8,7 @@ Label: **CURRENT BUILD BEHAVIOR** check, offline only (written 2026-10-18 on mai
 | --- | --- |
 | Profile `all-on-rehearsal` ([tools/release_profiles.py](../tools/release_profiles.py)) | The `playtest` profile plus every built-but-off gameplay flag ON: `REHEARSAL_ON` lists them. A **scratch** profile like `playtest-streaming`: `Streaming(enabled=True, scratch=True)`, so `release_playtest.shipped_profiles()` and the shipped-profile hard stops skip it, it is never uploaded, and `build/*-all-on-rehearsal.*` is git-ignored. `CrystalPacksEnabled` and `PaidRandomItemsEnabled` stay **required false** by rule, and so do the test, demo, QA and preview switches. `verify_release.py --profile all-on-rehearsal` passes (with the SCRATCH warning). The rules of `default` and `playtest` are unchanged: both still refuse a Config with the rehearsal values (`tests/test_rehearsal.py`). |
 | Runner [tools/run_rehearsal.py](../tools/run_rehearsal.py) | `python tools/run_rehearsal.py --runner luau.exe --compiler luau-compile.exe [--profile all-on-rehearsal \| playtest \| none] [--only name,name]` copies `src/`, `tools/`, `tests/` and the workflow into a scratch directory (docs, assets and most of `resources/` are linked, never written), rewrites only the **scratch** Config, and runs every `python tools/...` command of the CI job there, in parallel (about 90 s). The committed Config is never edited. See s2 for how the Config reaches the harnesses. |
-| [tools/rehearsal_expected.json](../tools/rehearsal_expected.json) | The 15 verifiers that fail on purpose because they pin the committed OFF state of a flag. The runner calls a failure expected only when its output carries the entry's signature and no other failing line; anything else is an `INTERACTION`. An entry that now passes is reported as stale. |
+| [tools/rehearsal_expected.json](../tools/rehearsal_expected.json) | The 16 verifiers that fail on purpose because they pin the committed OFF state of a flag. The runner calls a failure expected only when its output carries the entry's signature and no other failing line; anything else is an `INTERACTION`. An entry that now passes is reported as stale. |
 | [tools/verify_switch_on.py](../tools/verify_switch_on.py) (in CI) | Static guards: the profile is scratch and the paid line is closed; **every Config boolean that is false is either turned on by the rehearsal or excluded here with a reason** (a new built-but-off flag, such as `SecretSpeciesEnabled` and `DinoSkinsEnabled` which landed while this was written, fails the build until it is rehearsed); remote names are unique across `src/server`; every `Config.X` read exists in `Config.luau`; every `require(script.Parent.X)` resolves; and the flag-order rules of s4. |
 | [tools/measure_switch_on_cost.py](../tools/measure_switch_on_cost.py) | The 12-player cost table of s5. |
 
@@ -20,12 +20,13 @@ Not every suite takes its Config from the file. Some stub it (`verify_objective_
 
 ## 3. Result of the run
 
-Committed Config through the runner (`--profile none`): **147 of 147 pass**, so the copy of the tree behaves like the real one. All-on-rehearsal: **132 of 147 pass, 15 fail, and all 15 are the expected pins** below. No failure is unexplained.
+Committed Config through the runner (`--profile none`): **150 of 150 pass**, so the copy of the tree behaves like the real one. All-on-rehearsal: **134 of 150 pass, 16 fail, and all 16 are the expected pins** below. No failure is unexplained.
 
 | Verifier | Why it fails under all-on (expected) | What it still proved before it stopped |
 | --- | --- | --- |
 | `verify_world_art`, `verify_gameplay` | Pin `WorldArtMode/FoodArtMode = Legacy` and `SpecialFoodsEnabled = false` at runtime | The Kit-mode food start (new check, s6 finding 1) and everything before the pin |
 | `verify_objectives`, `verify_objective_hooks`, `verify_progression`, `verify_gifts`, `verify_gift_ui`, `verify_skins`, `verify_secret_species` (part A), `verify_class_picker`, `verify_mouth_reach` | "The committed Config has the flag off" (one assertion or `check` each) | Their static checks, the pure rules and (secret species part B) 2,113 flag-on checks of settlement, nests, shop, fusion and rollback; `verify_mouth_reach` ran all its numeric checks |
+| `verify_profile_golden` | Records the stored bytes of a scripted session under the committed Config (BD-607); the 'outage' server takes the Config as it comes, so the all-on fields change them from step 168 (378 bytes). Steps 1 to 167 are byte-identical | A pure move of the repository is still guarded in CI |
 | `verify_rollback` | The drill is about a build with the flags OFF reading data a flags-ON build wrote | 360 checks pass with the flags off, as designed |
 | `verify_spawn` | Builds its own default and playtest variants from the Config text and expects CaveHub false in the default one | The cave-hub spawn geometry |
 | `verify_multiplayer_sim`, `verify_private_state` | The three scenario families that assert the OFF state (perk refused, no objective hook, hub size rule off): 11 of 684 checks | **673 of 684 checks pass with every flag on**: settlement exactly once, no duplicated egg, leases, join storm, outage and flaky-store recovery, spam protection |
@@ -105,7 +106,7 @@ Derived, not simulated: `GiftService` polls its own Gifts store every `ClaimSeco
 ```
 python tools/verify_switch_on.py
 python tools/verify_release.py --profile all-on-rehearsal
-python tools/run_rehearsal.py --runner C:/.../luau.exe --compiler C:/.../luau-compile.exe          # 15 expected pins, exit 0
-python tools/run_rehearsal.py --runner ... --profile none                                           # the control: 147 of 147
+python tools/run_rehearsal.py --runner C:/.../luau.exe --compiler C:/.../luau-compile.exe          # 16 expected pins, exit 0
+python tools/run_rehearsal.py --runner ... --profile none                                           # the control: 150 of 150
 python tools/measure_switch_on_cost.py --runner ... --seeds 3                                       # about 2.5 minutes
 ```

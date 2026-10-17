@@ -66,5 +66,10 @@
     "signature": "the committed flag is OFF",
     "only": "committed flag is OFF",
     "reason": "part A pins SecretSpeciesEnabled false; part B (2,113 checks of the settlement, nest, shop, fusion and rollback paths with the flag on) passed"
+  },
+  "verify_profile_golden.py": {
+    "signature": "The stored profile changed",
+    "only": "golden: step|differences follow|stored profile changed|FAIL",
+    "reason": "records the stored bytes of a scripted session (BD-607). Steps 1 to 167 match under all-on because the session sets its own flags; from step 168 the 'outage' server takes the Config as it comes, and the identity and other flag-on fields add 378 bytes to the stored profile. A flag-off pure refactor is still guarded in CI"
   }
 }

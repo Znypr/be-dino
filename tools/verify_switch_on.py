@@ -159,10 +159,16 @@ def between(text: str, start: str, end: str) -> str:
     return text[a:b if b > a else len(text)]
 
 
+def repository_text() -> str:
+    """ProfileRepository and the Profile*.luau modules it was split into (BD-607): the transactions live in all of them."""
+    paths = [ROOT / "src/server/ProfileRepository.luau"] + sorted((ROOT / "src/server").glob("Profile*.luau"))
+    return chr(10).join(dict.fromkeys(p.read_text(encoding="utf-8") for p in paths))
+
+
 def check_rules() -> None:
-    repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
+    repo = repository_text()
     # Gifts and objectives never share a transaction: the gift claim is its own UpdateAsync and reports nothing to ObjectiveService.
-    gifts = between(repo, "function ProfileRepository.applyGifts", "\nfunction ProfileRepository.purchase")
+    gifts = between((ROOT / "src/server/ProfileGifts.luau").read_text(encoding="utf-8"), "function ProfileRepository.applyGifts", chr(10) + "end" + chr(10))
     if not gifts:
         fail("ProfileRepository.applyGifts not found")
     elif "objectives()" in gifts or "ObjectiveService" in gifts:
@@ -171,7 +177,7 @@ def check_rules() -> None:
     sites = len(re.findall(r"objectives\(\)\.", repo))
     guards = len(re.findall(r"Config\.ObjectivesEnabled == true", repo))
     if sites < 5 or guards < sites:
-        fail(f"ProfileRepository has {sites} objective hook sites but {guards} ObjectivesEnabled guards")
+        fail(f"the repository modules have {sites} objective hook sites but {guards} ObjectivesEnabled guards")
     # CombatEnabled replaces instant predation, so PredationAtMouth is moot while combat is on (documented in docs/152).
     predation = (ROOT / "src/server/PredationService.luau").read_text(encoding="utf-8")
     if "if Config.CombatEnabled then return end" not in predation:
