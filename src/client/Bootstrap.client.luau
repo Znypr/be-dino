@@ -1422,7 +1422,8 @@ local function scales()
     local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
         jump=if touch then coreTouchRect("JumpButton") else nil,
-        goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active")}) -- BD-531: the hub Goals header takes space under the goal line
+        goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active"), -- BD-531: the hub Goals header takes space under the goal line
+        objectives=Config.ObjectivesEnabled==true and goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active")}) -- BD-075: the objectives pill sits next to it (flag off = false, layout identical)
     local function place(object: GuiObject,uiScale: UIScale,entry)
         object.AnchorPoint,object.Position,object.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
         uiScale.Scale=entry.scale
@@ -1471,6 +1472,10 @@ local function scales()
     require(script.Parent.HudV2).layout(layout)
     gui:SetAttribute("FeedbackRect",Rect.new(layout.feedback.x,layout.feedback.y,layout.feedback.x+layout.feedback.w,layout.feedback.y+layout.feedback.h)) -- BD-507: FeedbackClient puts its Tell us! button here, clear of the egg plate
     gui:SetAttribute("GoalsRect",if layout.goals then Rect.new(layout.goals.x,layout.goals.y,layout.goals.x+layout.goals.w,layout.goals.y+layout.goals.h) else nil) -- BD-531: GoalsPanel sits on the reserved spot (nil = its own desktop formula)
+    if Config.ObjectivesEnabled==true then -- BD-075: ObjectivesPanel sits on these (nil while hidden); never touched with the flag off
+        gui:SetAttribute("ObjectivesRect",if layout.objectives then Rect.new(layout.objectives.x,layout.objectives.y,layout.objectives.x+layout.objectives.w,layout.objectives.y+layout.objectives.h) else nil)
+        gui:SetAttribute("ObjectivesOpenRect",if layout.objectivesOpen then Rect.new(layout.objectivesOpen.x,layout.objectivesOpen.y,layout.objectivesOpen.x+layout.objectivesOpen.w,layout.objectivesOpen.y+layout.objectivesOpen.h) else nil)
+    end
     gui:SetAttribute("AdminRect",Rect.new(layout.admin.x,layout.admin.y,layout.admin.x+layout.admin.w,layout.admin.y+layout.admin.h)) -- BD-531: AdminPanel puts its Admin button here (phone: not on the egg plate)
     gui:SetAttribute("ChipRect",Rect.new(layout.chip.x,layout.chip.y,layout.chip.x+layout.chip.w,layout.chip.y+layout.chip.h)) -- BD-538: HubTravelClient puts "Back to the middle" here (phone: clear of the weather column)
     toastScale.Scale=layout.toastScale
