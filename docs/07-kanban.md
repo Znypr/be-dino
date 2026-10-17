@@ -13,14 +13,14 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 | Status | P0 | P1 | P2 | P3 | Total |
 |---|---:|---:|---:|---:|---:|
-| Backlog | 5 | 16 | 35 | 19 | 75 |
+| Backlog | 5 | 17 | 35 | 19 | 76 |
 | Review / test | 60 | 183 | 80 | 12 | 335 |
 | Blocked | 1 | 0 | 0 | 0 | 1 |
 | Done | 16 | 7 | 6 | 0 | 29 |
-| Superseded | 2 | 2 | 1 | 0 | 5 |
+| Superseded | 2 | 2 | 0 | 0 | 4 |
 | Parked | 0 | 0 | 0 | 2 | 2 |
 | Spike | 0 | 2 | 0 | 0 | 2 |
-| **Total** | 84 | 210 | 122 | 33 | 449 |
+| **Total** | 84 | 211 | 121 | 33 | 449 |
 
 <!-- board-summary:end -->
 
@@ -1173,5 +1173,5 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-508 | Backlog | P3 | **Found-egg toast hides the mutation name when several eggs land in one tick** (BD-154 unseeded run, [03-catch-toast](evidence/2026-10-17-bd154-unseeded/03-catch-toast.jpg)): `FtueP1.foundToast` names "Ember" only for a single egg; with Food worth x10 or big pickups it says "You found 7 eggs!" + "A weather egg! Hatch it at Home". Accept: the body names the mutation ("Ember eggs!") when the batch holds one kind, "weather eggs" when mixed; texts stay inside NotifyQueue limits (30 / 44) and `tools/verify_egg_toast_count.py` covers it. Playtest-only in practice (x10 food); normal runs catch one egg per tick | BD-154, BD-378 |
 | BD-518 | Review / test | P1 | **Event-mutation body tint never rendered on low-poly dinos (found checking the pale Ember dino of the BD-154 run, [evidence](evidence/2026-10-17-ember-tint/README.md)).** `MutationLook.apply` set `MeshPart.Color`, which a baked-texture low-poly part ignores, so Ember, Frost and the rest showed no body tint (the ring, motes and badge worked). The pale body in the BD-154 image was the dino's own genes (cream-dominant mix); the tint is a 22-26 percent pull by design (`MaxAmount` 0.35). **Fixed 2026-10-17:** the tint is baked into the texture (`MutationLook.pull`, `LowPolyTexture.paint`, `LPMutation` + `LowPoly.setMutation`, cache key includes it, never on fused tiers), wired for the world dino, the equip path and previews (`PreviewTraits`, `DinosaurPreview`); `tools/verify_mutation_look.py` extended. Studio before/after: images A, C (before: identical with and without the mutation) and D-G (after, with and without the bake). Left: phone, other species by eye, owner eye on how strong 24 percent reads. | BD-155, BD-154 |
 | BD-519 | Backlog | P2 | **The egg is drawn at the top-left corner over the title at the first OPEN of a session** ([image](evidence/2026-10-17-stuck-BD-170/01-egg-drawn-top-left-at-first-open.jpg), 2026-10-17 Studio, found in the BD-170 check): "An egg is hatching..." with the egg at x about 150, y about 180 instead of the panel centre; later hatches were fine. Look at the first-layout frame of `HatchSequence` (size or position read before the panel has its AbsoluteSize). Needs a repro with a few fresh sessions. | BD-170 |
-| BD-524 | Superseded | P2 | **"Tell us!" (playtest feedback button) covers the EGGS plate bottom-left once a run has ended** ([06](evidence/2026-10-17-stuck-BD-148/06-run-complete-feedback-button-goal-line.jpg), [07](evidence/2026-10-17-stuck-BD-148/07-eggs-screen-after-run.jpg), 1140x785): the button sits on the left half of the "EGGS 0" HUD plate (it reads "SS 0"). Move it to a free corner and recheck at phone size. | BD-441 **Lead 2026-10-17:** same bug as BD-507 item 1, fixed in PR #363 (feedback button placed above the egg plate, verified at 21 viewport sizes); this Studio run used a build from before #363. Re-check in the next Studio pass. |
+| BD-524 | Backlog | P1 | **"Tell us!" (playtest feedback button) covers the EGGS plate bottom-left once a run has ended** ([06](evidence/2026-10-17-stuck-BD-148/06-run-complete-feedback-button-goal-line.jpg), [07](evidence/2026-10-17-stuck-BD-148/07-eggs-screen-after-run.jpg), 1140x785): the button sits on the left half of the "EGGS 0" HUD plate (it reads "SS 0"). Move it to a free corner and recheck at phone size. | BD-441 **Lead 2026-10-17:** NOT fixed by BD-507 (#363): this Studio build already contained #363, and the overlap still shows in the hub after a level-up toast (docs/evidence/2026-10-17-ember-tint/F-after-fix-world-hub-ember-raptor.jpg). The placement holds on the first screen but is lost later; find what resets it. |
 | BD-525 | Backlog | P2 | **Auto-open Common still revealed one plain Common egg** (2026-10-17 Studio, [README](evidence/2026-10-17-stuck-BD-148/README.md)): with only Common on AUTO, "Egg 8 of 11" showed a plain Gallimimus (Common, no BIG, Shiny, mutation, Rainbow or Astra) while eggs before it were skipped. `Bootstrap.client.luau` (`LastClaimedChestId`) reads the species from `LastChestRewardText` with a pattern; check it yields the species id used by `Config.SpeciesRarities` and that the egg shown first after OPEN is not forced on screen. Fix with a unit case in `tools/verify_eggs_screen.py`. | BD-153 |
