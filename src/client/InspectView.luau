@@ -71,7 +71,7 @@ function InspectView.attach(viewport: ViewportFrame, options: Options?): Handle
         hint.Size, hint.Text, hint.Font = UDim2.fromOffset(132, 26), "Drag to turn", Enum.Font.FredokaOne
         hint.TextColor3, hint.TextScaled, hint.ZIndex = Color3.new(1, 1, 1), true, z
         local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 13) corner.Parent = hint
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 18, 10, hint
+        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 18, 14, hint
         hint.Parent = uiParent
         hintLabel = hint
     end

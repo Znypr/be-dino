@@ -89,7 +89,7 @@ local function pill(parent: GuiObject, text: string, color: Color3, size: UDim2,
     p.Size, p.Position, p.Font, p.Text = size, position, Enum.Font.FredokaOne, text
     p.TextColor3, p.TextScaled, p.ZIndex = textColor or C.text, true, parent.ZIndex + 3
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 6) corner.Parent = p
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 8, p
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 14, p -- docs/114 s4.4: pills never shrink under 14 px; callers size them to fit
     p.Parent = parent
     return p
 end
@@ -134,10 +134,12 @@ local function paintEggButton(hit: GuiObject, details: any)
     else
         local generic = Theme.icon(hit, "egg_green")
         if generic then generic.Size, generic.Position, generic.ZIndex = UDim2.fromOffset(40, 40), UDim2.fromOffset(4, 4), hit.ZIndex + 1 end
+        local noEgg = view and view.kind ~= "egg" and view.kind ~= "loading" -- the "No egg" tip needs the lower strip: draw the generic egg smaller above it
+        if generic and noEgg then generic.Size, generic.Position = UDim2.fromOffset(28, 28), UDim2.fromOffset(10, 3) end
         if view and view.kind ~= "egg" and view.kind ~= "loading" then
             local tip = Instance.new("TextLabel")
-            tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 11, Enum.Font.GothamBold
-            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 12), UDim2.fromOffset(0, 36), hit.ZIndex + 2, hit
+            tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 14, Enum.Font.GothamBold
+            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 16), UDim2.fromOffset(0, 31), hit.ZIndex + 2, hit
         end
     end
 end
@@ -363,10 +365,10 @@ function Panels.species(ctx)
             if previewView then previewView:Destroy() previewView = nil end
             entryRef.mounted = false
         end
-        pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(62, 16), UDim2.new(1, -68, 0, 7), if d.stage == "base" then C.text else C.outline)
-        local y = 7
+        pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(74, 17), UDim2.new(1, -80, 0, 7), if d.stage == "base" then C.text else C.outline)
+        local y = 26 -- below the stage pill (top right, 7 to 24), never beside it: at 14 px the pills no longer fit in one row
         for _, text in MyDinos.ribbons(d, catalog) do
-            if y > 62 then break end
+            if y > 66 then break end
             -- BD-352: a mutation is a real badge (own colour, 14 px word, dot), not a 9 px pill; shiny / big stay small pills.
             local mutationId: string? = nil
             for _, entry in MutationLook.Entries do
@@ -376,13 +378,13 @@ function Panels.species(ctx)
                 MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, math.max(y, 28))) -- below the stage pill, never over it
                 y += MutationBadge.Height + 3
             else
-                pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
+                pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 17), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
                 y += 19
             end
         end
         W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 82), 14)
         W.swatch(button, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 101))
-        local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 115), C.outline)
+        local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 115), C.outline)
         tag.Visible = d.instanceId == st.equippedId
         cards[d.instanceId] = {stroke = stroke, tag = tag, button = button, index = order, mount = mount, unmount = unmount, mounted = false}
         entryRef = cards[d.instanceId]

@@ -20,26 +20,13 @@ from pathlib import Path
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 
 # --------------------------------------------------------------------------------------------------------------------
-# (a) KNOWN OFFENDERS (baseline, docs/116 C-37). The floors are a hard rule; these literals pre-date the check and cannot be raised without
-# a layout change that needs a Studio phone + desktop screenshot. Key = (file, kind) -> (how many offenders are known, reason).
+# (a) KNOWN OFFENDERS (baseline, docs/116 C-37). EMPTY since BD-501: the 18 literals that pre-dated the check were raised to the floors
+# (text 14 px, tap target 44 px) with their layouts adjusted and checked in Studio. Key = (file, kind) -> (how many offenders are known, reason).
 # kind: "text-literal" (a TextSize / helper size under 14), "text-min" (a UITextSizeConstraint Min/Max under 14), "button" (a size under 44).
-# A NEW offender (count goes up) fails with every line listed; a fixed one (count goes down) fails until the number is lowered, so the
-# list can only shrink. Keep it short: fix the code instead of adding here.
+# A NEW offender fails with every line listed; a fixed one (count goes down) fails until the number is lowered, so the list can only
+# shrink. Do not add entries: fix the code instead.
 # --------------------------------------------------------------------------------------------------------------------
-_R_TEXT_MIN = "shrink-to-fit floor of a TextScaled label; raising it clips long text, needs a Studio screenshot (C-37)"
-_R_BUTTON = "design px in a desktop modal; ModalCompact.enforce lifts it to 44 px only on phones; needs a layout pass (C-37)"
-_R_TEXT = "small tooltip text; needs a layout pass and a Studio screenshot (C-37)"
-UI_KNOWN = {
-    ("src/client/Bootstrap.client.luau", "text-min"): (2, _R_TEXT_MIN),
-    ("src/client/Bootstrap.client.luau", "button"): (6, _R_BUTTON),
-    ("src/client/DinoIndexPanels.luau", "text-min"): (1, _R_TEXT_MIN),
-    ("src/client/DinoIndexPanels.luau", "text-literal"): (1, _R_TEXT),
-    ("src/client/EggsScreen.luau", "text-min"): (1, _R_TEXT_MIN),
-    ("src/client/GoalsPanel.luau", "button"): (1, _R_BUTTON),
-    ("src/client/HatchSequence.luau", "text-min"): (4, _R_TEXT_MIN),
-    ("src/client/HudV2.luau", "text-min"): (1, _R_TEXT_MIN),
-    ("src/client/InspectView.luau", "text-min"): (1, _R_TEXT_MIN),
-}
+UI_KNOWN: dict = {}
 
 # --------------------------------------------------------------------------------------------------------------------
 # (c) NAME mappings only (doc label -> code key). Values are always parsed from the files.
