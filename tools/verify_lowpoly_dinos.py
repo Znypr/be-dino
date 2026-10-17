@@ -55,14 +55,9 @@ def check_registry():
         assert tiers[name] == tier, f"{name} tier {tier} != Config.SpeciesRarities {tiers[name]}"
         expect = next((c for c, group in CLASSES.items() if name in group), "Ground")
         assert cls == expect, f"{name} class {cls} != {expect}"
-        ladder = 2.0 * 1.1 ** (int(tier) - 1)
-        shape = float(scale) / ladder
-        assert 0.75 <= shape <= 1.65, f"{name} shape factor {shape:.2f} unreasonable"
-    by_tier = {}
-    for name, _, _, scale, tier, _ in entries:
-        by_tier.setdefault(tier, []).append(float(scale))
-    means = [sum(v) / len(v) for _, v in sorted(by_tier.items())]
-    assert all(b > a for a, b in zip(means, means[1:])), f"mean scale must grow every tier: {means}"
+        # BD-232: the scale is no longer a tier formula; the SIZE rule (10% per unlock tier by height, bulk or length) and its tolerance
+        # are enforced by tools/verify_scale_ladder.py against the Studio boxes, which also compares this table with ScaleLadder.
+        assert 1.2 <= float(scale) <= 4.5, f"{name} scale {scale} outside the sane range 1.2 to 4.5"
     assert sum(len(v) for v in PLAN.values()) == 22 and set().union(*PLAN.values()) == set(names), "part plan must cover all species"
     assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
     for name in names:
