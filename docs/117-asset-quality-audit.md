@@ -8,6 +8,7 @@ Written 2026-10-16 (branch claude/quality-gates). Purpose: the owner found sunk 
 |---|---|---|---|---|
 | Grounding | 8.1 item 4 | raycast every placed generated prop, report below terrain > 0.3 and floating > 0.3 studs (0.5 before BD-417) | Studio (own copy) + offline report | `tools/qa/ground_probe.server.luau`, `tools/qa/ground_report.py` |
 | Overlap (island) | 8.1 item 5 | solid kit-collider footprints pairwise (pure Luau placement) | offline, CI | `tools/verify_world_overlap.py` |
+| New plants and ground props (BD-463/464) | 8.1 items 3, 5 | empty ids = unchanged placement; fake ids = clutter replaced, phone triangle estimate not higher, lanes, bands, ground contact | offline, CI | `tools/verify_world_props.py` |
 | Overlap (cave) | 8.1 item 5 | cave footprints, paths, pads, lava basin | offline, CI | `tools/verify_cave_overlap.py` (existing) |
 | Palette | 5, 5.3, 5.10 | dominant hue buckets of each prop texture vs zone rules | Studio probe + offline report | `src/shared/AssetPalette.luau`, `tools/qa/colour_probe.server.luau`, `tools/qa/palette_report.py` |
 | Lighting | 6 | mean luminance of screenshots per place | Studio screenshot + offline | `tools/qa/capture_window.ps1`, `tools/qa/luminance.py` |
@@ -76,6 +77,7 @@ Grounding: island and cave green (above). Palette: probe re-run, the 56 props ga
 ```
 python tools/build.py && python tools/build.py --profile playtest
 python tools/verify_world_overlap.py --runner <luau>
+python tools/verify_world_props.py --runner <luau>
 python tools/verify_cave_overlap.py --runner <luau>
 python tools/verify_world_art.py --runner <luau> && python tools/verify_world_budget.py --runner <luau>
 python tools/qa/palette_report.py --runner <luau> [--input colour.tsv]

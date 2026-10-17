@@ -155,8 +155,36 @@ local function generatedProp(id: string, biome: string, roll: number, layer: str
     workspace:SetAttribute("WorldGeneratedProps", (workspace:GetAttribute("WorldGeneratedProps") or 0) + 1)
     return generatedCache[cacheKey]:Clone()
 end
+-- BD-463 / BD-464 step 2: one Blender plant or ground prop (WorldGeneratedMeshes.Props key). Only called for keys BiomePlacement placed, i.e. whose
+-- asset id is valid AND whose template really loaded into GeneratedWorld. The mesh is fitted inside the size recorded for the key (so an import
+-- scale mismatch cannot make a tuft huge) and its pivot is the bottom centre, exactly like generatedProp.
+local propCache: {[string]: Model} = {}
+local function propProp(key: string): Model?
+    local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local template = if folder then folder:FindFirstChild(key) else nil
+    local entry = Generated.Props[key]
+    if not template or not template:IsA("MeshPart") or not entry then return nil end
+    if not propCache[key] then
+        local size, want = template.Size, entry.size
+        local fit = math.min(want[1] / size.X, want[2] / size.Y, want[3] / size.Z)
+        local mesh = template:Clone()
+        mesh.Size = size * fit
+        mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
+        mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0)
+        mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0)
+        local model = Instance.new("Model")
+        mesh.Parent = model
+        model.PrimaryPart = mesh
+        model.WorldPivot = CFrame.new()
+        model.Name = key
+        model:SetAttribute("GeneratedMesh", key)
+        propCache[key] = model
+    end
+    workspace:SetAttribute("WorldGeneratedProps", (workspace:GetAttribute("WorldGeneratedProps") or 0) + 1)
+    return propCache[key]:Clone()
+end
 -- One kit prop = the uploaded MeshPart model (1 part) plus simplified invisible box colliders scaled with it.
-local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?, made: Model?, fitted: {{number}}?): boolean
+local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?, made: Model?, kitAll: any?, fitted: {{number}}?): boolean
     local model = made or generatedProp(id, biome or "meadow", roll or .5) or Resources.clone(id)
     if model then
         if not made then model:ScaleTo(scale) end
@@ -172,7 +200,7 @@ local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: numbe
         end
         return model ~= nil
     end
-    for _, c in KitData[id].colliders do
+    for _, c in (kitAll or KitData)[id].colliders do
         local collider = part(folder, id .. "Collider", Vector3.new(c[4], c[5], c[6]) * scale, Vector3.zero,
             Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
         collider.CFrame = pivot * CFrame.new(Vector3.new(c[1], c[2], c[3]) * scale) * CFrame.Angles(0, c[7], 0)
@@ -197,8 +225,20 @@ local function biomeKit(parent: Instance)
         local template = if overrides then overrides:FindFirstChild(id) else nil
         if template and template:IsA("MeshPart") then meshes[id] = true end
     end
+    -- BD-463/464 step 2: the Blender plants and ground props take part only when Config.WorldGeneratedMeshes is on, the key has a valid asset id
+    -- (BiomePlacement.validAssetId) AND its template really loaded into GeneratedWorld. Empty ids (today) = the grammar exactly as before.
+    local propEntries: {[string]: any} = {}
+    local generatedFolder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    if Config.WorldGeneratedMeshes and generatedFolder then
+        for key, entry in Generated.Props do
+            local template = generatedFolder:FindFirstChild(key)
+            if template and template:IsA("MeshPart") and Generated.validId(entry.assetId) then propEntries[key] = entry end
+        end
+    end
+    local kitAll = Biome.withProps(KitData, propEntries)
+    meshes = Biome.propMeshes(meshes, propEntries)
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
-        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout})
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout, props = propEntries})
     local missing = 0
     local counts = {tree = 0, colossal = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
     -- BD-395: trees, colossal trees and shrubs rest ON the real voxel terrain: five rays (centre + around the trunk) from above, the
@@ -208,17 +248,19 @@ local function biomeKit(parent: Instance)
     local Ground, rayMoved = Biome.Ground, 0
     for i, p in placed do
         counts[p.layer] += 1
-        local data = KitData[p.id]
+        local data = kitAll[p.id]
+        local isNewProp = propEntries[p.id] ~= nil
         -- BD-409: rocks and landmarks too (measured in Studio: every boulder sat ~2.3 studs INSIDE the voxel terrain, the analytic layout height
         -- is lower than the real surface). Rocks keep their RockSink embed; landmarks rest on the lowest sample.
         -- BD-416/417: build + scale the model first so the ray footprint and the embed come from the REAL mesh size (the generated mesh is
         -- fitted inside the kit extent, so extent * scale over-estimates it), with the per-kind policy of BiomePlacement.Ground.
         local made: Model? = nil
         if p.layer ~= "log" then
-            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), p.layer) or Resources.clone(p.id)
+            made = if isNewProp then propProp(p.id)
+                else generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), p.layer) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
             -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
-            if made and made.PrimaryPart and p.layer ~= "landmark" then
+            if made and made.PrimaryPart and p.layer ~= "landmark" and not (isNewProp and (data.family == "flowers" or data.family == "ground_mushrooms")) then
                 local tr, tg, tb = Biome.tint(p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 91), Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 92))
                 made.PrimaryPart.Color = Color3.new(tr, tg, tb)
             end
@@ -250,15 +292,16 @@ local function biomeKit(parent: Instance)
                 Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
             collider.CFrame = pivot * CFrame.new(0, data.extent[2] * .45 * p.scale, 0)
             collider.Transparency = 1
-        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), made, ancientColliders(made)) then
+        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), made, kitAll, ancientColliders(made)) then
             missing += 1
         end
         if i % 40 == 0 then task.wait() end
     end
     workspace:SetAttribute("WorldKitRayMoved", rayMoved) -- props the Terrain raycast moved (> 0.05 stud) from the analytic height
     workspace:SetAttribute("WorldKitPlacements", #placed)
-    workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
-    workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))
+    workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, kitAll))
+    workspace:SetAttribute("WorldKitParts", Biome.parts(placed, kitAll, meshes))
+    workspace:SetAttribute("WorldKitNewProps", (function() local n = 0 for _, p in placed do if propEntries[p.id] then n += 1 end end return n end)()) -- BD-463/464: Blender plants and ground props placed
     workspace:SetAttribute("WorldKitMissing", missing)
     for layer, n in counts do workspace:SetAttribute("WorldKit_" .. layer, n) end
 end
