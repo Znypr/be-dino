@@ -47,7 +47,7 @@ FALL_RECOVERY_STUB = (
 STATIC = [
     ("src/server/FoodService.luau", r"FoodCatchRules\.award\(candidate\.gained[\s\S]{0,300}RunEggTags\.nextScore\(before,whole,Config\.MaxCatchScore,Config\.RunEggMaxPerRun\)",
      "FoodService still turns pickups into catches with FoodCatchRules.award + RunEggTags.nextScore"),
-    ("src/server/Bootstrap.server.luau", r"Telemetry\.runSettled\(player, reason, runSeconds, settledOutcome\)", "Bootstrap still reports settled runs to telemetry"),
+    ("src/server/Bootstrap.server.luau", r"Telemetry\.runSettled\(player, reason, runSeconds, settledOutcome, runId\)", "Bootstrap still reports settled runs to telemetry"),
     ("src/server/ProfileRepository.luau", r"RareHatchService\.record\(player, committedOutcome\)", "publishHatch still hands settled hatches to RareHatchService"),
 ]
 
