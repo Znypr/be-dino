@@ -49,7 +49,7 @@ Free-text error strings (`status:gsub("_"," ")`) must map to this copy table.
 Reuse: `notify` API, `C` palette, `UIIconAssets` icons (egg, dinos, fusion, shield, home, weather x4, leap, trophy, amber), v2 card tints, reward-burst. New: the `toast-body` plate (1 image) and 5 icons below.
 
 ## 8. New icon list (5; v2 style, 1:1 transparent PNG, readable at 32 px)
-1. crystal (faceted blue gem), 2. level (rounded star with up-chevron), 3. star (completion, 5-point, shared with doc 66), 4. mutation-egg (egg with flame swirl), 5. warning (rounded triangle with bar).
+1. crystal (faceted AMBER gem, corrected 2026-10-17 per handbook s5.3; it said "blue" before), 2. level (rounded star with up-chevron), 3. star (completion, 5-point, shared with doc 66), 4. mutation-egg (egg with flame swirl), 5. warning (rounded triangle with bar).
 Potion already exists as `resources/ui/v2/scalable/potion.*` and needs an owner upload/binding (not in `UIIconAssets` today). Cracked egg reuses `premium-egg-cracks`; draw new only if unreadable at 32 px.
 
 ## 9. Animations (Proposal)

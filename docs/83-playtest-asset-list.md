@@ -51,7 +51,7 @@ logos, ground plane or sparkle bursts**. Save the prompt as a `.json` next to th
 | 12 | weather-aurora-v1.png (Northern Lights) | P0 | Green and teal aurora ribbons over a small dark-blue night hill with 2 stars. |
 | 13 | weather-quake-v1.png (Earthquake) | P0 | Chunky cracked rock slab splitting in two, with tan dust puffs and short shake lines. |
 | 14 | weather-bloodmoon-v1.png (Blood Moon) | P0 | Large round crimson-pink moon with soft craters and a thin dark cloud across it. Spooky but friendly, no faces. |
-| 15 | notify-crystal-v1.png | P1 | Faceted blue gem (the Crystals currency). Readable at 32 px. |
+| 15 | notify-crystal-v1.png | P1 | Faceted AMBER / golden-yellow gem (the Crystals currency; corrected 2026-10-17 per handbook s5.3: it said "blue" before, crystals are amber, never blue; fills #F1A024 and #FFD22B). Readable at 32 px. Full spec: [109](109-owner-art-prompt-pack.md) section 9.5. |
 | 16 | notify-level-v1.png | P1 | Rounded gold star with a white up-chevron. |
 | 17 | notify-star-v1.png | P1 | Simple chunky 5-point gold star (task done). |
 | 18 | notify-mutation-egg-v1.png | P1 | Ivory egg with a swirling coloured flame band. |
