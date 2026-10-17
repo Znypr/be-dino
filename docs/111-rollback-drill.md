@@ -93,6 +93,7 @@ store it does read.
 | `progression.potions` / `buffs` with ids added after Build 020 (loot, uncommon, epic) | BD-051, docs/68 | **Build 020 rejects unknown potion ids** |
 | `claimedGifts` (`{[giftId] = unix time or "revoked"}`) and `ownedSkins` (`{[skinId] = true}`) | BD-451 gifting core (docs/134) | Ignored and kept. Created ONLY by the first applied gift (a load, renew or release never adds them, so a profile that never received a gift is unchanged); asserted by `verify_gifts` (RB1) and `verify_rollback`: Build 020 loads both kinds of profile and preserves the fields byte-for-byte |
 | `equippedVariantKey` | BD-150 | Ignored and kept |
+| `equippedSecret` (`{speciesId, variantKey?}`) | BD-606 (docs/115 SS7) | Ignored and kept. Created ONLY by equipping a found secret species (flag on, model ready, never the default); the stored `equippedSpeciesId` stays `"compy"`, so Build 020 loads the profile and plays the fallback Compy (asserted by `verify_secret_species` against the frozen reader) |
 | low-poly / culling / world-kit settings | client only, **not persisted** | Nothing to roll back (no attribute or profile field) |
 
 `ProfileSchemaVersion` is still 1 everywhere. All changes are additive, which is why most data survives a rollback. The

@@ -40,8 +40,7 @@ end
 
 -- The measured row of a species, nil for an unknown one.
 local function rowOf(speciesId: any): any?
-    if typeof(speciesId) ~= "string" then return nil end
-    local row = (ScaleLadder.Dino.species :: any)[speciesId]
+    local row = ScaleLadder.dinoRow(speciesId) -- BD-606: the 22 shipped species, then the seven secrets
     return if row and row.snout and row.headLength and row.length then row else nil
 end
 

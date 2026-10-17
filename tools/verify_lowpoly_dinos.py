@@ -38,8 +38,27 @@ def registry():
     return re.findall(r'(\w+) = \{assetId = (\d+), version = "(v\d+)", scale = ([\d.]+), tier = (\d), class = "(\w+)"\}', text)
 
 
+def secret_slots():
+    """BD-606: {secret id: (class, assetId)} from Shared/SecretSpeciesConfig (assetId 0 = the model slot is empty)."""
+    text = (ROOT / 'src/shared/SecretSpeciesConfig.luau').read_text(encoding='utf-8')
+    return {m[0]: (m[1], int(m[2])) for m in re.findall(r'\{ id = "(\w+)", name = "[^"]+", secret = true, class = "(\w+)", weight = \d+, assetId = (\d+) \}', text)}
+
+
 def check_registry():
-    entries = registry()
+    all_entries = registry()
+    slots = secret_slots()
+    assert len(slots) == 7, f"expected 7 secret species in SecretSpeciesConfig, found {sorted(slots)}"
+    # BD-606: a secret appears here ONLY with a filled model slot, with the very same id and class (never an invented entry); every filled slot needs its entry
+    secret_entries = [e for e in all_entries if e[0] in slots]
+    for name, aid, _, scale, tier, cls in secret_entries:
+        assert slots[name][1] > 0, f"{name}: LowPolyDinoAssets has an entry but the SecretSpeciesConfig model slot is empty (never invent ids)"
+        assert str(slots[name][1]) == aid, f"{name}: LowPolyDinoAssets id {aid} differs from the SecretSpeciesConfig slot {slots[name][1]}"
+        assert cls == slots[name][0], f"{name}: LowPolyDinoAssets class {cls} differs from SecretSpeciesConfig {slots[name][0]}"
+        assert tier == "1", f"{name}: secret size tier must be 1 (docs/115 SS8)"
+        assert 0.5 <= float(scale) <= 6, f"{name}: scale {scale} outside the sane range"
+    for name, (_, aid) in slots.items():
+        assert aid == 0 or any(e[0] == name for e in secret_entries), f"{name}: the model slot is filled but LowPolyDinoAssets has no entry"
+    entries = [e for e in all_entries if e[0] not in slots]
     names = [e[0] for e in entries]
     ids = [e[1] for e in entries]
     config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
@@ -65,7 +84,7 @@ def check_registry():
     gal = next(float(e[3]) for e in entries if e[0] == 'gallimimus')
     compy = next(float(e[3]) for e in entries if e[0] == 'compy')
     assert gal >= 0.9 * compy, f"BD-329 gallimimus scale {gal} must give mass comparable to compy {compy}"
-    return entries
+    return all_entries
 
 
 BODY = r'''
@@ -392,7 +411,7 @@ if __name__ == '__main__':
     print("BD-388 animator source ok: joint-pivot rotation, shared bob, peck in studs")
     assert 'sampleDefeat' in anim and 'RunState") == "Ending"' in anim and 'LPSkin' in anim, 'BD-249: defeat hook in the animator'
     entries = check_registry()
-    print(f"low-poly registry ok: {len(entries)} species, flag off")
+    print(f"low-poly registry ok: {len(entries)} species ({len(secret_slots())} secret slots, {sum(1 for e in entries if e[0] in secret_slots())} filled), flag off")
     src = 'local P=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\n' + BODY
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'lowpoly_pose.luau'

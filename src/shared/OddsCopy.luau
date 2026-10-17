@@ -127,6 +127,16 @@ end
 Copy.fusionCalm = "Odds are shown before you fuse"
 Copy.fusionDetails = "Fusion uses no real money in this version. The chances above are exact and are shown before you fuse."
 
+-- BD-606 (docs/115 SS9, docs/149 s5): ONE honest line about the secret dino, for FREE eggs only (eggs found on runs and opened from free nests).
+-- It is told only while secret dinos can really drop (Config.SecretSpeciesEnabled AND at least one model slot filled: the caller passes that as
+-- `secretLive`), never as "guaranteed", never with a number or a price, and never as part of a shop egg's own odds: Copy.eggGroups, Copy.notes and
+-- ShopOdds.lines (what a bought egg can be) never mention it. Plain words for children (docs/72).
+Copy.secretLine = "A tiny chance of a secret dino in free eggs"
+function Copy.freeEggNotes(secretLive: boolean?): {string}
+    if secretLive == true then return {Copy.secretLine} end
+    return {}
+end
+
 function Copy.notes(isEgg: boolean): {string}
     local notes = {"Each egg is a fresh roll. Past eggs do not change the next one."}
     if isEgg then table.insert(notes, "Shop eggs never have Shiny or event looks.") end

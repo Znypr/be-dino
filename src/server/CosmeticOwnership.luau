@@ -111,7 +111,9 @@ function Own.apply(profile: any, action: string, id: string, ctx: any): (boolean
     local buying = action == "buyAura" or action == "buyTrail"
     local state = profile.dinosaurIdentity
     if ctx.identityOk ~= true or type(state) ~= "table" then return false, "no_dino_instance" end
-    local instanceId = Own.equippedInstanceId(state, profile.equippedSpeciesId, profile.equippedVariantKey)
+    -- BD-606: ctx.equipped = the dino actually played (a secret species is stored beside a fallback pair, ProfileRepository.equippedOf)
+    local equipped = ctx.equipped
+    local instanceId = Own.equippedInstanceId(state, if equipped then equipped.speciesId else profile.equippedSpeciesId, if equipped then equipped.variantKey else profile.equippedVariantKey)
     if not instanceId then return false, "no_dino_instance" end
     local rules = ctx.rules
     local p = rules.upgrade(profile)

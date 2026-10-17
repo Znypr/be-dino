@@ -236,14 +236,37 @@ local function secretSpecies(): any
     return secretModule
 end
 
--- BD-604: knownSpecies stays the NORMAL 22 on purpose. A secret species is not equippable or mutable by request yet (docs/149 s7), so no
--- profile ever stores a secret id in equippedSpeciesId or a reward.speciesId, and Build 020 keeps loading every profile (RB1).
+-- BD-604: knownSpecies stays the NORMAL 22 on purpose. A secret species is never mutable by request, and BD-606 (docs/115 SS7) equips it through the
+-- additive `equippedSecret` record (see equippedOf), so no profile ever stores a secret id in equippedSpeciesId or a reward.speciesId, and Build 020
+-- keeps loading every profile (RB1).
 local function knownSpecies(speciesId: any): boolean
     if typeof(speciesId) ~= "string" then return false end
     for _, configuredId in Config.SpeciesOrder do
         if configuredId == speciesId then return true end
     end
     return false
+end
+
+-- BD-606 (docs/115 SS7): the dino a profile actually PLAYS. The stored pair (equippedSpeciesId, equippedVariantKey) is always a species Build 020
+-- knows; a found secret species is the additive `equippedSecret` record beside it. With the flag off, an empty model slot, a lost secret or a
+-- stale record this is just the stored pair, so nothing changes for anyone who never equipped a secret and a rollback plays the fallback dino.
+local function entryOwned(entry: any): boolean
+    return typeof(entry) == "table" and typeof(entry.base) == "number" and typeof(entry.gold) == "number" and typeof(entry.diamond) == "number"
+        and (entry.base + entry.gold + (entry.emerald or 0) + entry.diamond > 0 or ProgressionRules.eventMutation(entry) ~= nil or EggTraits.selected(entry) ~= nil)
+end
+local function equippedOf(profile: any): (string, string?)
+    if profile.equippedSecret ~= nil and Config.SecretSpeciesEnabled == true then
+        local id, key = secretSpecies().readEquip(profile.equippedSecret, profile.equippedSpeciesId)
+        if id ~= nil then
+            local entry = profile.collection[id]
+            local variants = if typeof(entry) == "table" then entry.variants else nil
+            local variant = if key ~= nil and typeof(variants) == "table" then variants[key] else nil
+            if entryOwned(entry) and (key == nil or (typeof(variant) == "table" and typeof(variant.count) == "number" and variant.count > 0)) then
+                return id, key
+            end
+        end
+    end
+    return profile.equippedSpeciesId, profile.equippedVariantKey
 end
 
 -- BD-044: metrics.rarest and revealSkip were saved on the old three-tier species scale
@@ -488,7 +511,8 @@ end
 local function progressionView(profile: any)
     local progress=ProgressionRules.upgrade(profile)
     if Config.PerDinoCosmeticsEnabled==true and identityAvailable(profile.dinosaurIdentity) then
-        return CosmeticOwnership.view(progress,profile.dinosaurIdentity,profile.equippedSpeciesId,profile.equippedVariantKey)
+        local equippedId,equippedKey=equippedOf(profile)
+        return CosmeticOwnership.view(progress,profile.dinosaurIdentity,equippedId,equippedKey)
     end
     return progress
 end
@@ -510,8 +534,9 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "TyrannosaurusGold", collection.tyrannosaurus.gold)
     PrivateState.set(player, "PendingChestGrants", profile.pendingChestGrants or 0)
     PrivateState.set(player, "ProfileRevision", profile.revision or 0)
-    player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
-    local traits = EggTraits.selected(collection[profile.equippedSpeciesId], profile.equippedVariantKey)
+    local equippedId, equippedKey = equippedOf(profile) -- BD-606: the secret species when one is equipped and honoured
+    player:SetAttribute("EquippedSpeciesId", equippedId)
+    local traits = EggTraits.selected(collection[equippedId], equippedKey)
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
@@ -520,7 +545,7 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "PlaySeconds", profile.metrics.playSeconds)
     PrivateState.set(player, "RarestCaught", profile.metrics.rarest)
     PrivateState.set(player, "RobuxSpent", profile.metrics.robux)
-    local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
+    local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[equippedId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
     PrivateState.set(player, "ActiveChestCount", #profile.eggs)
     local chestSummary = {}
@@ -1427,7 +1452,12 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
     if typeof(speciesId) ~= "string" or #speciesId < 1 or #speciesId > 32 then
         return false, "invalid_species"
     end
-    if not knownSpecies(speciesId) then return false, "unknown_species" end
+    -- BD-606 (SS7): a found secret species is equippable only while the flag is on and its model slot is filled; otherwise it is as unknown as before.
+    local secretEquip = false
+    if not knownSpecies(speciesId) then
+        if Config.SecretSpeciesEnabled == true and secretSpecies().canEquip(speciesId, true) then secretEquip = true
+        else return false, "unknown_species" end
+    end
 
     local cachedEntry = cached.collection[speciesId]
     if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + (cachedEntry.emerald or 0) + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
@@ -1440,7 +1470,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
             return false, "not_owned"
         end
     end
-    if cached.equippedSpeciesId == speciesId and cached.equippedVariantKey == variantKey then
+    local currentId, currentKey = equippedOf(cached)
+    if currentId == speciesId and currentKey == variantKey then
         syncAttributes(player, cached)
         return true, "already_equipped"
     end
@@ -1468,8 +1499,16 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
                     return nil
                 end
             end
-            profileValue.equippedSpeciesId = speciesId
-            profileValue.equippedVariantKey = variantKey
+            if secretEquip then
+                -- SS7: the stored pair stays a species Build 020 knows (RB1); the secret is the additive record beside it
+                profileValue.equippedSpeciesId = secretSpecies().EquipFallback
+                profileValue.equippedVariantKey = nil
+                profileValue.equippedSecret = secretSpecies().equipRecord(speciesId, variantKey)
+            else
+                profileValue.equippedSpeciesId = speciesId
+                profileValue.equippedVariantKey = variantKey
+                profileValue.equippedSecret = nil
+            end
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue
@@ -1609,6 +1648,7 @@ function ProfileRepository.demoEquip(player: Player, speciesId: string): (boolea
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.equippedSpeciesId = speciesId -- owned or not: Studio demo only
             profileValue.equippedVariantKey = nil
+            profileValue.equippedSecret = nil
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue
@@ -2126,7 +2166,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
                 applied,status=true,"egg_purchased"
             elseif Config.PerDinoCosmeticsEnabled==true and (action=="buyAura" or action=="equipAura" or action=="buyTrail" or action=="equipTrail") then
                 -- BD-059 phase 2: bound to the equipped dino instance, same atomic token write as every other purchase.
-                applied,status,boundInstance=CosmeticOwnership.apply(profile,action,id,{rules=ProgressionRules,config=ProgressionConfig,identityOk=identityAvailable(profile.dinosaurIdentity)})
+                applied,status,boundInstance=CosmeticOwnership.apply(profile,action,id,{rules=ProgressionRules,config=ProgressionConfig,identityOk=identityAvailable(profile.dinosaurIdentity),equipped=(function() local id,key=equippedOf(profile) return {speciesId=id,variantKey=key} end)()})
             else applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount) end
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             if not applied then denied=status return nil end
