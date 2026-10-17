@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 local Rules = require(ReplicatedStorage.Shared.AdminRules)
+local AdminGifts = require(script.Parent.AdminGifts)
 local FoodService = require(script.Parent.FoodService)
 local ProgressionService = require(script.Parent.ProgressionService)
 
@@ -97,6 +98,9 @@ function AdminService.start()
         created.Parent = ReplicatedStorage
         folder = created
     end
+    -- BD-452 (docs/134 s5): the Gift page's own remote, created BEFORE AdminAction so the client finds it when AdminAction appears.
+    -- Returns nil and creates nothing unless GiftClaimEnabled, AdminGiftsEnabled and AdminPanelEnabled are all on (flags pinned off).
+    AdminGifts.start(folder :: Instance, function(player: any) return admins[player] == true end)
     local remote = Instance.new("RemoteFunction")
     remote.Name = "AdminAction"
     remote.Parent = folder
