@@ -381,6 +381,8 @@ local function showNext(player: any)
     PrivateState.set(player, "GiftNoticeJson", game:GetService("HttpService"):JSONEncode({
         id = notice.id,
         line = GiftRules.noticeLine(notice.source, notice.name),
+        name = GiftRules.shownName(notice.source, notice.name), -- BD-570: for "Mute <name>"; "" for a team gift. Resolved fresh, never stored.
+        kind = if entry then entry.kind else "skin", -- BD-570: picks the registered icon
         item = if entry then entry.label else "",
         message = GiftRules.presetText(notice.msg) or "",
         more = #(queue :: {any}) - 1,
@@ -531,6 +533,7 @@ end
 
 -- ------------------------------------------------------------------ the GiftAction remote (recipient controls only)
 local Shapes: {[string]: {[string]: boolean}} = {
+    get = {action = true}, -- BD-570: the Settings row reads the saved "Gifts from" value
     ack = {action = true},
     mute = {action = true},
     turnOff = {action = true},
@@ -556,7 +559,11 @@ function GiftService.handle(player: any, request: any, ...: any): any
     local action = request.action :: string
     local queue = notices[player]
     local current = if queue then queue[1] else nil
-    if action == "setFrom" then
+    if action == "get" then
+        local pref = readPref(userId)
+        if pref == nil then return fail("try_again") end
+        return {ok = true, from = pref.from}
+    elseif action == "setFrom" then
         local ok, status = GiftService.setFrom(userId, request.from)
         return if ok then {ok = true} else fail(status)
     elseif action == "blocked" then

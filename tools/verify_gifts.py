@@ -516,7 +516,7 @@ do
  check(pending(R1)==0,"applied gifts are removed from the inbox")
  check(select(2,S.claim(u))=="empty" and wallet(u)==c0+40,"a second claim finds nothing and grants nothing")
  local n=noticeOf(u)
- check(n and n.id=="Aold1" and n.line=="A gift from the Be Dino team!" and n.more==1 and n.canMute==false,"admin popup: team label, no name, cannot be muted")
+ check(n and n.id=="Aold1" and n.line=="A gift from the Be Dino team!" and n.more==1 and n.canMute==false and n.name=="" and n.kind=="crystals","admin popup: team label, no name, cannot be muted, crystals icon kind")
  local r=S.handle(u,{action="ack"}) check(r.ok and noticeOf(u).id==id and noticeOf(u).message=="Have fun!" and noticeOf(u).item=="Plushy skin","ack shows the next notice")
  S.handle(u,{action="ack"}) check(noticeOf(u)=="","nothing left to show")
  Repository.release(u)
@@ -533,7 +533,7 @@ do
  ok,code=S.send(req) check(ok and code=="duplicate" and pending(R2)==1,"the same receipt twice is ONE inbox entry")
  local u=user(R2) assert(Repository.load(u))
  local okc,status,summary=S.claim(u) check(okc and summary.applied==1 and data[key(u)].ownedSkins.Clay==true,"claimed")
- check(noticeOf(u).line=="You got a gift from Samantha Display!" and noticeOf(u).canMute==true,"robux popup shows the sender's display name, resolved fresh")
+ check(noticeOf(u).line=="You got a gift from Samantha Display!" and noticeOf(u).canMute==true and noticeOf(u).name=="Samantha Display" and noticeOf(u).kind=="skin","robux popup shows the sender's display name (also as name, for Mute <name>), resolved fresh")
  local c1=wallet(u)
  ok,code=S.send(req) check(ok and code=="queued" and pending(R2)==1,"a receipt re-delivered AFTER the claim re-adds the gift")
  okc,status,summary=S.claim(u) check(okc and summary.already==1 and summary.applied==0 and wallet(u)==c1,"...and claimedGifts blocks the second grant")
@@ -800,7 +800,7 @@ do
  S.claim(u)
  check(noticeOf(u).canMute==true and noticeOf(u).more==1,"two notices queued")
  local function call(request,...) return remote.OnServerInvoke(u,request,...) end
- for _,bad in {5,"x",{},{action="nope"},{action="mute",userId=1100},{action="ack",extra=true},{action="setFrom"},{action="setFrom",from="anyone"},{action="setFrom",from=5},{action="blocked"},{action="blocked",ids="x"},{action="blocked",ids={1,-2}},{action="turnOff",from="nobody"}} do
+ for _,bad in {5,"x",{},{action="nope"},{action="mute",userId=1100},{action="ack",extra=true},{action="get",extra=true},{action="get",from="friends"},{action="setFrom"},{action="setFrom",from="anyone"},{action="setFrom",from=5},{action="blocked"},{action="blocked",ids="x"},{action="blocked",ids={1,-2}},{action="turnOff",from="nobody"}} do
   local r=call(bad) check(r.ok==false and (r.reason=="bad_request"),"strict shape: "..tostring(bad)..": "..tostring(r.reason))
   check(noticeOf(u).canMute==true and noticeOf(u).more==1,"bad requests change nothing")
  end
@@ -810,6 +810,19 @@ do
  r=call({action="turnOff"}) check(r.ok and giftsData.pref_8000.from=="nobody" and noticeOf(u)=="","Turn gifts off: setting = Nobody, popup closes")
  r=call({action="mute"}) check(r.ok==false and r.reason=="nothing_to_mute","nothing on screen: nothing to mute")
  r=call({action="setFrom",from="friends"}) check(r.ok and giftsData.pref_8000.from=="friends","the Settings row writes the setting")
+ -- BD-570: the Settings row reads the saved value through the same remote (a missing record = Everyone, and a read never writes one)
+ r=call({action="get"}) check(r.ok and r.from=="friends" and r.reason==nil,"get answers the saved setting")
+ do
+  local fresh=user(8002) assert(Repository.load(fresh))
+  local g0=g.requests
+  local rf=remote.OnServerInvoke(fresh,{action="get"})
+  check(rf.ok and rf.from=="everyone" and giftsData.pref_8002==nil,"a player with no saved setting reads Everyone and nothing is written")
+  check(remote.OnServerInvoke(user(8003),{action="get"}).reason=="profile_not_loaded","get needs a loaded profile")
+  local unread=user(8004) assert(Repository.load(unread))
+  g.outage=true rf=remote.OnServerInvoke(unread,{action="get"}) g.outage=false
+  check(rf.ok==false and rf.reason=="try_again","a store outage answers try_again, not a made-up Everyone")
+  Repository.release(fresh) Repository.release(unread)
+ end
  r=call({action="blocked",ids={11,12}}) check(r.ok and giftsData.pref_8000.blocked[2]==12 and giftsData.pref_8000.muted[1]==1100 and giftsData.pref_8000.from=="friends","the client reports its blocked ids; other pref fields kept")
  local many={} for i=1,L.BlockedCap+1 do many[i]=i end
  check(call({action="blocked",ids=many}).reason=="bad_request","blocked report over 200 is refused")
