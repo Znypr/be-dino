@@ -208,8 +208,9 @@ def static_checks():
     assert 'HubScale' not in prog and 'inHub' not in prog, 'potion/progression code does not depend on the hub'
     for name in ('src/shared/DinosaurVisual.luau', 'src/client/Bootstrap.client.luau', 'src/client/ContactShadow.client.luau'):
         assert 'HubScale' not in src(name), name + ': the client and the renderer just follow the replicated VisualScale'
-    for name in ('src/client/Bootstrap.client.luau', 'src/client/ContactShadow.client.luau', 'src/client/CombatHud.luau', 'src/client/ResourceVisuals.client.luau'):
+    for name in ('src/client/CameraFit.luau', 'src/client/ContactShadow.client.luau', 'src/client/CombatHud.luau', 'src/client/ResourceVisuals.client.luau'):
         assert 'GetAttribute("VisualScale")' in src(name), name + ' follows VisualScale (camera min zoom, shadow, bars, model)'
+    assert 'CameraFit' in src('src/client/Bootstrap.client.luau'), 'Bootstrap frames the camera through CameraFit (BD-500), which follows VisualScale'
     assert 'MovementEnvelope.collider(scale' in dino, 'the collider is re-fitted on every render (HubDinos group included)'
 
 if __name__ == '__main__':
