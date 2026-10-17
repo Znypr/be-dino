@@ -21,5 +21,17 @@ Rects (BeDinoUI px): desktop pill (568, 92) 300 x 44, open (568, 92) 300 x 206, 
 - **Claim answer was cut** ("+10 crys..." in picture 04): it was drawn in the 38% title slot. It now takes the wide right-hand label for 2.5 s (`verify_objectives_panel.py` asserts it there). Not re-shot; the pictures here are the "before" for that one label.
 
 ## Seen, not fixed
-- Open rows had no divider and the prize line of one row ran into the name of the next (03): fixed by BD-562 (fixed row height, gap, divider, centred CLAIM; verifier-checked). Pictures 02, 03, 06 and 07 are the "before"; re-shoot pending "Studio free".
+- Open rows had no divider and the prize line of one row ran into the name of the next (03): fixed by BD-562 (fixed row height, gap, divider, centred CLAIM; verifier-checked). Pictures 02, 03, 06 and 07 are the "before"; 09 to 12 below are the "after".
 - Not covered: a real phone (touch, thumbstick, 44 px by finger) is BD-078 / BD-085; Studio's mouse stands in. BD-074 hooks were not on main, so progress was injected with the private hook above.
+
+## Re-shoot after BD-562 (PR #406, rows layout + note line), 2026-10-17
+Label: **CURRENT BUILD BEHAVIOR, private Studio copy only** (`ObjectivesEnabled` flipped in an unpublished build, `python tools/build.py --output C:/Users/znypr/dtmp/objpanel2.rbxlx` from branch `claude/objectives-panel-rows`, deleted afterwards; same private `ServerStorage.ObjDebug` hook as above, uncommitted). One Studio window (opened 12:53:23, closed 12:56:14), real clicks by instance path, only the known UIBlox `FoundationProvider` warnings. Viewports 1156 x 841 and 836 x 390 (BeDinoUI 836 x 332). Claims were real `ObjectiveAction` claims (wallet 1000000 -> 1000010 -> 1000030).
+
+| # | Picture | What it shows |
+| --- | --- | --- |
+| 09 | [desktop claimable](09-desktop-claimable-rows-v2.jpg) | same state as 03: fixed rows, 2 px dividers, CLAIM centred in row 1, "+10 crystals" under the name and clear of row 2 |
+| 10 | [desktop, T3 with its note](10-desktop-note-t3-rows-v2.jpg) | "Hatch 3 eggs" with the small "Cracked eggs count too" line, the prize and a centred CLAIM, all inside the one row height |
+| 11 | [desktop, two CLAIM rows](11-desktop-two-claims-rows-v2.jpg) | two finished tasks, each CLAIM centred in its own row, third row with bar |
+| 12 | [836x390 open](12-phone-836x390-open-rows-v2.jpg) | sheet 300 x 204 (the 238 px of rows scroll, scrollbar shown); covers only the Goals header, weather chip and LEAP; clear of the rail, wallet, EGGS plate, Admin and EXPLORE ISLAND |
+
+Not covered: a real phone (BD-078 / BD-085).
