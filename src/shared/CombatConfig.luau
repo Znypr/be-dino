@@ -53,6 +53,12 @@ local CombatConfig = {
     BiteRangeSlack = 1.5, -- extra studs for latency: the client aims, the server measures a moment later
     BodyRadiusPerScale = 1.2, -- BD-311: fallback body radius (studs) per combat scale when the server has no measured size
     BodyRadiusMax = 14, -- BD-311: any radius is clamped to this (a measured bounding box can never open an infinite range)
+    -- BD-245 PROPOSAL (docs/115 HZ1): the shape of a hit zone, Shared/HitSize.zone. "circle" = today's rule (HS1, max(width, length) / 2 x growth,
+    -- capped by BodyRadiusMax); "capsule" = the body footprint (half width round a spine as long as the body). Default "circle": nothing reads
+    -- "capsule" yet (CombatRules still calls HitSize.radius). The owner decides combat feel; do not flip this without a Studio hit test.
+    HitZoneRule = "circle",
+    HitCapsuleRadiusMax = 20, -- capsule safety caps, above every real body at growth 4.8 (widest 19.7, longest spine 16.9)
+    HitCapsuleSpanMax = 24,
     BiteConeDegrees = 70, -- full cone angle in front of the attacker
     BiteVerticalLimit = 7, -- same as PredationVerticalLimit
     BiteRequestsPerSecond = 2, -- rate limit per player (sliding 1 s window)
