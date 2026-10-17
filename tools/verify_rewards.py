@@ -104,9 +104,9 @@ local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityF
 -- this no-op spy stands in (the real service runs in verify_objective_hooks and verify_multiplayer_sim) and the flag-off runs never load it.
 local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end})
 local require=function(id)
- if id=="SecretSpeciesConfig" then return SecretSpecies end
- if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="SecretSpeciesConfig" then return SecretSpecies end
+ if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end -- after the PrivateState line on purpose: verify_objectives inserts its own ObjectiveService handling before it
  if id=="Cosmetic" then return Cosmetic end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
