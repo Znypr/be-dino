@@ -91,6 +91,12 @@ function Tier.templateName(species: string, partName: string, tierId: string): s
 end
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
+-- Coat edge glow (owner 2026-10-17 picked 'current look + much more glow'; lead Studio tuning): emissive strength and tint per tier.
+Tier.CoatGlow = {
+    gold = {strength = 6, tint = {255, 190, 70}},
+    emerald = {strength = 6, tint = {80, 255, 170}},
+    diamond = {strength = 6, tint = {200, 235, 255}},
+}
 Tier.ShellScale = 1.015        -- the shell is the body mesh inflated by this much (one extra MeshPart per textured part, same mesh)
 Tier.ShellTransparency = {0.4, 0.95} -- 2026-10-16 round 9 (live Studio tuning): the shell is a translucent tier-COLOURED crystal coat (0.5), not a clear gloss layer
 Tier.MaxShellReflectance = 0.5

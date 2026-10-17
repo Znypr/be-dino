@@ -163,7 +163,7 @@ tpl_call = dinos.find('local tpl = coatTemplate(')
 plain = dinos.find('shell.Transparency = math.clamp(entry.shellTransparency')
 if tpl_call < 0 or plain < 0 or plain > tpl_call:
     err('the plain translucent shell must be set first, then the template (fallback when none exists)')
-if not re.search(r'if tpl then.*?tpl:Clone\(\)\.Parent = shell\s+end', dinos, re.S):
+if not re.search(r'if tpl then.*?local coat = tpl:Clone\(\).*?coat\.Parent = shell\s+end', dinos, re.S):
     err('LowPolyDinos must clone the template onto the shell only when one exists')
 if 'ReplicatedStorage:FindFirstChild(Tier.TemplateFolder)' not in dinos or 'item:IsA("SurfaceAppearance")' not in dinos:
     err('coatTemplate must look in Tier.TemplateFolder and return nil when absent')
@@ -240,6 +240,16 @@ if tier_coat.COAT_TINT.get('gold') != (255, 175, 45):
     err('gold coat tint must be 255,175,45 (lead Studio tuning)')
 if 'tier_coat.COAT_TINT' not in (ROOT / 'tools/build.py').read_text(encoding='utf-8'):
     err('build.py must write the per-tier coat tint into the templates')
+
+
+# Owner 2026-10-17: tier edges must glow (emissive mask from the coat ColorMap), all three tiers
+_dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
+_tier = (ROOT / 'src/shared/LowPolyTier.luau').read_text(encoding='utf-8')
+if 'EmissiveMaskContent = Content.fromUri' not in _dinos or 'Tier.CoatGlow[entry.id]' not in _dinos:
+    err('coat clone must set an emissive mask from its ColorMap (edge glow)')
+for _t in ('gold', 'emerald', 'diamond'):
+    if f'    {_t} = {{strength = 6' not in _tier:
+        err(f'Tier.CoatGlow.{_t} strength 6 (lead Studio tuning)')
 
 
 if __name__ == '__main__':

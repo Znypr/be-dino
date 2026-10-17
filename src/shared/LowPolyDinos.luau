@@ -189,7 +189,18 @@ local function shells(container: Instance, entry: any?)
             local tpl = coatTemplate(tostring(container:GetAttribute("LPSpecies") or container.Name), p.Name, entry.id)
             if tpl then -- alpha lives in the ColorMap (AlphaMode Transparency), so the part itself is opaque and its look comes from the maps
                 shell.Material, shell.Reflectance, shell.Color, shell.Transparency = Enum.Material.SmoothPlastic, 0, Color3.new(1, 1, 1), 0
-                tpl:Clone().Parent = shell
+                local coat = tpl:Clone()
+                -- Owner 2026-10-17: "the sides / corners aren't glowing enough" -> the coat's own ColorMap is its emissive mask (edge-weighted
+                -- alpha), so the tier edges glow without washing the stripes. Lead Studio tuning: strength 6.
+                local glow = Tier.CoatGlow[entry.id]
+                if glow then
+                    pcall(function() -- EmissiveMaskContent is a newer API; an older client simply keeps the unlit coat
+                        (coat :: any).EmissiveMaskContent = Content.fromUri((coat :: any).ColorMap)
+                        (coat :: any).EmissiveStrength = glow.strength
+                        (coat :: any).EmissiveTint = Color3.fromRGB(glow.tint[1], glow.tint[2], glow.tint[3])
+                    end)
+                end
+                coat.Parent = shell
             end
             shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
             shell.CFrame = p.CFrame
