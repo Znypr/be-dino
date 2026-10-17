@@ -52,9 +52,9 @@ Assets.Requested = {
     -- BD-430 / BD-431 anime FX (Blender renders in resources/effects/fx-v2, docs/77 fx_*, docs/123 s3): white on alpha, tinted at runtime.
     flameTongue = {id = "rbxassetid://114341056622728", fallback = "fire"}, -- owner upload slot (docs/120): soft flame-tongue flipbook 4x4 of 128 px (calm aura base); NOT read yet (BD-432 aura flame swap)
     starPop = {id = "rbxassetid://85961871126391", fallback = "spark"}, -- owner upload slot (docs/120): four-point twinkle pop flipbook 4x4 of 128 px, OneShot; read by RareHatchClient (the rare banner pops); empty = no pop
-    domeGradient = {id = "rbxassetid://121647466011325", fallback = "spark"}, -- owner upload slot (docs/120): UV gradient of the shock dome mesh (slot shock_dome_mesh), 512 px; NOT read yet (BD-433 equip pop / landing)
+    domeGradient = {id = "rbxassetid://121647466011325", fallback = "spark"}, -- owner upload slot (docs/120): UV gradient of the shock dome mesh (slot shock_dome_mesh), 512 px; read by FxRig (BD-433 shock dome: Seismic reveal, Epic+ aura equip; only together with the shock_dome_mesh slot)
     speedStreaks = {id = "rbxassetid://75881547583312", fallback = "spark"}, -- owner upload slot (docs/120): four soft speed streaks, 512x512 sheet; NOT read yet (BD-432 Epic+ trails)
-    shaftGradient = {id = "rbxassetid://93058052585705", fallback = "spark"}, -- owner upload slot (docs/120): vertical light-shaft gradient 256x512 (also the UV texture of shaft_cone_mesh); read by HatchFx (Epic+ hatch light shaft); empty = no shaft
+    shaftGradient = {id = "rbxassetid://93058052585705", fallback = "spark"}, -- owner upload slot (docs/120): vertical light-shaft gradient 256x512 (also the UV texture of shaft_cone_mesh); read by HatchFx (Epic+ hatch light shaft) and RareHatchClient (BD-433 soft sweep across the OWN rare banner, Full only); empty = no shaft, no sweep
     shellEdge = {id = "rbxassetid://91928511866460", fallback = "spark"}, -- owner upload slot (docs/120): soft UV band of the aura / mutation shell (slot aura_shell_mesh), 512 px; read by FxRig; empty = untextured shell
     rainbowStrip = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     rimRingUi = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite

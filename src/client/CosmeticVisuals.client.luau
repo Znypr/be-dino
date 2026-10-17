@@ -14,12 +14,14 @@ local Recipes=require(Shared.FxRecipes)
 local Rig=require(script.Parent.FxRig)
 local Lod=require(Shared.EffectsLod) -- BD-095 distance LOD
 local Settings=require(Shared.SettingsModel)
+local MomentRim=require(script.Parent.MomentRim) -- BD-433: 1.5 s rim on the own dino when a mutation is revealed
 local function destroy(state)
     for _,rig in state.rigs do rig:destroy() end
     if state.glints then state.glints.Destroy() end
     if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
 end
 local states={}
+local lastOwnMutation=nil -- BD-433: the own dino's mutation as last seen (nil = not seen yet, so joining with one worn gives no rim)
 -- BD-432 global live-FX budget: what every OTHER dino's rigs already use (beams, trails, lights, shells).
 local function liveUsed(except)
     local used={}
@@ -69,6 +71,11 @@ RunService.Heartbeat:Connect(function(dt)
             local state=states[player]
             if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail or state.mode~=mode then
                 if state then destroy(state) end
+                if own then
+                    -- BD-433: a NEW event mutation on the own dino is "revealed": one 1.5 s rim (MomentRim owns Full / Lite / Off, Reduce Motion, the budget).
+                    if lastOwnMutation~=nil and mutationId~="" and mutationId~=lastOwnMutation then pcall(MomentRim.play,character,{mutationId=mutationId}) end
+                    lastOwnMutation=mutationId
+                end
                 state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,mode=mode,rigs={}}
                 local reduce=not Theme.MotionEnabled
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
