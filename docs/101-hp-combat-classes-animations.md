@@ -99,6 +99,8 @@ Client-side only, driven from the low-poly part rig (body, head, tail, legs, win
 | Jump | crouch, push-off, airborne pose, landing squash | higher and quicker, wings spread, flutter landing | **no jump**; button = forward dash with streak, tail kick, small splash | short hop, heavy landing puff |
 | Leap | forward lunge, bite snap, landing squash | swoop dive, wing tuck | aggressive dash, bigger lunge and splash, bite snap | shoulder-bump lunge, tail-club bump |
 
+**CURRENT BUILD BEHAVIOR (BD-555, BD-556, 2026-10-17):** the Humanoid reports Jumping only after the dino has left the ground, so the animator no longer plays the crouch and the push-off for a jump or leap: it eases from the current pose straight into the air tuck over `Pose.DirectBlend` (0.4 s) and lands from the weight it reached (a short hop squashes less). No part turns 8 degrees or more in one frame on take-off. The crouch and push-off maths stay in `LowPolyPose` (tested) for a later input-triggered anticipation. Water flipper tips are held at their rest height (`Pose.restLift`). Studio frame log: see the BD-555 row.
+
 Species flavour (Brachiosaurus neck sway, T-Rex arm twitch) is data, not new code. Skins keep their own style (docs/97). The chicken/dino walk is the one shared language for every class.
 
 ## 12. Class movement rules and map access (BD-231, BD-246)

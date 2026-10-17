@@ -65,11 +65,27 @@ def static_errors() -> list[str]:
         errors.append('GoalHud: exactly one require of ObjectivesPanel')
     for path in sorted((ROOT / 'src').rglob('*.luau')):
         rel = path.relative_to(ROOT).as_posix()
-        if rel in ('src/client/ObjectivesPanel.luau', 'src/client/GoalHud.luau'):
+        if rel in ('src/client/ObjectivesPanel.luau', 'src/client/GoalHud.luau', 'src/client/ObjectiveSeen.luau', 'src/client/FusionMenu.luau'):
             continue
         text = code_only(path.read_text(encoding='utf-8'))
         if 'ObjectivesPanel' in text or ('ObjectiveAction' in text and not rel.startswith('src/server/')):
             errors.append(f'{rel}: only GoalHud may reach ObjectivesPanel and only the panel may call ObjectiveAction on the client')
+    # --- OB2 (docs/115): the one-time "seen" report. Only FusionMenu calls it, behind the flag; it sends one shape; flag off = silent ---------------
+    seen = code_only(read('src/client/ObjectiveSeen.luau'))
+    menu = code_only(read('src/client/FusionMenu.luau'))
+    if 'ObjectiveAction' in menu or 'InvokeServer({action' in menu:
+        errors.append('FusionMenu must not call ObjectiveAction itself (it calls ObjectiveSeen.report)')
+    if len(re.findall(r'^.*ObjectiveSeen.*$', menu, re.M)) != 1 or             'if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end' not in menu:
+        errors.append('FusionMenu: exactly one use of ObjectiveSeen, `if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end`')
+    if re.findall(r'action\s*=\s*"([a-z_]+)"', seen) != ['seen'] or seen.count('InvokeServer') != 1 or seen.count('{action = "seen", id = seenId}') != 1:
+        errors.append('ObjectiveSeen: the only request is {action = "seen", id = seenId}')
+    if not re.search(r'function ObjectiveSeen\.report\(seenId: string\)\n    if Config\.ObjectivesEnabled ~= true then return end\n', seen):
+        errors.append('ObjectiveSeen.report must return first thing while the flag is not true (flag off sends nothing)')
+    for number, line in enumerate(seen.splitlines(), 1):
+        if line and not line[0].isspace() and not re.match(r'(local |function |return|end\b|--!)', line):
+            errors.append(f'ObjectiveSeen.luau:{number}: top-level statement runs on require: {line[:60]}')
+    if 'FindFirstChild("ObjectiveAction")' not in seen or 'WaitForChild' in seen:
+        errors.append('ObjectiveSeen: the remote is looked up with FindFirstChild (it exists only while the server flag is on)')
     # no top-level statement besides local/function/return (nothing runs when the module is required)
     for number, line in enumerate(panel.splitlines(), 1):
         if line and not line[0].isspace() and not re.match(r'(local |function |return|end\b|--!)', line):
@@ -143,10 +159,22 @@ def static_errors() -> list[str]:
         errors.append('TouchLayout.OBJECTIVES.h (the header button) must be >= 44')
     elif int(o.group(4)) < 44 + 4:
         errors.append('TouchLayout.OBJECTIVES.rowH must hold a 44 px CLAIM button')
-    claim_size = re.search(r'UDim2\.fromOffset\(CLAIM_W, (\d+)\)', panel)
+    claim_size = re.search(r'^local CLAIM_H = (\d+)', panel, re.M)
     claim_w = re.search(r'^local CLAIM_W = (\d+)', panel, re.M)
     if not claim_size or int(claim_size.group(1)) < 44 or not claim_w or int(claim_w.group(1)) < 44:
         errors.append('ObjectivesPanel: the CLAIM button is >= 44 x 44')
+    # --- BD-075 row layout (docs/66 s18): fixed row height, gap 4..6 px, a divider in the UITheme card colour, CLAIM centred in its row ------
+    gaps = re.search(r'rowGap = (\d+)\}', layout)
+    if not gaps or not 4 <= int(gaps.group(1)) <= 6:
+        errors.append('TouchLayout.OBJECTIVES.rowGap must be 4..6 px')
+    if '(O.rows - 1) * O.rowGap' not in layout:
+        errors.append('TouchLayout.objectivesOpenH must count the row gaps')
+    if 'divider.Name, divider.BackgroundColor3, divider.BorderSizePixel, divider.ZIndex = "Divider", C.card, 0, body.ZIndex' not in panel:
+        errors.append('ObjectivesPanel: each row has a Divider in the UITheme card colour (no art)')
+    if '(ROW_H - CLAIM_H) / 2' not in panel:
+        errors.append('ObjectivesPanel: CLAIM is vertically centred in its row ((ROW_H - CLAIM_H) / 2)')
+    if 'C.text:Lerp(C.card' not in panel:
+        errors.append('ObjectivesPanel: the row note uses UITheme colours only (text toned toward card)')
     if 'UIScale' in panel:
         errors.append('ObjectivesPanel is drawn 1:1 (no UIScale): text and buttons keep their real pixel size')
 
@@ -434,7 +462,7 @@ local Rect_ = {new = function(x0, y0, x1, y1) return {__type = "Rect", Min = {X 
 local function typeof(v) if type(v) == "table" and rawget(v, "__type") then return v.__type end return type(v) end
 local task_ = {spawn = function(fn, ...) table.insert(tasks, {fn, ...}) end, delay = function(_, fn) table.insert(tasks, {fn}) end}
 local os_ = {clock = function() return clockNow end}
-local Colors = {panel = "panel", card = "card", gold = "gold", accent = "accent", text = "text", outline = "outline", red = "red"}
+local Colors = {panel = "panel", card = "card", gold = "gold", accent = "accent", text = setmetatable({}, {__index = {Lerp = function() return "muted" end}}), outline = "outline", red = "red"}
 modules.UITheme = {Colors = Colors, decorate = function() end, TextStyle = {apply = function() end},
  icon = function(parent, id) local f = newInstance("Frame") f.Name = "Icon_" .. id f.Parent = parent return f end,
  animate = function(target, _, goals) for k, v in goals do target[k] = v end end}
@@ -564,14 +592,14 @@ local sent = {}
 for i = before + 1, #calls do if calls[i].action == "claim" then table.insert(sent, calls[i]) end end
 assert(#sent == 1 and sent[1].id == "T1" and type(sent[1].token) == "string" and #sent[1].token >= 1 and #sent[1].token <= Cfg.ClaimTokenMax, "claim request {action, id, token}")
 for k in sent[1] do assert(k == "action" or k == "id" or k == "token", "no other field is ever sent (no amounts, no progress)") end
-assert(title.Text == "Try again" and Rules.copyOk(title.Text), "a lost answer says what to do next")
+assert(wait.Text == "Try again" and Rules.copyOk(wait.Text) and title.Text == "TASKS", "a lost answer says what to do next")
 assert(claim.Text == "CLAIM" and claim.Active == true, "the button is back")
 local firstToken = sent[1].token
 claim.Activated:fire() pump()
 local retry
 for i = #calls, 1, -1 do if calls[i].action == "claim" then retry = calls[i] break end end
 assert(retry.token == firstToken, "the retry after a lost answer uses the SAME token (claim-once)")
-assert(title.Text == "+10 crystals", "paid: the grant the server answered, nothing computed here: " .. title.Text)
+assert(wait.Text == "+10 crystals", "paid: the grant the server answered, nothing computed here: " .. wait.Text)
 view = afterClaimView
 tick()
 local claimsSoFar = 0 for _, c in calls do if c.action == "claim" then claimsSoFar += 1 end end
@@ -591,7 +619,7 @@ remote.InvokeServer = function(_, request)
  return {ok = false, reason = "not_done"}
 end
 claim2.Activated:fire() pump()
-assert(title.Text == "Not done yet")
+assert(wait.Text == "Not done yet")
 local tokenA
 for i = #calls, 1, -1 do if calls[i].action == "claim" then tokenA = calls[i].token break end end
 assert(tokenA ~= firstToken, "a new task has its own token")
@@ -638,6 +666,179 @@ assert(Panel.goalLine(fitHub) == nil, "PLAY line on screen: an unfinished T8 giv
 Panel.setPlayActive(false)
 assert(Panel.goalLine({width = 600, font = 17, prefix = ""}).text == "Collect a second species" and Panel.goalLine({width = 200, font = 17, prefix = ""}).text == "Collect a second...", Panel.goalLine({width = 200, font = 17, prefix = ""}).text)
 -- the server says disabled / failing: the panel stays out of the way
+---------------------------------------------------------------- 7. row layout: no text rect overlaps another (1..3 rows, with and without CLAIM and a note)
+-- The mock has no layout engine, so the rects are computed from Position / Size / AnchorPoint exactly as Roblox does for UDim2 (offset + scale of the
+-- parent), for a visible label, button or progress bar inside the panel. A label's rect is its whole box, which is stricter than its glyphs.
+local function rectOf(node, parent)
+ local pos, size, anchor = node.Position, node.Size, node.AnchorPoint or {X = 0, Y = 0}
+ local w = size.X.Scale * parent.w + size.X.Offset
+ local h = size.Y.Scale * parent.h + size.Y.Offset
+ return {x = parent.x + pos.X.Scale * parent.w + pos.X.Offset - anchor.X * w, y = parent.y + pos.Y.Scale * parent.h + pos.Y.Offset - anchor.Y * h, w = w, h = h}
+end
+local function strictlyOverlap(a, b) return a.x < b.x + b.w - 0.01 and b.x < a.x + a.w - 0.01 and a.y < b.y + b.h - 0.01 and b.y < a.y + a.h - 0.01 end
+local function collect(rootNode)
+ local rootRect = {x = 0, y = 0, w = rootNode.Size.X.Offset, h = rootNode.Size.Y.Offset}
+ local items, rowRects = {}, {}
+ local function walk(node, rect, rowIndex)
+  for _, child in node.Children do
+   if child.Visible ~= false and child.Size ~= nil and child.Position ~= nil then
+    local r = rectOf(child, rect)
+    local row = rowIndex
+    local index = string.match(child.Name, "^Row(%d)$")
+    if index then row = tonumber(index) rowRects[row] = r end
+    local isText = (child.ClassName == "TextLabel" or child.ClassName == "TextButton") and child.Text ~= nil and child.Text ~= ""
+    if isText or child.Name == "Bar" then table.insert(items, {name = child.Name, r = r, row = row, node = child, text = isText}) end
+    if child.Name ~= "Fill" then walk(child, r, row) end
+   end
+  end
+ end
+ walk(rootNode, rootRect, nil)
+ return items, rowRects, rootRect
+end
+local function fakeRow(id, name, done, note)
+ return {id = id, name = name, note = note, progress = if done then 5 else 2, goal = 5, reward = {crystals = 10, xp = 0}, done = done, claimed = false, carried = false}
+end
+local function fakeView(n, claimMode, withNote)
+ local note = if withNote then "Cracked eggs count too" else nil
+ local long = "Hatch five eggs from the very first nest" -- 40 characters: the catalogue maximum
+ local function done(i) return claimMode == "all" or (claimMode == "first" and i == 1) end
+ local v = {tutorial = fakeRow("T1", long, done(1), note), short = {}, daily = {}, carry = {}, shortResetsIn = 1800, dailyResetsIn = 7200}
+ if n >= 2 then v.short = {fakeRow("S1", "Eat 40 food", done(2), note)} end
+ if n >= 3 then v.daily = {fakeRow("D1", "Hatch a Rare or better", done(3), note)} end
+ return v
+end
+local function layoutSheet(width, height, touch)
+ local l = TouchLayout.compute({width = width, height = height, touch = touch, navCount = 7, goals = true, objectives = true})
+ local o = l.objectivesOpen
+ assert(o and l.objectives, "layout gives the objectives rects at " .. width .. "x" .. height)
+ return Rect_.new(o.x, o.y, o.x + o.w, o.y + o.h), Rect_.new(l.objectives.x, l.objectives.y, l.objectives.x + l.objectives.w, l.objectives.y + l.objectives.h)
+end
+local O = TouchLayout.OBJECTIVES
+assert(O.rowGap >= 4 and O.rowGap <= 6 and O.rowH >= 48 and TouchLayout.objectivesOpenH() == O.h + 2 + O.rows * O.rowH + (O.rows - 1) * O.rowGap + 4, "open height counts rows and gaps")
+local sizes = {{"desktop 1156x783", 1156, 783, false}, {"phone 836x390", 836, 390, true}, {"phone 667x375", 667, 375, true}}
+local checked = 0
+for _, size in sizes do
+ local sheet, pill = layoutSheet(size[2], size[3], size[4])
+ gui.attrs.ObjectivesRect, gui.attrs.ObjectivesOpenRect = pill, sheet
+ for n = 1, 3 do
+  for _, claimMode in {"none", "first", "all"} do
+   for _, withNote in {false, true} do
+    local label = string.format("%s, %d rows, claim %s%s", size[1], n, claimMode, if withNote then ", note" else "")
+    view = fakeView(n, claimMode, withNote)
+    -- open (asks for the fresh view), inspect, then fold again so the next case opens it anew
+    header.Activated:fire() pump() tick()
+    assert(body.Visible == true and root.Size.X.Offset == sheet.Width, label .. ": open")
+    local items, rowRects, rootRect = collect(root)
+    local seenRows = 0
+    for _ in rowRects do seenRows += 1 end
+    assert(seenRows == n, label .. ": rows shown " .. seenRows)
+    for i = 1, n do
+     assert(rowRects[i].h == O.rowH, label .. ": every row has the same fixed height")
+     if i > 1 then
+      local gap = rowRects[i].y - (rowRects[i - 1].y + rowRects[i - 1].h)
+      assert(gap >= 4 and gap <= 6, label .. ": gap between rows is 4..6 px, got " .. gap)
+     end
+     local divider = find(row(i), "Divider")
+     assert(divider and divider.BackgroundColor3 == Colors.card and divider.Visible == (i < n), label .. ": divider under every row but the last, UITheme card colour")
+     if divider.Visible then
+      local d = rectOf(divider, rowRects[i])
+      assert(d.y >= rowRects[i].y + rowRects[i].h - 0.01 and d.y + d.h <= rowRects[i].y + rowRects[i].h + O.rowGap + 0.01, label .. ": the divider sits in the gap")
+     end
+    end
+    for a = 1, #items do
+     local item = items[a]
+     if item.text then
+      assert(item.node.TextSize >= 14, label .. ": " .. item.name .. " text >= 14 px")
+      assert(item.r.h >= item.node.TextSize, label .. ": " .. item.name .. " box is at least one line high")
+      if item.name == "Claim" then assert(item.r.w >= 44 and item.r.h >= 44, label .. ": CLAIM >= 44 x 44") end
+     end
+     assert(item.r.x >= -0.01 and item.r.x + item.r.w <= rootRect.w + 0.01, label .. ": " .. item.name .. " inside the panel width")
+     if item.row then
+      local rr = rowRects[item.row]
+      assert(item.r.y >= rr.y - 0.01 and item.r.y + item.r.h <= rr.y + rr.h + 0.01, label .. ": " .. item.name .. " inside its row (row " .. item.row .. ")")
+      if item.name == "Claim" then
+       assert(math.abs((item.r.y + item.r.h / 2) - (rr.y + rr.h / 2)) <= 0.5, label .. ": CLAIM vertically centred in its own row")
+      end
+     end
+     for b = a + 1, #items do
+      assert(not strictlyOverlap(item.r, items[b].r), string.format("%s: %s (%.0f,%.0f %.0fx%.0f) overlaps %s (%.0f,%.0f %.0fx%.0f)", label, item.name, item.r.x, item.r.y, item.r.w, item.r.h, items[b].name, items[b].r.x, items[b].r.y, items[b].r.w, items[b].r.h))
+     end
+    end
+    for i = 1, n do
+     local r = find(row(i), "Note")
+     assert((r.Visible == true) == withNote, label .. ": the note shows exactly when the row has one")
+     if withNote then assert(r.Text == "Cracked eggs count too" and r.TextSize >= 14 and r.TextColor3 ~= Colors.text, label .. ": note is small, >= 14 px and in the toned UITheme colour") end
+    end
+    -- the scroll canvas holds every row; the desktop sheet shows all of them without scrolling
+    local bodyTop = O.h + 2
+    assert(body.CanvasSize.Y.Offset >= rowRects[n].y + rowRects[n].h - bodyTop - 0.01, label .. ": canvas holds the rows")
+    if not size[4] then
+     assert(rowRects[n].y + rowRects[n].h <= rootRect.h + 0.01, label .. ": the desktop sheet is tall enough for " .. n .. " rows")
+    end
+    header.Activated:fire() pump() tick()
+    assert(body.Visible == false, label .. ": folds")
+    checked += 1
+   end
+  end
+ end
+end
+assert(checked == 3 * 3 * 3 * 2)
+print("Rows passed: " .. checked .. " layouts (1 to 3 rows, no / first / every CLAIM, with and without a note) at desktop, 836x390 and 667x375: no text or bar rect overlaps another, equal fixed row height, 4..6 px gaps with a divider, CLAIM centred and >= 44 px, text >= 14 px, note >= 14 px")
+---------------------------------------------------------------- OB2: the real ObjectiveSeen.luau (FusionMenu's one-time T9 report)
+do
+ local seenCfg = {ObjectivesEnabled = false}
+ local lookups, sent, queued = 0, {}, {}
+ local seenAnswer = function(_) return {ok = true, status = "seen"} end
+ local seenRemote = {IsA = function(_, c) return c == "RemoteFunction" end,
+  InvokeServer = function(_, request) table.insert(sent, copy(request)) return seenAnswer(request) end}
+ local hasRemote = true
+ local seenFolder = {FindFirstChild = function(_, name) if name == "ObjectiveAction" and hasRemote then return seenRemote end return nil end}
+ local seenRepl = {Shared = {Config = "Config"}, FindFirstChild = function(_, name) lookups += 1 if name == "BeDinoRemotes" then return seenFolder end return nil end}
+ local seenGame = {GetService = function(_, name) assert(name == "ReplicatedStorage") return seenRepl end}
+ local seenTask = {spawn = function(fn) table.insert(queued, fn) end}
+ local seenRequire = function(id) assert(id == "Config") return seenCfg end
+ local function loadSeen() return (function(game, task, require) @@SEEN_SRC@@ end)(seenGame, seenTask, seenRequire) end
+ local function drain() while #queued > 0 do table.remove(queued, 1)() end end
+ local Seen = loadSeen()
+ assert(lookups == 0 and #sent == 0, "requiring the module does nothing")
+ -- flag off: nothing is looked up, nothing is spawned, nothing is sent, however often the menu opens
+ for _ = 1, 5 do Seen.report("fusion_menu") end
+ drain()
+ assert(lookups == 0 and #sent == 0 and #queued == 0, "flag off: the client sends nothing and does not even look for the remote")
+ -- flag on but the server flag is off (no remote): still nothing
+ seenCfg.ObjectivesEnabled = true
+ hasRemote = false
+ Seen.report("fusion_menu") drain()
+ assert(#sent == 0, "no ObjectiveAction remote: nothing sent")
+ hasRemote = true
+ -- flag on: exactly one request of exactly one shape, and the menu does not wait for it (it is spawned)
+ Seen.report("fusion_menu")
+ assert(#sent == 0 and #queued == 1, "the request is spawned, never made inline")
+ Seen.report("fusion_menu")
+ assert(#queued == 1, "a second open while the first is in flight sends nothing")
+ drain()
+ assert(#sent == 1 and sent[1].action == "seen" and sent[1].id == "fusion_menu", "the report")
+ local keys = 0 for _ in sent[1] do keys += 1 end
+ assert(keys == 2, "no amount, no objective id, no reward: only {action, id}")
+ for _ = 1, 3 do Seen.report("fusion_menu") end drain()
+ assert(#sent == 1, "after an answer it is never sent again this session")
+ -- "not yet" answers are asked again on the next open; a definite refusal is not
+ for _, reason in {"rate_limited", "no_dino"} do
+  sent = {} Seen = loadSeen()
+  seenAnswer = function(_) return {ok = false, reason = reason} end
+  Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+  assert(#sent == 2, reason .. ": asked again on the next open")
+ end
+ sent = {} Seen = loadSeen()
+ seenAnswer = function(_) return nil end
+ Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+ assert(#sent == 2, "no answer: retry on the next open")
+ sent = {} Seen = loadSeen()
+ seenAnswer = function(_) return {ok = false, reason = "unknown_objective"} end
+ Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+ assert(#sent == 1, "a definite refusal is final")
+ print("Seen passed: real ObjectiveSeen.luau: flag off sends nothing and looks nothing up, one shape {action, id}, spawned, once per session, retries only on not-yet answers")
+end
 print("Panel passed: real ObjectivesPanel.luau on a GUI mock: folded one-liner and chip, open rows, CLAIM only on a finished task (>= 44 px), claim request {action,id,token}, waiting state, retry with the same token, fresh token after a definite answer, silent in a run and before the first egg")
 
 ---------------------------------------------------------------- 6. BD-561: the four optional icons (docs/109 section 9)
@@ -818,6 +1019,10 @@ for name, ids in {nothing = false, empty = {}, unrelated = {trophy = "rbxassetid
  walk(e, rectPill, rectSheet, DEFAULT, v1, function(env, label) record(env, label, seen) end)
  local text = ""
  for _, label in {"folded", "open", "open_ready", "folded_ready", "message"} do text ..= "## " .. label .. "\n" .. seen[label] .. "\n" end
+ local noted = copy(DEFAULT) noted.tutorial.name, noted.tutorial.note = "Hatch 3 eggs", "Cracked eggs count too" -- a row with a hint (OB3)
+ local e2, seen2 = makeEnv(if ids == false then nil else ids), {}
+ walk(e2, rectPill, rectSheet, noted, v1, function(env, label) record(env, label, seen2) end)
+ for _, label in {"folded", "open", "open_ready", "folded_ready", "message"} do text ..= "## noted " .. label .. "\n" .. seen2[label] .. "\n" end
  reference = reference or text
  assert(text == reference, "ids " .. name .. ": the tree is not the one without the feature")
  for _, label in {"folded", "open", "message"} do assert(not string.find(seen[label], "objective_", 1, true) and not string.find(seen[label], "notify_", 1, true), "no icon Instance") end
@@ -836,8 +1041,8 @@ do
  assert(serialize(wait.Position) == serialize(UDim2_.new(1, -10, 0.5, 0)) and serialize(wait.Size) == serialize(UDim2_.new(0.62, -10, 1, 0)) and serialize(title.Size) == serialize(UDim2_.new(0.38, -42, 1, 0)), "open words as before")
  local r1 = find(e.body, "Row1")
  local leftW = 281 - 124
- assert(serialize(find(r1, "Name").Position) == serialize(UDim2_.fromOffset(8, 2)) and serialize(find(r1, "Name").Size) == serialize(UDim2_.fromOffset(leftW, 32)), "row name as before")
- assert(find(r1, "Reward").Text == "+10 crystals" and serialize(find(r1, "Reward").Position) == serialize(UDim2_.new(1, -108, 0, 24)) and serialize(find(r1, "Reward").Size) == serialize(UDim2_.fromOffset(100, 22)), "row prize as before")
+ assert(serialize(find(r1, "Name").Position) == serialize(UDim2_.fromOffset(8, 3)) and serialize(find(r1, "Name").Size) == serialize(UDim2_.fromOffset(leftW, 32)), "row name as before")
+ assert(find(r1, "Reward").Text == "+10 crystals" and serialize(find(r1, "Reward").Position) == serialize(UDim2_.new(1, -108, 0, 30)) and serialize(find(r1, "Reward").Size) == serialize(UDim2_.fromOffset(100, 22)), "row prize as before")
 end
 
 -- 6d. fake ids: icons in their documented spots, no overlap, text inside its box
@@ -858,7 +1063,7 @@ local function textBox(label, pw, ph)
 end
 local function icon(parent, key) return find(parent, "Icon_" .. key) end
 local function shown(node) return node ~= nil and node.Visible == true end
-local stats = {arrowFolded = 0, starFolded = 0, arrowRow = 0, starRow = 0, gemRow = 0, gemMessage = 0, cuts = 0, canvases = 0}
+local stats = {arrowNote = 0, noteCut = 0, arrowFolded = 0, starFolded = 0, arrowRow = 0, starRow = 0, gemRow = 0, gemMessage = 0, cuts = 0, canvases = 0}
 local GROUP = {}
 for _, e in Cfg.Catalogue do GROUP[e.name] = e.group end
 
@@ -890,7 +1095,7 @@ local function checkHeader(e, label)
  if isOpen then assert(not shown(arrow) and not shown(star), "open: arrow and star belong to the rows") end
  if shown(arrow) then assert(not isOpen and chip.Visible, "folded arrow beside the task") stats.arrowFolded += 1 end
  if shown(star) then assert(not isOpen and find(chip, "ChipText").Text == "Done!", "folded star beside the Done chip") stats.starFolded += 1 end
- if shown(gem) then assert(isOpen and title.Text == "+10", "gem only after a reward number") stats.gemMessage += 1 end
+ if shown(gem) then assert(isOpen and wait.Text == "+10", "gem only after a reward number") stats.gemMessage += 1 end
  if not isOpen then
   local cut = find(chip, "ChipText").Text
   -- text fits its box by the pure estimate, or it is the single fallback word
@@ -899,29 +1104,38 @@ local function checkHeader(e, label)
  end
 end
 
+local ROW = TouchLayout.OBJECTIVES.rowH
+local function glyph(label, pw, lines) -- the box of the glyphs: one text line is about 1.15 x the font size high (the label box is taller)
+ local b = textBox(label, pw, ROW)
+ b.y1 = b.y0 + math.ceil(label.TextSize * 1.15) * lines
+ return b
+end
 local function checkRows(e, label)
  local W = e.root.Size.X.Offset
  for i = 1, 3 do
   local row = find(e.body, "Row" .. i)
   if row.Visible then
-   local name, count, reward, claim, bar = find(row, "Name"), find(row, "Count"), find(row, "Reward"), find(row, "Claim"), find(row, "Bar")
+   local name, note, count, reward, claim, bar = find(row, "Name"), find(row, "Note"), find(row, "Count"), find(row, "Reward"), find(row, "Claim"), find(row, "Bar")
    local arrow, star, gem = icon(row, "objective_arrow"), icon(row, "notify_star"), icon(row, "notify_crystal")
    local items = {}
    local function add(n, b) b.name = n table.insert(items, b) end
-   local nb = boxOf(name, W, 52)
-   local lines = math.min(2, Rules.wrapLines(name.Text, nb.x1 - nb.x0, 15))
-   nb.y1 = nb.y0 + 15 * lines add("name", nb)
-   if count.Visible then add("count", textBox(count, W, 52)) end
-   add("prize", textBox(reward, W, 52))
-   if claim.Visible then add("claim", boxOf(claim, W, 52)) end
-   if bar.Visible then add("bar", boxOf(bar, W, 52)) end
-   for n, node in {arrow = arrow, star = star, gem = gem} do if shown(node) then add(n, boxOf(node, W, 52)) end end
-   checkNoOverlap(items, W, 52, label .. " row " .. i .. " @" .. W)
+   local nb = boxOf(name, W, ROW)
+   local maxLines = if note.Visible then 1 else 2
+   add("name", nb) -- the whole label box, as in the row-layout test above (stricter than its glyphs)
+   if note.Visible then add("note", glyph(note, W, 1)) end
+   if count.Visible then add("count", glyph(count, W, 1)) end
+   add("prize", glyph(reward, W, 1))
+   if claim.Visible then add("claim", boxOf(claim, W, ROW)) end
+   if bar.Visible then add("bar", boxOf(bar, W, ROW)) end
+   for n, node in {arrow = arrow, star = star, gem = gem} do if shown(node) then add(n, boxOf(node, W, ROW)) end end
+   checkNoOverlap(items, W, ROW, label .. " row " .. i .. " @" .. W)
    if shown(arrow) then
     assert(GROUP[name.Text] == "tutorial" and not claim.Visible, "the arrow is only on an unfinished tutorial task")
-    assert(Rules.wrapLines(name.Text, name.Size.X.Offset, 15) <= 2, "the name still fits two lines beside the arrow: " .. name.Text)
-    assert(arrow.Size.X.Offset == P.arrow and boxOf(arrow, W, 52).x0 == 8, "arrow 28 px at the row's left")
+    assert(Rules.wrapLines(name.Text, name.Size.X.Offset, 15) <= maxLines, "the name still fits beside the arrow: " .. name.Text)
+    assert(not note.Visible or Rules.textWidth(note.Text, note.TextSize) <= note.Size.X.Offset + 0.01, "the hint still fits beside the arrow")
+    assert(arrow.Size.X.Offset == P.arrow and boxOf(arrow, W, ROW).x0 == 8, "arrow 28 px at the row's left")
     stats.arrowRow += 1
+    if note.Visible then stats.arrowNote += 1 if string.sub(note.Text, -3) == "..." then stats.noteCut += 1 end end
    end
    if GROUP[name.Text] ~= "tutorial" then assert(not shown(arrow), "never an arrow on a short or daily task") end
    if shown(star) then assert(claim.Visible, "the star only on a finished task") stats.starRow += 1 end
@@ -952,7 +1166,7 @@ for _, v in {{1280, 720}, {1920, 1080}, {836, 390}, {667, 375}} do
   end
  end
 end
-for _, w in {190, 220, 250, 300} do table.insert(sets, {label = "pill " .. w, pill = Rect_.new(10, 10, 10 + w, 54), sheet = Rect_.new(10, 10, 10 + w, 199)}) end
+for _, w in {190, 220, 250, 300} do table.insert(sets, {label = "pill " .. w, pill = Rect_.new(10, 10, 10 + w, 54), sheet = Rect_.new(10, 10, 10 + w, 248)}) end
 
 local pillWidths = {}
 for _, s in sets do
@@ -965,7 +1179,7 @@ local widths = {} for w in pillWidths do table.insert(widths, w) end table.sort(
 -- every catalogue task as the first / only task, at the narrow pills and the widest one
 local function oneRowView(entry)
  local view = {tutorialDone = true, short = {}, daily = {}, carry = {}}
- local row = {id = entry.id, name = entry.name, progress = 0, goal = entry.goal, reward = copy(entry.reward), done = false, claimed = false}
+ local row = {id = entry.id, name = entry.name, note = entry.note, progress = 0, goal = entry.goal, reward = copy(entry.reward), done = false, claimed = false}
  if entry.group == "tutorial" then view.tutorial, view.tutorialDone = row, false else table.insert(view[entry.group], row) end
  return view
 end
@@ -973,7 +1187,7 @@ local doneView = function(entry) local view = oneRowView(entry) local r = view.t
 local nameRuns = 0
 for _, w in {190, 220, 250, 300} do
  for _, entry in Cfg.Catalogue do
-  local pill, sheet = Rect_.new(10, 10, 10 + w, 54), Rect_.new(10, 10, 10 + w, 199)
+  local pill, sheet = Rect_.new(10, 10, 10 + w, 54), Rect_.new(10, 10, 10 + w, 248)
   local e = makeEnv(ALL_FAKE)
   walk(e, pill, sheet, oneRowView(entry), doneView(entry), visitor)
   nameRuns += 1
@@ -990,12 +1204,12 @@ for _, w in {190, 220, 250, 300} do
   end
  end
 end
-assert(stats.arrowFolded > 0 and stats.starFolded > 0 and stats.arrowRow > 0 and stats.starRow > 0 and stats.gemRow > 0 and stats.gemMessage > 0 and stats.cuts > 0, "the walk covers every icon: " .. serialize(stats))
+assert(stats.arrowNote > 0 and stats.arrowFolded > 0 and stats.starFolded > 0 and stats.arrowRow > 0 and stats.starRow > 0 and stats.gemRow > 0 and stats.gemMessage > 0 and stats.cuts > 0, "the walk covers every icon: " .. serialize(stats))
 
 -- the documented spots at the widest pill, and the arrow's rules
 do
  local e = makeEnv(ALL_FAKE)
- local pill, sheet = Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 199)
+ local pill, sheet = Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 248)
  e.place(pill, sheet) e.st.view = DEFAULT e.tick() e.tick()
  local header = e.header
  assert(shown(icon(header, "objective_arrow")) and find(header, "Title").Text == "Eat 10 food", "folded: the arrow beside the first tutorial task")
@@ -1008,19 +1222,20 @@ do
  e.toggle() e.st.view = v1 e.toggle()
  local ready = find(e.body, "Row1")
  assert(find(ready, "Claim").Visible and shown(icon(ready, "notify_star")) and shown(icon(ready, "notify_crystal")) and not shown(icon(ready, "objective_arrow")), "finished: star + prize + gem, no arrow")
- assert(boxOf(icon(ready, "notify_star"), 300, 52).x1 <= boxOf(icon(ready, "notify_crystal"), 300, 52).x0, "star, then the prize, then the gem")
+ assert(boxOf(icon(ready, "notify_star"), 300, 60).x1 <= boxOf(icon(ready, "notify_crystal"), 300, 60).x0, "star, then the prize, then the gem")
  e.toggle()
  assert(shown(icon(e.header, "notify_star")) and find(find(e.header, "Chip"), "ChipText").Text == "Done!" and not shown(icon(e.header, "objective_arrow")), "folded: the star left of the Done chip")
  assert(boxOf(icon(e.header, "notify_star"), 300, 44).x1 <= find(e.header, "Chip").Position.X.Offset, "the star is left of the chip")
  e.toggle()
  find(find(e.body, "Row1"), "Claim").Activated:fire() pump()
- local title = find(e.header, "Title")
- assert(title.Text == "+10" and shown(icon(e.header, "notify_crystal")), "the answer to a claim: the number, then the gem")
- assert(boxOf(icon(e.header, "notify_crystal"), 300, 44).x0 >= title.Position.X.Offset + Rules.textWidth("+10", 17) * 0.8, "the gem sits right after the number")
+ local wait = find(e.header, "Wait")
+ assert(wait.Text == "+10" and shown(icon(e.header, "notify_crystal")), "the answer to a claim: the number, then the gem")
+ local gemBox, numberBox = boxOf(icon(e.header, "notify_crystal"), 300, 44), textBox(wait, 300, 44)
+ assert(numberBox.x1 <= gemBox.x0 and gemBox.x0 - numberBox.x1 <= 4 and gemBox.x1 == 300 - 8 - P.chevron - GAP, "the gem sits right after the number, before the chevron")
 end
 do -- the bob: 3 px every half second, still when motion is off
  local e = makeEnv(ALL_FAKE)
- e.place(Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 199)) e.st.view = DEFAULT e.tick() e.tick()
+ e.place(Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 248)) e.st.view = DEFAULT e.tick() e.tick()
  local arrow = icon(e.header, "objective_arrow")
  local ys = {}
  for _ = 1, 6 do e.tick() ys[arrow.Position.Y.Offset] = true end
@@ -1042,7 +1257,7 @@ end)()
 
 def script() -> str:
     panel_src = read('src/client/ObjectivesPanel.luau')
-    text = LUAU
+    text = LUAU.replace('@@SEEN_SRC@@', read('src/client/ObjectiveSeen.luau'))
     for token, path in [
         ('@@CONFIG@@', 'src/shared/Config.luau'),
         ('@@PHONE_SCALE@@', 'src/shared/PhoneScale.luau'),
