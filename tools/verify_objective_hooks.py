@@ -1,4 +1,4 @@
-"""BD-074 objective event hooks (docs/66 section 19): offline verifier.
+"""BD-074 objective event hooks (docs/66 section 20): offline verifier.
 
 Static (source scan):
   * each of the 20 docs/66 objectives maps to at least one hook; the table is printed
@@ -694,7 +694,7 @@ def main(argv=None) -> int:
     parser.add_argument('--runner', required=True)
     args = parser.parse_args(argv)
     errors, table = static_report()
-    print('Objective-to-hook table (docs/66 section 19):')
+    print('Objective-to-hook table (docs/66 section 20):')
     print('| # | Objective | Event | Hook site(s) |')
     print('| --- | --- | --- | --- |')
     for row in table:

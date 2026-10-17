@@ -100,6 +100,32 @@ def static_errors() -> list[str]:
     if len(re.findall(r'^local ', boot, re.M)) > 195:
         errors.append('Bootstrap: no new top-level local (limit)')
 
+    # --- BD-076: the goal line follows the top objective, and with the flag off it is the old line ----------------------------------------
+    hud_code = code_only(goal_hud)
+    if hud_code.count('objectives=require(') != 1 or hud_code.count('local objectives: any=nil') != 1:
+        errors.append('GoalHud: `objectives` is nil until the one require inside the flag check')
+    if hud_code.count('objectives.goalLine(') != 1 or not re.search(r'if objectives then\n(?:(?!\n        end\n).)*objectives\.goalLine\(', hud_code, re.S):
+        errors.append('GoalHud: objectives.goalLine is called once, only inside `if objectives then` (flag off: objective stays nil)')
+    if 'local objective=nil' not in hud_code or 'objective=objective' not in hud_code or 'prefix..goal.text' not in hud_code:
+        errors.append('GoalHud: NextGoal.pick gets objective=nil unless the flag is on; the text is prefix..goal.text as before')
+    if hud_code.count('objectives.onTopChanged(') != 1 or hud_code.find('objectives.onTopChanged(') < hud_code.find('Config.ObjectivesEnabled==true then'):
+        errors.append('GoalHud: onTopChanged is wired once, inside the flag check')
+    next_goal = code_only(read('src/shared/NextGoal.luau'))
+    for word in ('Config', 'ObjectivesEnabled', 'ObjectivePanelRules', 'ObjectivesPanel', 'game:GetService', 'Instance.new'):
+        if word in next_goal:
+            errors.append(f'NextGoal must stay pure and flag-free, found {word} (the flag lives in GoalHud only)')
+    if panel.count('Rules.goalLine(') != 1 or panel.count('onTop') < 2:
+        errors.append('ObjectivesPanel: goalLine and onTopChanged are the only BD-076 hooks')
+    min_font = re.search(r'local MIN_FONT = (\d+)', read('src/shared/ObjectivePanelRules.luau'))
+    min_text = re.search(r'PhoneScale\.MinText = (\d+)', read('src/shared/PhoneScale.luau'))
+    if not min_font or not min_text or min_font.group(1) != min_text.group(1):
+        errors.append('ObjectivePanelRules.MIN_FONT must equal PhoneScale.MinText')
+    # The width maths in the Luau part assumes how Bootstrap styles the line; if these lines change, the fit table must be revisited.
+    for needle in ('floorText(17,layout.crystal.scale) else 17', 'goalLimit.MaxTextSize,goalLimit.MinTextSize=goalFloor,if layout.touch then goalFloor else require(Shared.PhoneScale).MinText',
+                   'goalText.TextScaled,goalText.TextSize=not layout.touch,goalFloor', 'local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)'):
+        if needle not in boot and needle not in goal_hud:
+            errors.append('goal line styling changed (' + needle[:50] + '...): re-check the BD-076 width table')
+
     # --- the client never computes a reward ----------------------------------------------------------------------------------------------
     for word in ('PrivateState', 'AccountXP', 'AccountLevel', 'MarketplaceService', 'Robux', 'DeveloperProduct', 'Crystals"'):
         if word in panel:
@@ -155,6 +181,7 @@ modules.TouchLayout = @@TOUCH_LAYOUT@@
 modules.ObjectiveConfig = @@OBJ_CONFIG@@
 modules.ObjectiveRules = @@OBJ_RULES@@
 modules.ObjectivePanelRules = @@PANEL_RULES@@
+modules.NextGoal = @@NEXT_GOAL@@
 local Rules, ServerRules, Cfg, TouchLayout = modules.ObjectivePanelRules, modules.ObjectiveRules, modules.ObjectiveConfig, modules.TouchLayout
 
 local function copy(t) if type(t) ~= "table" then return t end local r = {} for k, v in t do r[k] = copy(v) end return r end
@@ -251,6 +278,125 @@ assert(Rules.buttonState({claimable = true}, false) == "claim" and Rules.buttonS
 for _, e in Cfg.Catalogue do assert(#e.name <= Rules.MaxName and Rules.copyOk(e.name) and Rules.copyOk(Rules.rewardText(e.reward)) and Rules.copyOk(Rules.progressText({progress = e.goal, goal = e.goal})), e.id) end
 assert(Rules.copyOk(Rules.Title) and Rules.MaxShown == 3 and Rules.PollSeconds >= 5)
 print("Rules passed: 3 rows (claimable first, tutorial, short and daily in turns), T8 hidden next to the PLAY line until finished, folded line, 'New tasks soon' words, claim answers and token reuse, docs/72 copy")
+
+---------------------------------------------------------------- 6. BD-076: the one-line goal (priority table, flag-off identity, copy and width)
+local NextGoal = modules.NextGoal
+local function dino(species, pattern, stage) return {speciesId = species, stage = stage or "base", genes = {patternId = pattern}} end
+local function many(n, species, pattern, stage) local t = {} for _ = 1, n do table.insert(t, dino(species, pattern, stage)) end return t end
+local FUSION = {none = nil, progress = many(3, "compy", "06_wavy_stripes"), ready = many(6, "compy", "06_wavy_stripes")}
+local function goalOpts(dinos, objective)
+ return {dinos = dinos, level = 3, xp = 450, perLevel = 100, maxLevel = 60, objective = objective,
+  speciesName = function(id) return id == "compy" and "Compy" or id end, patternName = function(id) return id end}
+end
+local WIDE = {width = 600, font = 14, prefix = ""} -- plenty of room: the words, not the width, are under test here
+local function line(rowsView, fit, play)
+ return Rules.goalLine(Rules.select(rowsView, {playGoalActive = play == true}), fit or WIDE)
+end
+local freshLine = line(v0)
+local doneLine = line(v1)
+assert(freshLine and not freshLine.claimable and freshLine.text == "Eat 10 food: 0/10", freshLine and freshLine.text)
+assert(doneLine and doneLine.claimable and doneLine.ready and doneLine.text == "Done! Claim at the objectives panel", doneLine and doneLine.text)
+local TABLE = {} -- the priority table: objective (none / unfinished / claimable) x fusion (none / in progress / ready) -> the winner
+local function expect(objective, fusion)
+ if objective == "claimable" then return "objective" end
+ if fusion ~= "none" then return "fusion" end
+ if objective == "unfinished" then return "objective" end
+ return "level"
+end
+for _, objective in {"none", "unfinished", "claimable"} do
+ for _, fusion in {"none", "progress", "ready"} do
+  local o = if objective == "none" then nil elseif objective == "unfinished" then freshLine else doneLine
+  local goal = NextGoal.pick(goalOpts(FUSION[fusion], o))
+  assert(goal.kind == expect(objective, fusion), "priority " .. objective .. " + fusion " .. fusion .. " -> " .. goal.kind)
+  if goal.kind == "objective" then assert(goal.text == o.text and goal.ready == (objective == "claimable") and goal.claimable == (objective == "claimable")) end
+  if goal.kind == "fusion" then assert(goal.text == (if fusion == "ready" then "Gold ready: fuse Compy" else "Gold: 3/6 Compy")) end
+  if goal.kind == "level" then assert(goal.text == "Level 3: 50/500 XP") end
+  table.insert(TABLE, objective .. "+" .. fusion .. "=" .. goal.kind)
+ end
+end
+assert(#TABLE == 9)
+-- the three rules one by one, in words
+assert(NextGoal.pick(goalOpts(FUSION.ready, doneLine)).kind == "objective", "1. a claimable objective beats everything (even a ready fusion)")
+assert(NextGoal.pick(goalOpts(FUSION.progress, freshLine)).kind == "fusion", "2. the fusion goal beats an unfinished objective")
+assert(NextGoal.pick(goalOpts(nil, freshLine)).kind == "objective" and NextGoal.pick(goalOpts({}, freshLine)).kind == "objective", "3. any active objective beats the level fallback (list unavailable or empty)")
+-- a nonsense objective is ignored, never a blank line
+for _, bad in {"x", 5, {}, {text = ""}, {text = 5}, {claimable = true}} do assert(NextGoal.pick(goalOpts(nil, bad)).kind == "level", "unusable objective -> the old line") end
+
+-- flag-off identity: without an objective NextGoal.pick IS the old `fusion or level` for every input, field for field
+local function legacy(o) return NextGoal.fusion(o.dinos, o) or NextGoal.level(o) end
+local function same(a, b) for k, v in a do if b[k] ~= v then return false end end for k in b do if a[k] == nil then return false end end return true end
+local checked = 0
+for _, dinos in {FUSION.progress, FUSION.ready, {}, many(1, "rex", "03_round_spots", "emerald"), many(2, "compy", "06_wavy_stripes", "gold")} do
+ for _, xp in {0, 450, 10 ^ 9} do
+  local o = goalOpts(dinos, nil)
+  o.xp = xp
+  assert(same(NextGoal.pick(o), legacy(o)), "flag off: byte-identical to the old line")
+  checked += 1
+ end
+end
+assert(same(NextGoal.pick({level = 2, xp = 120}), legacy({level = 2, xp = 120})) and checked >= 15)
+
+-- copy and width on EVERY canvas: phone, tablet, desktop, and the real 836 x 390 / 667 x 375 minus the top bar, mouse and touch
+local canvases = {}
+for _, v in {{800, 360}, {640, 360}, {667, 375}, {732, 412}, {844, 390}, {915, 412}, {800, 302}, {760, 360}, {1024, 768}, {1280, 720}, {1280, 800}, {1366, 1024}, {1920, 1080}, {2400, 1080},
+ {667, 317}, {836, 332}, {1000, 700}, {1156, 841}, {1080, 720}, {1440, 900}} do table.insert(canvases, {v[1], v[2], true}) table.insert(canvases, {v[1], v[2], false}) end
+for _, v in {{836, 390}, {667, 375}} do for _, bar in {0, 36, 44, 58} do for _, touch in {true, false} do table.insert(canvases, {v[1], v[2] - bar, touch}) end end end
+local PHONE = modules.PhoneScale
+local function wordsOf(text) local w = {} for word in string.gmatch(text, "%S+") do table.insert(w, word) end return w end
+local longReady, shortReady, fullNames, cutNames, bareProgress = 0, 0, 0, 0, 0
+for _, c in canvases do
+ local layout = TouchLayout.compute({width = c[1], height = c[2], touch = c[3], navCount = 7})
+ local scale = layout.crystal.scale
+ -- exactly what Bootstrap does: the phone layout draws a fixed floorText(17) size and truncates; desktop scales between MinText and 17
+ local font = if layout.touch then PHONE.floorText(17, scale) else PHONE.MinText
+ local prefix = if c[3] or PHONE.isCompact(c[2]) then "" else "Goal  "
+ assert((prefix == "") == layout.touch, "the prefix rule matches the layout: " .. c[1] .. "x" .. c[2])
+ assert(not layout.touch or font * scale >= PHONE.MinText - 1e-6, "the touch line renders >= 14 px at " .. c[1] .. "x" .. c[2])
+ local fit = {width = 244, font = font, prefix = prefix}
+ -- finished: the longest fixed phrase that fits (the bare "Done!" always does)
+ local ready = line(v1, fit)
+ assert(ready.claimable and Rules.fitsLine(ready.text, fit) and Rules.copyOk(ready.text), "ready text fits at " .. c[1] .. "x" .. c[2] .. ": " .. ready.text)
+ assert(string.sub(ready.text, 1, 5) == "Done!", "a finished task always starts with Done!")
+ for _, candidate in Rules.GoalReadyText do
+  if candidate == ready.text then break end
+  assert(not Rules.fitsLine(candidate, fit), "a longer phrase that fits is preferred: " .. candidate)
+ end
+ if ready.text == Rules.GoalReadyText[1] then longReady += 1 else shortReady += 1 end
+ -- unfinished: every catalogue task at progress 0 and goal - 1
+ for _, e in Cfg.Catalogue do
+  for _, p in {0, math.max(0, e.goal - 1)} do
+   local row = {id = e.id, name = e.name, progress = p, goal = e.goal, reward = e.reward, fraction = p / e.goal, claimable = false}
+   local l = Rules.goalLine({row}, fit)
+   local pText = if e.goal > 1 then Rules.progressText(row) else ""
+   assert(l and not l.claimable and not l.ready and l.id == e.id, e.id)
+   assert(Rules.fitsLine(l.text, fit) or l.text == pText, "fits: " .. l.text .. " at " .. c[1] .. "x" .. c[2])
+   assert(Rules.copyOk(l.text) and #l.text <= 48, "copy: " .. l.text)
+   assert(pText == (if e.goal > 1 then Rules.progressText(row) else "") and (pText == "" or string.sub(l.text, -#pText) == pText), "a counted task keeps its count: " .. l.text)
+   -- never a word cut in half: the name part is a whole-word prefix of the name
+   local namePart = string.gsub(string.sub(l.text, 1, #l.text - #pText), "[:%.%s]+$", "")
+   if namePart == "" then bareProgress += 1 elseif namePart ~= "Task" and namePart ~= "Next task" then
+    local nameWords, partWords = wordsOf(e.name), wordsOf(namePart)
+    for i, word in partWords do assert(word == nameWords[i], "whole words only: '" .. l.text .. "' from '" .. e.name .. "'") end
+   end
+   if l.text == e.name .. (if pText ~= "" then ": " .. pText else "") then fullNames += 1 else cutNames += 1 end
+   -- the words never end on a dangling "a" / "toward" before the dots
+   assert(not string.find(l.text, " a%.%.%.") and not string.find(l.text, " toward%.%.%.") and not string.find(l.text, " the%.%.%."), "no dangling word: " .. l.text)
+  end
+ end
+end
+assert(fullNames > 0 and cutNames > 0 and shortReady > 0, "the table covers both the full and the cut words")
+assert(Rules.textWidth("", 17) == 0 and Rules.textWidth("Done!", 17) < Rules.textWidth("Done! Claim it", 17) and Rules.textWidth("WWWW", 14) > Rules.textWidth("iiii", 14))
+-- degenerate input never errors, never a blank line
+assert(Rules.goalLine({}, WIDE) == nil and Rules.goalLine({{claimable = false}}, nil) == nil)
+local nameless = Rules.goalLine({{id = "X", name = "", progress = 1, goal = 2, claimable = false, fraction = 0.5}}, WIDE)
+assert(nameless.text == "Task 1/2", nameless.text)
+assert(Rules.goalLine({{id = "X", name = "Supercalifragilisticexpialidocious", progress = 1, goal = 2, claimable = false, fraction = 0.5}}, {width = 120, font = 23, prefix = ""}).text == "Task 1/2", "one over-long word is never cut: the progress stands in")
+-- T8 versus the Goals PLAY line: the unfinished second-species task never reaches the goal line either
+assert(line(t8(0), WIDE, true) == nil, "PLAY line on screen: no T8 on the goal line")
+assert(line(t8(0), WIDE, false).text == "Collect a second species", "PLAY line done: T8 may show")
+assert(line(t8(1), WIDE, true).claimable, "a finished T8 is a reward: it shows")
+print(string.format("Goal line passed: priority table %s; flag-off identical on %d inputs; copy and width on %d canvases (%d full names, %d cut at a word, ready text long on %d / short on %d canvases)",
+ table.concat(TABLE, " "), checked, #canvases, fullNames, cutNames, longReady, shortReady))
 
 ---------------------------------------------------------------- 5. the REAL ObjectivesPanel.luau against a mock of the GUI classes
 local clockNow, tasks, calls, guidCount = 1000, {}, {}, 0
@@ -466,6 +612,29 @@ local callsHidden = #calls
 for _ = 1, 60 do tick() end
 assert(root.Visible == false and #calls == callsHidden, "Goals hidden (first session): the panel is hidden and silent")
 anchor.Visible = true
+-- BD-076: the REAL panel answers the goal line and tells GoalHud only when the top row changed
+local fitHub = {width = 244, font = 17, prefix = ""}
+local g0 = Panel.goalLine(fitHub)
+assert(g0 and g0.claimable and string.sub(g0.text, 1, 5) == "Done!", "view loaded (second tutorial task finished): the claimable row leads the goal line")
+local topChanges = 0
+Panel.onTopChanged(function() topChanges += 1 end)
+local function refetch() header.Activated:fire() header.Activated:fire() pump() tick() end
+remote.InvokeServer = function(_, request) table.insert(calls, copy(request)) if request.action == "view" then return {ok = true, view = copy(view)} end return {ok = false, reason = "bad_request"} end
+view = copy(v0)
+refetch()
+local g1 = Panel.goalLine(fitHub)
+assert(topChanges == 1 and g1 and not g1.claimable and g1.text == "Eat 10 food: 0/10", "a changed top row notifies once: " .. tostring(g1 and g1.text))
+refetch() refetch()
+assert(topChanges == 1, "the same answer again (every 20 s poll) does not wake the goal line")
+view = copy(v1)
+refetch()
+assert(topChanges == 2 and Panel.goalLine(fitHub).claimable, "a finished task notifies and is claimable")
+view = t8(0)
+Panel.setPlayActive(true)
+refetch()
+assert(Panel.goalLine(fitHub) == nil, "PLAY line on screen: an unfinished T8 gives the goal line nothing")
+Panel.setPlayActive(false)
+assert(Panel.goalLine({width = 600, font = 17, prefix = ""}).text == "Collect a second species" and Panel.goalLine({width = 200, font = 17, prefix = ""}).text == "Collect a second...", Panel.goalLine({width = 200, font = 17, prefix = ""}).text)
 -- the server says disabled / failing: the panel stays out of the way
 ---------------------------------------------------------------- OB2: the real ObjectiveSeen.luau (FusionMenu's one-time T9 report)
 do
@@ -536,6 +705,7 @@ def script() -> str:
         ('@@OBJ_CONFIG@@', 'src/shared/ObjectiveConfig.luau'),
         ('@@OBJ_RULES@@', 'src/shared/ObjectiveRules.luau'),
         ('@@PANEL_RULES@@', 'src/shared/ObjectivePanelRules.luau'),
+        ('@@NEXT_GOAL@@', 'src/shared/NextGoal.luau'),
     ]:
         text = text.replace(token, module(path))
     return text.replace('@@PANEL_SRC@@', panel_src)
@@ -560,8 +730,8 @@ def main(argv=None) -> int:
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         print(result.stderr, end='')
-        if result.returncode == 0 and 'Panel passed' in result.stdout:
-            print('Objectives panel verification passed (BD-075).')
+        if result.returncode == 0 and 'Panel passed' in result.stdout and 'Goal line passed' in result.stdout:
+            print('Objectives panel verification passed (BD-075, BD-076).')
             return 0
         return result.returncode or 1
 

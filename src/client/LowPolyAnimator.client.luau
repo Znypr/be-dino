@@ -109,6 +109,9 @@ local function updateAction(rig: any, now: number)
         if leaping then rig.aggr = 1 end
     elseif ph ~= nil and ph ~= "land" then
         rig.carry = if ph == "air" then math.clamp((now - rig.actAt) / Pose.TuckTime, 0, 1) else 0
+        rig.flap = if ph == "air" and rig.class == "Fly" then Pose.airFlap(now - rig.actAt, rig.aggr) else 0 -- the landing flutter continues from here
+        local dur = Pose.duration(ph, rig.aggr, rig.class)
+        rig.wing = Pose.wingOpen(ph, if dur > 0 then math.clamp((now - rig.actAt) / dur, 0, 1) else 1) -- a hop that lands before the wings opened keeps them folded
         startPhase(rig, "land", now)
     elseif ph == "land" and now - rig.actAt >= Pose.duration("land", rig.aggr, rig.class) then
         rig.act = nil
@@ -164,7 +167,7 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
     if phase then
         local elapsed = now - rig.actAt
         local dur = Pose.duration(phase, rig.aggr, rig.class)
-        ctx.phase, ctx.t, ctx.aggr, ctx.carry = phase, elapsed, rig.aggr, rig.carry
+        ctx.phase, ctx.t, ctx.aggr, ctx.carry, ctx.flap, ctx.wing = phase, elapsed, rig.aggr, rig.carry, rig.flap, rig.wing
         ctx.p = if dur > 0 then math.clamp(elapsed / dur, 0, 1) else 0
         k = Pose.actionWeight(phase, ctx.p)
     end
@@ -213,7 +216,7 @@ RunService.Heartbeat:Connect(function(dt)
             local _, size = visual:GetBoundingBox()
             -- character: updateAction reads it (jump, leap, land, surge, defeat). It was never set, so those poses never played (found by tools/verify_motion_poses.py).
             rig = {character = character, visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, flap = 0, wing = 1, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
@@ -239,7 +242,7 @@ RunService.Heartbeat:Connect(function(dt)
         local rig = npcRigs[model]
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
-            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0,
+            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0, flap = 0, wing = 1,
                 leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             npcRigs[model] = rig
         end

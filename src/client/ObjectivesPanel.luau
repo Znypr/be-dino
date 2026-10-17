@@ -19,10 +19,29 @@ local TouchLayout = require(Shared:WaitForChild("TouchLayout"))
 local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
 
 local Panel = {}
-local state = {playActive = true, view = nil :: any, fetchedAt = 0, fetching = false, nextFetch = 0}
+local state = {playActive = true, onTop = nil :: (() -> ())?, view = nil :: any, fetchedAt = 0, fetching = false, nextFetch = 0}
 
 -- GoalHud feeds the Goals panel PLAY state through this (true = "play new dinos" is on screen and not finished, so an unfinished T8 is hidden).
 function Panel.setPlayActive(active: boolean) state.playActive = active end
+
+-- BD-076 (docs/66 s19): the top objective for the one-line goal. Pure choice (ObjectivePanelRules.select = the same rows the panel shows, so an
+-- unfinished T8 stays hidden next to the Goals PLAY line); nil until the server has answered. fit = {width, font} of the goal line.
+function Panel.goalLine(fit: any): any?
+    if state.view == nil then return nil end
+    return Rules.goalLine(Rules.select(state.view, {playGoalActive = state.playActive}), fit)
+end
+-- GoalHud listens here: called only when what the goal line would say about the top row changed (not on every 20 s poll).
+function Panel.onTopChanged(fn: () -> ()) state.onTop = fn end
+local function topKey(): string
+    local top = Rules.select(state.view, {playGoalActive = state.playActive})[1]
+    if top == nil then return "" end
+    return string.format("%s|%d|%s", top.id, top.progress, tostring(top.claimable))
+end
+local function setView(view: any)
+    local before = topKey()
+    state.view, state.fetchedAt = view, os.clock()
+    if state.onTop and topKey() ~= before then state.onTop() end
+end
 
 local HEADER_H = TouchLayout.OBJECTIVES.h -- 44: the header is a button (docs/114 s4.4 tap-target floor)
 local ROW_H = TouchLayout.OBJECTIVES.rowH
@@ -185,7 +204,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
             local response = call({action = "view"})
             state.fetching = false
             if response and response.ok == true and typeof(response.view) == "table" then
-                state.view, state.fetchedAt = response.view, os.clock()
+                setView(response.view)
                 render()
             end
         end)
@@ -205,7 +224,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
             busy[id] = nil
             local code = if response == nil then "error" elseif response.ok == true then response.status else response.reason
             if not Rules.keepToken(code) then tokens[id] = nil end -- a definite answer frees the id; a lost one retries with the SAME token (claim-once)
-            if response and typeof(response.view) == "table" then state.view, state.fetchedAt = response.view, os.clock() end
+            if response and typeof(response.view) == "table" then setView(response.view) end
             if code == "claimed" and response and typeof(response.grant) == "table" then message = Rules.rewardText(response.grant) else message = Rules.claimMessage(code) end
             messageUntil = os.clock() + 2.5
             render()
