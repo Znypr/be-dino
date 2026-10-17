@@ -20,3 +20,6 @@ build/fx-weather-frames/
 
 # BD-430/431 intermediate Blender frames (tools/render_fx_anime.py); the assembled sheets live in resources/effects/fx-v2/
 build/fx-anime-frames/
+
+# Lead one-shot upload batch (tools/upload_batch.py): copies of repo PNGs plus manifest.json, never committed.
+build/upload-batch/

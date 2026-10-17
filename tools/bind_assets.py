@@ -4,6 +4,7 @@
     python tools/bind_assets.py - < ids.txt       # same, from stdin
     python tools/bind_assets.py ids.json          # {"ribbonSoft": "rbxassetid://123", "trail_fern": 456}
     python tools/bind_assets.py --list            # every slot name, kind and whether it is bound
+    python tools/bind_assets.py --batch uploaded.json --manifest build/upload-batch/manifest.json   # one-shot batch (tools/upload_batch.py)
     python tools/bind_assets.py --dry-run ids.txt # validate and show, write nothing
 
 Slots come from tools/asset_slots.json (checked against docs/120 by tools/verify_asset_slots.py). Unknown names, malformed
@@ -12,6 +13,7 @@ Audio ids must be Audio uploads, images must be Image (not Decal) uploads (docs/
 """
 import argparse
 import datetime
+import difflib
 import json
 import re
 import sys
@@ -56,6 +58,37 @@ def parse_input(text):
             raise ValueError(f'duplicate name: {name}')
         seen.add(name)
     return pairs
+
+
+def batch_pairs(upload_map, manifest):
+    """{"http://localhost:PORT/<file>": "rbxassetid://N"} + upload_batch manifest [{file, slot, url_path}] -> [(slot, id)].
+    A URL matches a manifest entry by its last path segment, so the host and port do not matter. Every URL must match
+    exactly one entry; an entry with no URL is simply not bound (partial uploads are fine)."""
+    by_path = {e['url_path'].lstrip('/'): e['slot'] for e in manifest}
+    pairs, errors = [], []
+    for url, ident in upload_map.items():
+        tail = re.split(r'[?#]', str(url))[0].rstrip('/').rsplit('/', 1)[-1]
+        slot = by_path.get(tail)
+        if slot is None:
+            errors.append(f'{url}: not in the manifest (expected one of the url_path names, e.g. {next(iter(by_path), "?")})')
+        else:
+            pairs.append((slot, ident))
+    if errors:
+        raise ValueError('\n'.join(errors))
+    return pairs
+
+
+def changed_lines(old, new):
+    """(old line, new line) pairs that differ ('' for a pure insert), for the dry-run report."""
+    a, b = old.splitlines(), new.splitlines()
+    out = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if tag == 'equal':
+            continue
+        old_l, new_l = [x.strip() for x in a[i1:i2]], [x.strip() for x in b[j1:j2]]
+        for k in range(max(len(old_l), len(new_l))):
+            out.append((old_l[k] if k < len(old_l) else '', new_l[k] if k < len(new_l) else ''))
+    return out
 
 
 def rep_one(text, pattern, value, what):
@@ -245,22 +278,41 @@ def main(argv=None):
     ap.add_argument('input', nargs='?', help="file of name=id lines or JSON, or '-' for stdin")
     ap.add_argument('--list', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--batch', metavar='MAP.json', help='uploader output {"http://localhost:PORT/<file>": "rbxassetid://N"}')
+    ap.add_argument('--manifest', metavar='manifest.json', help='manifest written by tools/upload_batch.py (needed with --batch)')
     args = ap.parse_args(argv)
     slots = load_slots()
     if args.list:
         list_slots(slots)
         return 0
-    if not args.input:
-        ap.error('give an input file (or - for stdin), or --list')
-    raw = sys.stdin.read() if args.input == '-' else Path(args.input).read_text(encoding='utf-8')
+    if args.batch:
+        if not args.manifest or args.input:
+            ap.error('--batch needs --manifest and no positional input')
+    elif not args.input:
+        ap.error('give an input file (or - for stdin), --batch MAP.json --manifest M.json, or --list')
     try:
-        plan, texts = bind(parse_input(raw), slots)
+        if args.batch:
+            upload_map = json.loads(Path(args.batch).read_text(encoding='utf-8'))
+            if not isinstance(upload_map, dict):
+                raise ValueError('--batch JSON must be an object of url: rbxassetid')
+            pairs = batch_pairs(upload_map, json.loads(Path(args.manifest).read_text(encoding='utf-8')))
+        else:
+            raw = sys.stdin.read() if args.input == '-' else Path(args.input).read_text(encoding='utf-8')
+            pairs = parse_input(raw)
+        plan, texts = bind(pairs, slots)
     except ValueError as e:
         print('REFUSED, nothing written:\n' + str(e), file=sys.stderr)
         return 1
     for name, digits in plan.items():
         print(f'{name} -> rbxassetid://{digits}  ({slots[name]["file"]}:{slots[name]["group"]})')
     if args.dry_run:
+        for path, text in texts.items():
+            diff = changed_lines(path.read_text(encoding='utf-8'), text)
+            print(f'{path.relative_to(ROOT).as_posix()}: {len(diff)} line(s) would change')
+            for old, new in diff:
+                if old:
+                    print(f'  - {old}')
+                print(f'  + {new}')
         print('dry run: nothing written')
         return 0
     for path, text in texts.items():
