@@ -82,6 +82,10 @@ local function updateAction(rig: any, now: number)
     local jumpEdge = jumpKey and not rig.jumpHeld
     rig.jumpHeld = jumpKey
     local leaping = now - rig.leapAt < 0.7
+    local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall
+        or (hum.FloorMaterial == Enum.Material.Air and math.abs(root.AssemblyLinearVelocity.Y) > 3)
+    rig.inAir = airborne
+    if airborne then rig.airAt = now end -- BD-556: the hip-dip cover looks for a dip for a moment after the last airborne frame
     if rig.class == "Water" then -- no air time: the jump / leap button is a forward surge
         if rig.act == "surge" and now - rig.actAt >= Pose.duration("surge", rig.aggr, "Water") then rig.act = nil end
         if rig.act == nil and (jumpEdge or (leaping and rig.leapAt ~= rig.surgeLeap)) then
@@ -95,8 +99,6 @@ local function updateAction(rig: any, now: number)
         end
         return
     end
-    local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall
-        or (hum.FloorMaterial == Enum.Material.Air and math.abs(root.AssemblyLinearVelocity.Y) > 3)
     local ph = rig.act
     if airborne then
         -- BD-555: the humanoid reports Jumping only once the dino has left the ground, so a crouch and a push-off here would play AFTER take-off
@@ -153,6 +155,29 @@ local function collect(visual: Model): {any}
     return list
 end
 
+-- BD-556: root height over the floor below it (nil = no floor in reach). Only the local player is checked (a ray 4 times a second while settled,
+-- every frame for Pose.HipDipWindow after touch-down), so the cost is a handful of rays per second.
+local function floorGap(rig: any): number?
+    local at = rig.root.Position
+    local hit = workspace:Raycast(at, Vector3.new(0, -12, 0), rig.rayParams)
+    return if hit then at.Y - hit.Position.Y else nil
+end
+-- Studs the whole visual must be lifted so the hard-landing hip compression (the humanoid's spring) does not sink the feet into the ground.
+local function hipDipFor(rig: any, now: number): number
+    if rig.inAir then return 0 end -- no rays in flight
+    if now - rig.airAt > Pose.HipDipWindow then
+        if now - rig.gapAt >= 0.25 then -- settled: learn the normal root-to-floor height
+            rig.gapAt = now
+            local g = floorGap(rig)
+            if g then rig.restGap = if rig.restGap then rig.restGap + (g - rig.restGap) * 0.5 else g end
+        end
+        return 0
+    end
+    if not rig.restGap then return 0 end
+    local g = floorGap(rig)
+    return if g then Pose.hipDip(rig.restGap, g) else 0
+end
+
 local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?)
     local root = rig.root
     local v = root.AssemblyLinearVelocity
@@ -174,6 +199,7 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         k = if phase == "air" then Pose.airWeight(elapsed) elseif phase == "land" then Pose.landWeight(ctx.p, rig.landFrom) else Pose.actionWeight(phase, ctx.p)
     end
     local bob = Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class) * height -- BD-388: one shared translation for every part
+    if amp > 0 and rig.rayParams then bob += hipDipFor(rig, now) end -- BD-556: the same lift for every part, so nothing slides
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
@@ -224,7 +250,13 @@ RunService.Heartbeat:Connect(function(dt)
             local _, size = visual:GetBoundingBox()
             -- character: updateAction reads it (jump, leap, land, surge, defeat). It was never set, so those poses never played (found by tools/verify_motion_poses.py).
             rig = {character = character, visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), aggr = 0, carry = 0, landFrom = 1, flap = 0, wing = 1, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, landFrom = 1, flap = 0, wing = 1, airAt = -10, gapAt = -10, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
+            if player == Players.LocalPlayer then -- BD-556: only the local dino looks for the hard-landing hip dip
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                params.FilterDescendantsInstances = {character}
+                rig.rayParams = params
+            end
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then

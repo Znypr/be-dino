@@ -6,6 +6,9 @@
 -- Pure choices (which 3 rows, the folded line, the words, claim answers) live in Shared/ObjectivePanelRules (tools/verify_objectives_panel.py).
 -- Pattern: GoalsPanel (existing UI parts only: Theme.decorate plates, the registered "trophy" icon, no new art, no asset ids).
 -- Folded: ONE 44 px line (trophy, nearest task, progress chip). Open: header + the 3 tasks (name, progress bar, CLAIM when done) + "New tasks soon".
+-- BD-561 (docs/109 section 9): four OPTIONAL icons (chevron, tutorial arrow, crystal, star), each read from Theme.ImageIds. An empty id = no Instance and no
+-- reserved space, so with all four empty the panel is exactly the one without icons; geometry comes from the pure ObjectivePanelRules.headerLayout /
+-- prizeLayout / fitWords (tools/verify_objectives_panel.py checks both states).
 -- Placement comes from TouchLayout (published by Bootstrap as the ObjectivesRect / ObjectivesOpenRect attributes of the BeDinoUI gui), at 1:1
 -- so text is >= 14 px and every button >= 44 px. Hidden during a run, like the Goals panel (the hub is where tasks are read and claimed).
 local HttpService = game:GetService("HttpService")
@@ -86,6 +89,31 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
     local chipText = text(chip, "ChipText", 16, C.text, Enum.TextXAlignment.Center) -- progress "3/10" or "Done!" (folded)
     chipText.Position, chipText.Size = UDim2.fromOffset(0, 0), UDim2.fromScale(1, 1)
 
+    -- BD-561: icon slots. Rules.Slots names the Theme.ImageIds keys; a key with no id gets nothing at all (makeIcon returns nil).
+    local P = Rules.IconPx
+    local art: {[string]: boolean} = {}
+    for which, key in Rules.Slots do
+        local ids = (Theme :: any).ImageIds
+        local id = if type(ids) == "table" then ids[key] else nil
+        art[which] = type(id) == "string" and id ~= ""
+    end
+    local anyArt = art.chevron or art.arrow or art.crystal or art.star
+    local function makeIcon(parent: GuiObject, which: string, px: number): GuiObject?
+        if not art[which] then return nil end
+        local icon = Theme.icon(parent, Rules.Slots[which])
+        if icon then icon.Size, icon.Visible = UDim2.fromOffset(px, px), false end
+        return icon
+    end
+    local chevronIcon, arrowIcon = makeIcon(header, "chevron", P.chevron), makeIcon(header, "arrow", P.arrow)
+    local starIcon, gemIcon = makeIcon(header, "star", P.star), makeIcon(header, "crystal", P.crystal)
+    -- The arrow bobs 3 px every half second (a tween, ~2 updates a second); Reduce Motion (Theme.MotionEnabled false) keeps it still.
+    local function bobTo(icon: GuiObject, x: number, y: number)
+        local bob = if (Theme :: any).MotionEnabled ~= false and math.floor(os.clock() / 0.5) % 2 == 1 then 3 else 0
+        local at = UDim2.fromOffset(x, y + bob)
+        if icon.Visible then Theme.animate(icon, 0.4, {Position = at}) else icon.Position = at end
+        icon.Visible = true
+    end
+
     -- Body: the 3 rows (pooled, updated on data changes only, never per frame).
     local body = Instance.new("ScrollingFrame")
     body.Name, body.BackgroundTransparency, body.BorderSizePixel, body.ScrollBarThickness = "Body", 1, 0, 6
@@ -115,13 +143,16 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         local divider = Instance.new("Frame") -- 2 px line in the gap under the row (UITheme card colour, no art); hidden under the last shown row
         divider.Name, divider.BackgroundColor3, divider.BorderSizePixel, divider.ZIndex = "Divider", C.card, 0, body.ZIndex
         divider.Position, divider.Size, divider.Parent = UDim2.fromOffset(8, ROW_H + ROW_GAP / 2 - 1), UDim2.new(1, -16, 0, 2), row
-        rows[i] = {frame = row, divider = divider, name = name, note = note, bar = bar, fill = fill, count = count, reward = reward, claim = claim, id = nil :: string?, fraction = -1}
+        rows[i] = {frame = row, divider = divider, name = name, note = note, bar = bar, fill = fill, count = count, reward = reward, claim = claim, id = nil :: string?, fraction = -1,
+            arrow = makeIcon(row, "arrow", P.arrow), star = makeIcon(row, "star", P.row), gem = makeIcon(row, "crystal", P.row)}
     end
 
     local open = false
     local busy: {[string]: boolean} = {}
     local tokens: {[string]: string} = {}
     local message, messageUntil = "", 0
+    local messageGrant: any = nil -- the grant behind `message` (so the crystal icon can follow the number); nil for any other answer
+    local panelWidth = TouchLayout.OBJECTIVES.w -- the width the rect gives the panel (the tween may still be on its way)
     local shown: {any} = {}
     local lastRects = ""
 
@@ -171,6 +202,42 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         end
         title.TextSize = if open then 17 else TEXT
         title.TextColor3 = if folded.claimable and not open then C.accent else C.gold
+        if anyArt then -- BD-561: re-place the header pieces around the icons that exist; icons that do not exist change nothing
+            local lay = Rules.headerLayout(panelWidth, {
+                chevron = chevronIcon ~= nil, arrow = arrowIcon ~= nil and folded.tutorial == true, star = starIcon ~= nil and folded.claimable,
+                chip = chip.Visible, open = open,
+            })
+            if chevronIcon then
+                chevronIcon.Position, chevronIcon.Rotation, chevronIcon.Visible = UDim2.fromOffset(lay.chevronX, (HEADER_H - P.chevron) // 2), if open then 180 else 0, true
+            end
+            local gemShown = false
+            if open then
+                -- The claim answer sits in the right-hand words; with the crystal icon it is "+10" and the gem at the very end (number, then gem).
+                local inset = lay.waitInset
+                local words = if showMessage and messageGrant ~= nil and gemIcon ~= nil then Rules.rewardWords(messageGrant, true) else nil
+                if words and gemIcon and Rules.textWidth(words, PhoneScale.MinText) <= lay.waitW - P.crystal - 2 then
+                    gemShown = true
+                    gemIcon.Position = UDim2.new(1, -(inset + P.crystal), 0, (HEADER_H - P.crystal) // 2)
+                    inset += P.crystal + 2
+                    wait.Text = words
+                else
+                    wait.Text = Rules.fitWords(wait.Text, lay.waitW, PhoneScale.MinText) or "Soon"
+                end
+                wait.Position, wait.Size = UDim2.new(1, -inset, 0.5, 0), UDim2.new(0.62, -inset, 1, 0)
+                title.Text = Rules.fitWords(title.Text, lay.titleW, 17) or title.Text
+            else
+                title.Position, title.Size = UDim2.fromOffset(lay.titleX, 0), UDim2.new(0, lay.titleW, 1, 0)
+                title.Text = Rules.fitWords(title.Text, lay.titleW, TEXT) or "Task"
+                if lay.chipX then chip.Position = UDim2.fromOffset(lay.chipX, 8) end
+            end
+            if gemIcon then gemIcon.Visible = gemShown end
+            if arrowIcon then
+                if lay.arrowX then bobTo(arrowIcon, lay.arrowX, (HEADER_H - P.arrow) // 2) else arrowIcon.Visible = false end
+            end
+            if starIcon then
+                if lay.starX then starIcon.Position, starIcon.Visible = UDim2.fromOffset(lay.starX, (HEADER_H - P.star) // 2), true else starIcon.Visible = false end
+            end
+        end
         -- Rows.
         body.Visible = open
         for i, r in rows do
@@ -213,6 +280,42 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
                 else
                     r.reward.Position, r.reward.Size, r.reward.TextXAlignment = UDim2.new(1, rightX, 0, 30), UDim2.fromOffset(CLAIM_W, 22), Enum.TextXAlignment.Right
                 end
+                if anyArt then -- BD-561: arrow on the open tutorial task, star + gem on the prize line; each only where it fits
+                    local arrowRoom = P.arrow + Rules.IconGap
+                    if r.arrow then
+                        if data.group == "tutorial" and not data.claimable and Rules.wrapLines(data.name, leftW - arrowRoom, TEXT) <= (if hasNote then 1 else 2) then
+                            r.name.Position, r.name.Size = UDim2.fromOffset(8 + arrowRoom, 3), UDim2.fromOffset(leftW - arrowRoom, if hasNote then 20 else 32)
+                            if hasNote then -- the hint is indented too, and cut at a whole word if it no longer fits
+                                r.note.Position, r.note.Size = UDim2.fromOffset(8 + arrowRoom, 23), UDim2.fromOffset(leftW - arrowRoom, 18)
+                                r.note.Text = Rules.fitWords(data.note, leftW - arrowRoom, PhoneScale.MinText) or data.note
+                            end
+                            bobTo(r.arrow, 8, 3)
+                        else
+                            r.arrow.Visible = false
+                        end
+                    end
+                    local lay = Rules.prizeLayout(data.reward, if data.claimable then leftW else CLAIM_W, data.claimable, {star = r.star ~= nil, gem = r.gem ~= nil})
+                    r.reward.Text = lay.words
+                    if data.claimable then
+                        local lineY, lineH = if hasNote then 41 else 38, if hasNote then 18 else 20
+                        r.reward.Position, r.reward.Size = UDim2.fromOffset(8 + lay.text.x, lineY), UDim2.fromOffset(lay.text.w, lineH)
+                        if r.star then
+                            r.star.Visible = lay.star ~= nil
+                            if lay.star then r.star.Position = UDim2.fromOffset(8 + lay.star, lineY + (lineH - P.row) // 2) end
+                        end
+                        if r.gem then
+                            r.gem.Visible = lay.gem ~= nil
+                            if lay.gem then r.gem.Position = UDim2.fromOffset(8 + lay.gem, lineY + (lineH - P.row) // 2) end
+                        end
+                    else
+                        r.reward.Size = UDim2.fromOffset(lay.text.w, 22)
+                        if r.star then r.star.Visible = false end
+                        if r.gem then
+                            r.gem.Visible = lay.gem ~= nil
+                            if lay.gem then r.gem.Position = UDim2.new(1, rightX + lay.gem, 0, 31) end
+                        end
+                    end
+                end
             end
         end
     end
@@ -246,7 +349,11 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
             local code = if response == nil then "error" elseif response.ok == true then response.status else response.reason
             if not Rules.keepToken(code) then tokens[id] = nil end -- a definite answer frees the id; a lost one retries with the SAME token (claim-once)
             if response and typeof(response.view) == "table" then setView(response.view) end
-            if code == "claimed" and response and typeof(response.grant) == "table" then message = Rules.rewardText(response.grant) else message = Rules.claimMessage(code) end
+            if code == "claimed" and response and typeof(response.grant) == "table" then
+                message, messageGrant = Rules.rewardText(response.grant), response.grant
+            else
+                message, messageGrant = Rules.claimMessage(code), nil
+            end
             messageUntil = os.clock() + 2.5
             render()
             if not (response and response.ok == true) then fetch(true) end -- e.g. the window rolled over: show what the server says now
@@ -291,6 +398,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         if key ~= lastRects then
             lastRects = key
             local height = if open then rect.Height else HEADER_H
+            panelWidth = rect.Width
             root.Position = UDim2.fromOffset(rect.Min.X, rect.Min.Y)
             Theme.animate(root, 0.15, {Size = UDim2.fromOffset(rect.Width, height)})
             body.CanvasSize = UDim2.fromOffset(0, CANVAS_H)

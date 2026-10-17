@@ -1,0 +1,41 @@
+# Raw output, 2026-10-17 s1 pass (Studio, playtest profile redesign-020, one player, unpublished copy)
+
+## 5-minute run, walker log (client, game time in brackets)
+[111.6] RUN START (RunState Active) after gate walk 7.0s
+[111.6] start t=0s eggs=0 carry=0.00 growth=0.00 rawFood(growth/0.1)=0 scale=1 weather=clear walkspeed=22 species=compy lootMult=1 growthMult=1
+[171.6] min1 t=60s eggs=25 carry=0.03 growth=104.30 rawFood(growth/0.1)=1043 scale=1.757 weather=clear walkspeed=22 lootMult=1 growthMult=1
+[231.7] min2 t=120s eggs=49 carry=0.51 growth=206.30 rawFood(growth/0.1)=2063 scale=2.264 weather=clear walkspeed=22 lootMult=1 growthMult=1
+[291.6] min3 t=180s eggs=65 carry=0.71 growth=273.80 rawFood(growth/0.1)=2738 scale=2.545 weather=clear walkspeed=22 lootMult=1 growthMult=1
+[351.7] min4 t=240s eggs=85 carry=0.59 growth=341.01 rawFood(growth/0.1)=3410 scale=2.796 weather=thunder walkspeed=25.3 lootMult=1.4 growthMult=1.1
+[411.7] min5 t=300s eggs=97 carry=0.82 growth=381.05 rawFood(growth/0.1)=3811 scale=2.936 weather=thunder walkspeed=25.3 lootMult=1.4 growthMult=1.1
+Then HOME by hand (UI): GO HOME card "You found 99 eggs, Growth 386"; Run Complete "Eggs found 99, +183 Crystals, +4 nests, Growth 386".
+Server log: [BD-TELEMETRY] {"event":"run_end","duration_s":372,"reason":"ManualExit","food":4125,"food_is_estimate":true,"eggs":99,"nests":4,"crystals":183}
+Frame rate sampled with RenderStepped: 60.5 / 61 / 60 per second at the join, during the run (30 s, end), and at the end.
+
+## Memory (Stats:GetTotalMemoryUsageMb and GetMemoryUsageMbForTag, tags >= 0.5 MB; client and server read the same numbers: one Studio process)
+join (in the cave hub): total=3389.4 Internal=1925.2 Instances=164.1 Signals=16.0 LuaHeap=699.4 Script=270.0 BaseParts=52.3 GraphicsMeshParts=4.4 GraphicsParticles=15.9 GraphicsParts=6.2 GraphicsSpatialHash=1.3 GraphicsTerrain=48.3 GraphicsTexture=59.7 GraphicsTextureCharacter=4.0 Sounds=4.5 TerrainVoxels=7.2 Gui=28.6 Animation=5.2 | parts=6387 instances(workspace)=8871
+after the 5-minute run (island, thunder, 29 emitters on): total=3703.9 Internal=1935.6 Instances=164.0 Signals=16.0 LuaHeap=696.7 Script=270.0 BaseParts=52.0 GraphicsMeshParts=4.3 GraphicsParticles=16.1 GraphicsParts=6.4 GraphicsSpatialHash=1.6 GraphicsTerrain=48.6 GraphicsTexture=87.6 GraphicsTextureCharacter=4.0 Sounds=5.4 TerrainVoxels=7.6 Gui=28.6 Animation=7.5 | parts=6467 instances=9031
+hub after the run (clear weather): total=3818.3 Internal=1999.2 Instances=196.2 Signals=16.0 LuaHeap=722.5 Script=270.0 BaseParts=52.2 GraphicsMeshParts=4.3 GraphicsParticles=16.0 GraphicsParts=6.3 GraphicsSpatialHash=1.3 GraphicsTerrain=48.9 GraphicsTexture=99.2 GraphicsTextureCharacter=4.0 Sounds=5.9 TerrainVoxels=7.6 Gui=28.9 Animation=7.9 | parts=6235 instances=8567
+hub after the seven weather events and seven gate trips: total=3923.6 Internal=1982.6 Instances=197.5 Signals=18.1 LuaHeap=737.2 Script=270.0 BaseParts=54.1 GraphicsMeshParts=4.3 GraphicsParticles=15.9 GraphicsParts=6.5 GraphicsSpatialHash=1.7 GraphicsTerrain=49.0 GraphicsTexture=135.7 GraphicsTextureCharacter=6.0 Sounds=6.7 TerrainVoxels=7.7 Gui=29.5 Animation=12.6 | parts=6372 instances=8841
+workspace attributes at the end: PatternImagesPinned=0 PatternImagesLive=0 LowPolyDinosFailed=0 LowPolyDinosLoaded=22; LowPolyImagesMiB / LowPolyImagesLive / LowPolyCacheDenied never set (nil); StreamingEnabled=false.
+
+## Cave weather probe (hub, Heart spawn (0, 8.8, 580), 6 to 8 s after the admin remote started the event) vs the island 6 to 7 s after the gate
+baseline hub, clear:  emittersOn=0 beamsOn=0 | bright=1.30 expo=-0.60 fogEnd=900 | haze dens=0.04 | grade sat=0.00 | bloom=0.00 | rays=0.00 | CaveGrade b=-0.05 c=0.08 s=0.05
+HUB rain      : emittersOn=0 rateSum=0 beamsOn=0 | bright=1.30 expo=-0.60 fogEnd=900 | grade 0/0/0 bloom 0 rays 0
+ISLAND rain   : emittersOn=12 rateSum=13812 | bright=0.90 expo=-0.35 fogEnd=260 | haze dens=0.50 | grade b-0.06 c0.14 s-0.26 | bloom 0.20 | dof on
+HUB thunder   : emittersOn=0 beamsOn=0 | unchanged (same numbers as baseline)
+ISLAND thunder: emittersOn=12 rateSum=18128 | bright=1.80 expo=-0.30 fogEnd=200 | haze dens=0.56 | grade s-0.20 | bloom 0.50
+HUB blizzard  : emittersOn=0 beamsOn=0 | unchanged
+ISLAND blizzard: emittersOn=8 rateSum=6146 | bright=1.80 expo=0.00 fogEnd=110 | haze dens=0.80 | grade s-0.40 | bloom 0.45 | rays 0.10
+HUB volcano   : emittersOn=0 beamsOn=0 | unchanged
+ISLAND volcano: emittersOn=16 rateSum=2503 | bright=1.80 expo=-0.20 fogEnd=300 | haze dens=0.40 | grade s+0.15 | bloom 0.25 | rays 0.15
+HUB aurora    : emittersOn=0 beamsOn=0 | unchanged
+ISLAND aurora : emittersOn=7 rateSum=677 beamsOn=42 | bright=1.80 expo=-0.20 fogEnd=400 | haze dens=0.32 | grade s+0.40 | bloom 1.20 | rays 0.05
+HUB quake     : emittersOn=0 beamsOn=0 | unchanged
+ISLAND quake  : emittersOn=5 rateSum=239 | bright=1.80 expo=0.00 fogEnd=220 | haze dens=0.45 | grade s-0.14 | bloom 0.15
+HUB bloodmoon : emittersOn=0 beamsOn=0 | visible moon parts 0 | unchanged
+ISLAND bloodmoon: emittersOn=6 rateSum=724 | bright=1.80 expo=-0.15 fogEnd=360 | haze dens=0.40 | grade s+0.45 | bloom 0.50 | rays 0.12 | visible moon parts 3
+Going HOME with the blood moon active: RunState stays "Settled" for about 2 s (the dino is still on the island, weather fully on), then Sanctuary: particles off at once, grade saturation 0.45 -> 0.00 in 0.8 s (0.44, 0.30, 0.15, 0.00 at 0.25 s steps). Weather fully gone about 2.9 s after tapping GO HOME.
+
+## Console (get_console_output, whole session)
+Only UIBlox "FoundationProvider not found" warnings (Studio core UI, known) plus the game's own "[Be Dino] redesign-020 ready", [BD-TELEMETRY] run_end lines and "[Be Dino admin]" lines. No red lines from src/.
