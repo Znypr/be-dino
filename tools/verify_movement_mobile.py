@@ -231,12 +231,16 @@ local function elements(layout)
  -- BD-531: the Admin button (Studio/admin only) and the hub Goals header must not sit on any HUD piece either (it covered the egg plate at 836 x 390).
  table.insert(list, {name = "admin", interactive = true, thumbOk = true, r = {x = layout.admin.x, y = layout.admin.y, w = layout.admin.w, h = layout.admin.h}})
  if layout.goals then table.insert(list, {name = "goals", interactive = true, thumbOk = true, r = {x = layout.goals.x, y = layout.goals.y, w = layout.goals.w, h = layout.goals.h}}) end
+ -- BD-075: the FOLDED objectives pill (flag on, hub). A 44 px tappable header, so it must stay out of Roblox's thumbstick zone and the jump corner too (no thumbOk).
+ -- On desktop the hub Goals panel (folded) is checked as well: the pill sits next to it.
+ if layout.objectives then table.insert(list, {name = "objectives", interactive = true, r = {x = layout.objectives.x, y = layout.objectives.y, w = layout.objectives.w, h = layout.objectives.h}}) end
+ if layout.goalsPanel then table.insert(list, {name = "goalspanel", interactive = true, r = layout.goalsPanel}) end
  table.insert(list, {name = "goalline", r = {x = layout.crystal.x, y = layout.crystal.y + layout.crystal.h * layout.crystal.scale + TouchLayout.GOAL_GAP, w = layout.crystal.w * layout.crystal.scale, h = TouchLayout.GOAL_H * layout.crystal.scale}})
  table.insert(list, {name = "notice", r = rect(layout.notice)})
  -- BD-538: the in-run SIZE bar and its goal hint (HudV2) and the hub "Back to the middle" chip (HubTravelClient) come from the layout now. They used to be
  -- centred and put 9 x 30 px (bar) and 4 x 44 px (chip) under the weather/LEAP column at 667 x 317. Included for every canvas (more than the game ever shows
  -- at once), so a piece that comes back onto the column, the rail, the egg plate, Tell us!, Admin or Home fails here. The chip is a 48 px tap target.
- if not layout.goals then -- the SIZE bar and hint are in-run only; the Goals header is hub-only (never on screen together)
+ if not layout.goals and not layout.objectives then -- the SIZE bar and hint are in-run only; the Goals header and the objectives pill are hub-only (never on screen together)
   table.insert(list, {name = "sizebar", thumbOk = true, r = rect(layout.sizeBar)})
   table.insert(list, {name = "sizehint", thumbOk = true, r = rect(layout.sizeHint)})
  end
@@ -249,11 +253,40 @@ local function elements(layout)
  return list
 end
 local NAV = 7
-local function check(width, height, touch, measured, goals)
+-- BD-075: the OPEN objectives sheet. Desktop: clear of EVERY piece, including the open Goals panel. Phone: the player opened it on purpose, so it may cover
+-- exactly these hub pieces (the Goals header, the weather/LEAP/buffs column, the "Back to the middle" chip) and nothing else: not the egg plate, wallet, goal
+-- line, rail, Home, Tell us!, Admin, the thumbstick zone or the jump corner. It is on the canvas and has room for the header and at least one row.
+local COVERABLE = {goals = true, leap = true, weather = true, buffs = true, chip = true}
+local function checkOpen(layout, list, width, height, label)
+ local O = TouchLayout.OBJECTIVES
+ local r = layout.objectivesOpen
+ assert(r and inside(r, width, height), label .. ": open objectives sheet leaves the canvas")
+ assert(r.w >= O.minW - 1e-6 and r.h >= O.h + O.rowH - 1e-6, label .. ": open sheet too small for the header and one row")
+ local folded = layout.objectives
+ assert(math.abs(r.y - folded.y) < 1e-6 and r.x < folded.x + folded.w and folded.x < r.x + r.w, label .. ": open sheet opens at the pill (same top edge, shared columns)")
+ for _, a in list do
+  if a.name ~= "objectives" and not (not layout.touch and a.name == "sizebar") then
+   local covers = TouchLayout.overlaps(r, a.r)
+   assert(not covers or (layout.touch and COVERABLE[a.name]), label .. ": open objectives sheet covers " .. a.name)
+  end
+ end
+ if layout.goalsPanelOpen then assert(not TouchLayout.overlaps(r, layout.goalsPanelOpen), label .. ": open objectives sheet touches the OPEN Goals panel") end
+ if layout.touch then
+  for zone, z in layout.reserved do assert(not TouchLayout.overlaps(r, z), label .. ": open sheet intrudes on Roblox " .. zone .. " zone") end
+ end
+end
+local function check(width, height, touch, measured, goals, objectives)
  local layout = TouchLayout.compute({width = width, height = height, touch = touch, navCount = NAV,
-  thumb = measured and measured.thumb, jump = measured and measured.jump, goals = goals})
+  thumb = measured and measured.thumb, jump = measured and measured.jump, goals = goals, objectives = objectives})
  local list = elements(layout)
- local label = string.format("%dx%d %s%s", width, height, if touch then "touch" else "desktop", if goals then " hub" else "")
+ local label = string.format("%dx%d %s%s%s", width, height, if touch then "touch" else "desktop", if goals then " hub" else "", if objectives then " +objectives" else "")
+ if objectives then
+  assert(layout.objectives and layout.objectivesOpen, label .. ": objectives rects missing")
+  if layout.touch then assert(goals, "objectives are hub-only") end
+  checkOpen(layout, list, width, height, label)
+ else
+  assert(layout.objectives == nil and layout.objectivesOpen == nil and layout.goalsPanel == nil, label .. ": flag off must add nothing to the layout")
+ end
  for i, a in list do
   assert(inside(a.r, width, height), label .. ": " .. a.name .. " leaves the safe canvas")
   for j = i + 1, #list do
@@ -289,8 +322,8 @@ local function check(width, height, touch, measured, goals)
 end
 local phones = {{800, 360}, {640, 360}, {667, 375}, {732, 412}, {844, 390}, {915, 412}, {800, 302}, {760, 360}}
 local tablets = {{1024, 768}, {1280, 720}, {1280, 800}, {1366, 1024}, {1920, 1080}, {2400, 1080}}
-for _, v in phones do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) end
-for _, v in tablets do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) end
+for _, v in phones do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) check(v[1], v[2], true, nil, true, true) end
+for _, v in tablets do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) check(v[1], v[2], true, nil, true, true) end
 -- BD-531: the real phone-landscape canvases. A 836 x 390 / 667 x 375 screen minus the Roblox top bar (36 to 58 px; the ScreenGui uses
 -- CoreUISafeInsets, which is what AbsoluteSize reports) is what TouchLayout sees; in a run and in the hub (Goals header on screen), mouse or touch.
 -- Every HUD element must be on the canvas and clear of every other one: egg plate ("hud"), wallet, goal line, Goals header, weather/leap/buffs
@@ -302,6 +335,12 @@ for _, v in {{836, 390}, {667, 375}} do
     local layout = TouchLayout.compute({width = v[1], height = v[2] - bar, touch = touch, navCount = NAV, goals = goals})
     assert(layout.touch, "short canvas uses the phone layout")
     check(v[1], v[2] - bar, touch, nil, goals) -- BD-538: the mouse case too (a PC window this short gets the phone layout)
+    if goals then -- BD-075: the objectives pill in the hub, same canvases: every HUD piece stays clear and the weather chip stays visible
+     local withObjectives = check(v[1], v[2] - bar, touch, nil, true, true)
+     assert(withObjectives.timers.weatherVisible, "weather chip stays visible next to the objectives pill")
+     local o = withObjectives.objectives
+     assert(o.w >= TouchLayout.OBJECTIVES.minW - 1e-6 and o.h >= Config.TouchMinTargetPx - 1e-6, "pill is at least minW wide and a 44 px target")
+    end
     local e = TouchLayout.rendered(layout.hud)
     assert(e.w > 0 and e.h > 0 and e.x >= 0 and e.y >= 0, "egg plate visible")
     assert(layout.timers.weatherVisible, "weather chip stays visible")
@@ -333,7 +372,12 @@ do
  end
 end
 -- BD-507: 1156 x 841 is the Studio game view of the owner review pictures (Tell us! sat on "EGGS 0" there); 800 x 600 is a small desktop window (a canvas under 500 px tall is the phone layout).
-for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {2400, 1080}, {1024, 768}, {1156, 841}, {800, 600}} do check(v[1], v[2], false) end
+for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {2400, 1080}, {1024, 768}, {1156, 841}, {800, 600}} do
+ check(v[1], v[2], false)
+ local d = check(v[1], v[2], false, nil, nil, true) -- BD-075: next to the hub Goals panel, same top edge, not over it (folded or open), not over the rail
+ assert(math.abs(d.objectives.y - d.goalsPanel.y) < 1e-6 and d.objectives.x + d.objectives.w <= d.goalsPanel.x + 1e-6, "desktop pill is left of the Goals panel, same top edge")
+ assert(math.abs(d.goalsPanel.x + d.goalsPanel.w - (d.crystal.x + d.crystal.w * d.crystal.scale)) < 1e-6, "Goals panel mirrors GoalsPanel.luau: right edge on the wallet")
+end
 for _, v in {{1156, 841}, {1280, 720}, {1920, 1080}, {1024, 768}, {800, 600}} do
  local layout = TouchLayout.compute({width = v[1], height = v[2], touch = false, navCount = NAV})
  assert(not TouchLayout.overlaps(layout.feedback, TouchLayout.rendered(layout.hud)), string.format("%dx%d desktop: Tell us! covers the egg plate", v[1], v[2]))

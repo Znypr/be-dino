@@ -30,6 +30,26 @@ TouchLayout.ADMIN = {w = 120, h = 48, desktopX = 14, desktopY = 8}
 -- PhoneScale.floorScale gives (1:1 on phones). On the phone layout the FOLDED header is only as wide as the wallet (at least MinW), so it
 -- never reaches under the rail; the panel grows to its 260 px width only while the player has it open. Bootstrap publishes the rect as GoalsRect.
 TouchLayout.GOALS = {w = 260, h = 44, dy = 34, minW = 130}
+-- BD-075: the collapsible objectives panel (ObjectivesPanel.luau), behind Config.ObjectivesEnabled. Real pixels, never scaled (44 px tall header
+-- and buttons, text >= 14 px at 1:1). `objectives` is the FOLDED rect (always clear of every HUD piece), `objectivesOpen` is the rect while it is
+-- open. Desktop: straight LEFT of the hub Goals panel (same top edge), clear of the open Goals panel too. Phone: under the rail, between the thumbstick
+-- zone and the Goals header (the weather column starts under it); the open sheet is the one part that may cover the Goals header, the weather column
+-- and the hub chip while the player has it open (everything else stays clear: tools/verify_movement_mobile.py). Bootstrap publishes both as the
+-- ObjectivesRect / ObjectivesOpenRect attributes of the BeDinoUI gui.
+TouchLayout.OBJECTIVES = {w = 300, minW = 190, h = 44, rowH = 52, rows = 3, gap = 4, deskGap = 8}
+TouchLayout.GOALS_OPEN_H = 214 -- GoalsPanel unfolded: 44 + 2 + 3 x 56
+function TouchLayout.objectivesOpenH(): number
+    local O = TouchLayout.OBJECTIVES
+    return O.h + 2 + O.rows * O.rowH + 4
+end
+-- Desktop (not compact) hub Goals panel, mirroring GoalsPanel.luau's own formula (right edges aligned on the wallet, 34 px design under the goal line, 260 wide).
+function TouchLayout.goalsDesktop(crystal): (Rect, Rect)
+    local G = TouchLayout.GOALS
+    local s = PhoneScale.floorScale(crystal.scale, G.h, 14)
+    local x = crystal.x + crystal.w * crystal.scale - G.w * s
+    local y = crystal.y + crystal.h * crystal.scale + TouchLayout.GOAL_GAP + G.dy * crystal.scale
+    return {x = x, y = y, w = G.w * s, h = G.h * s}, {x = x, y = y, w = G.w * s, h = TouchLayout.GOALS_OPEN_H * s}
+end
 -- BD-538: the in-run SIZE bar and the one-line goal hint under it (HudV2) and the hub "Back to the middle" chip (HubTravelClient). They used to
 -- sit at the screen centre on every canvas, which on a 667-wide phone put them 4 to 9 px under the weather/LEAP column. Both now come from
 -- the layout: centred when clear, else slid left of the right-hand column. Sizes are design px (the bar and hint carry a UIScale); the chip
@@ -57,6 +77,11 @@ function TouchLayout.walletPlates(layout): Rect
     if g then
         local x, y = math.min(plates.x, g.x), math.min(plates.y, g.y)
         plates = {x = x, y = y, w = math.max(plates.x + plates.w, g.x + g.w) - x, h = math.max(plates.y + plates.h, g.y + g.h) - y}
+    end
+    local o = layout.objectives -- BD-075: the folded objectives pill is part of the top-right block too (the toast stack keeps clear of it)
+    if o then
+        local x, y = math.min(plates.x, o.x), math.min(plates.y, o.y)
+        plates = {x = x, y = y, w = math.max(plates.x + plates.w, o.x + o.w) - x, h = math.max(plates.y + plates.h, o.y + o.h) - y}
     end
     return plates
 end
@@ -192,7 +217,7 @@ local function feedbackRect(layout, width: number, height: number): Rect
     return above
 end
 
-local function desktop(width: number, height: number, count: number)
+local function desktop(width: number, height: number, count: number, objectives: boolean?)
     local small = clamp(math.min(width / 1000, height / 800), 0.3, 1)
     local crystalScale = math.max(0.65, small)
     local hud = {x = 18, y = height - 18 - TouchLayout.HUD.h * small, scale = small, w = TouchLayout.HUD.w, h = TouchLayout.HUD.h}
@@ -220,6 +245,20 @@ local function desktop(width: number, height: number, count: number)
         toastScale = math.min(1, (width - 20) / 440),
     }
     result.feedback = feedbackRect(result, width, height) -- BD-507
+    if objectives then -- BD-075: left of the hub Goals panel, same top edge, clear of the rail and of the OPEN Goals panel
+        local O = TouchLayout.OBJECTIVES
+        local g, gOpen = TouchLayout.goalsDesktop(result.crystal)
+        result.goalsPanel, result.goalsPanelOpen = g, gOpen
+        local railRight = result.rail.x + result.rail.w * small
+        local right = g.x - O.deskGap
+        local x = math.max(right - O.w, railRight + O.deskGap)
+        local y = g.y
+        if right - x < O.minW then x, y = math.max(g.x + g.w - O.w, railRight + O.deskGap), g.y + gOpen.h + O.deskGap end -- tiny desktop: under the open Goals panel
+        local w = math.min(O.w, g.x + g.w - x)
+        if y == g.y then w = right - x end
+        result.objectives = {x = x, y = y, w = w, h = O.h}
+        result.objectivesOpen = {x = x, y = y, w = w, h = TouchLayout.objectivesOpenH()}
+    end
     local barScale = clamp(hud.scale, 0.7, 1) -- BD-538: the SIZE bar sits under the build badge at y 64 (HudV2 used to compute this itself)
     result.sizeBar, result.sizeHint = sizeBarRects(width, 64, barScale, TouchLayout.rendered(result.timers))
     result.chip = chipRect(width, height, {TouchLayout.rendered(result.timers)})
@@ -227,10 +266,11 @@ local function desktop(width: number, height: number, count: number)
 end
 
 -- `goals` (BD-531): true while the hub Goals header is on screen (out of a run, after the first egg); the right-hand column then starts under it.
-function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?})
+-- `objectives` (BD-075): true while the objectives pill is on screen (same condition as `goals`, and Config.ObjectivesEnabled); nil/false = nothing changes.
+function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?, objectives: boolean?})
     local width, height, count = params.width, params.height, params.navCount
     -- BD-333: a short canvas (phone landscape) always gets the phone layout, even when Studio/PC reports a mouse.
-    if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count) end
+    if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count, params.objectives) end
     local target, m = Config.TouchMinTargetPx, Config.TouchSafeMargin
     local s = clamp(math.min(width / 1000, height / 560), 0.55, 1)
     local thumb, corner = TouchLayout.reservedZones(width, height, params.thumb, params.jump)
@@ -275,6 +315,16 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         rail.button.w, rail.button.h = target, target
     end
 
+    local badgeY = hud.y + hud.h * hud.scale + 2
+    -- Studio-only preview notice: beside the build badge, or below it when the rail is in the way.
+    local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 20, textSize = PhoneScale.MinText}
+    if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
+        notice.x, notice.y = m, badgeY + 22
+        -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
+        notice.w = math.max(60, math.min(notice.w, rail.x - m - notice.x - 1)) -- BD-080: floor 60, Bootstrap scales the text to fit
+    end
+    local badge = {x = m, y = badgeY, scale = 1, w = math.max(60, math.min(150, rail.x - m - 2)), h = 20, textSize = PhoneScale.MinText} -- BD-080: the compact egg plate leaves less room before the rail
+
     -- Right column above the jump corner: weather on top, LEAP nearest the right thumb.
     local timersScale = math.max(target / TouchLayout.LEAP_H, s)
     local columnX = width - m - TouchLayout.TIMERS_W * timersScale
@@ -285,6 +335,40 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         goals.y = rail.y + rail.h + m -- BD-531: on a narrow canvas the header reaches under the rail: it starts below the rail (GoalsPanel follows the GoalsRect attribute)
     end
     if goals and goals.x + goals.w > columnX then top = math.max(top, goals.y + goals.h + m) end -- BD-531: weather/leap never sit under the Goals header
+    -- Bottom-centre Home/Explore between the thumbstick zone and the jump corner.
+    local actionScale = math.max(target / TouchLayout.ACTION.h, s)
+    local halfSpace = math.min(width / 2 - (thumb.x + thumb.w) - m, corner.x - m - width / 2)
+    local actionW = math.min(TouchLayout.ACTION.w, 2 * halfSpace / actionScale)
+    local action = {x = width / 2 - actionW * actionScale / 2, y = height - m - TouchLayout.ACTION.h * actionScale,
+        scale = actionScale, w = actionW, h = TouchLayout.ACTION.h}
+
+    -- BD-075: the objectives pill. Under the rail, left of the Goals header, right of the badge / notice and (where it reaches down into it) the thumbstick zone.
+    local objectives: Rect?, objectivesOpen: Rect? = nil, nil
+    if params.objectives then
+        local O = TouchLayout.OBJECTIVES
+        local y0 = if goals then goals.y else crystal.y + crystal.h * crystal.scale + TouchLayout.GOAL_GAP + TouchLayout.GOAL_H * crystal.scale + m
+        y0 = math.max(y0, rail.y + rail.h * rail.scale + O.gap)
+        local right = (if goals then goals.x else crystal.x) - O.gap
+        local left = m
+        if y0 + O.h > thumb.y then left = math.max(left, thumb.x + thumb.w + O.gap) end
+        for _, b in {TouchLayout.rendered(hud), TouchLayout.rendered(badge), TouchLayout.rendered(notice)} do
+            if b.y < y0 + O.h and y0 < b.y + b.h and b.x < right then left = math.max(left, b.x + b.w + O.gap) end
+        end
+        if y0 + O.h > top and right > columnX and columnX - O.gap - left >= O.minW then right = columnX - O.gap end -- narrow the pill before pushing the column down
+        local w = math.min(O.w, right - left)
+        objectives = {x = right - w, y = y0, w = w, h = O.h}
+        if y0 + O.h > top and objectives.x + objectives.w > columnX then top = y0 + O.h + m end -- the weather column starts under the pill
+        -- The open sheet grows right and down from the pill, never into the thumbstick zone's columns, the jump corner or Home.
+        local openH = TouchLayout.objectivesOpenH()
+        local sheetLeft = math.max(m, thumb.x + thumb.w + O.gap)
+        local sheetRight = width - m
+        if y0 + openH > corner.y then sheetRight = math.min(sheetRight, corner.x - O.gap) end
+        local x0 = math.max(sheetLeft, math.min(objectives.x, sheetRight - O.w))
+        local sw = math.min(O.w, sheetRight - x0)
+        local sh = math.min(openH, height - m - y0)
+        if x0 < action.x + action.w * action.scale and action.x < x0 + sw then sh = math.min(sh, action.y - O.gap - y0) end
+        objectivesOpen = {x = x0, y = y0, w = sw, h = math.max(sh, O.h)}
+    end
     local bottom = corner.y - 1 -- 1 px guard against float rounding at the shared edge
     local designH = math.min(220, (bottom - top) / timersScale)
     local leapY = designH - TouchLayout.LEAP_H
@@ -300,33 +384,20 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         buffsH = math.max(buffsH, 0), buffsVisible = weatherVisible and buffsH >= buffsText * 2,
         leapText = leapText, weatherText = weatherText, buffsText = buffsText}
 
-    -- Bottom-centre Home/Explore between the thumbstick zone and the jump corner.
-    local actionScale = math.max(target / TouchLayout.ACTION.h, s)
-    local halfSpace = math.min(width / 2 - (thumb.x + thumb.w) - m, corner.x - m - width / 2)
-    local actionW = math.min(TouchLayout.ACTION.w, 2 * halfSpace / actionScale)
-    local action = {x = width / 2 - actionW * actionScale / 2, y = height - m - TouchLayout.ACTION.h * actionScale,
-        scale = actionScale, w = actionW, h = TouchLayout.ACTION.h}
-
-    local badgeY = hud.y + hud.h * hud.scale + 2
-    -- Studio-only preview notice: beside the build badge, or below it when the rail is in the way.
-    local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 20, textSize = PhoneScale.MinText}
-    if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
-        notice.x, notice.y = m, badgeY + 22
-        -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
-        notice.w = math.max(60, math.min(notice.w, rail.x - m - notice.x - 1)) -- BD-080: floor 60, Bootstrap scales the text to fit
-    end
     local result = {
         touch = true,
         feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
         admin = {x = 0, y = 0, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} :: Rect, -- BD-531: filled below, next to Tell us!
         goals = goals,
+        objectives = objectives, -- BD-075: nil unless params.objectives (flag off = no key)
+        objectivesOpen = objectivesOpen,
         reserved = {thumb = thumb, jump = corner},
         crystal = crystal,
         hud = hud,
         rail = rail,
         timers = timers,
         action = action,
-        badge = {x = m, y = badgeY, scale = 1, w = math.max(60, math.min(150, rail.x - m - 2)), h = 20, textSize = PhoneScale.MinText}, -- BD-080: the compact egg plate leaves less room before the rail
+        badge = badge,
         notice = notice,
         toastScale = math.min(1, (width - 20) / 440),
     }

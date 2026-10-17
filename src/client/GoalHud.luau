@@ -23,6 +23,7 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
     local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
     goalText.TextScaled=true
     local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
+    local objectives: any=nil -- BD-075: the objectives panel module, set only while Config.ObjectivesEnabled (nil = flag off: nothing below runs)
     local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
     local function refreshGoal()
         -- BD-440: hidden until the first egg (the Goals panel follows this frame's Visible)
@@ -32,7 +33,9 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
             maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
             speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
         GoalsPanel.setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-        GoalsPanel.setSpecies(GoalsRules.indexCounts(ctx.decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return ctx.eventMutation(id)~=nil or ctx.ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#EggGenetics.Patterns,mutations=#ProgressionConfig.EventMutations},ctx.decoded("DiscoveryJson","")))
+        local counts=GoalsRules.indexCounts(ctx.decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return ctx.eventMutation(id)~=nil or ctx.ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#EggGenetics.Patterns,mutations=#ProgressionConfig.EventMutations},ctx.decoded("DiscoveryJson",""))
+        GoalsPanel.setSpecies(counts)
+        if objectives then objectives.setPlayActive(not GoalsRules.play(counts).done) end -- BD-075: the PLAY line and the "second species" task never nag at once (docs/66 s16)
         goalText.Text,goalText.TextColor3=(if ctx.touchMode() or PhoneScale.isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
     end
     local goalQueued=false
@@ -60,6 +63,10 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
         PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
     end
     GoalsPanel.attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
+    if Config.ObjectivesEnabled==true then -- BD-075: flag off (every committed build) = this module is never even required
+        objectives=require(script.Parent.ObjectivesPanel)
+        objectives.attach(gui,goalHUD)
+    end
     refreshGoal()
     loadGoalDinos()
     return goalHUD,goalScale,goalText,goalLimit

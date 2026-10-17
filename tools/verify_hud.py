@@ -7,6 +7,7 @@ HUD text gone, the HUD module reuses the existing "egg" icon (no invented asset 
 """
 from pathlib import Path
 import argparse, re, subprocess, sys, tempfile
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
 def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
 
@@ -88,6 +89,14 @@ def static_checks():
     hud_src = (ROOT / 'src/client/HudV2.luau').read_text(encoding='utf-8')
     assert 'layout.rail.scale' not in hud_src and 'top + (BAR_H + 4) * scale' not in hud_src, 'HudV2 no longer centres the bar itself'
     verify_movement_mobile.static_538_paths()
+    # BD-075: the objectives pill is a layout piece like the Goals header: both layouts return its rects when `objectives` is set (and nothing when it is not;
+    # tools/verify_movement_mobile.py asserts zero overlap with every HUD piece at 8 phone, 6 tablet, 7 desktop and the 836 x 390 / 667 x 375 canvases, folded
+    # and open), Bootstrap passes the flag and publishes the rects only under it, and GoalHud attaches the panel only behind Config.ObjectivesEnabled.
+    assert 'return desktop(width, height, count, params.objectives)' in touch and 'objectives = objectives,' in touch and 'result.objectives = {x = x, y = y, w = w, h = O.h}' in touch, 'both layouts place the objectives pill'
+    assert 'objectives=Config.ObjectivesEnabled==true and goalHUD.Visible' in boot, 'Bootstrap only asks for the pill while the flag is on'
+    import verify_objectives_panel
+    problems = verify_objectives_panel.static_errors()
+    assert not problems, 'objectives panel wiring: ' + '; '.join(problems)
     verify_movement_mobile.static_modal_rail()  # BD-546: the menu card clears the left rail, wired through ModalCompact
 
 if __name__ == '__main__':
