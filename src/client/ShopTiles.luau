@@ -20,8 +20,8 @@ local function image(parent: GuiObject, name: string, id: string, anchor: Vector
 end
 
 -- The live numbers the tile subtitles read: p = the decoded progression profile.
-function Tiles.info(p: any, eggPrice: number, crystals: number): {[string]: number}
-    return {auras = Art.countOwned(p.auras), trails = Art.countOwned(p.trails), eggPrice = eggPrice, crystals = crystals}
+function Tiles.info(p: any, eggPrice: number, crystals: number, randomBlocked: boolean?): {[string]: number}
+    return {auras = Art.countOwned(p.auras), trails = Art.countOwned(p.trails), eggPrice = eggPrice, crystals = crystals, randomBlocked = if randomBlocked then 1 else 0}
 end
 
 -- Decide whether the next shop open starts on the landing page (call before open("auras")).

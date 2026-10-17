@@ -45,6 +45,21 @@ end
 local toggle = button(gui, "Admin", C.purple, UDim2.fromOffset(120, 48))
 toggle.Name, toggle.Position = "AdminToggle", UDim2.fromOffset(14, 8)
 
+-- BD-531: Bootstrap publishes where the Admin button may sit (TouchLayout.admin): desktop keeps (14, 8); on the phone layout that spot is the
+-- egg plate, so it moves to the bottom-left row. The button only follows the attribute; nothing else moves it.
+task.spawn(function()
+    local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+    if not main then return end
+    local function pin()
+        local rect = main:GetAttribute("AdminRect")
+        if typeof(rect) == "Rect" then
+            toggle.Position, toggle.Size = UDim2.fromOffset(rect.Min.X, rect.Min.Y), UDim2.fromOffset(rect.Width, rect.Height)
+        end
+    end
+    main:GetAttributeChangedSignal("AdminRect"):Connect(pin)
+    pin()
+end)
+
 local panel = Instance.new("Frame")
 panel.Name, panel.BackgroundColor3, panel.Visible = "AdminPanel", C.panel, false
 -- BD-261: as wide as the screen allows up to 420 px (phone landscape), so no button runs past the edge.

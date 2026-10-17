@@ -43,7 +43,7 @@ local mutableConfig=table.clone(GameConfig)
 mutableConfig.WriteBudgetEnabled=false
 GameConfig=mutableConfig
 assert(GameConfig.StudioLocalProfilesEnabled==true and GameConfig.StudioTestWalletEnabled==true,"this case models the unpublished Studio memory profile")
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel",PaidRandomGate="PaidRandomGate"}}
 local services={DataStoreService={GetDataStore=function()return store end},HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return true end}}
 local game={GameId=0,JobId="test",GetService=function(_,id)return services[id] end} -- unpublished place: GameId 0 + Studio = local preview
 local task={wait=function()end,spawn=function()end,delay=function()end}
@@ -72,6 +72,7 @@ local require=function(id)
  if id=="RareHatchService" then return {record=function() end} end
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="FtueRules" then return FtueRules elseif id=="SettingsModel" then return SettingsModel end
+ if id=="PaidRandomGate" then return PAID_RANDOM_GATE_MODULE end -- BD-532
  error("unexpected module "..tostring(id))
 end
 local Random={new=function()return {NextNumber=function()return .5 end}end}
@@ -236,7 +237,7 @@ def script():
         ('FTUE_RULES_MODULE', 'src/shared/FtueRules.luau'), ('FUSION_ODDS_MODULE', 'src/server/FusionOdds.luau'),
         ('IDENTITY_FUSION_MODULE', 'src/server/IdentityFusion.luau'), ('COSMETIC_OWNERSHIP_MODULE', 'src/server/CosmeticOwnership.luau'),
         ('IDENTITY_MODULE', 'src/server/DinosaurIdentity.luau'), ('NEST_QUEUE_MODULE', 'src/shared/NestQueue.luau'),
-        ('SETTINGS_MODEL_MODULE', 'src/shared/SettingsModel.luau'), ('REWARDS_MODULE', 'src/server/RewardMath.luau'),
+        ('SETTINGS_MODEL_MODULE', 'src/shared/SettingsModel.luau'), ('PAID_RANDOM_GATE_MODULE', 'src/shared/PaidRandomGate.luau'), ('REWARDS_MODULE', 'src/server/RewardMath.luau'),
         ('REPO_MODULE', 'src/server/ProfileRepository.luau'), ('CLOCK_MODULE', 'src/shared/WeatherClock.luau'),
         ('SERVICE_MODULE', 'src/server/ProgressionService.luau')):
         s = s.replace(key, module(path))

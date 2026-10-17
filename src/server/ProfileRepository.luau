@@ -20,6 +20,7 @@ local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
 local CosmeticOwnership = require(script.Parent.CosmeticOwnership) -- BD-059 phase 2, only used when Config.PerDinoCosmeticsEnabled
 local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
+local PaidRandomGate = require(ReplicatedStorage.Shared.PaidRandomGate) -- BD-532
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -2032,8 +2033,8 @@ end
 function ProfileRepository.progressionAction(player: Player, action: string, id: string, token: string, replace: boolean?, amount: number?)
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
     if typeof(token)~="string" or #token<1 or #token>80 then return false,"invalid_token" end
-    if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
-        and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+    -- BD-532: one shared rule (the client greys the tile out with the same function before the tap); the policy gate is NOT loosened
+    if PaidRandomGate.guards(action) and PaidRandomGate.blocked(Config.DeveloperProducts, Config.PaidRandomItemsEnabled, PrivateState.get(player, "PaidRandomEligible")) then return false,"random_items_unavailable" end
     if action=="buyPerk" and (Config.FastTravelPerk~=true or Config.CaveHub~=true) then return false,"perk_unavailable" end -- BD-391/405: flag off = no purchase
     local eggId=nil
     local egg=nil
