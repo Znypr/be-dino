@@ -39,20 +39,47 @@ end
 
 local PANEL, CARD, ACCENT = Color3.fromRGB(42, 40, 53), Color3.fromRGB(61, 58, 73), Color3.fromRGB(93, 237, 31)
 
--- BD-507: first position = straight above the egg plate (desktop rule), until Bootstrap's layout publishes the real rect.
-local open = make("TextButton", gui, "TellUsButton", UDim2.fromOffset(120, 48), UDim2.new(0, 18, 1, -138))
+-- BD-507 / BD-524: ONE function, pin(), owns the button's Position and Size. Every other part of this script (the run-end watcher, respawn, the
+-- toasts) only touches Visible. pin() runs on the FeedbackRect attribute, whenever something else moves the button, whenever Visible flips
+-- (a run ended, a respawn), and whenever the egg plate moves; a last check nudges the button above the real EggsPlate if the two ever overlap.
+-- First position (before Bootstrap publishes the layout) = straight above the egg plate, the desktop rule.
+local FALLBACK_POS, FALLBACK_SIZE = UDim2.new(0, 18, 1, -138), UDim2.fromOffset(120, 48)
+local open = make("TextButton", gui, "TellUsButton", FALLBACK_SIZE, FALLBACK_POS)
 style(open, "Tell us!", Color3.fromRGB(194, 86, 255), 24)
+local uiRoot: Instance? = nil
+local function pin()
+    local r = if uiRoot then uiRoot:GetAttribute("FeedbackRect") else nil
+    local pos, size = FALLBACK_POS, FALLBACK_SIZE
+    if typeof(r) == "Rect" then pos, size = UDim2.fromOffset(r.Min.X, r.Min.Y), UDim2.fromOffset(r.Width, r.Height) end
+    local plate = if uiRoot then uiRoot:FindFirstChild("EggsPlate", true) else nil
+    if plate and plate:IsA("GuiObject") and plate.AbsoluteSize.X > 0 then
+        -- Safety net: resolve the target spot to pixels; if it still touches the real egg plate, sit just above the plate instead.
+        local space = gui.AbsoluteSize
+        local x, y = pos.X.Scale * space.X + pos.X.Offset, pos.Y.Scale * space.Y + pos.Y.Offset
+        local w, h = size.X.Offset, size.Y.Offset
+        local pa, pb = plate.AbsolutePosition - gui.AbsolutePosition, plate.AbsoluteSize
+        if x < pa.X + pb.X and pa.X < x + w and y < pa.Y + pb.Y and pa.Y < y + h then
+            pos = UDim2.fromOffset(x, math.max(0, pa.Y - 6 - h))
+        end
+    end
+    open.Position, open.Size = pos, size -- equal values fire no change event, so the guards below cannot loop
+end
+open:GetPropertyChangedSignal("Position"):Connect(pin)
+open:GetPropertyChangedSignal("Visible"):Connect(pin)
 task.spawn(function()
     local ui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
     if not ui then return end
-    local function sync()
-        local r = ui:GetAttribute("FeedbackRect")
-        if typeof(r) == "Rect" then
-            open.Position, open.Size = UDim2.fromOffset(r.Min.X, r.Min.Y), UDim2.fromOffset(r.Width, r.Height)
-        end
+    uiRoot = ui
+    ui:GetAttributeChangedSignal("FeedbackRect"):Connect(pin)
+    local function hookPlate(plate: Instance)
+        if plate.Name ~= "EggsPlate" or not plate:IsA("GuiObject") then return end
+        plate:GetPropertyChangedSignal("AbsolutePosition"):Connect(pin)
+        plate:GetPropertyChangedSignal("AbsoluteSize"):Connect(pin)
     end
-    ui:GetAttributeChangedSignal("FeedbackRect"):Connect(sync)
-    sync()
+    local existing = ui:FindFirstChild("EggsPlate", true)
+    if existing then hookPlate(existing) end
+    ui.DescendantAdded:Connect(hookPlate)
+    pin()
 end)
 open.Visible = false -- BD-441: hidden until the first run has ended (Rules.showButton)
 

@@ -80,6 +80,8 @@ def static_checks():
     assert 'gui:SetAttribute("FeedbackRect"' in boot, 'Bootstrap publishes the Tell us! rect'
     feedback = (ROOT / 'src/client/FeedbackClient.client.luau').read_text(encoding='utf-8')
     assert 'GetAttribute("FeedbackRect")' in feedback and 'UDim2.new(0, 12, 1, -68)' not in feedback, 'Tell us! follows the layout rect (no fixed bottom-left spot over the egg plate)'
+    import verify_movement_mobile  # BD-524: every path that can move the button (run end, respawn, toasts, Admin) uses the published rect
+    verify_movement_mobile.static_feedback_paths()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('--runner', required=True); args = parser.parse_args()
