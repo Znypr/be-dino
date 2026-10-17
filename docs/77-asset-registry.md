@@ -74,6 +74,61 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | sfx shop_refresh | sound | assets/audio/sfx/shop_refresh.wav | - | src/shared/Sfx.luau | planned |
 | sfx ui_click | sound | assets/audio/sfx/ui_click.wav | - | src/shared/Sfx.luau | planned |
 | sfx weather_start | sound | assets/audio/sfx/weather_start.wav | - | src/shared/Sfx.luau | planned |
+| trail_electric | image, owner upload | - | 80830681763211 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_tidal | image, owner upload | - | 74997682105205 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_astra | image, owner upload | - | 81320582648014 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_fern | image, owner upload | - | 83110978985156 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_solar | image, owner upload | - | 74556480306160 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_nova | image, owner upload | - | 72795088168090 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_frost | image, owner upload | - | 71078322710374 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_ember | image, owner upload | - | 96824687229527 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_dewdrop | image, owner upload | - | 107735055645703 | src/shared/AssetSlots.luau:Images.mutation_dewdrop (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_white | image, owner upload | - | 104044876766486 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_ember | image, owner upload | - | 117208551240266 | src/shared/AssetSlots.luau:Images.mutation_ember (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| trail_violet | image, owner upload | - | 77755278927267 | src/shared/ProgressionConfig.luau:TrailIconAssetIds (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_bloodmoon | image, owner upload | - | 74119171683709 | src/shared/AssetSlots.luau:Images.mutation_bloodmoon (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_charged | image, owner upload | - | 93959050524008 | src/shared/AssetSlots.luau:Images.mutation_charged (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_aurora | image, owner upload | - | 134568045943087 | src/shared/AssetSlots.luau:Images.mutation_aurora (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_frost | image, owner upload | - | 131948112110255 | src/shared/AssetSlots.luau:Images.mutation_frost (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| crystalSheet | image, owner upload | - | 94393081338822 | src/shared/EffectAssets.luau:Requested.crystalSheet (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| dustSand | image, owner upload | - | 119516661403029 | src/shared/EffectAssets.luau:Requested.dustSand (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| domeGradient | image, owner upload | - | 121647466011325 | src/shared/EffectAssets.luau:Requested.domeGradient (BD-430) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| auroraCurtain | image, owner upload | - | 128842494260639 | src/shared/EffectAssets.luau:Requested.auroraCurtain (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| bloodMoonDisc | image, owner upload | - | 122823984085426 | src/shared/EffectAssets.luau:Requested.bloodMoonDisc (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| mutation_seismic | image, owner upload | - | 72296125293283 | src/shared/AssetSlots.luau:Images.mutation_seismic (BD-190, BD-352) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| ashFlake | image, owner upload | - | 131635701604841 | src/shared/EffectAssets.luau:Requested.ashFlake (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| bloodMoonMotes | image, owner upload | - | 86426562626172 | src/shared/EffectAssets.luau:Requested.bloodMoonMotes (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| glowPlate | image, owner upload | - | 105101525902416 | src/shared/EffectAssets.luau:Requested.glowPlate (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifAurora | image, owner upload | - | 97185500895489 | src/shared/EffectAssets.luau:Requested.motifAurora (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| glowPlateRound | image, owner upload | - | 128285384434335 | src/shared/EffectAssets.luau:Requested.glowPlateRound (BD-186) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| lightningBolt | image, owner upload | - | 102197656625811 | src/shared/EffectAssets.luau:Requested.lightningBolt (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| glowPlateCrescent | image, owner upload | - | 138616004461778 | src/shared/EffectAssets.luau:Requested.glowPlateCrescent (BD-186) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| emberSpark | image, owner upload | - | 115473988653859 | src/shared/EffectAssets.luau:Requested.emberSpark (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| glowPlateDroplet | image, owner upload | - | 133056402460883 | src/shared/EffectAssets.luau:Requested.glowPlateDroplet (BD-186) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| flameTongue | image, owner upload | - | 114341056622728 | src/shared/EffectAssets.luau:Requested.flameTongue (BD-430) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifPebbles | image, owner upload | - | 100494013192702 | src/shared/EffectAssets.luau:Requested.motifPebbles (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifSoftSparks | image, owner upload | - | 102409610035010 | src/shared/EffectAssets.luau:Requested.motifSoftSparks (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifEmbers | image, owner upload | - | 98926643450640 | src/shared/EffectAssets.luau:Requested.motifEmbers (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| rainStreak | image, owner upload | - | 121551609229303 | src/shared/EffectAssets.luau:Requested.rainStreak (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifSnowCrystals | image, owner upload | - | 133573301109513 | src/shared/EffectAssets.luau:Requested.motifSnowCrystals (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| ribbonSoft | image, owner upload | - | 84468257631033 | src/shared/EffectAssets.luau:Requested.ribbonSoft (BD-178) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifCrimson | image, owner upload | - | 124636832847062 | src/shared/EffectAssets.luau:Requested.motifCrimson (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| motifDroplets | image, owner upload | - | 111454833517595 | src/shared/EffectAssets.luau:Requested.motifDroplets (BD-189, BD-162) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shaftGradient | image, owner upload | - | 93058052585705 | src/shared/EffectAssets.luau:Requested.shaftGradient (BD-431) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| smokeWispy | image, owner upload | - | 109923635123915 | src/shared/EffectAssets.luau:Requested.smokeWispy (BD-187) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| shellEdge | image, owner upload | - | 91928511866460 | src/shared/EffectAssets.luau:Requested.shellEdge (BD-431) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| smokeDense | image, owner upload | - | 105104302451262 | src/shared/EffectAssets.luau:Requested.smokeDense (BD-187) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| smokeSoft | image, owner upload | - | 77674653002282 | src/shared/EffectAssets.luau:Requested.smokeSoft (BD-187) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| ringSeismic | image, owner upload | - | 116339962404470 | src/shared/EffectAssets.luau:Requested.ringSeismic (BD-188) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| ringShock | image, owner upload | - | 95209918178125 | src/shared/EffectAssets.luau:Requested.ringShock (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| ringSoft | image, owner upload | - | 106236766216010 | src/shared/EffectAssets.luau:Requested.ringSoft (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| meadow_grass_v2_normal | image, owner upload | - | 136360120089645 | resources/visual-upgrade-bindings.json:worldMaterials.BeDino_MeadowV2.normal (BD-461) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| meadow_grass_v2_color | image, owner upload | - | 85444193168969 | resources/visual-upgrade-bindings.json:worldMaterials.BeDino_MeadowV2.color (BD-461) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| speedStreaks | image, owner upload | - | 75881547583312 | src/shared/EffectAssets.luau:Requested.speedStreaks (BD-431) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| snowFlakeSheet | image, owner upload | - | 88571241920989 | src/shared/EffectAssets.luau:Requested.snowFlakeSheet (BD-131) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| starPop | image, owner upload | - | 85961871126391 | src/shared/EffectAssets.luau:Requested.starPop (BD-430) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| meadow_grass_v2_roughness | image, owner upload | - | 114907673456194 | resources/visual-upgrade-bindings.json:worldMaterials.BeDino_MeadowV2.roughness (BD-461) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
+| speedLine | image, owner upload | - | 114909357103518 | src/shared/EffectAssets.luau:Requested.speedLine (BD-189) | uploaded 2026-10-17, source owner upload, bound (Studio check pending) |
 
 Notes
 

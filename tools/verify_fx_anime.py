@@ -34,9 +34,14 @@ def module(path, subs=None):
 
 PURE = r'''
 -- 1. EffectAssets
+-- 2026-10-17: the lead bound the uploaded ids. The slot may be empty OR one valid registered id; the EMPTY-state checks below
+-- still run (ids are cleared for them and restored at the end, where the bound state is checked too).
+local BOUND = {}
 for _, key in {"flameTongue", "starPop", "domeGradient", "speedStreaks", "shaftGradient", "shellEdge"} do
     local req = A.Requested[key]
-    assert(req and req.id == "", key .. " exists with an EMPTY id (never an invented one)")
+    assert(req and (req.id == "" or A.isValid(req.id)), key .. " exists with an empty or valid id (never an invented one)")
+    BOUND[key] = req.id
+    req.id = ""
     assert(not A.isReal(key) and A.resolve(key) == A.Builtin[req.fallback], key .. " empty resolves to its built-in sprite")
 end
 for _, key in {"flameTongue", "starPop"} do
@@ -145,6 +150,10 @@ assert(RH.plan("off", false, "shiny").pop == 0 and RH.plan("full", true, "legend
 assert(RH.plan("bogus", false, "shiny").pop == RH.Pop.full, "an unknown level plays as Full")
 assert(RH.plan("full", true, "shiny").banner and RH.plan("off", true, "legendary").sound == "shiny_bang", "banner + sound stay")
 assert(RH.PopLife > 0.5 and RH.PopLife <= 1.5 and RH.PopSize >= 32 and RH.PopSize <= 96, "a pop is short and small")
+for key, id in BOUND do
+    A.Requested[key].id = id
+    assert(A.isReal(key) == (id ~= "") and A.resolve(key) == (if id ~= "" then id else A.Builtin[A.Requested[key].fallback]), key .. " bound id resolves to itself, empty to its sprite")
+end
 print("anime FX pure checks passed: slots empty, shell decision, hatch shaft plan, rare banner pops")
 '''
 
@@ -433,7 +442,10 @@ def scan():
         assert not re.search(r'rbxassetid://\d+', src(path)), path + ' must not contain asset ids'
     ea = src('src/shared/EffectAssets.luau')
     for key in ['flameTongue', 'starPop', 'domeGradient', 'speedStreaks', 'shaftGradient', 'shellEdge']:
-        assert re.search(key + r' = \{id = "", fallback', ea), key + ' slot must be empty until the owner uploads it'
+        m = re.search(key + r' = \{id = "(rbxassetid://\d+)?", fallback', ea)
+        assert m, key + ' slot must be empty or one valid rbxassetid'
+        if m.group(1):  # bound after the 2026-10-17 batch upload: the id must be a registered docs/77 row, never invented
+            assert m.group(1).split('//')[1] in src('docs/77-asset-registry.md'), key + ' bound id is not in the asset registry'
     slots = src('src/shared/AssetSlots.luau')
     for key in ['shock_dome_mesh', 'shaft_cone_mesh', 'aura_shell_mesh']:
         assert re.search(key + r' = "",', slots), key + ' mesh slot must stay empty until uploaded'

@@ -20,6 +20,14 @@ The single list of every asset still missing or not yet uploaded. It does not re
 
 **Binding legend:** AUTO = `tools/bind_ui_icons.py` or one table edit; TABLE = one config edit; CODE = a small agent task first (named in the row).
 
+## Batch upload (lead)
+
+One pass for every image whose file is already in the repo and whose slot is still empty: 10 trail icons, 7 mutation badges, 35 FX textures (`resources/effects/fx-v2/`, the superseded smoke / spark / flame / star sheets excluded) and the 3 meadow-grass-v2 maps = 55 PNGs. Nothing here uploads by itself; the lead's uploader (Studio / Asset Manager, owner account, as **Image**) fetches the files from a local server.
+
+1. `python tools/upload_batch.py` checks each file (under 20 MB, real PNG, RGBA where the slot needs alpha), copies them as `<slot name>.png` into the flat folder `build/upload-batch/` (gitignored) and writes `manifest.json` (`[{file, slot, url_path}]`). `--list` only checks.
+2. `python -m http.server 8765 --directory build/upload-batch`, then upload every `http://localhost:8765/<slot>.png` and save the result as JSON: `{"http://localhost:8765/trail_fern.png": "rbxassetid://N", ...}` (for example `build/uploaded.json`). A partial map is fine; only the listed slots are bound.
+3. `python tools/bind_assets.py --batch build/uploaded.json --manifest build/upload-batch/manifest.json --dry-run` prints every line that would change and writes nothing; run it again without `--dry-run` to write all ids and the docs/77 lines in one go. Then `python tools/build.py`, `python tools/verify_asset_slots.py` and a Studio check as above. Bound slots are skipped on the next `upload_batch.py` run.
+
 ## 1. Files already in the repo, only an upload is missing
 
 | Asset | BD | Maker | File (repo path) | Format | Bound in code | Bind | Bind in: file:key (bind_assets.py name) |
