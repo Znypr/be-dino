@@ -12,6 +12,7 @@ local RewardMath = require(script.Parent.RewardMath)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
+local streamingStart: {[Player]: boolean} = {} -- BD-498: a player whose spawn area is being streamed in right now (StreamingEnabled only)
 -- BD-090: server-side run start times (server clock); never replicated, never client-reported.
 local runStartedAt: {[string]: number} = {}
 -- BD-479: per-run ledger of the weather active when each bonus nest was FOUND (index = nest ordinal). Server-only like runStartedAt:
@@ -57,6 +58,9 @@ end
 -- BD-210 run-start gate: server terrain built, and the client confirmed its local terrain (or the timeout passed).
 function RunLifecycle.worldReady(player: Player): boolean
     if workspace:GetAttribute("IslandTerrainReady") ~= true then return false end
+    -- BD-498 (docs/150): with StreamingEnabled the client cannot see the island from the cave hub, so its ClientWorldReady would only come
+    -- after the 20 s timeout. requestStart streams the spawn area in instead (below). No effect while StreamingEnabled is false.
+    if workspace.StreamingEnabled then return true end
     if player:GetAttribute("WorldReady") == true then return true end
     local joinedAt = player:GetAttribute("JoinedAt")
     return typeof(joinedAt) == "number" and os.clock() - joinedAt >= Config.WorldReadyTimeoutSeconds
@@ -271,6 +275,13 @@ function RunLifecycle.requestStart(player: Player): boolean
     if not RunLifecycle.worldReady(player) then
         player:SetAttribute("LastRunStartStatus", "WorldLoading")
         return false
+    end
+    if workspace.StreamingEnabled then -- BD-498 (docs/150): load the island around the spawn on this client BEFORE the teleport, so the dino never lands on empty ground
+        if streamingStart[player] then return false end
+        streamingStart[player] = true
+        pcall(function() player:RequestStreamAroundAsync(SpawnGeometry.islandPoint(Layout), 8) end)
+        streamingStart[player] = nil
+        if player.Parent ~= Players or player.Character ~= character or character:GetAttribute("RunState") ~= "Sanctuary" then return false end
     end
     require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
     RunLifecycle.begin(player, character)
