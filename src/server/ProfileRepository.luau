@@ -228,6 +228,16 @@ local function keyFor(player: Player): string
     return "u:" .. tostring(player.UserId)
 end
 
+-- BD-604 (docs/149): the secret species data/rules module, required lazily so a harness that does not carry it is unaffected while
+-- Config.SecretSpeciesEnabled is false (every use below is behind that flag).
+local secretModule: any = nil
+local function secretSpecies(): any
+    if secretModule == nil then secretModule = require(ReplicatedStorage.Shared.SecretSpeciesConfig) end
+    return secretModule
+end
+
+-- BD-604: knownSpecies stays the NORMAL 22 on purpose. A secret species is not equippable or mutable by request yet (docs/149 s7), so no
+-- profile ever stores a secret id in equippedSpeciesId or a reward.speciesId, and Build 020 keeps loading every profile (RB1).
 local function knownSpecies(speciesId: any): boolean
     if typeof(speciesId) ~= "string" then return false end
     for _, configuredId in Config.SpeciesOrder do
@@ -1036,6 +1046,10 @@ end
 local function sortByRarity(eggs)
     table.sort(eggs, function(a, b)
         local ar, br = Config.SpeciesRarities[a.reward.speciesId], Config.SpeciesRarities[b.reward.speciesId]
+        if Config.SecretSpeciesEnabled == true then -- BD-604: an egg that carries a secret species reveals last
+            if a.reward.secretSpeciesId ~= nil then ar = Config.SpeciesRarityScale + 1 end
+            if b.reward.secretSpeciesId ~= nil then br = Config.SpeciesRarityScale + 1 end
+        end
         return if ar == br then a.source.ordinal < b.source.ordinal else ar < br
     end)
 end
@@ -1098,7 +1112,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         table.insert(runEggs, {
             eggId = eggId, kind = "run_egg",
             eventId = tag.eventId or "clear", mutationId = tag.mutationId or "",
-            reward = RewardMath.computeChestReward(rng, eggCount),
+            reward = RewardMath.computeChestReward(rng, eggCount, "run"), -- BD-604: "run" may roll a secret species (flag on)
             shiny = traits.shiny, big = traits.big,
             genes = traits.genes, traitRollVersion = traits.traitRollVersion,
             source = {kind = "run", runId = runId, ordinal = i, originalEggId = eggId},
@@ -1330,7 +1344,7 @@ local function rollNestEggs(profileValue: any, nest: any): {any}
         local tag = if nest.weatherId then ProgressionRules.eventEgg(nest.weatherId, rng:NextNumber()) else nil
         table.insert(eggs, {
             eggId = eggId, kind = "nest_egg", eventId = if tag then tag.eventId else "clear", mutationId = if tag then tag.mutationId else "",
-            reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs),
+            reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs, "nest"), -- BD-604: a free nest may roll a secret species (flag on)
             shiny = shinyRoll < tier.shinyChance, big = bigRoll < tier.bigChance,
             genes = EggGenetics.roll(level, rng), traitRollVersion = "bd045-genes-v2",
             source = {kind = "nest", runId = nest.droppedFromRun, nestId = nest.nestId, ordinal = k, originalEggId = eggId, luck = nest.luck},
@@ -1702,6 +1716,18 @@ end
 -- its operation. Returns the committed outcome or nil. Runs inside an UpdateAsync transform.
 local function applyHatch(profileValue: any, chest: any, index: number, outcome: any, now: number, freshSpecies: {[string]: boolean}?)
     table.remove(profileValue.eggs, index)
+    -- BD-604 (docs/149): an egg that carries a committed secret species hatches it, but only while the flag is on and its model slot is
+    -- filled (otherwise the normally rolled species hatches, exactly as before). A failed Cracked egg hatches nothing, so it never
+    -- reveals a secret (that roll is simply lost). The collection entry is created here, lazily, on the first secret hatch: a profile
+    -- that never hatched a secret has no secret key.
+    if Config.SecretSpeciesEnabled == true and outcome.secretSpeciesId ~= nil and not (chest.genes ~= nil and not chest.genes.hatchSuccess) then
+        local secretId = secretSpecies().resolve(outcome)
+        if secretId ~= nil then
+            outcome.speciesId = secretId
+            outcome.secret = true
+            if profileValue.collection[secretId] == nil then profileValue.collection[secretId] = secretSpecies().newEntry() end
+        end
+    end
     local species = profileValue.collection[outcome.speciesId]
     if typeof(species) ~= "table" then return nil end
     if freshSpecies ~= nil and not (chest.genes ~= nil and not chest.genes.hatchSuccess) and not ownsAny(species) then freshSpecies[outcome.speciesId] = true end -- BD-074: BEFORE this egg is added (objective hook only; nothing persisted)
@@ -1736,7 +1762,7 @@ local function applyHatch(profileValue: any, chest: any, index: number, outcome:
     outcome.big=chest.big == true
     outcome.shiny=chest.shiny == true
     outcome.eggId=chest.eggId
-    if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
+    if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId] or 0) end -- BD-604: a secret species is not a tier and never raises it
 
     if profileValue.pendingChestGrants > 0 then
         profileValue.pendingChestGrants -= 1
