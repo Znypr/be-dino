@@ -138,7 +138,7 @@ class WorldGeneratedMeshTests(unittest.TestCase):
                                 "tree_colossal_broadleaf_v3_lod1", "tree_colossal_pine_v3_lod1", "tree_colossal_palm_v3_lod1"})
         fbx_name = {"broadleaf": "broad", "pine": "pine", "palm": "palm"}
         for key, asset_id, placed, lod, kit, stand_in, tris in entries:
-            self.assertEqual(placed, "true" if lod == "0" else "false", f"{key}: only LOD0 is placed; LOD1 waits for BD-475")
+            self.assertEqual(placed, "true", f"{key}: BD-475 swaps LOD0 and LOD1 by distance, both are used")
             self.assertEqual(key.endswith("_lod1"), lod == "1")
             self.assertIn(f"{kit}=", KIT, f"{key}: unknown kit id {kit}")
             self.assertTrue(kit.endswith("_l"), "colossal meshes stand in for the size-l kit trees")
@@ -160,6 +160,11 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         arena = (ROOT / "src/server/Arena.luau").read_text()
         self.assertIn('local colossalKey = if layer == "colossal" then Generated.colossalFor(id) else nil', arena, "ordinary size-l trees must keep their meshes")
         self.assertIn("p.layer) or Resources.clone(p.id)", arena, "the placement layer must reach generatedProp")
+        # BD-475: the ancient tree is only used as a LOD0 + LOD1 pair; sizes and trunk numbers feed ColossalRules
+        self.assertIn('if near and near:IsA("MeshPart") and far and far:IsA("MeshPart") then', arena, "a LOD0 without its LOD1 keeps the stand-in")
+        for key, *_ in entries:
+            row = [line for line in COLOSSAL_BLOCK.splitlines() if line.strip().startswith(key + " = ")][0]
+            self.assertRegex(row, r"size = \{[\d., ]+\}, base = \{[-\d., ]+\}", f"{key} needs size and base for the LOD1 pivot shift")
         self.assertIn("if not template and key and folder then template = folder:FindFirstChild(key) end", arena, "stand-in fallback")
         loader = (ROOT / "src/server/ImportedResources.luau").read_text()
         self.assertIn('for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then', loader, "loader must skip empty colossal ids")

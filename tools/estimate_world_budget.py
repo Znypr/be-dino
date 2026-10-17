@@ -50,10 +50,45 @@ end
 '''
 
 
-def luau_script(cfg_text, density_from_config):
+# BD-475 (docs/142): colossal ancient trees with FAKE ids, i.e. what the phone/tablet/desktop client would keep if every BD-474 mesh id were
+# pasted. The SAME ColossalRules.assign the client runs decides LOD0/LOD1/off per grid spot, for the config radius (default = today's
+# radius) and for the ceiling radius. Tris come from WorldGeneratedMeshes.Colossal (LOD0 about 4,000, LOD1 about 930). Stateless: every tree
+# counts as "was shown" so the hysteresis radius applies, the same convention as culling() below.
+COLOSSAL_DUMP = r"""
+local ent0,ent1={},{}
+for _,e in Generated.Colossal do if e.lod==0 then ent0[e.kit]=e else ent1[e.kit]=e end end
+local cps={}
+for _,p in a do if p.layer=="colossal" and ent0[p.id] then table.insert(cps,{x=p.x,z=p.z,e0=ent0[p.id],e1=ent1[p.id]}) end end -- dead colossal trees have no ancient mesh: they stay stand-ins in both worlds
+local HYST,HALFW=Config.WorldCulling.Hysteresis,Config.ArenaHalfWidth
+local spots={{0,30}}
+for gx=-HALFW,HALFW,64 do for gz=-HALFW,HALFW,64 do table.insert(spots,{gx,gz}) end end
+for _,cls in {"Phone","Tablet","Desktop"} do
+ local s=Rules.settings(Config.WorldCulling,cls)
+ local normal=Config.WorldCulling[cls].radius
+ for _,mode in {"default","ceiling","bound"} do
+  local set=table.clone(s)
+  if mode=="ceiling" then set.radius=s.ceiling end
+  if mode=="bound" then set.lod0=1e9 end -- default radius, but the LOD0 slots are always full (wherever the nearest trees are): the worst case of the cap
+  for _,sp in spots do
+   local items,today={},0
+   for _,c in cps do
+    local d=math.sqrt((c.x-sp[1])^2+(c.z-sp[2])^2)
+    table.insert(items,{d=d,state="lod1",tris0=c.e0.tris,tris1=c.e1.tris})
+    if d<=normal*HYST then today+=1 end
+   end
+   local _,st=Rules.assign(items,set,HYST,1e9)
+   print(string.format("C %s %s %d %d %d %d %d %d %d %d",cls,mode,sp[1],sp[2],today,st.lod0,st.lod1,st.off,st.tris,#cps))
+  end
+ end
+end
+"""
+
+
+def luau_script(cfg_text, density_from_config, colossal=False):
     head = vwa.script(False, cfg_text, False)
     pre = head[:head.index('local PLAYTEST=')]
     pre += 'local Generated=' + vwa.wrapped('src/shared/WorldGeneratedMeshes.luau') + '\n'
+    pre += 'local Rules=' + vwa.wrapped('src/shared/ColossalRules.luau') + '\n'
     pre += 'local DENSITY=%s\n' % ('Config.WorldArtDensity' if density_from_config else '1')
     if PROPS_IDS == 'fake':
         pre += 'do local n=0 for _,e in Generated.Props do n+=1 e.assetId=tostring(100000000+n) end end\n'
@@ -62,7 +97,7 @@ def luau_script(cfg_text, density_from_config):
     pre += 'Kit=Biome.withProps(Kit,Generated.Props)\nMeshes=Biome.propMeshes(Meshes,Generated.Props)\n'
     pre += ('local a=Biome.generate({seed=Config.WorldArtSeed,density=DENSITY,extent=Config.ArenaHalfWidth,height=Layout.height,'
             'kit=Kit,meshes=Meshes,map=BiomeMap,layout=Layout,props=Generated.Props})\n')
-    return pre + DUMP
+    return pre + DUMP + (COLOSSAL_DUMP if colossal else '')
 
 
 def run_profile(runner, name):
@@ -70,20 +105,23 @@ def run_profile(runner, name):
     cfg = release_profiles.apply_profile(text, 'playtest')[0] if name == 'playtest' else text
     with tempfile.TemporaryDirectory() as t:
         p = Path(t) / 'est.luau'
-        p.write_text(luau_script(cfg, name == 'playtest'))
+        p.write_text(luau_script(cfg, name == 'playtest', True))
         out = subprocess.run([runner, str(p)], capture_output=True, text=True)
         if out.returncode:
             raise SystemExit(out.stdout[-1500:] + out.stderr)
-    props, kit = [], {}
+    props, kit, colossal = [], {}, {}
     for l in out.stdout.splitlines():
         f = l.split()
         if not f:
             continue
-        if f[0] == 'P':
+        if f[0] == 'C':
+            colossal.setdefault((f[1], f[2]), {})[(int(f[3]), int(f[4]))] = dict(
+                today=int(f[5]), lod0=int(f[6]), lod1=int(f[7]), off=int(f[8]), tris=int(f[9]), total=int(f[10]))
+        elif f[0] == 'P':
             props.append(dict(layer=f[1], id=f[2], x=float(f[3]), z=float(f[4]), biome=f[5]))
         elif f[0] == 'K':
             kit[f[1]] = dict(tris=int(f[2]), colliders=int(f[3]), gen=f[4] == '1')
-    return props, kit, cfg
+    return props, kit, cfg, colossal
 
 
 def tris_of(p, kit):
@@ -113,7 +151,7 @@ def estimate(runner):
     area = (2 * HALF) ** 2
     res = dict(guidance={k: v[0] for k, v in GUIDANCE.items()}, cull=cull, hysteresis=hyst, food_parts=food_parts, profiles={})
     for name in ('default', 'playtest'):
-        props, kit, cfg = run_profile(runner, name)
+        props, kit, cfg, colossal = run_profile(runner, name)
         P = dict(kit_on='WorldArtMode = "BiomeKit"' in cfg, placements=len(props), by_kind={}, by_biome={})
         for p in props:
             for key, d in (('by_kind', p['layer']), ('by_biome', p['biome'])):
@@ -128,6 +166,7 @@ def estimate(runner):
         P['gen_props'] = sum(r['gen'] for r in P['by_kind'].values())
         P['kit_parts_total'] = P['mesh_parts'] + P['collider_parts']
         P['cull'] = {}
+        P['colossal'] = {}
         for cls, c in cull.items():
             spawn = culling(props, kit, c['radius'], c['budget'], hyst, SPAWN)
             worst, wc = (0, 0, 0), SPAWN
@@ -138,6 +177,21 @@ def estimate(runner):
                         worst, wc = r, (gx, gz)
             food_in = min(food_parts, round(food_parts * math.pi * (c['radius'] * food_factor) ** 2 / area))
             P['cull'][cls] = dict(spawn=spawn, worst=worst, worst_at=wc, food_visible=food_in)
+            # BD-475: colossal ancient trees with fake ids, same spots as the culling above (see COLOSSAL_DUMP)
+            dflt, ceil_, bound = colossal[(cls, 'default')], colossal[(cls, 'ceiling')], colossal[(cls, 'bound')]
+            at = dflt[wc]
+            total = at['total']
+            spot_delta = max(r['tris'] - r['today'] * GEN_TRIS for r in dflt.values())
+            P['colossal'][cls] = dict(
+                ancient_trees=total, standin_all_tris=total * GEN_TRIS, worst_at=wc,
+                standin_n=at['today'], standin_tris=at['today'] * GEN_TRIS,
+                default=dict(lod0=at['lod0'], lod1=at['lod1'], tris=at['tris'], max_tris=max(r['tris'] for r in dflt.values()),
+                             max_lod0=max(r['lod0'] for r in dflt.values()), max_over_standin=spot_delta),
+                bound=dict(lod0=bound[wc]['lod0'], lod1=bound[wc]['lod1'], tris=bound[wc]['tris'], max_tris=max(r['tris'] for r in bound.values()),
+                           max_over_standin=max(r['tris'] - r['today'] * GEN_TRIS for r in bound.values())),
+                ceiling=dict(lod0=ceil_[wc]['lod0'], lod1=ceil_[wc]['lod1'], tris=ceil_[wc]['tris'], max_tris=max(r['tris'] for r in ceil_.values()),
+                             max_lod0=max(r['lod0'] for r in ceil_.values()),
+                             max_parts=max(r['lod0'] + r['lod1'] for r in ceil_.values())))
         if not P['kit_on']:
             lw, lf, per = vwa.legacy_parts()
             P['legacy_props_parts'], P['legacy_food_parts'], P['legacy_per'] = lw, lf, per
@@ -162,12 +216,17 @@ def estimate(runner):
     RESIDUAL = 600  # derived: verify_world_art RESIDUAL_PARTS (hub, boundary, arch, spring, rigs)
     for n, P in res['profiles'].items():
         w = P['cull']['Phone']
+        cls_ = 'Phone'
         kit_parts = w['worst'][1] + P['collider_parts'] if P['kit_on'] else None
         P['join_parts'] = (P['kit_parts_total'] if P['kit_on'] else P['legacy_props_parts']) + (food_parts if P['kit_on'] else P['legacy_food_parts']) + RESIDUAL
         P['phone_scene'] = dict(
             world_parts_lowpoly=(w['worst'][1] + P['collider_parts'] + w['food_visible'] + RESIDUAL + res['dinos']['low_parts_peak']) if P['kit_on'] else None,
             world_tris_low=(w['worst'][4] + w['worst'][3] * GEN_LOW) if P['kit_on'] else None,
             world_tris_mid=w['worst'][2] if P['kit_on'] else None,
+            # BD-475: the same scene with every colossal ancient tree mesh pasted (fake ids): the colossal share is swapped for the LOD0/LOD1 result
+            world_tris_mid_fake_default=(w['worst'][2] - P['colossal'][cls_]['standin_tris'] + P['colossal'][cls_]['default']['tris']) if P['kit_on'] else None,
+            world_tris_mid_fake_bound=(w['worst'][2] - P['colossal'][cls_]['standin_tris'] + P['colossal'][cls_]['bound']['tris']) if P['kit_on'] else None,
+            world_tris_mid_fake_ceiling=(w['worst'][2] - P['colossal'][cls_]['standin_tris'] + P['colossal'][cls_]['ceiling']['tris']) if P['kit_on'] else None,
             world_tris_high=(w['worst'][4] + w['worst'][3] * GEN_HIGH) if P['kit_on'] else None)
     cc = (ROOT / 'src/shared/CombatConfig.luau').read_text()
     hz = num(cc, 'HpSendHz')
@@ -199,6 +258,11 @@ def main():
             print(f"   {k:12s} props {r['props']:5d} colliders {r['colliders']:4d} tris {r['tris']:,}")
         for c, r in P['cull'].items():
             print(f"   cull {c:8s} spawn(within,kept,tris)={r['spawn']} worst={r['worst']} at {r['worst_at']} food visible ~{r['food_visible']}")
+        for c, r in P['colossal'].items():
+            d, k = r['default'], r['ceiling']
+            print(f"   colossal fake ids {c:8s} {r['ancient_trees']} ancient trees (all as stand-ins {r['standin_all_tris']:,} tris); at {r['worst_at']}: stand-ins {r['standin_n']} = {r['standin_tris']:,} tris, "
+                  f"default radius {d['lod0']} LOD0 + {d['lod1']} LOD1 = {d['tris']:,} (max any spot {d['max_tris']:,}, most LOD0 {d['max_lod0']}; LOD0 slots always full: {r['bound']['tris']:,}), "
+                  f"ceiling radius {k['lod0']} + {k['lod1']} = {k['tris']:,} (max any spot {k['max_tris']:,}, most parts {k['max_parts']})")
         if not P['kit_on']:
             print(f"   legacy world props ~{P['legacy_props_parts']:,} parts, legacy food ~{P['legacy_food_parts']:,}")
     for n, P in res['profiles'].items():
