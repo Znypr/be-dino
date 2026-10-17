@@ -53,20 +53,22 @@ function Lod.domeFits(device: string, live: number): boolean
 end
 
 -- Pure: does one more rig (cost = FxRecipes cost plus shells) fit next to what is already live (used)?
-function Lod.fits(device: string, used: {[string]: number}, cost: {[string]: number}): boolean
+-- BD-502: `beamCap` (optional) replaces the beam ceiling, nothing else: PhoneGuards.cosmeticBeamCap leaves room for the cave shaft beams.
+function Lod.fits(device: string, used: {[string]: number}, cost: {[string]: number}, beamCap: number?): boolean
     local cap = Lod.Live[device] or Lod.Live.desktop
     for _, k in Lod.CostKeys do
-        if (used[k] or 0) + (cost[k] or 0) > cap[k] then return false end
+        local limit = if k == "beams" and beamCap ~= nil then beamCap else cap[k]
+        if (used[k] or 0) + (cost[k] or 0) > limit then return false end
     end
     return true
 end
 
 -- Pure: the richest detail that fits. want = detail from detail(); costOf(detail) = cost of that look. Steps down full -> lite.
 -- Never returns "none" when floor is "lite" (own dino, event-mutation cue): those always draw, at the lite look.
-function Lod.fit(device: string, want: string, used: {[string]: number}, costOf: (string) -> {[string]: number}, floorLite: boolean): string
+function Lod.fit(device: string, want: string, used: {[string]: number}, costOf: (string) -> {[string]: number}, floorLite: boolean, beamCap: number?): string
     if want == "none" then return "none" end
-    if want == "full" and Lod.fits(device, used, costOf("full")) then return "full" end
-    if Lod.fits(device, used, costOf("lite")) then return "lite" end
+    if want == "full" and Lod.fits(device, used, costOf("full"), beamCap) then return "full" end
+    if Lod.fits(device, used, costOf("lite"), beamCap) then return "lite" end
     return if floorLite then "lite" else "none"
 end
 

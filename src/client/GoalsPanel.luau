@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("GoalsRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
+local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
 
 local Panel = {}
 local state = {dinos = nil :: any, species = {found = 0, owned = 0, total = 0} :: any, dirty = true}
@@ -79,11 +80,14 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         local inRun = character ~= nil and character:GetAttribute("RunState") == "Active"
         root.Visible = not inRun and anchor.Visible
         if not root.Visible then return end
-        -- sit just under the goal line, same scale
+        -- sit just under the goal line, right edges aligned. BD-502: the goal line is scaled down on phones (0.6), and GoalsPanel is not part
+        -- of the ModalCompact floor pass, so the header would render 44 x 0.6 = 26 px; the panel takes the smallest scale at which the header
+        -- tap target is >= 44 px and the text >= 14 px (1:1), growing LEFT from the goal line's right edge.
         local anchorScale = anchor:FindFirstChildOfClass("UIScale")
-        local s = if anchorScale then anchorScale.Scale else 1
+        local lineScale = if anchorScale then anchorScale.Scale else 1
+        local s = PhoneScale.floorScale(lineScale, HEADER_H, 14)
         scale.Scale = s
-        root.Position = UDim2.fromOffset(anchor.Position.X.Offset, anchor.Position.Y.Offset + 34 * s)
+        root.Position = UDim2.fromOffset(anchor.Position.X.Offset + anchor.Size.X.Offset * lineScale - 260 * s, anchor.Position.Y.Offset + 34 * lineScale)
         if state.dirty then
             state.dirty = false
             render()

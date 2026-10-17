@@ -142,6 +142,9 @@ local function elements(layout)
  table.insert(list, {name = "crystal", r = rect(layout.crystal)})
  table.insert(list, {name = "action", interactive = true, r = rect(layout.action)})
  table.insert(list, {name = "badge", r = rect(layout.badge)})
+ -- BD-502: the Tell us! button (FeedbackClient) must never touch the egg plate ("hud") or any other HUD piece. On touch it sits in the bottom-left
+ -- corner, which is inside Roblox's thumbstick zone (a 120 x 48 button there only swallows taps on itself), so only that zone check is skipped.
+ table.insert(list, {name = "feedback", interactive = true, thumbOk = true, r = {x = layout.feedback.x, y = layout.feedback.y, w = layout.feedback.w, h = layout.feedback.h}})
  table.insert(list, {name = "notice", r = rect(layout.notice)})
  local rail = layout.rail
  for i, p in rail.positions do
@@ -163,7 +166,7 @@ local function check(width, height, touch, measured)
   end
   if touch then
    for zone, r in layout.reserved do
-    assert(not TouchLayout.overlaps(a.r, r), label .. ": " .. a.name .. " intrudes on Roblox " .. zone .. " zone")
+    assert(a.thumbOk or not TouchLayout.overlaps(a.r, r), label .. ": " .. a.name .. " intrudes on Roblox " .. zone .. " zone")
    end
    if a.interactive then
     assert(a.r.h >= Config.TouchMinTargetPx - 1e-6 and a.r.w >= Config.TouchMinTargetPx - 1e-6, label .. ": " .. a.name .. " below touch target")
@@ -190,11 +193,17 @@ local phones = {{800, 360}, {640, 360}, {667, 375}, {732, 412}, {844, 390}, {915
 local tablets = {{1024, 768}, {1280, 720}, {1280, 800}, {1366, 1024}, {1920, 1080}, {2400, 1080}}
 for _, v in phones do check(v[1], v[2], true) end
 for _, v in tablets do check(v[1], v[2], true) end
-for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {2400, 1080}, {1024, 768}} do check(v[1], v[2], false) end
+-- BD-502: 1156 x 841 is the Studio game view of the owner review pictures (Tell us! sat on "EGGS 0" there); 800 x 600 is a small desktop window (a canvas under 500 px tall is the phone layout).
+for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {2400, 1080}, {1024, 768}, {1156, 841}, {800, 600}} do check(v[1], v[2], false) end
+for _, v in {{1156, 841}, {1280, 720}, {1920, 1080}, {1024, 768}, {800, 600}} do
+ local layout = TouchLayout.compute({width = v[1], height = v[2], touch = false, navCount = NAV})
+ assert(not TouchLayout.overlaps(layout.feedback, TouchLayout.rendered(layout.hud)), string.format("%dx%d desktop: Tell us! covers the egg plate", v[1], v[2]))
+ assert(layout.feedback.h >= Config.TouchMinTargetPx and layout.feedback.w >= Config.TouchMinTargetPx, "Tell us! below the 44 px target")
+end
 -- A live TouchGui measured larger than the defaults is still avoided.
 check(800, 360, true, {jump = {x = 690, y = 250, w = 90, h = 90}, thumb = {x = 0, y = 110, w = 340, h = 250}})
 local phone = TouchLayout.compute({width = 800, height = 360, touch = true, navCount = NAV})
-print(string.format("Touch layout passed: %d phone + %d tablet + 5 desktop canvases; 800x360 Home %dx%d px, nav %dx%d px, leap %d px tall, no overlap with thumbstick/jump zones",
+print(string.format("Touch layout passed: %d phone + %d tablet + 7 desktop canvases (Tell us! clear of the egg plate and every HUD piece); 800x360 Home %dx%d px, nav %dx%d px, leap %d px tall, no overlap with thumbstick/jump zones",
  #phones, #tablets, phone.action.w * phone.action.scale, phone.action.h * phone.action.scale,
  phone.rail.button.w, phone.rail.button.h, TouchLayout.LEAP_H * phone.timers.scale))
 '''

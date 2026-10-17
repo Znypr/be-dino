@@ -3,6 +3,7 @@
 -- Pure numbers and tables, no Instances and no services, so tools/verify_phone_guards.py checks them offline. The clients ask these functions:
 --   * client/CavePhoneGuard   -> which cave lights and shaft beams may be on (nearest 12 lights, 4 beams)
 --   * client/FxRig            -> may a cosmetic aura glow light shine (not inside the hub on a phone)
+--   * client/CosmeticVisuals  -> cosmetic beam ceiling inside the hub on a phone (24 minus the 4 shaft beams = 20, BD-502)
 --   * client/WeatherVisuals   -> weather particle density (phone 0.25)
 --   * client/WorldCulling     -> are the invisible prop colliders culled with the props (phone only)
 -- `device` is "phone" | "tablet" | "desktop" in any letter case (FxRecipes.deviceClass says "phone", WorldCulling says "Phone"). Anything else counts as
@@ -59,6 +60,14 @@ function Guards.beamsPerShaft(device: string?, shafts: number, perShaft: number)
     local cap = Guards.caveBeamCap(device)
     if cap == nil or shafts <= 0 then return perShaft end
     return math.clamp(math.floor(cap / shafts), 0, perShaft)
+end
+
+-- BD-502: the cosmetic beam ceiling (aura rings, spirals) of the scene-wide live-FX budget (EffectsLod.Live[device].beams = `liveCap`). Inside the
+-- hub on a phone the cave's own shaft beams (4 after caveBeams) count against the same phone budget (24), so the cosmetic beams get the rest:
+-- 24 - 4 = 20 and the hub total is <= 24. Outside the hub, and on tablet and desktop, the cap is `liveCap` unchanged.
+function Guards.cosmeticBeamCap(device: string?, insideHub: boolean, liveCap: number): number
+    if kind(device) ~= "phone" or not insideHub then return liveCap end
+    return math.max(liveCap - Guards.Phone.caveBeams, 0)
 end
 
 -- May an aura / mutation glow light shine? Not on a phone while its player is inside the cave hub, except the OWN dino under Reduce Motion

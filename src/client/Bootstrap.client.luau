@@ -1429,8 +1429,9 @@ local function scales()
         labelObject.TextScaled,labelObject.TextSize,labelObject.TextXAlignment=touch,entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
     end
     previewNotice.Text=if touch then "STUDIO PREVIEW: UNSAVED" else "STUDIO PREVIEW • progress not saved • test currency"
-    foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,layout.hud.y-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts)
+    foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,(if touch then layout.hud.y else math.min(layout.hud.y,layout.feedback.y))-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts); BD-502: and above the Tell us! button
     require(script.Parent.HudV2).layout(layout)
+    gui:SetAttribute("FeedbackRect",Rect.new(layout.feedback.x,layout.feedback.y,layout.feedback.x+layout.feedback.w,layout.feedback.y+layout.feedback.h)) -- BD-502: FeedbackClient puts its Tell us! button here, clear of the egg plate
     toastScale.Scale=layout.toastScale
     local wallet=TouchLayout.walletPlates(layout) -- BD-378: the toast stack keeps clear of the Crystals plate and the goal line under it
     toastLayer:SetAttribute("WalletRect",Rect.new(wallet.x,wallet.y,wallet.x+wallet.w,wallet.y+wallet.h))

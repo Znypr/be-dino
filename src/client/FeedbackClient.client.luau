@@ -1,7 +1,8 @@
 --!strict
 -- Playtest feedback button (docs/128), behind Config.PlaytestFeedbackEnabled (default false). Own ScreenGui and module so
--- Bootstrap.client.luau (local limit) is untouched. A small "Tell us!" button bottom-left (48 px high, above the 44 px touch
--- minimum) opens three emoji ratings (Fun / Hard / Looks) and an optional short text box. The server filters the text and
+-- Bootstrap.client.luau (local limit) is untouched. A small "Tell us!" button (48 px high, above the 44 px touch
+-- minimum) opens three emoji ratings (Fun / Hard / Looks) and an optional short text box. BD-502: its spot comes from
+-- TouchLayout.feedback, published by Bootstrap as the BeDinoUI FeedbackRect attribute, so it never covers the egg plate. The server filters the text and
 -- rate-limits; this script only sends {fun, level, looks, text}. Copy follows docs/72: short, plain, no jargon.
 -- PLACEHOLDER art: plain text and emoji only; final icons are a separate art task (docs/72).
 local Players = game:GetService("Players")
@@ -18,6 +19,7 @@ if not remote or not remote:IsA("RemoteEvent") then return end
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name, gui.ResetOnSpawn, gui.DisplayOrder = "PlaytestFeedback", false, 40
+gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets -- same pixel space as BeDinoUI (BD-054), so FeedbackRect lines up
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local function make(class: string, parent: Instance, name: string, size: UDim2, pos: UDim2): any
@@ -37,8 +39,21 @@ end
 
 local PANEL, CARD, ACCENT = Color3.fromRGB(42, 40, 53), Color3.fromRGB(61, 58, 73), Color3.fromRGB(93, 237, 31)
 
-local open = make("TextButton", gui, "TellUsButton", UDim2.fromOffset(120, 48), UDim2.new(0, 12, 1, -68))
+-- BD-502: first position = straight above the egg plate (desktop rule), until Bootstrap's layout publishes the real rect.
+local open = make("TextButton", gui, "TellUsButton", UDim2.fromOffset(120, 48), UDim2.new(0, 18, 1, -138))
 style(open, "Tell us!", Color3.fromRGB(194, 86, 255), 24)
+task.spawn(function()
+    local ui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+    if not ui then return end
+    local function sync()
+        local r = ui:GetAttribute("FeedbackRect")
+        if typeof(r) == "Rect" then
+            open.Position, open.Size = UDim2.fromOffset(r.Min.X, r.Min.Y), UDim2.fromOffset(r.Width, r.Height)
+        end
+    end
+    ui:GetAttributeChangedSignal("FeedbackRect"):Connect(sync)
+    sync()
+end)
 open.Visible = false -- BD-441: hidden until the first run has ended (Rules.showButton)
 
 local panel = make("Frame", gui, "FeedbackPanel", UDim2.fromOffset(420, 330), UDim2.new(0.5, -210, 0.5, -165))

@@ -100,6 +100,8 @@ def static_checks():
         assert banned not in rules, 'GoalsRules stays pure: ' + banned
     panel = (ROOT / 'src/client/GoalsPanel.luau').read_text(encoding='utf-8')
     assert 'rbxassetid' not in panel and 'ImageLabel' not in panel, 'no new art ids in the Goals panel'
+    # BD-502: the panel is not in the ModalCompact floor pass, so it raises its own UIScale until the 44 px header renders >= 44 px (a phone goal line is 0.6)
+    assert 'PhoneScale.floorScale(lineScale, HEADER_H, 14)' in panel and 'scale.Scale = s' in panel, 'GoalsPanel header >= 44 real px on a phone'
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     hud = (ROOT / 'src/client/GoalHud.luau').read_text(encoding='utf-8')  # goal HUD block moved out of Bootstrap (register limit)
     assert 'GoalsPanel.attach(gui,goalHUD' in hud and 'GoalsPanel.setDinos' in hud and 'GoalsPanel.setSpecies' in hud and 'indexCounts' in hud and 'GoalHud).build' in boot
