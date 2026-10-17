@@ -139,9 +139,31 @@ def script():
  s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Genetics='+module('src/shared/EggGenetics.luau')+'\n'
  s+='local script={Parent={ProgressionConfig="ProgressionConfig",EggGenetics="Genetics"}}\nlocal require=function(id)return if id=="Genetics" then Genetics else ProgressionConfig end\nlocal Rules='+module('src/shared/ProgressionRules.luau')+'\n'
  return s+BODY
+def icons():
+ # BD-101: every catalog potion has a bound, unique Image id in AssetSlots (read by PotionArt), a registry line and a 512 px upload copy.
+ import re,struct
+ config=(ROOT/'src/shared/ProgressionConfig.luau').read_text()
+ catalog=re.findall(r'\{id="(\w+)",name="([^"]+)",kind="\w+",rarity="\w+",duration',config)
+ assert len(catalog)==12,len(catalog)
+ slots=(ROOT/'src/shared/AssetSlots.luau').read_text()
+ bound=dict(re.findall(r'potion_icon_(\w+) = "(rbxassetid://[1-9]\d{4,18})"',slots))
+ assert sorted(bound)==sorted(i for i,_ in catalog),('potion without icon / icon without potion',sorted(set(bound)^{i for i,_ in catalog}))
+ assert len(set(bound.values()))==12,'icon ids must be unique'
+ registry=(ROOT/'docs/77-asset-registry.md').read_text()
+ for pid,name in catalog:
+  assert f'| potion_icon_{pid} |' in registry and bound[pid] in registry,pid
+  stem=re.sub(r'[^a-z]+','-',name.lower())
+  big,small=ROOT/f'resources/ui/v2/items/potion-{stem}.png',ROOT/f'resources/ui/v2/items/potion-{stem}-512.png'
+  assert big.exists() and small.exists(),(name,'missing png')
+  head=small.read_bytes()[:33]
+  w,h,depth,color=struct.unpack('>IIBB',head[16:26])
+  assert (w,h,color)==(512,512,6),(small.name,'must be a 512x512 RGBA png')
+ print('Potion icons passed: 12 catalog potions, 12 unique bound ids in AssetSlots, 12 registry lines, 12 PNGs at 512 px RGBA')
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:
   path=Path(d)/'potion_shop.luau';path.write_text(script())
   result=subprocess.run([args.runner,str(path)],capture_output=True,text=True)
-  print(result.stdout,end='');print(result.stderr,end='');raise SystemExit(result.returncode)
+  print(result.stdout,end='');print(result.stderr,end='')
+  if result.returncode==0:icons()
+  raise SystemExit(result.returncode)

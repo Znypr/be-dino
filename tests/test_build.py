@@ -53,10 +53,12 @@ class BuildTests(unittest.TestCase):
         root = ET.fromstring(packager.build()[0])
         service = next(n for n in root.findall("Item") if n.attrib["class"] == "MaterialService")
         variants = service.findall("Item")
-        self.assertEqual(len(variants), 3)
+        # 2026-10-17: BeDino_MeadowV2 (BD-461) is packaged now that its three maps are uploaded; it has NO metalness map and stays unbound.
+        self.assertEqual(len(variants), 4)
         for variant in variants:
             self.assertEqual(variant.attrib["class"], "MaterialVariant")
-            for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
+            maps = ("ColorMap", "NormalMap", "RoughnessMap") if variant.find("Properties/string[@name='Name']").text == "BeDino_MeadowV2" else ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap")
+            for key in maps:
                 self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
         # BD-460 (docs/138): the BeDino_Meadow variant stays packaged with all its IDs but is NOT bound: the island uses the built-in Grass.
         self.assertIsNone(service.find("Properties/string[@name='GrassName']"))

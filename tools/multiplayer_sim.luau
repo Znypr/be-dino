@@ -73,9 +73,10 @@ local function boot(server)
     local leaving = LC.new({endForDisconnect = RL.endForDisconnect,
         release = function(p) env.released[p] = true return Repo.release(p) end, publish = nil})
     env.leaving = leaving
-    RL.configureSettlement(function(player, runId, catchScore, reason, eggEvents, runSeconds)
+    RL.configureSettlement(function(player, runId, catchScore, reason, eggEvents, runSeconds, nestWeather)
         env.settleCalls[runId] = (env.settleCalls[runId] or 0) + 1
-        local ok, outcome, status = Repo.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, nil)
+        -- BD-319 round 2: mirrors Bootstrap, which hands the run's per-nest weather ledger (BD-479) to the settlement
+        local ok, outcome, status = Repo.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, nestWeather)
         if ok then env.committed[runId] = {userId = player.UserId, catch = catchScore, outcome = outcome, status = status} end
         leaving.settlementFinished(player)
         return ok

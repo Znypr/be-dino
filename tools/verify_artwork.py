@@ -11,6 +11,9 @@ local Color3={fromRGB=function(r,g,b)return {r=r,g=g,b=b}end,new=function(r,g,b)
 local UDim={new=function(s,o)return {S=s,O=o}end}
 local created={}
 local Instance={new=function(kind)local o={kind=kind} table.insert(created,o) return o end}
+local Slots='''+module('src/shared/AssetSlots.luau')+'''
+local script={Parent={AssetSlots="Slots"}}
+local require=function(_)return Slots end
 local PotionArt='''+module('src/shared/PotionArt.luau')+'''
 local Assets='''+module('src/shared/ArtworkAssets.luau')+'''\nlocal Layout='''+module('src/shared/ArtworkLayout.luau')+'''
 local script={Parent={ArtworkAssets="Assets",ArtworkLayout="Layout",PotionArt="PotionArt"}}
@@ -36,7 +39,7 @@ created={}
 Artwork.build(parent,Navigation.potions,native)
 local menuImages,menuFrames=0,0
 for _,o in created do
- if o.kind=="ImageLabel" then menuImages+=1 assert(o.Image==PotionArt.Images.speed_common and o.Image=="rbxassetid://110990547415973" and o.Size.X==1 and o.Position.X==.5) end
+ if o.kind=="ImageLabel" then menuImages+=1 assert(o.Image==PotionArt.Images.speed_common and o.Image=="rbxassetid://82050795396595" and o.Size.X==1 and o.Position.X==.5) end
  if o.kind=="Frame" then menuFrames+=1 end
 end
 assert(menuImages==1 and menuFrames==1,"BD-144: menu potion = root frame + one image, no pips")

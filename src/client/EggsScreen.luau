@@ -3,8 +3,9 @@
 -- Drawing only; state rules live in Shared/EggsLogic (tools/verify_eggs_screen.py). Bootstrap passes a
 -- context table of its UI helpers so this module stays focused and Bootstrap edits stay small.
 -- BD-169 redesign (docs/87 calm, bubbly, colourful): the hero egg is the official Blender egg PNG (EggPicture, with its condition look)
--- on a soft tile floor (PLACEHOLDER until the Blender tile-floor render is uploaded, docs/77 egg_stage); nest slots use the single-egg
--- nest icon (egg_nest_single). No motion is added, so Reduce Motion needs nothing.
+-- on a soft tile floor (PLACEHOLDER; BD-208: once ConditionStageAssetIds holds the owner's jungle stage, docs/77 egg_stage_jungle, the card draws
+-- it with the condition egg PNG instead, ConditionStage.hero); nest slots use the single-egg nest icon (egg_nest_single, bound; code-drawn
+-- fallback in UITheme if its id is ever empty). No motion is added, so Reduce Motion needs nothing.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -16,6 +17,8 @@ local ProgressionConfig = require(Shared.ProgressionConfig)
 local ProgressionRules = require(Shared.ProgressionRules)
 local UIFormat = require(Shared.UIFormat)
 local EggPicture = require(script.Parent.EggPicture)
+local ConditionStage = require(script.Parent.ConditionStage)
+local StageRules = require(Shared.ConditionStageRules)
 local FxUi = require(Shared.FxUi)
 local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
@@ -95,14 +98,36 @@ function EggsScreen.render(ctx: any)
 
     local rarity = if entry then entry.rarity or 1 else nil
     local accent = if rarity then ctx.rarityColors[rarity] else C.blue
-    local stageW, stageH = 300, cardH - 20
-    local stage = EggPicture.stage(card, stageW, stageH, accent)
-    stage.Position = UDim2.fromOffset(10, 10)
+    -- BD-208: the official Blender stage + condition egg when uploaded (ConditionStageAssetIds, a SQUARE with ScaleType Fit, nothing
+    -- stretched); with no id the tile floor and tinted egg below stay exactly as they were.
     local look = FusionSelection.eggSlotLook(entry, entry ~= nil and EggGenetics.valid(entry.genes))
-    local eggSize = math.clamp(stageH - 70, 110, 190)
-    local egg = EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)
-    egg.Position = UDim2.fromOffset((stageW - eggSize) // 2, 14)
-    if not entry then dim(egg, .6) end
+    local conditionKey = StageRules.conditionKey(if entry and look == "genes" then entry.genes.conditionId else nil)
+    local stageW, stageH = 300, cardH - 20
+    local side = StageRules.heroSide(stageW, stageH)
+    local official = ConditionStage.hero(card, side, conditionKey)
+    local stage: GuiObject
+    local egg: GuiObject
+    if official then
+        stageW, stageH = side, side
+        stage = official.frame
+        stage.Position = UDim2.fromOffset(10, 10 + (cardH - 20 - side) // 2)
+        if official.egg then
+            egg = official.egg
+            if not entry then (egg :: ImageLabel).ImageTransparency = .6 end
+        else
+            local eggSize = math.clamp(side - 70, 110, 190) -- stage only: today's tinted egg standing on the pedestal
+            egg = EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)
+            egg.Position = UDim2.fromOffset((side - eggSize) // 2, math.max(4, math.floor(side * .76) - eggSize))
+            if not entry then dim(egg, .6) end
+        end
+    else
+        stage = EggPicture.stage(card, stageW, stageH, accent)
+        stage.Position = UDim2.fromOffset(10, 10)
+        local eggSize = math.clamp(stageH - 70, 110, 190)
+        egg = EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)
+        egg.Position = UDim2.fromOffset((stageW - eggSize) // 2, 14)
+        if not entry then dim(egg, .6) end
+    end
 
     if entry and rarity then
         local conditionName = if entry.genes and EggGenetics.valid(entry.genes) then EggGenetics.condition(entry.genes.conditionId or "normal").name else nil

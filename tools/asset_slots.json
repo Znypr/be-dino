@@ -281,7 +281,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "domeGradient",
    "group": "Requested.domeGradient",
-   "pending": "BD-433 shock dome code (BD-430 texture rendered, not read yet)"
+   "pending": "BD-433 shock dome reads it (FxRig, needs the shock_dome_mesh slot too); rendered, not uploaded"
   },
   {
    "name": "speedStreaks",
@@ -2067,6 +2067,162 @@
     "GeneratedMeshes.Props"
    ],
    "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "potion_icon_speed_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_speed_common",
+   "group": "Images.potion_icon_speed_common",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_growth_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_growth_common",
+   "group": "Images.potion_icon_growth_common",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_loot_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_loot_common",
+   "group": "Images.potion_icon_loot_common",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_speed_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_speed_uncommon",
+   "group": "Images.potion_icon_speed_uncommon",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_growth_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_growth_uncommon",
+   "group": "Images.potion_icon_growth_uncommon",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_speed_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_speed_rare",
+   "group": "Images.potion_icon_speed_rare",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_growth_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_growth_rare",
+   "group": "Images.potion_icon_growth_rare",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_loot_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_loot_rare",
+   "group": "Images.potion_icon_loot_rare",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_growth_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_growth_epic",
+   "group": "Images.potion_icon_growth_epic",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_loot_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_loot_epic",
+   "group": "Images.potion_icon_loot_epic",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_speed_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_speed_legendary",
+   "group": "Images.potion_icon_speed_legendary",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
+  },
+  {
+   "name": "potion_icon_growth_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_icon_growth_legendary",
+   "group": "Images.potion_icon_growth_legendary",
+   "table": "Images",
+   "reader": [
+    "src/shared/PotionArt.luau",
+    "AssetSlots"
+   ]
   }
  ]
 }

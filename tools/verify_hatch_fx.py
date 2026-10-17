@@ -175,8 +175,13 @@ end
 assert(P.counts(6, "desktop", false).drops > P.counts(1, "desktop", false).drops, "rarer reveals splash more droplets")
 -- 10. Flipbook cells + real-id switch (EffectAssets): fallback shows no cell, a real id selects one of 16 cells of the sheet.
 -- FX v3 (2026-10-16): smoke / sparkle / flame / swirl are real 1024 px uploads (256 px cells); crystalSheet still falls back.
+-- 2026-10-17: crystalSheet and glowPlate are bound to owner uploads now; the fallback checks clear them and restore them.
+local savedCrystal, savedPlate = A.Requested.crystalSheet.id, A.Requested.glowPlate.id
+A.Requested.crystalSheet.id, A.Requested.glowPlate.id = "", ""
 assert(A.cellRect("crystalSheet", 1) == nil, "no cell while the key still uses a built-in sprite")
 assert(A.resolve("glowPlate") == A.Builtin.spark and not A.isReal("glowPlate"))
+A.Requested.crystalSheet.id, A.Requested.glowPlate.id = savedCrystal, savedPlate
+assert(A.cellRect("crystalSheet", 1) ~= nil or savedCrystal == "", "a bound crystalSheet selects a cell")
 assert(A.isReal("smokeSheet") and A.isReal("sparkSheet") and A.isReal("starFour") and A.isReal("flameSheet") and A.isReal("swirl") and A.isReal("rays"))
 local savedGlow, savedRing = A.Requested.glowPlate.id, A.Requested.ringShock.id
 local fakeId = "rbxassetid://1234567"

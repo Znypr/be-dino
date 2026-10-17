@@ -200,6 +200,14 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 - BD-451 grows (recipient setting, block/mute, never-played inbox, audit, revoke), stays P2. BD-452 stays P2 and gains offline-by-username. BD-453 stays P3, now also gated by the docs/134 s12 go-live review. Dependencies unchanged.
 - Open for the owner (3): see the PR description; none blocks BD-451 or BD-452.
 
+## LEAD decision 2026-10-17 (owner delegated): admin Mutation chance is per player
+| # | Decision | Why | Source |
+|---|---|---|---|
+| AM1 | **LEAD (owner delegated):** the admin panel's "Mutation chance x10" (BD-237) applies **only to the admin's own catches**. `FoodService` keeps one scale per admin Player (shared pure `AdminMutationScale` book, weak-keyed, server memory only), and `RunEggTags.apply` receives the catching player's own scale (x1 for everyone else). The scale is cleared when that admin leaves and on Reset or server start. Caps (x1..x10, 100% chance cap), validation, the odds panel, bonus nests and "no profile write" are unchanged | it was server-wide, so in a published playtest with friends their weather eggs also rolled at x10 and those boosted mutation tags were saved to their profiles, polluting real player data | [79](79-admin-panel.md), [111](111-multiplayer-audit.md) s8, [99](99-mutation-audit.md) G5, BD-237 |
+
+### Task effects (2026-10-17, admin Mutation chance)
+- BD-237 stays Review / test: still only the lead's Studio check is open (now: the owner's own eggs mutate at x10 and a friend's do not). Overrules the earlier "server-wide by design" note in docs/79 and docs/111 s8.
+
 ## 2026-10-17 (fused tier look BENCHED)
 - OWNER 2026-10-17: after walking the Studio test (v2 edge-glow coats, emissive strength 6, plus a live Neon halo + bloom test): "it looks like a plastic shell, not a metal gloss effect. bench for now. do something else." The tier look is BENCHED; PR #291 (tier-shiny) stays open and unmerged.
 - State at bench: build-time SurfaceAppearance templates (21, raptor gold/emerald/diamond v2 maps uploaded), per-tier roughness, warm gold tint, emissive edge glow. Owner liked: colours and pattern preserved perfectly. Owner disliked: plastic-shell read, weak reflections, hard part-seam bands, no soft blurry glow like the 4-panel reference.

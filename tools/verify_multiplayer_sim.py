@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_load  # noqa: E402
 
 HEAD_MARKER = "-------------------------------------------------------------------- simulated players"
+REPORT_MARKER = "-------------------------------------------------------------------- report"
 
 
 def patch_head(head: str) -> str:
@@ -60,6 +61,16 @@ def patch_head(head: str) -> str:
 def build_harness() -> str:
     marker_at = verify_load.HARNESS.index(HEAD_MARKER)
     head = patch_head(verify_load.HARNESS[:marker_at])
+    # BD-319 round 2: modules are loaded inside newServer, before boot() installs the mocks. A late-bound proxy lets a module loaded
+    # early (PrivateState, required by ProfileRepository) see the mock workspace / Instance that boot() creates and a scenario may
+    # replace. Done here and not in patch_head, because verify_session1_smoke patches the same text its own way.
+    for old, new in (
+        ("workspace = server.workspace, Instance = server.Instance,", "workspace = server.proxy('workspace'), Instance = server.proxy('Instance'),"),
+        ("    local function load(n)" + chr(10), "    function server.proxy(name) return setmetatable({}, {__index = function(_, k) local target = server[name] return if target then target[k] else nil end}) end" + chr(10) + "    local function load(n)" + chr(10)),
+    ):
+        if head.count(old) != 1:
+            raise SystemExit(f"harness patch target changed in verify_load.py: {old!r}")
+        head = head.replace(old, new)
     sources = []
     for folder in ("src/server", "src/shared"):
         for path in sorted((ROOT / folder).glob("*.luau")):
@@ -69,6 +80,12 @@ def build_harness() -> str:
                            f"{verify_load.long_string(path.read_text(encoding='utf-8'))}")
     head = head.replace("__SOURCES__", "{\n" + ",\n".join(sources) + "\n}")
     body = (ROOT / "tools" / "multiplayer_sim.luau").read_text(encoding="utf-8")
+    # BD-319 round 2: tools/multiplayer_cross_player.luau (2/4/8 players, cross-player leakage, per-client caps) runs in the
+    # same chunk, just before the report, so it shares the scheduler, the mocks and the helpers of the body.
+    cross = (ROOT / "tools" / "multiplayer_cross_player.luau").read_text(encoding="utf-8")
+    if body.count(REPORT_MARKER) != 1:
+        raise SystemExit("multiplayer_sim.luau lost its report marker")
+    body = body.replace(REPORT_MARKER, cross + "\n" + REPORT_MARKER)
     return "local SCENARIO_FAIL_RATE = 0\n" + head + "\n" + body
 
 
@@ -89,7 +106,21 @@ STATIC = [
     ("src/server/ProfileRepository.luau", r"action==\"buyPerk\" and \(Config\.FastTravelPerk~=true or Config\.CaveHub~=true\)", "buyPerk is refused while the perk or cave flag is off"),
     ("src/server/RunLifecycle.luau", r"SetAttribute\(\"HubStation\", nil\)", "the public HubStation marker is cleared on respawn and run start"),
     ("src/server/Leaderboards.luau", r"Writes\.shouldWrite\(writeState,definition\.id,userId", "leaderboard writes go through the per-user write gate"),
+    # BD-319 round 2: cross-player wiring that the offline cases above rely on.
+    ("src/server/AdminService.luau", r"local function handle\(player: Player, action: any, a: any, b: any\): \(boolean, string\)\n    if admins\[player\] ~= true then return false, \"not_admin\" end", "the admin remote refuses non-admins before anything else"),
+    ("src/server/AdminService.luau", r"admins\[player\] = nil lastRequest\[player\] = nil", "admin state is dropped when the player leaves"),
+    ("src/server/FoodService.luau", r"RunEggTags\.apply\(events,weatherId,before,after,function\(\) return eventRandom:NextNumber\(\) end,FoodService\.adminMutationScale\(candidate\.player\)\)", "the admin mutation scale reaches only the per-catch weather roll, and only for the catching player's own scale"),
+    ("src/server/FoodService.luau", r"adminMutationScales = AdminMutationScale\.new\(\)[\s\S]{0,700}AdminMutationScale\.get\(adminMutationScales, player\)", "the admin mutation scale is kept per Player (shared AdminMutationScale book), not server-wide"),
+    ("src/server/FoodService.luau", r"PlayerRemoving:Connect\(function\(player\) previous\[player\] = nil AdminMutationScale\.clear\(adminMutationScales, player\)", "FoodService drops a leaving player's mutation scale too"),
+    ("src/server/AdminService.luau", r"FoodService\.clearAdminMutationMultiplier\(player\)", "the leaving admin's mutation scale is cleared"),
+    ("src/server/ProfileRepository.luau", r"ProgressionRules\.eventEgg\(nest\.weatherId, rng:NextNumber\(\)\)", "nest eggs roll at the shipped chance (no admin scale)"),
+    ("src/server/RunLifecycle.luau", r"local runNestWeather: \{\[string\]: \{string\}\} = \{\}", "the nest weather ledger is server-only and keyed by run id"),
+    ("src/server/RunLifecycle.luau", r"runNestWeather\[runId\] = nil\n    local killEggs", "settlement consumes (clears) the run's nest weather ledger"),
+    ("src/server/Dinosaur.luau", r"caveHub = Config\.CaveHub == true, inHub = inHub, score = character:GetAttribute\(\"GrowthScore\"\)", "the drawn size is decided per character from its own position and attributes"),
 ]
+
+# BD-319 round 2: these are client-side render caps. If a server script required them, a cap could become a count across players.
+CLIENT_ONLY_MODULES = ("EffectsLod", "ContactShadowRules", "MomentRimPlan", "FxRecipes", "CameraOcclusion", "ConditionOverlays")
 
 
 def static_checks() -> list[str]:
@@ -98,6 +129,11 @@ def static_checks() -> list[str]:
         text = (ROOT / rel).read_text(encoding="utf-8")
         if not re.search(pattern, text):
             problems.append(f"static: {label} ({rel})")
+    for path in sorted((ROOT / "src/server").glob("*.luau")):
+        text = path.read_text(encoding="utf-8")
+        for name in CLIENT_ONLY_MODULES:
+            if re.search(r"require\([^)\n]*\b" + name + r"\b", text):
+                problems.append(f"static: server script {path.name} requires client render-cap module {name} (caps must stay per client)")
     repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
     # BD-358: routine remote-triggered writes are admitted through the per-player bucket; priority writes never are.
     parts = re.split(r"\n(?=function ProfileRepository\.)", repo)

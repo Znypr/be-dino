@@ -126,7 +126,7 @@ for key, req in Assets.Requested do
 end
 for key, id in Assets.Uploaded do assert(Assets.isValid(id), key) end
 assert(not Assets.isValid("rbxassetid://") and not Assets.isValid("rbxassetid://abc") and Assets.isValid("rbxassetid://123"))
-assert(Assets.resolve("nothing") == Assets.Builtin.spark and Assets.resolve("glowPlate") == Assets.Builtin.spark)
+assert(Assets.resolve("nothing") == Assets.Builtin.spark and Assets.resolve("glowPlate") == (Assets.Requested.glowPlate.id ~= "" and Assets.Requested.glowPlate.id or Assets.Builtin.spark))
 -- 8. FX v3: flipbook modes and the aura tier rules (all: smoke; Rare+: sparkles; Epic+: flame + rays; Legendary+: swirl at the feet).
 assert(Assets.mode("smokeSheet") == "OneShot" and Assets.mode("sparkSheet") == "OneShot" and Assets.mode("flameSheet") == "Random" and Assets.mode("swirl") == "Loop")
 assert(Assets.isSheet("smokeSheet") and Assets.isSheet("swirl") and not Assets.isSheet("rays") and Assets.isReal("rays"))
@@ -309,7 +309,7 @@ do
         end
     end
     for _, key in MAPPED do Assets.Requested[key].id = saved[key] end
-    assert(not Assets.isReal("motifAurora") and R.resolve("mutation", Look.get("aurora"), {device = "desktop", real = Assets.isReal}).layers[3].tex == "sparkSheet", "slots restored")
+    assert(Assets.isReal("motifAurora") == (saved.motifAurora ~= "") and R.resolve("mutation", Look.get("aurora"), {device = "desktop", real = Assets.isReal}).layers[3].tex == (if saved.motifAurora ~= "" then "motifAurora" else "sparkSheet"), "slots restored")
 end
 print(string.format("FxRecipes passed: %d resolutions (auras %d, trails %d, mutations %d) x 3 devices, tiers monotonic, phone rate x0.5, Reduce Motion light/ribbon only",
     count, #Config.Auras, #Config.Trails, #Look.Order))
@@ -337,12 +337,13 @@ def scan():
     for path in ['src/shared/FxRecipes.luau', 'src/shared/FxUi.luau', 'src/client/FxRig.luau']:
         assert not re.search(r'rbxassetid://\d+', (ROOT / path).read_text(encoding='utf-8')), path + ' must not contain asset ids'
     ids = re.findall(r'rbxassetid://(\d+)', (ROOT / 'src/shared/EffectAssets.luau').read_text(encoding='utf-8'))
-    # Real uploads only: the BD-155 soft mist plus the five FX v3 owner uploads (docs/77 fx3_* rows, 2026-10-16).
-    real = {'105629313112163', '109810080362045', '105817278245256', '71657118485647', '84584423423015', '99778248779183'}
-    assert set(ids) == real, 'EffectAssets may only contain registered real uploads: ' + str(ids)
+    # Real uploads only: the BD-155 soft mist, the five FX v3 owner uploads (docs/77 fx3_* rows, 2026-10-16) and any id the lead
+    # bound after the 2026-10-17 batch upload; every id must be a registered docs/77 row (empty slots stay allowed).
+    core = {'105629313112163', '109810080362045', '105817278245256', '71657118485647', '84584423423015', '99778248779183'}
+    assert core <= set(ids), 'the registered core uploads must stay bound: ' + str(core - set(ids))
     registry = (ROOT / 'docs/77-asset-registry.md').read_text(encoding='utf-8')
-    for i in real - {'105629313112163'}:
-        assert 'rbxassetid://' + i in registry, i + ' must be in the asset registry'
+    for i in set(ids) - {'105629313112163'}:
+        assert i in registry, i + ' is in EffectAssets but not in the asset registry (invented id?)'
     # Bootstrap is at Luau's 200 local-register limit: it must not gain top-level locals for this feature.
     assert 'FxRig' not in (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     # BD-186..189: the world rig hands the recipe the slot check, and the recipe owns the one mutation -> texture table

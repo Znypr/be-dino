@@ -131,6 +131,29 @@ try:
 except Exception as e:  # noqa: BLE001
     err(f'bind_assets self-test failed: {e!r}')
 
+# self-test of the one-shot batch (tools/upload_batch.py + bind_assets --batch), in memory
+try:
+    import upload_batch  # noqa: E402
+    items, _skipped = upload_batch.collect(by_name)
+    for it in items:
+        problems = upload_batch.check_file(ROOT / it['file'], it['needs_alpha'])[0]
+        if problems:
+            err(f'upload batch file {it["file"]}: ' + '; '.join(problems))
+    if len({it['slot'] for it in items}) != len(items):
+        err('upload batch maps two files to one slot')
+    manifest = [{'file': it['file'], 'slot': it['slot'], 'url_path': it['slot'] + it['ext']} for it in items]
+    if manifest:
+        first = manifest[0]
+        got = bind_assets.batch_pairs({f'http://localhost:9/{first["url_path"]}': 'rbxassetid://123456'}, manifest)
+        assert got == [(first['slot'], 'rbxassetid://123456')], got
+        try:
+            bind_assets.batch_pairs({'http://localhost:9/unknown.png': 'rbxassetid://123456'}, manifest)
+            err('batch binder accepted a URL that is not in the manifest')
+        except ValueError:
+            pass
+except Exception as e:  # noqa: BLE001
+    err(f'upload_batch self-test failed: {e!r}')
+
 if errors:
     print('Asset slot check FAILED:\n  ' + '\n  '.join(errors))
     sys.exit(1)

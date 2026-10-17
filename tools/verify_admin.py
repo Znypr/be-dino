@@ -132,6 +132,27 @@ local clearEvents, clearHits, clearCalls = Tags.apply({}, "clear", 0, 20, functi
 assert(#clearEvents == 0 and clearHits == 0 and clearCalls == nil, "clear weather tags nothing at x10")
 local _, noEggHits = Tags.apply({}, "rain", 5, 5, function() return 0 end, 10)
 assert(noEggHits == 0, "a catch that adds no egg rolls nothing at x10")
+-- BD-237 / docs/115: the multiplier is per player. Only the admin who set it rolls boosted; everyone else stays x1 in the same weather.
+do
+ local adminP, friend, other = {}, {}, {}
+ local book = Scale.new()
+ assert(Scale.get(book, adminP) == 1 and Scale.get(book, friend) == 1, "everyone starts at x1")
+ Scale.set(book, adminP, 10)
+ assert(Scale.get(book, adminP) == 10 and Scale.get(book, friend) == 1 and Scale.get(book, other) == 1, "x10 is the admin's alone")
+ local rainChance = Config.Weather[1].id == "rain" and Config.Weather[1].chance or 0.02
+ local function eggFor(p) local _, hits = Tags.apply({}, "rain", 0, 1, function() return rainChance * 5 end, Scale.get(book, p)) return hits end
+ assert(eggFor(adminP) == 1 and eggFor(friend) == 0 and eggFor(other) == 0, "the admin's egg mutates, friends' eggs roll the shipped chance")
+ Scale.set(book, adminP, 99) assert(Scale.get(book, adminP) == 10, "clamped to x10")
+ Scale.set(book, friend, 0/0) assert(Scale.get(book, friend) == 1, "NaN means x1")
+ Scale.set(book, friend, "10") assert(Scale.get(book, friend) == 1, "non-numbers mean x1")
+ Scale.set(book, friend, -4) assert(Scale.get(book, friend) == 1, "never below x1")
+ Scale.set(book, adminP, 1) assert(Scale.get(book, adminP) == 1 and next(book.scales) == nil, "x1 clears the entry")
+ Scale.set(book, adminP, 7) Scale.set(book, friend, 3)
+ Scale.clear(book, adminP)
+ assert(Scale.get(book, adminP) == 1 and Scale.get(book, friend) == 3, "a leaving admin's scale is cleared without touching another admin's")
+ Scale.clearAll(book)
+ assert(Scale.get(book, friend) == 1 and next(book.scales) == nil, "reset / start clears every scale")
+end
 print("Admin panel checks passed")
 '''
 
@@ -148,11 +169,21 @@ def static_checks():
     if 'OnClientInvoke' in service or 'InvokeClient' in service:
         errors.append('AdminService must never invoke clients')
     # BD-237: the mutation multiplier is applied only from the admin-gated publish(), never read from profiles or remotes of players.
-    if 'FoodService.setAdminMutationMultiplier(value)' not in service:
-        errors.append('AdminService.publish must forward mutationChanceMultiplier to FoodService')
+    if 'FoodService.setAdminMutationMultiplier(caller, value)' not in service:
+        errors.append('AdminService.publish must forward mutationChanceMultiplier to FoodService for the calling admin only (per player, docs/115)')
+    if 'publish(a, value, player)' not in service or 'clearAllAdminMutationMultipliers()' not in service:
+        errors.append('AdminService must pass the caller to publish and clear every admin scale on reset / start')
+    if 'clearAdminMutationMultiplier(player)' not in service:
+        errors.append("AdminService must clear a leaving admin's mutation scale")
     food = (ROOT / 'src/server/FoodService.luau').read_text(encoding='utf-8')
-    if 'adminMutationMultiplier = 1' not in food or 'adminMutationMultiplier)' not in food:
-        errors.append('FoodService must default the mutation multiplier to 1 and pass it to RunEggTags.apply')
+    if 'adminMutationScales = AdminMutationScale.new()' not in food or 'AdminMutationScale.get(adminMutationScales, player)' not in food:
+        errors.append('FoodService must keep the mutation scale per Player in an AdminMutationScale book (x1 by default)')
+    if 'FoodService.adminMutationScale(candidate.player))' not in food:
+        errors.append("FoodService must pass the catching player's own scale to RunEggTags.apply")
+    if re.search(r'adminMutationMultiplier', food):
+        errors.append('FoodService must not keep a server-wide mutation multiplier (BD-237 is per player, docs/115)')
+    if 'AdminMutationScale.clear(adminMutationScales, player)' not in food:
+        errors.append("FoodService must drop a leaving player's mutation scale")
     for name in ('src/client/EggsScreen.luau', 'src/client/Bootstrap.client.luau', 'src/client/IndexScreen.luau'):
         path = ROOT / name
         if path.exists() and re.search(r'mutationChanceMultiplier|Admin_mutation|scaledChance', path.read_text(encoding='utf-8')):
@@ -191,6 +222,7 @@ def script():
             + ' Tags = ' + module('src/shared/RunEggTags.luau') + '\n'
             + 'end\n'
             + 'local Admin=' + module('src/shared/AdminRules.luau') + '\n'
+            + 'local Scale=' + module('src/shared/AdminMutationScale.luau') + '\n'
             + 'local Clock=' + module('src/shared/WeatherClock.luau',
                                       {'require(script.Parent.ProgressionConfig)': '{WeatherInterval=600,WeatherDuration=180}'})
             + '\n' + BODY)
