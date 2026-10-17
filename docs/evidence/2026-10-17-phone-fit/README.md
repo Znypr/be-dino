@@ -85,4 +85,14 @@ Studio was in use by another agent, so no Studio window was opened for this chan
 
 Verifiers that now fail if these come back: `verify_movement_mobile` (zero overlaps incl. SIZE bar, hint, chip; every action >= 44 px; a probe that the centred bar and chip would touch the column; desktop rects unchanged; static wiring), `verify_phone_scale` (`scrollX` false, innerW >= 836, body inside the screen width, floors with the fitted scale, OPEN / AUTO / GO HOME / CANCEL >= 44 px), `verify_hud`, `verify_feedback`.
 
-Studio pictures to take once the lead says "Studio free" (one window, BeDinoUI about 667 x 317): `after2-667x375-hub-hud.jpg`, `after2-667x375-run-hud.jpg`, `after2-667x375-eggs-screen.jpg`, `after2-667x375-go-home-confirm.jpg`. STATUS: pending.
+## BD-538 Studio result (2026-10-17, 12:02, BeDinoUI 667 x 317, mouse not touch, 60 frames/s before every capture)
+
+Own place `dtmp/smallphone.rbxlx` (playtest profile, branch after merging main), one Studio window, window 1447 x 630 (docked panels take the rest), camera back on Custom. Pictures:
+
+- [hub HUD](after2-667x375-hub-hud.jpg): "Back to the middle" at (205,173) 240 x 48 ends at x 445, the weather/LEAP column starts at 449: no overlap (was 4 x 44). Tell us! (8,261), Admin and EXPLORE ISLAND on the bottom row, no overlap.
+- [run HUD](after2-667x375-run-hud.jpg): SIZE bar (140,72) 250 x 34 and the goal hint (85,110) 360 x 28 end at x 390 and 445, the column starts at 449: no overlap (was 9 x 30).
+- [Eggs screen](after2-667x375-eggs-screen.jpg): `BodyScroll` 644.6 x 260.6, `CanvasSize` (0, 0), `BodyFit` UIScale 0.964, no sideways bar. All five nest slots whole (the 5th at x 529 to 649, scroller right edge 656), the hint "Nest eggs are lucky! Nests open one at a time." whole (right edge 649), AUTO 100 x 46, EXPLORE ISLAND 436 x 89. The egg card frame is 3 px taller than the scroller at the bottom (`OfficialEgg` bottom 312 vs 309): clipped by the scroller, nothing readable cut.
+- [Go home](after2-667x375-go-home-confirm.jpg): same `BodyScroll` (canvas 0 x 0), GO HOME (245.9,257.1) 188 x 46 and CANCEL (443.3,257.1) 188 x 46, both inside the body, no scroll bars.
+- Also seen: the Dino Index at this size fits the width too (canvas X 0, vertical bar only).
+- Tell us!: `TellUsButton.Visible` is false while the ModalScrim is up (read in the Dino Index and Eggs screens, true in the hub after a run ended). The Eggs picture has no egg yet (a fresh profile), so the egg card's rarity and condition chips themselves were not on screen; the button is hidden whenever the scrim is up, so it cannot cover them.
+- Not covered: 836 x 390 (unchanged by this change, offline verifiers only), a real touch phone (BD-085).
