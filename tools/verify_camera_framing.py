@@ -21,7 +21,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_scale_ladder import MEASURED  # noqa: E402  (W, H, L at spawn of all 22 species, Studio-measured BD-471 / BD-500)
+from verify_scale_ladder import MEASURED, SECRET_BOXES, ALL_BOXES  # noqa: E402  (W, H, L at spawn of all 22 species, Studio-measured BD-471 / BD-500; BD-606: plus the 7 secret species, design estimates until their meshes exist)
 
 BASE = 12  # Config.CameraMinZoom
 CAP = 90  # CameraFraming.MaxDistance (BD-513)
@@ -86,7 +86,7 @@ print("OK")
 
 
 def run(runner):
-    sizes = ', '.join('%s = {%s, %s, %s}' % (k, *v) for k, v in MEASURED.items())
+    sizes = ', '.join('%s = {%s, %s, %s}' % (k, *v) for k, v in ALL_BOXES.items())
     source = 'local M = (function()\n' + (ROOT / 'src/shared/CameraFraming.luau').read_text(encoding='utf-8') + '\nend)()\n' + BODY.replace('{SIZES}', '{' + sizes + '}')
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'camera_framing.luau'
@@ -149,18 +149,26 @@ def main():
                 problems.append('%s at %s: Studio fill %d%% is outside 25 to 56%% of the screen height' % (species, s, fill))
             if top < 160:
                 problems.append('%s at %s: Studio dino top %d px is inside the HUD banner (needs 160 or more)' % (species, s, top))
-    missing = [sp for sp in MEASURED if sp not in STUDIO and sp not in PENDING_SWEEP]
+    missing = [sp for sp in MEASURED if sp not in STUDIO and sp not in PENDING_SWEEP]  # the secrets (SECRET_BOXES) have no Studio sweep row until their meshes exist; the numeric rules below still cover them
     if missing:
         problems.append('no Studio sweep row for: %s' % ', '.join(missing))
     # BD-513 BIG: at the BIG maximum growth scale 4.8 no species is held back by the cap: the camera distance is the size rule's own number
     # (12 x max(scale, size ratio), never below 12 x 4.8), so the screen share is the same ratio as at scale 4 (<= 56%) and not the old 72%.
-    for species in MEASURED:
+    for species in ALL_BOXES:
         z, _ = rows[(species, 4.8)]
-        h, l = MEASURED[species][1] * 4.8, MEASURED[species][2] * 4.8
+        h, l = ALL_BOXES[species][1] * 4.8, ALL_BOXES[species][2] * 4.8
         wanted = max(BASE * 4.8, BASE * ((h * h + (0.65 * l) ** 2) ** 0.5) / 8.2831)
         if z < BASE * 4.8 - 1e-6 or abs(z - wanted) > 0.02 * wanted:
             problems.append('%s at 4.8: min zoom %.2f is not the size rule (%.2f): the cap still binds' % (species, z, wanted))
-    widest = max(rows[(sp, 4.8)][0] for sp in MEASURED)
+    # BD-606: the secret species are Compy-sized (tier 1): framed no farther than a Compy-like body, never closer than 12 x scale, never capped
+    for species in SECRET_BOXES:
+        for s in (1, 2, 4):
+            z, lift = rows[(species, float(s))]
+            if z > BASE * s * 1.10 + 1e-6:
+                problems.append('secret %s at %s: min zoom %.2f is pushed back more than 10%% past a Compy (%.2f)' % (species, s, z, BASE * s))
+            if lift > 2 * (s - 1) * 1.10 + 0.5:
+                problems.append('secret %s at %s: lift %.2f is above a Compy-like body' % (species, s, lift))
+    widest = max(rows[(sp, 4.8)][0] for sp in ALL_BOXES)
     if widest > CAP:
         problems.append('the widest body at 4.8 needs %.1f, past the cap %d' % (widest, CAP))
     occlusion = (ROOT / 'src/shared/CameraOcclusion.luau').read_text(encoding='utf-8')
@@ -170,14 +178,14 @@ def main():
     if not re.search(r'CameraFraming\.MaxDistance = %d' % CAP, (ROOT / 'src/shared/CameraFraming.luau').read_text(encoding='utf-8')):
         problems.append('CameraFraming.MaxDistance is not %d' % CAP)
     if args.print:
-        for sp in sorted(MEASURED):
+        for sp in sorted(ALL_BOXES):
             print(sp, ' '.join('s%s %.1f/%.1f' % (s, *rows[(sp, float(s))]) for s in (1, 2, 4)))
     if problems:
         print('camera framing FAILED:')
         for p in problems:
             print(' -', p)
         raise SystemExit(1)
-    print('camera framing ok: Compy unchanged, 22 species never closer than 12 x scale, capped at 90 and never capped at 4.8, %d Studio sweep rows match' % sum(len(v) for v in STUDIO.values()))
+    print('camera framing ok: Compy unchanged, 22 species + %d secret species never closer than 12 x scale, capped at 90 and never capped at 4.8, %d Studio sweep rows match' % (len(SECRET_BOXES), sum(len(v) for v in STUDIO.values())))
 
 
 if __name__ == '__main__':

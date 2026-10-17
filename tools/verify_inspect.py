@@ -272,7 +272,7 @@ def check_wiring():
     assert 'invalid_variant' in service and 'profileRepository.equipSpecies(player, speciesId, variantKey)' in service
     repo = profile_sources.repository_text()
     assert repo.count('not_owned') >= 1 and 'profileValue.equippedVariantKey = variantKey' in repo
-    assert 'EggTraits.selected(collection[profile.equippedSpeciesId], profile.equippedVariantKey)' in repo
+    assert 'EggTraits.selected(collection[equippedId], equippedKey)' in repo and 'local function equippedOf' in repo  # BD-606: the dino actually played (a secret species sits beside the fallback pair)
     workflow = read('.github/workflows/build-generated-place.yml')
     assert 'verify_inspect.py' in workflow, 'verify_inspect.py must run in CI'
     print('Wiring checks passed: hatch tap gating, camera hooks, server equip validation, workflow')
