@@ -4,6 +4,8 @@
 -- {k = "all"} to everyone else (short HUD banner, text already built and cut on the server). Nothing here is sent back.
 -- Confetti reuses the uploaded fx3 sparkle sheet (EffectAssets starFour), tinted: no new art. Effects Off or Reduce Motion
 -- (calm) draws no confetti; Lite draws fewer pieces. The sound is Sfx "shiny_bang" (docs/77, docs/110).
+-- BD-430 / BD-433: when the Blender starPop flipbook slot holds a real upload, the own banner gets star pops at its two ends (one at Lite,
+-- none at Off or with Reduce Motion): the 16-frame twinkle plays once (EffectAssets.frameAt, OneShot) and is gone. Empty slot = today's banner.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -46,6 +48,43 @@ local function banner(text: string, big: boolean)
     task.delay(if big then 4.5 else 3.5, function()
         if label.Parent then label:Destroy() end
     end)
+    return label
+end
+
+-- Star pops flanking the own banner (BD-430). At most 2 alive at once; each plays the starPop flipbook once over Rare.PopLife seconds.
+local pops = {}
+local popConn = nil
+local function stepPops(dt: number)
+    for i = #pops, 1, -1 do
+        local p = pops[i]
+        p.age += dt
+        if p.age >= Rare.PopLife then p.obj:Destroy() table.remove(pops, i)
+        else
+            local t = p.age / Rare.PopLife
+            Assets.setCell(p.obj, "starPop", Assets.frameAt("starPop", t, p.age, 1))
+        end
+    end
+    if #pops == 0 and popConn then popConn:Disconnect() popConn = nil end
+end
+local function starPops(count: number)
+    if count <= 0 or not Assets.isRealUi("starPop") then return end
+    local width = gui.AbsoluteSize.X
+    local half = math.min(220 + Rare.PopSize * 0.5, width * 0.5 - Rare.PopSize * 0.5) -- banner end, kept on screen on narrow phones
+    local room = math.max(0, 2 - #pops)
+    for i = 1, math.min(count, room) do
+        local img = Instance.new("ImageLabel")
+        img.BackgroundTransparency = 1
+        img.AnchorPoint = Vector2.new(0.5, 0.5)
+        img.Image = Assets.resolve("starPop")
+        Assets.setCell(img, "starPop", 1)
+        img.ImageColor3 = COLORS[1]
+        img.Size = UDim2.fromOffset(Rare.PopSize, Rare.PopSize)
+        img.Position = UDim2.fromOffset(width * 0.5 + (if i == 1 then half else -half), 98)
+        img.ZIndex = 5
+        img.Parent = gui
+        table.insert(pops, {obj = img, age = 0})
+    end
+    if #pops > 0 and not popConn then popConn = RunService.Heartbeat:Connect(stepPops) end
 end
 
 local pieces = {}
@@ -97,7 +136,7 @@ local function celebrate(data)
     -- show it when this egg's reveal lands (not when the server settled it)
     local delay = Timeline.durations(not s.calm, tonumber(data.rarity) or 1, false, false).revealAt
     task.delay(delay, function()
-        if plan.banner then banner(tostring(data.text), true) end
+        if plan.banner then banner(tostring(data.text), true) starPops(plan.pop) end
         confetti(plan.confetti)
         pcall(Sfx.play, plan.sound)
     end)

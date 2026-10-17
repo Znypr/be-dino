@@ -11,7 +11,7 @@ import bpy
 
 def parse_args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    opts = {"frames": Path("build/fx-frames"), "blend": None, "only": None, "samples": None, "step": 1}
+    opts = {"frames": Path("build/fx-frames"), "blend": None, "only": None, "samples": None, "step": 1, "out": None, "meshes": None, "shots": None}
     i = 0
     while i < len(argv):
         key = argv[i].lstrip("-")
@@ -27,7 +27,7 @@ def new_scene(name, size, frames=16, samples=256, ortho=2.0, bounces_volume=0):
     sc = bpy.data.scenes.new(name)
     r = sc.render
     r.engine = "CYCLES"
-    r.resolution_x = r.resolution_y = size
+    r.resolution_x, r.resolution_y = size if isinstance(size, tuple) else (size, size)   # a size, or (width, height)
     r.resolution_percentage = 100
     r.film_transparent = True
     r.filter_size = 1.5
@@ -173,3 +173,137 @@ def render_frames(sc, out_dir, step=1):
     sc.frame_step = step
     sc.render.filepath = str(out_dir / "f_")
     bpy.ops.render.render(animation=True, scene=sc.name)
+
+
+# --------------------------------------------------------------------------- BD-430 / BD-431 helpers (white-on-alpha FX renders)
+class Graph:
+    """Socket-level shader graph builder on top of Nodes: every call returns an OUTPUT SOCKET (or takes sockets / floats), so
+    a gradient reads like a formula. Used by tools/blender/build_fx_anime.py."""
+
+    def __init__(self, mat):
+        self.N = Nodes(mat)
+        self.t = self.N.t
+
+    def val(self, x):
+        n = self.N.n("ShaderNodeValue")
+        n.outputs[0].default_value = x
+        return n.outputs[0]
+
+    def op(self, name, a, b=None, clamp=False):
+        m = self.N.n("ShaderNodeMath", operation=name)
+        m.use_clamp = clamp
+        for i, v in enumerate((a, b)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                m.inputs[i].default_value = v
+            else:
+                self.t.links.new(v, m.inputs[i])
+        return m.outputs[0]
+
+    def ramp(self, sock, lo, hi, kind="SMOOTHERSTEP", out_lo=0.0, out_hi=1.0):
+        m = self.N.n("ShaderNodeMapRange", interpolation_type=kind, clamp=True)
+        self.t.links.new(sock, m.inputs["Value"])
+        m.inputs["From Min"].default_value = lo
+        m.inputs["From Max"].default_value = hi
+        m.inputs["To Min"].default_value = out_lo
+        m.inputs["To Max"].default_value = out_hi
+        return m.outputs[0]
+
+    def uv(self):
+        tc = self.N.n("ShaderNodeTexCoord")
+        sep = self.N.n("ShaderNodeSeparateXYZ")
+        self.t.links.new(tc.outputs["UV"], sep.inputs[0])
+        return sep.outputs[0], sep.outputs[1]
+
+    def uv_radius(self):
+        """Distance from the UV centre, 0 in the middle and 1 at the edge of a plane that spans the whole UV square."""
+        tc = self.N.n("ShaderNodeTexCoord")
+        off = self.N.n("ShaderNodeVectorMath", operation="SUBTRACT")
+        off.inputs[1].default_value = (0.5, 0.5, 0.0)
+        self.t.links.new(tc.outputs["UV"], off.inputs[0])
+        ln = self.N.n("ShaderNodeVectorMath", operation="LENGTH")
+        self.t.links.new(off.outputs[0], ln.inputs[0])
+        return self.op("MULTIPLY", ln.outputs[1], 2.0)
+
+    def facing(self, power=1.0):
+        """|N . view|: 1 where the surface faces the camera, 0 at the silhouette (soft rounded edges on real 3D forms)."""
+        g = self.N.n("ShaderNodeNewGeometry")
+        d = self.N.n("ShaderNodeVectorMath", operation="DOT_PRODUCT")
+        self.t.links.new(g.outputs["Normal"], d.inputs[0])
+        self.t.links.new(g.outputs["Incoming"], d.inputs[1])
+        a = self.op("ABSOLUTE", d.outputs["Value"])
+        return self.op("POWER", a, power) if power != 1.0 else a
+
+    def emit(self, alpha, strength=1.0):
+        """Output = white emission with the given alpha (a socket or a float, clamped to 0..1)."""
+        a = alpha if not isinstance(alpha, (int, float)) else self.val(alpha)
+        c = self.op("MAXIMUM", self.op("MINIMUM", a, 1.0), 0.0)
+        emis = self.N.n("ShaderNodeEmission")
+        emis.inputs["Color"].default_value = (1, 1, 1, 1)
+        emis.inputs["Strength"].default_value = strength
+        clear = self.N.n("ShaderNodeBsdfTransparent")
+        mix = self.N.n("ShaderNodeMixShader")
+        self.t.links.new(c, mix.inputs["Fac"])
+        self.t.links.new(clear.outputs[0], mix.inputs[1])
+        self.t.links.new(emis.outputs[0], mix.inputs[2])
+        out = self.N.n("ShaderNodeOutputMaterial")
+        self.t.links.new(mix.outputs[0], out.inputs[0])
+
+
+def blur_compositor(sc, layers):
+    """Render Layers -> Gaussian blurs (px radius each) stacked with Alpha Over -> output. layers = [(blur_px, factor), ...],
+    widest first: the widest is the background and each next layer is laid over it with its factor (0 px = unblurred).
+    The blur runs on the premultiplied render, so RGB stays white wherever alpha > 0."""
+    ng = bpy.data.node_groups.new(sc.name + "_comp", "CompositorNodeTree")
+    ng.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    sc.compositing_node_group = ng
+    rl = ng.nodes.new("CompositorNodeRLayers")
+    rl.scene = sc
+    rl.location = (-600, 0)
+
+    def blur(px, y):
+        if px <= 0:
+            return rl
+        b = ng.nodes.new("CompositorNodeBlur")
+        b.location = (-300, y)
+        size = b.inputs["Size"]
+        size.default_value = (px, px, 0.0) if len(size.default_value) == 3 else (px, px)
+        b.inputs["Extend Bounds"].default_value = False
+        ng.links.new(rl.outputs["Image"], b.inputs["Image"])
+        return b
+    acc = blur(layers[0][0], 300)
+    for k, (px, factor) in enumerate(layers[1:], start=1):
+        over = ng.nodes.new("CompositorNodeAlphaOver")
+        over.location = (-100 + 200 * k, 0)
+        over.inputs["Factor"].default_value = factor
+        ng.links.new(acc.outputs[0], over.inputs["Background"])
+        ng.links.new(blur(px, 300 - 200 * k).outputs[0], over.inputs["Foreground"])
+        acc = over
+    # force RGB to pure white where alpha > 0 (a blurred 1/255 alpha edge would otherwise round to a grey fringe in 8-bit PNG)
+    sep = ng.nodes.new("CompositorNodeSeparateColor")
+    sep.location = (300, 200)
+    ng.links.new(acc.outputs[0], sep.inputs[0])
+    white = ng.nodes.new("CompositorNodeRGB")
+    white.outputs[0].default_value = (1, 1, 1, 1)
+    white.location = (300, -100)
+    sa = ng.nodes.new("CompositorNodeSetAlpha")
+    sa.inputs["Type"].default_value = "Replace Alpha"
+    sa.location = (450, 0)
+    ng.links.new(white.outputs[0], sa.inputs["Image"])
+    ng.links.new(sep.outputs["Alpha"], sa.inputs["Alpha"])
+    out = ng.nodes.new("NodeGroupOutput")
+    out.location = (600, 0)
+    ng.links.new(sa.outputs[0], out.inputs[0])
+
+
+def hide_except(obj, frame, frames):
+    """Show `obj` in render only on `frame` (constant keys), so one scene holds a whole flipbook."""
+    for f, hidden in ((1, frame != 1), (frame, False), (frame + 1, True)):
+        if f < 1 or f > frames + 1:
+            continue
+        obj.hide_render = hidden
+        obj.keyframe_insert("hide_render", frame=f)
+    for fc in all_fcurves(obj):
+        for kp in fc.keyframe_points:
+            kp.interpolation = "CONSTANT"

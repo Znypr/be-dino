@@ -54,6 +54,8 @@ function Import.loadGeneratedWorld(): (number, number)
     -- BD-463/464: the Blender plants and ground props load the same way once an id is pasted; empty = skipped silently. Arena (step 2) places a key
     -- only when its id is valid AND this load succeeded (a failed load just leaves the old clutter, see Arena.biomeKit).
     for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    -- BD-474: colossal ancient trees (LOD0 used by the colossal layer, LOD1 stored for BD-475) load the same way; empty ids are skipped silently.
+    for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1

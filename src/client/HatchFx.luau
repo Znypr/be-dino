@@ -6,11 +6,14 @@
 -- Textures: Shared/EffectAssets keys glowPlate / ringShock / smokeSheet / sparkSheet / starFour. A key without a real upload falls
 -- back to plain rounded shapes (calm, tinted at runtime); once the owner uploads the Blender PNGs the real ids are used automatically.
 -- Reduce Motion: ONE static soft glow, nothing else.
+-- BD-431 / BD-433: Epic and up also show ONE soft light shaft behind the egg (Blender texture shaftGradient, Plan.shaft), only while that slot
+-- holds a real upload, only in the full Effects look, never with Reduce Motion. An empty slot keeps exactly today's sprites.
 local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Plan = require(Shared.HatchFxPlan)
 local Recipes = require(Shared.FxRecipes)
 local Assets = require(Shared.EffectAssets)
+local Settings = require(Shared.SettingsModel)
 
 local M = {}
 local cache = setmetatable({}, {__mode = "k"})
@@ -45,6 +48,17 @@ local function node(parent, z: number, key: string, shape: string, seed: number)
     n.obj.Parent = parent
     return n
 end
+-- The light shaft: a tall soft image whose sides fade out through a UIGradient (the texture itself tiles around, it has no soft sides).
+local function shaftNode(parent)
+    local i = Instance.new("ImageLabel")
+    i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolveUi("shaftGradient")
+    i.AnchorPoint, i.ZIndex, i.Visible = Vector2.new(0.5, 0), Plan.Shaft.z, false
+    local g = Instance.new("UIGradient")
+    g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.28, 0), NumberSequenceKeypoint.new(0.72, 0), NumberSequenceKeypoint.new(1, 1)})
+    g.Parent = i
+    i.Parent = parent
+    return {obj = i, key = "shaftGradient", shape = "shaft", img = true}
+end
 local function put(n, x: number, y: number, size: number, color: Color3, opacity: number)
     local o = n.obj
     o.Position, o.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(size, size)
@@ -75,6 +89,7 @@ function M.ensure(back: Frame, front: Frame)
     local device = deviceClass()
     local max = Plan.counts(6, device, false)
     local pool = {back = back, front = front, device = device, max = max, bloom = {}, sparks = {}, motes = {}, puffs = {}, shocks = {}, fg = {}, drops = {}}
+    pool.shaft = if Assets.isRealUi("shaftGradient") then shaftNode(back) else nil
     for i = 1, max.bloom do pool.bloom[i] = node(back, 22, "glowPlate", "disc", 1) end
     for i = 1, max.motes do pool.motes[i] = node(back, 23, "sparkSheet", "disc", i) end
     for i = 1, max.sparks do pool.sparks[i] = node(back, 23, "starFour", "spark", i) end
@@ -88,7 +103,7 @@ end
 
 -- A run of one egg. motion = Theme.MotionEnabled. tier/colour are supplied (and may change) when the server result arrives.
 function M.begin(pool, motion: boolean)
-    local h = {pool = pool, motion = motion, tier = 1, color = Color3.fromRGB(70, 205, 170), failed = false, counts = Plan.counts(1, pool.device, not motion),
+    local h = {pool = pool, motion = motion, tier = 1, shaft = 0, color = Color3.fromRGB(70, 205, 170), failed = false, counts = Plan.counts(1, pool.device, not motion),
         palette = {WHITE}, dropColors = {{WHITE}, {WHITE}}, dropTier = {1, 1}}
     h.palette = M.colors(h, h.color)
     M.hide(h)
@@ -105,6 +120,8 @@ function M.style(h, tier: number, color: Color3, failed: boolean)
     h.tier, h.color, h.failed = math.clamp(tier, 1, 6), color, failed
     h.counts = Plan.counts(h.tier, h.pool.device, not h.motion)
     h.palette = M.colors(h, color)
+    h.shaft = 0
+    if h.pool.shaft then h.counts, h.shaft = Plan.withShaft(h.tier, h.pool.device, not h.motion, Settings.effects()) end -- 0 or 1 sprite, never over the cap
 end
 -- The colour / pattern being revealed by a paint bucket (side 1 = colour, 2 = pattern): sets that splash's droplet colours.
 function M.paintStyle(h, side: number, color: Color3, revealTier: number)
@@ -119,6 +136,7 @@ end
 function M.hide(h)
     local p = h.pool
     for _, list in {p.bloom, p.sparks, p.motes, p.puffs, p.shocks, p.fg, p.drops} do hideAll(list) end
+    if p.shaft then p.shaft.obj.Visible = false end
 end
 
 -- Per frame. vt = visual clock, bp = build progress 0..1, since = seconds after the burst (nil while building), revealed = dino shown.
@@ -137,6 +155,17 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     end
     local failed = h.failed
     local pal = h.palette
+    -- light shaft (Epic+, one sprite, behind the bloom): fades in with the build-up, then eases down; hidden for a failed egg
+    local sh = p.shaft
+    if sh then
+        if h.shaft > 0 and not failed then
+            local k, a = Plan.shaftLook(bp, since)
+            local o = sh.obj
+            o.Position, o.Size = UDim2.fromOffset(cx, 0), UDim2.fromOffset(Plan.Shaft.width, Plan.Shaft.height * k)
+            o.ImageColor3, o.ImageTransparency = h.color:Lerp(WHITE, 0.55), 1 - a
+            o.Visible = a > 0.01
+        else sh.obj.Visible = false end
+    end
     -- bloom: three soft discs, inner light to outer deep, growing through the build-up
     local grow = Plan.bloomScale(bp, since)
     for i = 1, p.bloom and c.bloom or 0 do

@@ -195,4 +195,36 @@ function P.drop(j: number, n: number, since: number, side: number)
     return dx, dy, math.min(P.Limits.maxAlpha, 1 - k ^ 1.5), math.max(3, size)
 end
 
+-- ---------------------------------------------------------------- light shaft (BD-431 / BD-433, docs/123 s3)
+-- ONE soft light shaft behind the egg and the dinosaur, from the top of the panel down through the egg, for Epic (tier 4) and up. It is the
+-- shaftGradient Blender texture (a vertical gradient, bright at the source) shown by client/HatchFx.luau ONLY while that slot holds a real
+-- upload, ONLY in the full Effects look and NEVER with Reduce Motion (docs/87 calm: no flash, it only fades in with the build-up).
+-- It is one extra sprite counted against the device cap: when the cap has no room for it, P.withShaft trims the least important sprite
+-- (P.TrimOrder) instead, so the total never grows (a tablet Mythic egg is exactly at its cap).
+P.Shaft = {minTier = 4, width = 230, height = 330, alpha = 0.34, z = 21}
+function P.shaft(tier: number, device: string, reduce: boolean?, mode: string?): number
+    if reduce or mode ~= "full" then return 0 end
+    if math.floor(tier) < P.Shaft.minTier then return 0 end
+    return 1
+end
+-- counts() plus the shaft: returns the sprite counts (trimmed by TrimOrder only when the shaft would break the cap) and the shaft count 0 / 1.
+function P.withShaft(tier: number, device: string, reduce: boolean?, mode: string?)
+    local c = P.counts(tier, device, reduce)
+    local n = P.shaft(tier, device, reduce, mode)
+    local cap = P.Caps[device] or P.Caps.desktop
+    if n > 0 then
+        for _, name in P.TrimOrder do
+            while P.total(c) + n > cap and c[name] > 0 do c[name] -= 1 end
+        end
+    end
+    return c, n
+end
+-- Height scale (0.65..1) and opacity of the shaft: it fades in over the second half of the build-up (bp 0..1), holds through the burst and
+-- eases down to about two thirds of its peak over three seconds (since = seconds after the burst, nil while building). Never above Shaft.alpha.
+function P.shaftLook(bp: number, since: number?): (number, number)
+    local k = ease(clamp01((bp - 0.35) / 0.65))
+    local hold = if since then 1 - 0.35 * clamp01(since / 3) else 1
+    return 0.65 + 0.35 * k, P.Shaft.alpha * k * hold
+end
+
 return P
