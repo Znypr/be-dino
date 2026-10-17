@@ -21,9 +21,11 @@ ROOT = Path(__file__).resolve().parents[1]
 LIGHTING_TECHNOLOGY = 1
 
 
-def build(project_path=ROOT / "default.project.json", transform=None):
+def build(project_path=ROOT / "default.project.json", transform=None, workspace_properties=None):
     """Package the project. `transform(relative_path, source) -> source` lets a
-    release profile rewrite generated sources; `src/` itself is never modified."""
+    release profile rewrite generated sources; `src/` itself is never modified.
+    `workspace_properties` is a list of (xml tag, property name, text) written onto the Workspace item (BD-502 gate 4:
+    StreamingEnabled and its radii are not scriptable at runtime, so the build writes them)."""
     project_path = Path(project_path)
     project = json.loads(project_path.read_text(encoding="utf-8"))
     if set(project) != {"name", "tree"}:
@@ -33,6 +35,7 @@ def build(project_path=ROOT / "default.project.json", transform=None):
     ET.SubElement(root, "External").text = "nil"
     sources = {}
     counter = 0
+    written_workspace = []
 
     def item(parent, name, class_name, source=None):
         nonlocal counter
@@ -87,6 +90,10 @@ def build(project_path=ROOT / "default.project.json", transform=None):
         if unknown:
             raise ValueError(f"Unsupported project properties: {unknown}")
         node = item(parent, name, spec.get("$className", "Folder"))
+        if spec.get("$className") == "Workspace":
+            for tag, prop, text in workspace_properties or []:
+                ET.SubElement(node.find("Properties"), tag, {"name": prop}).text = text
+            written_workspace.append(name)
         if spec.get("$className") == "Lighting":
             ET.SubElement(node.find("Properties"), "token", {"name": "Technology"}).text = str(LIGHTING_TECHNOLOGY)
         if "$path" in spec:
@@ -116,6 +123,8 @@ def build(project_path=ROOT / "default.project.json", transform=None):
     for name, spec in sorted(tree.items()):
         if not name.startswith("$"):
             descend(root, name, spec)
+    if workspace_properties and len(written_workspace) != 1:
+        raise ValueError(f"Workspace properties requested but the project has {len(written_workspace)} Workspace items")
     add_tier_coat_templates(root, item, project_path.parent)
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="utf-8", xml_declaration=True), sources
@@ -179,7 +188,7 @@ def build_profile(profile, project_path=ROOT / "default.project.json"):
         reports.append(report)
         return rewritten
 
-    data, sources = build(project_path, transform)
+    data, sources = build(project_path, transform, release_profiles.workspace_properties(profile))
     if len(reports) != 1:
         raise ValueError(f"Release profile {profile!r}: expected exactly one {CONFIG_PATH}, found {len(reports)}")
     return data, sources, reports[0]
@@ -195,6 +204,13 @@ if __name__ == "__main__":
     output = args.output or ROOT / ("build/BeDino-Build" + build_version() + suffix + ".rbxlx")
     if suffix:
         data, sources, report = build_profile(args.profile)
+        import release_profiles  # build_profile put tools/ on sys.path
+        for streaming_error in release_profiles.streaming_config_errors(args.profile):
+            report.errors.append(streaming_error)
+        setting = release_profiles.streaming_for(args.profile)
+        if setting.enabled:
+            print(f"STREAMING: Workspace.StreamingEnabled = true, target {setting.target_radius}, min {setting.min_radius}, "
+                  f"integrity {setting.integrity_mode}" + (" (SCRATCH profile: never publish this place)" if setting.scratch else ""))
         for warning in report.warnings:
             print(f"WARNING: {warning}")
         if not report.ok:
@@ -211,5 +227,8 @@ if __name__ == "__main__":
         manifest.update({"profile": args.profile, "build": "redesign-" + build_version(),
                          "git_commit": commit, "git_dirty": dirty, "config_overrides": report.applied,
                          "warnings": report.warnings})
+        setting = release_profiles.streaming_for(args.profile)
+        manifest["streaming"] = {"enabled": setting.enabled, "target_radius": setting.target_radius, "min_radius": setting.min_radius,
+                                 "integrity_mode": setting.integrity_mode, "gate": setting.gate, "scratch": setting.scratch}
     output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Built {output.name}: {len(sources)} scripts, {len(data)} bytes")

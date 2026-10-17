@@ -89,7 +89,7 @@ local function pill(parent: GuiObject, text: string, color: Color3, size: UDim2,
     p.Size, p.Position, p.Font, p.Text = size, position, Enum.Font.FredokaOne, text
     p.TextColor3, p.TextScaled, p.ZIndex = textColor or C.text, true, parent.ZIndex + 3
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 6) corner.Parent = p
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 8, p
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 14, p -- docs/114 s4.4: pills never shrink under 14 px; callers size them to fit
     p.Parent = parent
     return p
 end
@@ -134,10 +134,12 @@ local function paintEggButton(hit: GuiObject, details: any)
     else
         local generic = Theme.icon(hit, "egg_green")
         if generic then generic.Size, generic.Position, generic.ZIndex = UDim2.fromOffset(40, 40), UDim2.fromOffset(4, 4), hit.ZIndex + 1 end
+        local noEgg = view and view.kind ~= "egg" and view.kind ~= "loading" -- the "No egg" tip needs the lower strip: draw the generic egg smaller above it
+        if generic and noEgg then generic.Size, generic.Position = UDim2.fromOffset(28, 28), UDim2.fromOffset(10, 3) end
         if view and view.kind ~= "egg" and view.kind ~= "loading" then
             local tip = Instance.new("TextLabel")
-            tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 11, Enum.Font.GothamBold
-            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 12), UDim2.fromOffset(0, 36), hit.ZIndex + 2, hit
+            tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 14, Enum.Font.GothamBold
+            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 16), UDim2.fromOffset(0, 31), hit.ZIndex + 2, hit
         end
     end
 end
@@ -349,12 +351,24 @@ function Panels.species(ctx)
         button.Parent = parent
         button.Activated:Connect(function() selectCopy(d.instanceId) end)
         local g = d.genes or {}
+        -- BD-507: ribbons first, because the thumbnail takes the height that is left above them (MyDinos.cardRows).
+        local ribbons = MyDinos.ribbons(d, catalog)
+        local mutationId: string? = nil
+        local pills: {string} = {}
+        for _, text in ribbons do
+            local found: string? = nil
+            for _, entry in MutationLook.Entries do
+                if string.upper(entry.name) == text then found = entry.id end
+            end
+            if found then mutationId = found else table.insert(pills, text) end
+        end
+        local rows = MyDinos.cardRows(#pills, mutationId ~= nil)
         local previewView: ViewportFrame? = nil
         local entryRef: any = nil
         local function mount()
             if previewView then return end
             local view = Preview.add(button, speciesId, if d.stage == "base" then "base" else d.stage)
-            view.Position, view.Size = UDim2.fromOffset(4, 4), UDim2.new(1, -8, 0, 74)
+            view.Position, view.Size = UDim2.fromOffset(MyDinos.Card.top, MyDinos.Card.top), UDim2.new(1, -2 * MyDinos.Card.top, 0, rows.thumbH)
             if d.stage == "base" and (d.genes or (d.mutationId or "") ~= "") then PreviewTraits.add(view, {genes = d.genes, mutationId = d.mutationId}) end
             previewView = view
             entryRef.mounted = true
@@ -363,26 +377,18 @@ function Panels.species(ctx)
             if previewView then previewView:Destroy() previewView = nil end
             entryRef.mounted = false
         end
-        pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(62, 16), UDim2.new(1, -68, 0, 7), if d.stage == "base" then C.text else C.outline)
-        local y = 7
-        for _, text in MyDinos.ribbons(d, catalog) do
-            if y > 62 then break end
-            -- BD-352: a mutation is a real badge (own colour, 14 px word, dot), not a 9 px pill; shiny / big stay small pills.
-            local mutationId: string? = nil
-            for _, entry in MutationLook.Entries do
-                if string.upper(entry.name) == text then mutationId = entry.id end
-            end
-            if mutationId then
-                MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, math.max(y, 28))) -- below the stage pill, never over it
-                y += MutationBadge.Height + 3
-            else
-                pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
-                y += 19
-            end
+        pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(74, 17), UDim2.new(1, -80, 0, 7), if d.stage == "base" then C.text else C.outline)
+        -- BD-507: SHINY / BIG pills in one row, the mutation badge in its own row, both UNDER the thumbnail (never over the dino).
+        local pillX = 4
+        for _, text in pills do
+            local width = if text == "SHINY" then 54 else 40
+            pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(width, MyDinos.Card.pillH), UDim2.fromOffset(pillX, rows.pillY), if text == "SHINY" then C.outline else C.text)
+            pillX += width + 4
         end
-        W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 82), 14)
-        W.swatch(button, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 101))
-        local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 115), C.outline)
+        if mutationId then MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, rows.chipY)) end -- BD-352: a real badge (own colour, 14 px word, dot)
+        W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, MyDinos.Card.labelH), UDim2.fromOffset(4, rows.labelY), 14)
+        W.swatch(button, g, UDim2.new(1, -16, 0, MyDinos.Card.swatchH), UDim2.fromOffset(8, rows.swatchY))
+        local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, MyDinos.Card.tagH), UDim2.fromOffset(4, rows.tagY), C.outline)
         tag.Visible = d.instanceId == st.equippedId
         cards[d.instanceId] = {stroke = stroke, tag = tag, button = button, index = order, mount = mount, unmount = unmount, mounted = false}
         entryRef = cards[d.instanceId]
@@ -393,7 +399,7 @@ function Panels.species(ctx)
         if not g then return end
         local total = 0
         for _ in cards do total += 1 end
-        local first, last = MyDinos.window(g.CanvasPosition.Y, g.AbsoluteWindowSize.Y / math.max(.3, ctx.scale()), 138, 8, 4, total)
+        local first, last = MyDinos.window(g.CanvasPosition.Y, g.AbsoluteWindowSize.Y / math.max(.3, ctx.scale()), MyDinos.Card.h, 8, 4, total)
         for _, entry in cards do
             if entry.index >= first and entry.index <= last then entry.mount() else entry.unmount() end
         end
@@ -462,7 +468,7 @@ function Panels.species(ctx)
         local g = W.scroll(right, UDim2.fromOffset(516, 402 - top), UDim2.fromOffset(0, top))
         g.Name = "DinoCards"
         local layout = Instance.new("UIGridLayout")
-        layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.fromOffset(120, 138), UDim2.fromOffset(8, 8), Enum.SortOrder.LayoutOrder
+        layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.fromOffset(MyDinos.Card.w, MyDinos.Card.h), UDim2.fromOffset(8, 8), Enum.SortOrder.LayoutOrder
         layout.Parent = g
         grid = g
         table.insert(connections, g:GetPropertyChangedSignal("CanvasPosition"):Connect(updateWindow))

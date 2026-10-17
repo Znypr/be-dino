@@ -43,6 +43,7 @@ task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD
 if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(script.Parent.ImportedResources).loadGeneratedWorld() end
 if require(ReplicatedStorage.Shared.HatchV2Assets).enabled(Config, game:GetService("RunService"):IsStudio() and game.GameId == 0) then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end -- BD-397 (docs/118), no-op while false
 Arena.build()
+require(script.Parent.StreamingSetup).start() -- BD-498 (docs/150): Persistent models when StreamingEnabled is on; returns at once while it is off
 Leaderboards.start()
 
 require(script.Parent.PrivateState).start() -- BD-360 owner-only channel, before any profile can load
@@ -155,6 +156,9 @@ local function setup(player: Player)
             Dinosaur.attach(character, Config.WalkSpeed, player)
             if player.Character == character then character:PivotTo(hub) end
         end)
+        -- BD-503: home after a settle / death / first join is a respawn at the hub pad; with StreamingEnabled ask the client to stream the hub in as well
+        -- (concurrent, so the BD-210 "at once" placement above and the attach are not delayed; no-op while streaming is off).
+        task.spawn(function() require(script.Parent.StreamingTeleport).request(player, hub.Position) end)
     end)
     task.spawn(spawnLoadedPlayer, player)
 end

@@ -14,12 +14,13 @@ ScaleLadder.Version = 1
 ScaleLadder.Unit = "studs"
 
 -- ---------------------------------------------------------------- dinosaurs
--- height = bounding-box height in studs at scale 1 of the LOW-POLY model (Config.LowPolyDinos, the playtest profile); scale = the
--- LowPolyDinoAssets clone-time scale (MIRRORED, CODE). measured = true for ALL 22 species since BD-471 (2026-10-17): Studio bounding box
--- height of LowPolyDinos.clone(species) after ScaleTo(1), the exact model DinosaurVisual.render draws at scale 1 (template pose, wings and
--- necks as authored; the earlier BD-329/BD-337/docs/108 numbers Compy 6.6, Gallimimus 4.9, T-Rex 10.3 agree within 0.1). Full boxes
--- (width x height x length) are in docs/evidence/2026-10-17-bd471/measurements.md. measured = false would mean ESTIMATE = scale x
--- heightPerScaleEstimate; the 19 estimates were off by -64% to +40% (shape factors differ a lot), so do not use the estimate rule for a new species.
+-- BD-232 (owner rule: "Sizes follow about 10% growth per unlock tier; fly and water species are scaled by bulk up to the T-Rex"; LEAD
+-- decision 2026-10-17, owner delegated, docs/115). Sizing is THE size rule; each species row has its unlock tier (Config.SpeciesRarities),
+-- its basis and its target in studs. scale = the LowPolyDinoAssets clone-time scale (MIRRORED, CODE; the one place a species size is set),
+-- and width/height/length = the Studio bounding box of LowPolyDinos.clone(species) at spawn (growth scale 1), template pose, 2 decimals
+-- (BD-471 method, re-measured after the BD-232 scale change; docs/evidence/2026-10-17-species-sizes/). That box IS the in-game spawn size:
+-- the clone bakes `scale` into the parts and DinosaurVisual.render only multiplies by the growth scale (1 at spawn, HubScaleRules 1 in the hub).
+-- measured = true for ALL 22 species. measured = false would mean ESTIMATE = scale x heightPerScaleEstimate (do not use for a new species).
 -- The legacy (non-low-poly) Compy is about 5.5 studs (docs/68); only the low-poly rows are in this table.
 ScaleLadder.HeightPerScaleEstimate = 2.84
 ScaleLadder.Dino = {
@@ -39,29 +40,46 @@ ScaleLadder.Dino = {
     },
     order = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"}, -- Config.SpeciesOrder
     species = {
-        compy = {scale = 2.2, height = 6.6, measured = true},
-        triceratops = {scale = 3.0, height = 8.39, measured = true},
-        tyrannosaurus = {scale = 3.66, height = 10.2, measured = true},
-        raptor = {scale = 2.1, height = 8.4, measured = true},
-        stegosaurus = {scale = 2.64, height = 4.91, measured = true},
-        ankylosaurus = {scale = 2.66, height = 6.49, measured = true},
-        archaeopteryx = {scale = 1.76, height = 5.28, measured = true},
-        baryonyx = {scale = 2.42, height = 6.22, measured = true},
-        brachiosaurus = {scale = 3.87, height = 10.63, measured = true},
-        dimorphodon = {scale = 1.9, height = 5.7, measured = true},
-        elasmosaurus = {scale = 2.66, height = 6.52, measured = true},
-        gallimimus = {scale = 2.9, height = 4.92, measured = true},
-        ichthyosaurus = {scale = 2.3, height = 3.45, measured = true},
-        microraptor = {scale = 1.7, height = 5.1, measured = true},
-        mosasaurus = {scale = 3.22, height = 3.29, measured = true},
-        pachycephalosaurus = {scale = 1.98, height = 5.11, measured = true},
-        parasaurolophus = {scale = 2.31, height = 5.54, measured = true},
-        plesiosaurus = {scale = 2.42, height = 6.73, measured = true},
-        pteranodon = {scale = 2.31, height = 6.93, measured = true},
-        quetzalcoatlus = {scale = 2.8, height = 8.4, measured = true},
-        spinosaurus = {scale = 3.51, height = 8.43, measured = true},
-        therizinosaurus = {scale = 3.19, height = 10.93, measured = true},
+        compy = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.69, measured = true},
+        triceratops = {scale = 2.86, tier = 3, basis = "height", target = 7.99, width = 5.79, height = 8.00, length = 8.58, measured = true},
+        tyrannosaurus = {scale = 3.47, tier = 5, basis = "height", target = 9.66, width = 5.31, height = 9.67, length = 10.41, measured = true},
+        raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, measured = true},
+        stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, measured = true},
+        ankylosaurus = {scale = 3.6, tier = 4, basis = "height", target = 8.78, width = 7.78, height = 8.78, length = 14.40, measured = true},
+        archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, measured = true},
+        baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, measured = true},
+        brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, measured = true},
+        dimorphodon = {scale = 1.71, tier = 1, basis = "bulk", target = 5.55, width = 5.76, height = 5.13, length = 5.73, measured = true},
+        elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, measured = true},
+        gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, measured = true},
+        ichthyosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 3.78, height = 4.31, length = 8.61, measured = true},
+        microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, measured = true},
+        mosasaurus = {scale = 3.47, tier = 5, basis = "length", target = 10.41, width = 3.37, height = 3.55, length = 10.41, measured = true},
+        pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, measured = true},
+        parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, measured = true},
+        plesiosaurus = {scale = 2.87, tier = 3, basis = "length", target = 8.60, width = 4.81, height = 7.99, length = 8.61, measured = true},
+        pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, measured = true},
+        quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, measured = true},
+        spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, measured = true},
+        therizinosaurus = {scale = 2.56, tier = 4, basis = "height", target = 8.78, width = 4.91, height = 8.78, length = 10.24, measured = true},
     },
+}
+
+-- ---------------------------------------------------------------- the size rule (BD-232)
+-- Unlock tier = Config.SpeciesRarities (1 Common .. 5 Legendary; a species is unlocked by hatching it). Basis by class: Ground and Armored
+-- (Elasmosaurus is a normal Ground dino, docs/101) use HEIGHT; Fly uses BULK; Water uses LENGTH, so a long low swimmer is not forced tall.
+--   height target(tier) = Sizing.height.tier1 x growthPerTier^(tier - 1)            (Compy, tier 1, is 6.6)
+--   bulk   target(tier) = Sizing.bulk.top   / growthPerTier^(topTier - tier)        (the T-Rex's bulk is the top, tier 5)
+--   length target(tier) = Sizing.length.top / growthPerTier^(topTier - tier)        (the T-Rex's length is the top, tier 5)
+-- bulk = cube root of the bounding-box volume (width x height x length), in studs, so it compares with a height. The tolerance is the
+-- allowed relative gap between a species' measured size and its target (scale is rounded to 2 decimals, so the real gap is under 0.5%).
+ScaleLadder.Sizing = {
+    growthPerTier = 1.1,
+    tolerance = 0.02,
+    topTier = 5,
+    height = {tier1 = 6.6},
+    bulk = {top = 8.12}, -- T-Rex bulk at spawn: (5.31 x 9.67 x 10.41) ^ (1/3)
+    length = {top = 10.41}, -- T-Rex length at spawn
 }
 
 -- ---------------------------------------------------------------- world: plants, trees, rocks, landmarks
@@ -118,6 +136,21 @@ ScaleLadder.Hub = {
 }
 
 -- ---------------------------------------------------------------- helpers
+-- Size of a species on its own basis (height, bulk or length), from a box.
+function ScaleLadder.sizeOf(basis: string, width: number, height: number, length: number): number
+    if basis == "length" then return length end
+    if basis == "bulk" then return (width * height * length) ^ (1 / 3) end
+    return height
+end
+
+-- The rule: target size in studs for a basis and unlock tier (1 to 5), not rounded.
+function ScaleLadder.targetSize(basis: string, tier: number): number
+    local s = ScaleLadder.Sizing
+    if basis == "height" then return s.height.tier1 * s.growthPerTier ^ (tier - 1) end
+    local top = if basis == "bulk" then s.bulk.top else s.length.top
+    return top / s.growthPerTier ^ (s.topTier - tier)
+end
+
 -- Height of a species at a drawn scale (the low-poly model scales uniformly with the dino).
 function ScaleLadder.dinoHeight(speciesId: string, scale: number): number
     local row = ScaleLadder.Dino.species[speciesId]
