@@ -76,6 +76,8 @@ def contract(failures: list) -> int:
             needle = '"%s"' % lit if is_exact else '"%s' % lit
         if needle not in text and lit.isupper() and lit.isalpha():
             needle = '"%s"' % lit.lower()  # shop tab buttons are string.upper(tab) of the tab ids
+        if needle not in text and lit.isupper():
+            needle = '"%s"' % lit.capitalize()  # buttons that show an upper-cased sentence, e.g. COMING SOON from "Coming soon"
         if needle not in text:
             failures.append("CONTRACT: the walk uses %r but src/ no longer has it" % lit)
     # names built at run time are covered by their prefix above; titles and tab words below are upper-cased or compared by value

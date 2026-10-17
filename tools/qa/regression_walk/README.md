@@ -1,6 +1,6 @@
 # First-session regression walk as scripts (BD-541, docs/145 s9)
 
-Label: **TOOLING (offline-built, NOT yet run in Studio).** The 13-step first-session walk of [docs/145](../../../docs/145-session1-readiness-2026-10-17.md) s9 as Studio `execute_luau` snippets, so one lead session can run it in minutes once a Studio window renders again. Nothing here was run in Studio, on a phone or on a published server; `tools/verify_regression_walk.py` only proves the scripts parse, keep the step order and judge a mock game correctly.
+Label: **TOOLING (offline-built; first Studio run 2026-10-17, see [the evidence](../../../docs/evidence/2026-10-17-regression-walk/README.md)).** The 13-step first-session walk of [docs/145](../../../docs/145-session1-readiness-2026-10-17.md) s9 as Studio `execute_luau` snippets, so one lead session can run it in minutes once a Studio window renders again. Nothing here was run in Studio, on a phone or on a published server; `tools/verify_regression_walk.py` only proves the scripts parse, keep the step order and judge a mock game correctly.
 
 How it works: every step does what a player does. It **taps the real buttons** with `VirtualInputManager` and **fires the very remotes** those buttons fire (`RequestStartRun`, `RequestEndRun`, `RequestLeap`, `ClaimChest` through OPEN, `EquipSpecies`, `ProgressionAction`, `SetRevealSkip`, the admin panel's `AdminAction`). It never sets a profile value, an egg, a crystal or a run state. Then it checks the result (attributes, which menu is open, button and label text, `AbsolutePosition` / `AbsoluteSize` of the HUD rectangles, the log) and prints one line:
 
@@ -37,6 +37,32 @@ Then paste the `WALK` / `WALKS` lines into the BD-317 row and save the captures 
 ### Where to capture
 
 Each step prints a `CAPTURE` line when it ends. The chunks run several steps in one call, so by the time you see the line the game has moved on. For **evidence images** run one step per call: put `shared.BDWalkOnly = 6;` in front of the snippet text (the chunk file of that step), read the `CAPTURE` line, then `screen_capture` at once. The steps depend on each other, so run them in order (1, 2, 3, ...); `BDWalkOnly` just selects which one runs. For the **fast pass** run the chunks as they are and capture only at the end of each chunk. The camera position in the line is where the game camera is (it follows the dino); you cannot place it, so the note says what to look at.
+
+### What the first Studio run (2026-10-17) showed
+
+* `shared` survives between calls. `VirtualInputManager` is **blocked** in `execute_luau` ("cannot call SendMouseMoveEvent"): every tap prints `NEEDS click ... at viewport (x,y)`; click exactly those numbers with `user_mouse_input` (Client). Press E with `user_keyboard_input` for the leap. A hand-click round per tap is normal: steps 10 and 12 resume tab by tab (`W.keep`), step 7 and 9 need the buttons clicked before the call.
+* `require(<game module>)` from a snippet is a second copy of the module (own Lua VM): state such as `FusionMenu.close()`, `SettingsMenu.tab()`, `SettingsModel.calm()`, `UITheme.MotionEnabled` and the server `PrivateState` is not the game's. The scripts read the screen and `SettingsJson` instead; owner-only values on the server read empty, so server checkpoints 2 and 3 are ODD for those lines.
+* `execute_luau` sets the camera to `Fixed` after every call: set `workspace.CurrentCamera.CameraType = Enum.CameraType.Custom` at the start of a call and again before `screen_capture`.
+* The step lines do not come back in the `execute_luau` result (only the console shows `print`). Install this once (Client) and call `return shared.BDRun({1,2,3,4}, 3)` (list, only-step) to get the lines back:
+  ```lua
+  shared.BDRun = function(list, only)
+      local W = shared.BDWalk
+      local before = {}
+      for n, r in W.results do before[n] = r.line end
+      shared.BDWalkOnly = only
+      local ok, r = pcall(function() return W.run(list) end)
+      shared.BDWalkOnly = nil
+      local out, keys = {}, {}
+      for n in W.results do table.insert(keys, n) end
+      table.sort(keys)
+      for _, n in keys do if W.results[n].line ~= before[n] then table.insert(out, W.results[n].line) end end
+      if #W.needs > 0 then table.insert(out, "NEEDS " .. table.concat(W.needs, " ; ")) end
+      return (if ok then "" else "RUN ERROR " .. tostring(r) .. "
+") .. table.concat(out, "
+") .. "
+=> " .. tostring(r)
+  end
+  ```
 
 ### If a tap does not work
 
