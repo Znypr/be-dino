@@ -221,6 +221,15 @@ What this means:
   `measure_identity_storage` separately shows identity sidecars reach the 4 MiB key limit
   well before 10,000 dinosaurs, which BD-064 must cap.
 
+### Offline cross-player cases (BD-319, 2026-10-17): `python tools/verify_multiplayer_sim.py --runner <luau>`
+
+The 12-player simulation of [docs/111](111-multiplayer-audit.md) now also runs every cross-player case at 2, 4 and 8 players
+(`tools/multiplayer_cross_player.luau`): same-tick settlement exactly once per player, the per-nest weather ledger (BD-479), owner-only
+state never delivered to another client (including `BufferedRevealCount`), the cave hub at exactly 1x for the player inside it only
+(BD-480), the admin Mutation chance x10 reaching only its guarded path, and per-client render caps (contact shadows, effects LOD, FX pool,
+moment rim). It proves ordering and isolation against mocks; it does not replace rows L2 and L3 below. The matching live 10-minute
+script for 4 players is docs/111 section 5.6 (BD-319 / BD-364).
+
 ### Manual device/load matrix
 
 Record build/tag, place version, device, client count, duration, result and evidence
