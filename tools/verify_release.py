@@ -90,11 +90,14 @@ def studio_guard_errors(server_dir: Path = ROOT / "src/server") -> list[str]:
     """Studio-local flags must only be read behind the unpublished-Studio guard."""
     errors = []
     guard = re.compile(r"IsStudio\(\)\s+and\s+game\.GameId\s*==\s*0")
+    handed_over = re.compile(r"local\s+localPreview\s*=\s*shared\.localPreview")
     for path in sorted(server_dir.glob("**/*.luau")):
         lines = path.read_text(encoding="utf-8").splitlines()
         defines = [line for line in lines if re.match(r"\s*local\s+localPreview\s*=", line)]
         for line in defines:
-            if not guard.search(line):
+            # docs/150: a part of ProfileRepository only hands the guarded value over (`local localPreview = shared.localPreview`);
+            # the definition in ProfileRepository.luau itself is still checked below, like every other file.
+            if not guard.search(line) and not (path.name != "ProfileRepository.luau" and handed_over.fullmatch(line.strip())):
                 errors.append(f"{path.name}: localPreview is no longer limited to unpublished Studio: {line.strip()}")
         for number, line in enumerate(lines, 1):
             for flag in profiles.STUDIO_LOCAL_FLAGS:

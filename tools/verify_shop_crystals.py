@@ -7,6 +7,9 @@ Decoration crystals (rock_crystal) are exempt and may stay lavender.
 from pathlib import Path
 import argparse, subprocess, tempfile
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 
 def wrapped(path, prefix=''):
@@ -65,7 +68,7 @@ def static_crystals_tab(boot):
     assert 'Coming soon!' not in tab, 'no loose Coming soon line above R$ buttons'
     assert 'R$' not in tab, 'R$ text is only made by ShopCardState.packButton'
     assert tab.count('PromptProductPurchase') == 1 and 'Config.CrystalPacksEnabled==true' in tab, 'the purchase prompt stays gated by the flag too'
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    repo = profile_sources.repository_text()
     assert 'Config.CrystalPacksEnabled == true' in repo, 'the server reads the same flag the same way'
     cfg = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
     assert 'CrystalPacksEnabled = false' in cfg, 'packs stay off for the playtest (docs/43)'

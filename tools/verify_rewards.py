@@ -8,13 +8,18 @@ reconnects. Mocks validate transaction logic only, not Studio replication or UI.
 from pathlib import Path
 import argparse
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path):
-    return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 HARNESS = r'''

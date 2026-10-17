@@ -31,7 +31,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_EMBED_BYTES = 155_000  # skip large generated art tables the repository never requires (ProfileRepository.luau itself passed 120,000 with BD-073 and 140,000 with BD-456; ResourceGeometry 164k and IconRaster 203k stay out)
+MAX_EMBED_BYTES = 100_000  # docs/150: ProfileRepository was split into parts under 55 KB (it had grown past 138 KB and this limit was raised twice in a day); the largest module any harness embeds is IconTiles at 72 KB. Still skips the generated art tables the repository never requires (ResourceGeometry 164k, IconRaster 203k). tools/verify_server_module_size.py keeps server modules under 120 KB.
 
 HARNESS = r'''
 local SOURCES = __SOURCES__

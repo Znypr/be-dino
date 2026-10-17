@@ -1,0 +1,1090 @@
+{
+"steps": [
+[
+1,
+"load",
+5305,
+"f15550119aea3303"
+],
+[
+2,
+"fusion status before any dino",
+5331,
+"047973a812d0d096"
+],
+[
+3,
+"settle run r1",
+77245,
+"eb4df3d5642c024f"
+],
+[
+4,
+"settle run r1 replay",
+77245,
+"c9a72a56e9523738"
+],
+[
+5,
+"settle run r2 (tags, nests)",
+146491,
+"eecec2ae89d17408"
+],
+[
+6,
+"settle bad run id",
+146339,
+"24353d7494eb03da"
+],
+[
+7,
+"settle bad events",
+146343,
+"3da75534ebc7a8d6"
+],
+[
+8,
+"pending reveals",
+146313,
+"b0402b8ba5800c95"
+],
+[
+9,
+"claim egg 1",
+154875,
+"bde24d9f752df351"
+],
+[
+10,
+"claim egg 2",
+154837,
+"d7236a9450cedc82"
+],
+[
+11,
+"claim egg 3",
+154837,
+"badbf5e7fb1cf56d"
+],
+[
+12,
+"claim egg 4",
+154776,
+"29d66916828947e2"
+],
+[
+13,
+"claim egg 5",
+154764,
+"a2956852b4ccacce"
+],
+[
+14,
+"claim egg 6",
+154815,
+"808e417e625270c4"
+],
+[
+15,
+"claim egg 7",
+154855,
+"1b8adf1bda35bccd"
+],
+[
+16,
+"claim egg 8",
+154759,
+"192821d21c879e34"
+],
+[
+17,
+"claim egg 9",
+154765,
+"d3bf577979a39173"
+],
+[
+18,
+"claim egg 10",
+154746,
+"86dda1faee9579ae"
+],
+[
+19,
+"claim egg 11",
+158840,
+"4973a54fbe8ae12d"
+],
+[
+20,
+"claim egg 12",
+158865,
+"eb6e41c5401b33df"
+],
+[
+21,
+"claim egg 13",
+158822,
+"aee788d182d37083"
+],
+[
+22,
+"claim egg 14",
+158828,
+"09f0f024da9e58dc"
+],
+[
+23,
+"claim missing egg",
+158495,
+"8e108c314f478f9b"
+],
+[
+24,
+"claim invalid id",
+158504,
+"8fa382ae4d3761ce"
+],
+[
+25,
+"pending reveals after page",
+158476,
+"becf9a8b361509d9"
+],
+[
+26,
+"reveal skip",
+158514,
+"a80a53d9fc7fb873"
+],
+[
+27,
+"reveal skip bad",
+158527,
+"f624f4359a82353f"
+],
+[
+28,
+"settings burst 1",
+158717,
+"936f305b3f782a15"
+],
+[
+29,
+"settings burst 2",
+158717,
+"769103557bc33e97"
+],
+[
+30,
+"settings burst 3",
+158717,
+"f7a74988398c8f2a"
+],
+[
+31,
+"settings burst 4",
+158719,
+"d9909a748ee3ce96"
+],
+[
+32,
+"settings burst 5",
+158719,
+"6dfed148ea615932"
+],
+[
+33,
+"settings burst 6",
+158719,
+"7f54209834440a22"
+],
+[
+34,
+"settings burst 7",
+158719,
+"f2b25f644ac76a16"
+],
+[
+35,
+"settings burst 8",
+158720,
+"8606dd7ec06ea152"
+],
+[
+36,
+"settings bad",
+158731,
+"5197432769af7ce5"
+],
+[
+37,
+"after coalesce flush",
+158816,
+"a75974121467895a"
+],
+[
+38,
+"nests round 1",
+159004,
+"201d10a17978d7e3"
+],
+[
+39,
+"claim not-ready nest 1",
+158727,
+"31e6586056d1824e"
+],
+[
+40,
+"claim nest 1",
+163223,
+"2cfafae184297beb"
+],
+[
+41,
+"claim nest replay 1",
+163226,
+"1ae6fab9262b2413"
+],
+[
+42,
+"nests round 2",
+163394,
+"a924287dab923de7"
+],
+[
+43,
+"claim not-ready nest 2",
+163176,
+"59cace2b457d6b45"
+],
+[
+44,
+"claim nest 2",
+166162,
+"28debfc2c9e7272e"
+],
+[
+45,
+"claim nest replay 2",
+166165,
+"5ccb0c64d9237cd6"
+],
+[
+46,
+"nests round 3",
+166274,
+"e589d52da8067b47"
+],
+[
+47,
+"claim not-ready nest 3",
+166115,
+"02f640d031e3f85a"
+],
+[
+48,
+"claim nest 3",
+169650,
+"f8843c50f75e95a8"
+],
+[
+49,
+"claim nest replay 3",
+169653,
+"88510b86e9923970"
+],
+[
+50,
+"claim nest missing",
+169598,
+"377cad46ad168b4a"
+],
+[
+51,
+"claim more 1",
+169927,
+"94dbf16fc6a72745"
+],
+[
+52,
+"claim more 2",
+169937,
+"9c240e45884b221f"
+],
+[
+53,
+"claim more 3",
+169946,
+"31e88441310d4c13"
+],
+[
+54,
+"claim more 4",
+169923,
+"f28ff592a7ecd60c"
+],
+[
+55,
+"claim more 10",
+178828,
+"8887558f80d353a9"
+],
+[
+56,
+"claim more 20",
+187476,
+"7ef21d2f2c6ade61"
+],
+[
+57,
+"claim more 30",
+199399,
+"67d2f3774461e9a9"
+],
+[
+58,
+"claim more 40",
+204173,
+"8be65178b5a0013e"
+],
+[
+59,
+"claim more 50",
+209813,
+"cd46c7bd047d53f7"
+],
+[
+60,
+"claim more 60",
+212790,
+"72eecfd032547178"
+],
+[
+61,
+"claim more 70",
+217316,
+"15ec0eb2ab42843e"
+],
+[
+62,
+"claim more 80",
+223295,
+"94c85d72cbe08ad8"
+],
+[
+63,
+"claim more 90",
+226470,
+"f6371fd79dae7ead"
+],
+[
+64,
+"equip compy",
+226139,
+"fb2fa7bb0f872b05"
+],
+[
+65,
+"equip compy again",
+226139,
+"fb2fa7bb0f872b05"
+],
+[
+66,
+"equip unknown",
+226139,
+"1682147fd30d2885"
+],
+[
+67,
+"equip variant pachycephalosaurus",
+226238,
+"d6c4f83d27a46f5f"
+],
+[
+68,
+"equip locked",
+226237,
+"8dec9ec920023b83"
+],
+[
+69,
+"collection test grant",
+226238,
+"74f17ddedc7ee07a"
+],
+[
+70,
+"collection test grant replay",
+226240,
+"e1f6ed10010bddf4"
+],
+[
+71,
+"chest test grant",
+226198,
+"7db93dfd0f51c567"
+],
+[
+72,
+"grant crystals 1",
+225943,
+"0899b5ce9bd33b14"
+],
+[
+73,
+"grant crystals 2",
+225652,
+"06202c061aff2932"
+],
+[
+74,
+"grant crystals 3",
+225329,
+"4e77bf8216dc1360"
+],
+[
+75,
+"grant crystals 4",
+225059,
+"790b7bd87c29e3a2"
+],
+[
+76,
+"grant replay",
+225050,
+"124e7936bb6a9ac2"
+],
+[
+77,
+"buy potion",
+224910,
+"3da7a8ddd4d4ff77"
+],
+[
+78,
+"buy potion again",
+224910,
+"7194d4f0eb1061a8"
+],
+[
+79,
+"buy potion stale",
+224914,
+"3320517b5d8320a5"
+],
+[
+80,
+"use potion",
+224759,
+"dae1904d0ad44ed7"
+],
+[
+81,
+"use potion twice",
+224760,
+"b5fb8066338a1d76"
+],
+[
+82,
+"buy aura",
+224516,
+"d16413e95dcfc3ab"
+],
+[
+83,
+"equip aura",
+224264,
+"9653ba62be242c42"
+],
+[
+84,
+"buy trail locked",
+224269,
+"065d471dfa4e55af"
+],
+[
+85,
+"buy perk",
+224269,
+"9e2ee4f04b947b3a"
+],
+[
+86,
+"buy egg",
+224433,
+"de625f0e9eb653c4"
+],
+[
+87,
+"upgrade condition",
+224157,
+"b348e0f9cbe33d7b"
+],
+[
+88,
+"progression read",
+224720,
+"8f99ecf5e263321f"
+],
+[
+89,
+"objective record food",
+224141,
+"460a9cec5d017882"
+],
+[
+90,
+"objective record hatch",
+224141,
+"460a9cec5d017882"
+],
+[
+91,
+"objective record bad",
+224142,
+"c4e985e70ad813a5"
+],
+[
+92,
+"objective view",
+225251,
+"c11500aed4095c1c"
+],
+[
+93,
+"objective flush",
+224481,
+"bfdfe7a877417f6e"
+],
+[
+94,
+"objective seen",
+224478,
+"f1fb924895658f44"
+],
+[
+95,
+"objective seen again",
+224486,
+"20fd13edd51a0cbf"
+],
+[
+96,
+"objective flush 2",
+224506,
+"14b7d12ea74bdede"
+],
+[
+97,
+"objective claim T1",
+224267,
+"7b5f70f06353a456"
+],
+[
+98,
+"objective claim T1 replay",
+224269,
+"efc20c14bfd0944e"
+],
+[
+99,
+"objective claim T1 again",
+224219,
+"87a11dc06f64620e"
+],
+[
+100,
+"objective claim unknown",
+224221,
+"d636b2b461490a56"
+],
+[
+101,
+"objective claim unmet",
+224212,
+"b382c552a77097be"
+],
+[
+102,
+"gifts apply",
+224365,
+"f19ac13fba6366a9"
+],
+[
+103,
+"gifts replay",
+224318,
+"5ae0e918f721b6b8"
+],
+[
+104,
+"gifts revoke",
+224347,
+"3a6be0ba6ebfbfd4"
+],
+[
+105,
+"gifts bad plan",
+224319,
+"068cad664c0f06d0"
+],
+[
+106,
+"mutation setup 49",
+238366,
+"2233147ba8c513d5"
+],
+[
+107,
+"mutate short",
+238380,
+"30ff2d555557a187"
+],
+[
+108,
+"mutation setup 50",
+238660,
+"3bb623fed6b3fc3a"
+],
+[
+109,
+"mutate gold",
+224198,
+"14cb9445dd925de7"
+],
+[
+110,
+"mutate gold replay",
+224200,
+"55d4896ea60db9a2"
+],
+[
+111,
+"mutate conflict",
+224097,
+"a2435008f19e54de"
+],
+[
+112,
+"mutate unknown",
+224099,
+"af88a4f8556b8132"
+],
+[
+113,
+"mutation setup 51",
+238791,
+"7fd8f6953e3493a7"
+],
+[
+114,
+"fusion status",
+238777,
+"b690d5fc6ead70ca"
+],
+[
+115,
+"list dinosaurs",
+275486,
+"f268975ee13d0f46"
+],
+[
+116,
+"fusion donors",
+238840,
+"4d272ef7d81949ad"
+],
+[
+117,
+"dinosaur details",
+239794,
+"ca7feda2a37c4c86"
+],
+[
+118,
+"fusion details",
+239794,
+"ca7feda2a37c4c86"
+],
+[
+119,
+"quote fusion",
+243505,
+"c9a01770d767c95a"
+],
+[
+120,
+"quote fusion bad",
+238792,
+"137c3e5da9bd9c47"
+],
+[
+121,
+"fuse bad digest",
+238797,
+"bb29ce8951a6c023"
+],
+[
+122,
+"fuse",
+235886,
+"336dbbf3e049eb85"
+],
+[
+123,
+"fuse replay",
+235890,
+"6d9ba789265f1873"
+],
+[
+124,
+"list dinosaurs after",
+239226,
+"8cd8b4b936776a73"
+],
+[
+125,
+"skin view",
+235410,
+"bb9dbcb036f6996c"
+],
+[
+126,
+"skin view instance",
+235436,
+"0fe9e017ca219599"
+],
+[
+127,
+"skin view missing",
+235405,
+"7259df4f5bc5c491"
+],
+[
+128,
+"skin equip base",
+235421,
+"044670a184761963"
+],
+[
+129,
+"skin equip clay no model",
+235422,
+"04d8b690e9170068"
+],
+[
+130,
+"skin equip clay",
+235421,
+"705bc07948945ca3"
+],
+[
+131,
+"skin equip not owned",
+235423,
+"03665690f6844d6e"
+],
+[
+132,
+"skin set default",
+235445,
+"9f7feaf08bfed2fe"
+],
+[
+133,
+"skin view default",
+235506,
+"8274d908ce779cc4"
+],
+[
+134,
+"skin unequip",
+235430,
+"16fc97517ceb3793"
+],
+[
+135,
+"skin clear default",
+235414,
+"b8bcb6d2b9dc62da"
+],
+[
+136,
+"skin bad plan",
+235408,
+"f22e0aae6b308ae2"
+],
+[
+137,
+"purchase",
+235412,
+"de7474ce932ee086"
+],
+[
+138,
+"purchase replay",
+235412,
+"de7474ce932ee086"
+],
+[
+139,
+"purchase bad",
+235413,
+"333553897c451923"
+],
+[
+140,
+"buy egg gated",
+235446,
+"5da27fe892f1fd74"
+],
+[
+141,
+"fusion gated",
+235446,
+"5da27fe892f1fd74"
+],
+[
+142,
+"renew",
+235425,
+"a224674d3cd95a5f"
+],
+[
+143,
+"settle run r3",
+304974,
+"a71332f4d7a4f414"
+],
+[
+144,
+"renew 2",
+304799,
+"3f1a52e380a73a35"
+],
+[
+145,
+"release",
+284888,
+"29a4c17ffb6b8be5"
+],
+[
+146,
+"after release",
+284461,
+"05900f35c411fa8f"
+],
+[
+147,
+"reload",
+304167,
+"706c98ae24e9eea4"
+],
+[
+148,
+"reload progression",
+304747,
+"96f0472ab153aa7c"
+],
+[
+149,
+"reload claim",
+305047,
+"f08f818d66a5fb77"
+],
+[
+150,
+"reload release",
+285336,
+"3775a780ebca3df4"
+],
+[
+151,
+"preview load",
+5347,
+"ceb9c249bd758f13"
+],
+[
+152,
+"preview fusion status",
+5347,
+"873d79dcb15a030e"
+],
+[
+153,
+"preview settle",
+54000,
+"2301431059e2aa44"
+],
+[
+154,
+"demo grant eggs",
+55239,
+"948f88f615328ebc"
+],
+[
+155,
+"demo grant eggs new find",
+55570,
+"d1728343db45d1ed"
+],
+[
+156,
+"demo grant bad",
+55572,
+"ecdf201f46f12715"
+],
+[
+157,
+"demo equip",
+55583,
+"71d77eeb87a8c2cd"
+],
+[
+158,
+"demo crystals",
+55582,
+"f6a9502aa92fcdfa"
+],
+[
+159,
+"demo crystals bad",
+55586,
+"0c063ff85c9c6328"
+],
+[
+160,
+"preview claim 1",
+65500,
+"859b60520830dc1e"
+],
+[
+161,
+"preview claim 2",
+65468,
+"7af4c277a49edf7d"
+],
+[
+162,
+"preview claim 3",
+65397,
+"3ac3ed6999f863a3"
+],
+[
+163,
+"preview claim 4",
+65399,
+"6b7f2f6836585136"
+],
+[
+164,
+"preview claim 5",
+65508,
+"cb94f646f3a94d8a"
+],
+[
+165,
+"preview claim 6",
+65398,
+"e5100c5ddc12c4e7"
+],
+[
+166,
+"preview grant crystals",
+65201,
+"6159e5f114e13523"
+],
+[
+167,
+"preview release",
+58732,
+"433f208e99415aa2"
+],
+[
+168,
+"outage load",
+4934,
+"5826d7b021588970"
+],
+[
+169,
+"outage settle ok",
+25223,
+"f6984bf4f2e7fcf6"
+],
+[
+170,
+"outage settings",
+25076,
+"3aabce5254b9a45a"
+],
+[
+171,
+"outage settle",
+25076,
+"d2b2f8f4099d2368"
+],
+[
+172,
+"outage pending",
+25173,
+"6b60556e30df2e08"
+],
+[
+173,
+"outage renew",
+25057,
+"2669a77ea44436a0"
+],
+[
+174,
+"outage renew recovers",
+52613,
+"cc51e99171145a7b"
+],
+[
+175,
+"outage recovered",
+52742,
+"815af1f9b0dba7fb"
+],
+[
+176,
+"outage claim",
+56958,
+"c35c1311d8bd324b"
+],
+[
+177,
+"lease lost settle",
+56593,
+"2478eb0cd12d73ca"
+],
+[
+178,
+"lease lost equip",
+56601,
+"c6a3083221c9f158"
+],
+[
+179,
+"lease lost renew",
+56575,
+"0bd25f38244a641a"
+],
+[
+180,
+"lease lost kicked",
+56623,
+"e2859e040f654fa6"
+],
+[
+181,
+"lease lost release",
+50207,
+"8a29d29bc32ca3fd"
+]
+]
+}

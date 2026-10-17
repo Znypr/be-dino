@@ -169,6 +169,9 @@ jobs:
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_rewards.py --runner /tmp/luau/luau
           python tools/verify_rollback.py --runner /tmp/luau/luau
+          python tools/verify_profile_golden.py --runner /tmp/luau/luau
+          python tools/verify_server_module_size.py
+          python tools/verify_server_module_size.py --selftest
           python tools/verify_gifts.py --runner /tmp/luau/luau
           python tools/verify_gift_ui.py --runner /tmp/luau/luau
           python tools/verify_switch_on.py

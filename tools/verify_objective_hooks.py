@@ -33,6 +33,13 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import verify_objectives  # noqa: E402
 
 REPO = 'src/server/ProfileRepository.luau'
+# docs/150: the transactions live in parts installed by ProfileRepository (function bodies unchanged); the hooks sit where they sat.
+EGGS = 'src/server/ProfileEggs.luau'
+COLLECTION = 'src/server/ProfileCollection.luau'
+SHOP = 'src/server/ProfileShop.luau'
+FUSION_PART = 'src/server/ProfileFusion.luau'
+OBJECTIVES_PART = 'src/server/ProfileObjectives.luau'
+REPO_FILES = {REPO, EGGS, COLLECTION, SHOP, FUSION_PART, OBJECTIVES_PART}
 FOOD = 'src/server/FoodService.luau'
 LEAP = 'src/server/LeapService.luau'
 FUSION = 'src/server/FusionService.luau'
@@ -47,19 +54,19 @@ SITES = [
     dict(name='leap', file=LEAP, fn=r'^function Leap\.start\(\)', call=r'require\(script\.Parent\.ObjectiveService\)\.record\(player,"leap_used",1\)',
          guard=r'GameConfig\.ObjectivesEnabled==true', kinds=['leap_used'],
          anchors=[r'player:SetAttribute\("LastLeapStatus","leaping"\)', r'active\[player\]=\{']),
-    dict(name='run settled', file=REPO, fn=r'^function ProfileRepository\.commitRunSettlement\(', call=r'objectives\(\)\.recordRunSettled\(player, runId, runSeconds, runEggs,',
+    dict(name='run settled', file=EGGS, fn=r'^function ProfileRepository\.commitRunSettlement\(', call=r'objectives\(\)\.recordRunSettled\(player, runId, runSeconds, runEggs,',
          guard=r'Config\.ObjectivesEnabled == true', recorder='recordRunSettled',
          anchors=[r'retrySettlement\("run settlement"', r'adopt\(player, updated\)', r'PrivateState\.set\(player, "LastSettledRunId", runId\)']),
-    dict(name='eggs hatched', file=REPO, fn=r'^function ProfileRepository\.claimChest\(', call=r'objectives\(\)\.recordHatched\(player, opened, freshSpecies\)',
+    dict(name='eggs hatched', file=EGGS, fn=r'^function ProfileRepository\.claimChest\(', call=r'objectives\(\)\.recordHatched\(player, opened, freshSpecies\)',
          guard=r'Config\.ObjectivesEnabled == true and not duplicateOutcome', recorder='recordHatched',
          anchors=[r'retry\("chest claim"', r'adopt\(player, updated\)', r'publishHatch\(player, chestId, committedOutcome\)']),
-    dict(name='equip', file=REPO, fn=r'^function ProfileRepository\.equipSpecies\(', call=r'objectives\(\)\.record\(player, "dino_equipped", 1\)',
+    dict(name='equip', file=COLLECTION, fn=r'^function ProfileRepository\.equipSpecies\(', call=r'objectives\(\)\.record\(player, "dino_equipped", 1\)',
          guard=r'Config\.ObjectivesEnabled == true', kinds=['dino_equipped'],
          anchors=[r'retry\("equip species"', r'adopt\(player, updated\)']),
-    dict(name='potion', file=REPO, fn=r'^function ProfileRepository\.progressionAction\(', call=r'objectives\(\)\.record\(player,"potion_bought",1\)',
+    dict(name='potion', file=SHOP, fn=r'^function ProfileRepository\.progressionAction\(', call=r'objectives\(\)\.record\(player,"potion_bought",1\)',
          guard=r'Config\.ObjectivesEnabled == true and action=="buyPotion" and not duplicate', kinds=['potion_bought'],
          anchors=[r'retry\("progression"', r'adopt\(player, updated\)']),
-    dict(name='fusion commit', file=REPO, fn=r'^function ProfileRepository\.fuseDinosaurs\(', call=r'objectives\(\)\.recordFusionUse\(player\)',
+    dict(name='fusion commit', file=FUSION_PART, fn=r'^function ProfileRepository\.fuseDinosaurs\(', call=r'objectives\(\)\.recordFusionUse\(player\)',
          guard=r'Config\.ObjectivesEnabled == true and not duplicate', recorder='recordFusionUse',
          anchors=[r'retry\("identity fusion"', r'adopt\(player, updated\)']),
     dict(name='fusion quote', file=FUSION, fn=r'^local function handleAction\(', call=r'require\(script\.Parent\.ObjectiveService\)\.recordFusionUse\(player\)',
@@ -67,7 +74,7 @@ SITES = [
          anchors=[r'repository\.quoteFusion\(', r'if not quote then return fail', r'odds_not_approved']),
 ]
 # Files that may mention ObjectiveService at all (everything else, in particular src/client, must not).
-ALLOWED_FILES = {REPO, FOOD, LEAP, FUSION, SERVICE, 'src/server/Bootstrap.server.luau', 'src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau'}
+ALLOWED_FILES = {*REPO_FILES, FOOD, LEAP, FUSION, SERVICE, 'src/server/Bootstrap.server.luau', 'src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau'}
 CLIENT_PANEL_FILES = {'src/client/ObjectivesPanel.luau'}
 # OB2 (docs/115): the ONE other client file that may use ObjectiveAction. It sends only {action = "seen", id = <menu id>}, and only
 # FusionMenu calls it (with "fusion_menu", behind the flag).
@@ -182,7 +189,7 @@ def static_report() -> tuple[list[str], list[str]]:
     # OB2: T9 is produced by the server-validated "seen" report, not by the fusion quote. The chain must exist: the remote shape,
     # the service branch, and the repository function that queues the catalogue row's own event for a declared seen id only.
     service_text = (ROOT / SERVICE).read_text(encoding='utf-8')
-    repo_lines = read_lines(REPO)
+    repo_lines = read_lines(OBJECTIVES_PART)
     try:
         seen_start, seen_end = function_range(repo_lines, r'^function ProfileRepository\.objectiveSeen\(')
         seen_body = '\n'.join(repo_lines[seen_start:seen_end])
@@ -237,7 +244,7 @@ def static_report() -> tuple[list[str], list[str]]:
         if rel in ALLOWED_FILES and rel != SERVICE:
             count = len(re.findall(r'(objectives\(\)|ObjectiveService\))\.(record|recordRunSettled|recordHatched|recordFusionUse)\(', code))
             declared = per_file.get(rel, 0)
-            if rel in (REPO, FOOD, LEAP, FUSION) and count != declared:
+            if (rel in REPO_FILES or rel in (FOOD, LEAP, FUSION)) and count != declared:
                 errors.append(f'{rel}: {count} objective calls but {declared} declared sites (undeclared hook?)')
         # lazy only: the require of the service must be indented (inside a function), never a top-level cost
         for lineno, line in enumerate(text.split('\n'), 1):

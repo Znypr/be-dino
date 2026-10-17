@@ -31,8 +31,12 @@ FLAGS = ('GiftingEnabled', 'AdminGiftsEnabled', 'GiftClaimEnabled')
 FIXTURE = 'tools/fixtures/build020/'
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402
+
+
 def module(path: str) -> str:
-    return '(function()\n' + (ROOT / path).read_text(encoding='utf-8') + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 def gift_rules_module() -> str:
@@ -91,7 +95,7 @@ def static_errors() -> list[str]:
     start = re.search(r'function GiftService\.start\(.*?\n(.*?)\nend\n', service, flags=re.S)
     if not start or 'if not claimOn() then return nil end' not in start.group(1).split('\n')[0] + '\n' + start.group(1).split('\n')[1]:
         errors.append('GiftService.start must return nil on its first line while the flag is off')
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    repo = profile_sources.repository_text()
     match = re.search(r'function ProfileRepository\.applyGifts\(.*?\n(.*?)\n', repo)
     if not match or 'Config.GiftClaimEnabled ~= true' not in match.group(1):
         errors.append('ProfileRepository.applyGifts must test Config.GiftClaimEnabled on its first line')
