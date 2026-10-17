@@ -261,7 +261,7 @@ def static_checks():
     assert b, 'BUY POTION button not found'
     h = b.group(1)
     assert 'return' not in h, 'confirm handler must not return before transact'
-    assert 'transact("buyPotion",item.id.."@"..chosenPotionWindow,false)' in h, 'buy must send the window-stamped id'
+    assert 'transact("buyPotion",item.id.."@"..potionChoice.window,false)' in h, 'buy must send the window-stamped id'
     assert h.index('transact(') < h.index('open("potions")'), 'transact before leaving the modal'
     # CANCEL is the only other control on the confirm card and never transacts.
     c = re.search(r'button\(body,"CANCEL",290,339,510,44,C\.red,function\(\) open\("potions"\) end\)', client)

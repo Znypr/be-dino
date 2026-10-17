@@ -36,9 +36,9 @@ return table.freeze({
     -- {14,21,48,14,3},{11,19,49,17,4},{8,17,50,20,5},{5,15,51,22,7},{2,12,51,25,10}.
     -- Eggs keep the odds they were rolled with; traitRollVersion records the version.
     ConditionOddsVersion="bd045-conditions-v1",
-    -- BD-365 (docs/112): a new profile's first eggs are never Cracked. FtueRules holds the same numbers (verify_ftue_rules checks).
+    -- BD-365 (docs/112): a new profile's first eggs are never Cracked. FtueRules holds the same number (verify_ftue_rules checks);
+    -- the child-facing line is built from it in OddsCopy.safeEggsLine, so the number is never typed into a sentence by hand.
     SafeEggs=2,
-    SafeEggsLine="Your first 2 eggs are safe: they are never Cracked.",
     ConditionWeightScale=10000,
     ConditionWeights={
         {5000,3000,1500,450,50},

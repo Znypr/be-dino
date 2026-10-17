@@ -473,7 +473,7 @@ local cosmeticTab="auras"
 local trailPage=1
 local oddsLevelOverride=nil
 local outcomeState={page=1,filters={}}
-local chosenPotion="speed_common"
+local potionChoice={id="speed_common",window=0} -- BD-539: window was the global chosenPotionWindow; it is the shop window the offers were drawn from
 local pendingShop=nil
 local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
@@ -565,7 +565,8 @@ render=function(name: string)
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
-            label(body,require(Shared.FtueP1).ConditionsHeader,0,cardsY,824,30,20,C.gold) -- BD-372: the safe-first-eggs note, no level number
+            local safeLine=require(Shared.OddsCopy).safeEggsLine(require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting")))
+            if safeLine then label(body,safeLine,0,cardsY,824,30,20,C.gold) end -- BD-372/365: the safe-first-eggs note, only while true
             -- BD-394: the owner's Blender stage (jungle backdrop + condition eggs) when uploaded (ConditionStageAssetIds); else the live egg tiles, bigger.
             local staged=require(script.Parent.ConditionStage).background(body,0,cardsY+62,824,144)
             for i,row in ProgressionConfig.Conditions do
@@ -682,7 +683,7 @@ render=function(name: string)
         local OddsCopy=require(Shared.OddsCopy)
         local upgradeOdds=oddsLevelOverride~=nil
         heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Odds" else "Egg Odds",C.blue
-        local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0)
+        local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0,require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting"))) -- BD-365: the safe-eggs line only while true
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.ScrollBarThickness,list.ZIndex,list.Parent="OddsSimple",1,0,UDim2.fromOffset(824,308),8,24,body
         local lineY=0
         for _,group in groups do
@@ -692,7 +693,7 @@ render=function(name: string)
                 label(list,row.text,560,lineY,220,30,22,C.blue).TextXAlignment=Enum.TextXAlignment.Right
                 lineY+=32
             end
-            if group.note then label(list,group.note,10,lineY,790,28,18) lineY+=30 end
+            if group.note then label(list,group.note,10,lineY,790,28,OddsCopy.NoteTextSize) lineY+=30 end
             label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
         end
         for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end
@@ -760,7 +761,7 @@ render=function(name: string)
         local p=progression()
         -- BD-051: server-clock rotation. Offers/stock come from the shared deterministic rules; the server re-checks every purchase.
         local window=ProgressionRules.shopWindow(workspace:GetServerTimeNow())
-        chosenPotionWindow=window
+        potionChoice.window=window
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
@@ -800,7 +801,7 @@ render=function(name: string)
             label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,26,186,36,15)
             label(card,if left>0 then left.." left" else look.caption,74,62,186,20,15,ShopCard.captionColor(look))
             local buy=button(card,look.buttonText,8,84,248,44,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
-                if left>0 then chosenPotion=item.id open("potionConfirm") end
+                if left>0 then potionChoice.id=item.id open("potionConfirm") end
             end)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
@@ -814,7 +815,7 @@ render=function(name: string)
                 local x=(slot%3)*276 local y=338+math.floor(slot/3)*50
                 slot+=1
                 local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,44,C.purple,function()
-                    chosenPotion=item.id
+                    potionChoice.id=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
                 end)
@@ -829,14 +830,14 @@ render=function(name: string)
         if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
         scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*50+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
-        local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
+        local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..UIFormat.duration(item.duration).."?" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
-            if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..chosenPotionWindow,false) end
+            if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..potionChoice.window,false) end
             open("potions")
         end)
         button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
@@ -1214,6 +1215,9 @@ render=function(name: string)
         button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
     end
 end
+-- BD-539: Luau allows 200 locals per function and this main chunk was at 198. Everything from here to the end of the script runs inside
+-- one function so its locals (about 56) count against that function instead. Same order, same code, nothing is reindented.
+do local function mountHud()
 local buildBadge=label(gui,"BUILD "..Config.Build,0,0,250,24,15,C.blue)
 buildBadge.Name,buildBadge.AnchorPoint,buildBadge.Position="BuildBadge",Vector2.new(.5,0),UDim2.new(.5,0,0,36)
 local foodDiagnostic=label(gui,"",0,0,450,22,14,C.accent)
@@ -1735,3 +1739,4 @@ Input.InputBegan:Connect(function(input,processed)
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
 end)
+end mountHud() end
