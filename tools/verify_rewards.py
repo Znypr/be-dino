@@ -96,8 +96,12 @@ local require=function(id) if id=="Identity" then return Identity end return Gam
 local FusionOdds=@@FUSION_ODDS@@
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
 local Cosmetic=@@COSMETIC_OWNERSHIP@@
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
+-- BD-074 / switch-on rehearsal (docs/149): with Config.ObjectivesEnabled on, ProfileRepository requires ObjectiveService lazily after a commit;
+-- this no-op spy stands in (the real service runs in verify_objective_hooks and verify_multiplayer_sim) and the flag-off runs never load it.
+local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end})
 local require=function(id)
+ if id=="ObjectiveService" then ObjectiveSpy.loads+=1 return ObjectiveSpy end
  if id=="PrivateState" then return PrivateStateStub end
  if id=="Cosmetic" then return Cosmetic end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch

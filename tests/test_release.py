@@ -282,9 +282,11 @@ class LoadHarnessTests(unittest.TestCase):
     def test_gate_flags_problems(self):
         clean = {"crashes": 0, "failures": {}, "queueDrops": 0, "undrainedEggs": 0, "leasedAtEnd": 0,
                  "ratioA": 0.5, "ratioB": 0.2, "peakWindowA": 70, "budgetA": 140, "peakWindowB": 10, "budgetB": 80,
-                 "maxKeyBytesPerMinute": 200000, "maxProfileBytes": 15000}
+                 "maxKeyBytesPerMinute": 200000, "maxProfileBytes": 15000, "ops": {"claim": 12, "settle": 10}}
         self.assertEqual(verify_load.gate(clean), [])
         self.assertEqual(len(verify_load.gate(dict(clean, failures={"claim:save_failed": 1}, ratioA=1.2))), 2)
+        # docs/149: a run that never hatched would leave the hatch writes out of every request number
+        self.assertTrue(any("no hatch claim" in p for p in verify_load.gate(dict(clean, ops={"settle": 10}))))
 
 
 if __name__ == "__main__":

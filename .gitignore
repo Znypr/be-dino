@@ -6,6 +6,8 @@ build/*-playtest.rbxlx
 build/*-playtest.manifest.json
 build/*-playtest-streaming.rbxlx
 build/*-playtest-streaming.manifest.json
+build/*-all-on-rehearsal.rbxlx
+build/*-all-on-rehearsal.manifest.json
 
 # tools/release_playtest.py (docs/148): release manifests, dry-run output and verifier logs, local only.
 build/release/

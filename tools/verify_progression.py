@@ -466,7 +466,7 @@ assert(donorDetails.traitsKnown and donorDetails.genes.patternId~=nil)
 local fusionSpecies=donorDetails.speciesId
 local function goldCount() return localUser.attrs.CollectionJson[fusionSpecies].gold end -- mock JSONEncode returns a table copy
 -- Default-off flag: no quote, no fusion.
-assert(GameConfig.IdentityFusionPreviewEnabled==false)
+assert(GameConfig.IdentityFusionPreviewEnabled==false,"the committed Config has the fusion flag off")
 assert(select(2,LocalRepository.quoteFusion(localUser,"gold",donors))=="fusion_disabled")
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token="off"}))=="fusion_disabled")
 assert(LocalRepository.setFusionTestRoller({})==false)

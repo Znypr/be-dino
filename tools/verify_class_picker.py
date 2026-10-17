@@ -13,7 +13,7 @@ for id,class in Combat.SpeciesClasses do
   assert(not CI.line(id):find("%d"),"no numbers in picker copy")
 end
 assert(CI.forSpecies(nil).class=="Ground" and CI.forSpecies("bogus").hint=="Fast runner")
-assert(Cfg.ClassMovementEnabled==false and Cfg.CombatEnabled==false)
+assert(Cfg.ClassMovementEnabled==false and Cfg.CombatEnabled==false,"the committed Config has the class movement and combat flags off")
 for _,c in M.ClassMovement.ClassNames do assert(CI.Labels[c] and CI.Hints[c],c) end
 -- Class badge (owner 2026-10-16): 4 slots, one letter each, unbound = clearly a placeholder, bound = the owner icon.
 local seen={}

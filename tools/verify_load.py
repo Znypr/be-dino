@@ -239,6 +239,7 @@ local function newServer(name, jobId, overrides)
         server.cache["src/shared/Config"] = table.freeze(config)
     end
     server.Repository = load(node("src/server/ProfileRepository"))
+    server.PrivateState = load(node("src/server/PrivateState")) -- BD-360: NextChestId lives here, not in Player attributes (docs/149)
     server.Config = load(node("src/shared/Config"))
     server.Rules = load(node("src/shared/ProgressionRules"))
     return server
@@ -300,6 +301,25 @@ local function loadWithRetry(server, p)
     return false
 end
 
+-- docs/149 (switch-on rehearsal): with Config.ObjectivesEnabled the real server queues objective events in memory (the hooks call
+-- ProfileRepository.objectiveRecord after each commit) and ObjectiveService flushes every ObjectiveConfig.FlushSeconds. The harness
+-- does not start ObjectiveService (it needs Roblox instances), so it plays the same two roles: one queued event per pickup tick, per
+-- settlement and per hatch claim, and one flush thread per joined player. Flag off (every committed profile): nothing here runs.
+local function objectivesOn(server) return server.Config.ObjectivesEnabled == true end
+local function objectiveEvent(server, p, kind, amount, eventId)
+    if objectivesOn(server) then server.Repository.objectiveRecord(p, {kind = kind, amount = amount, id = eventId}) end
+end
+local function objectiveFlushLoop(sc, server, p)
+    if not objectivesOn(server) then return end
+    local flushSeconds = __OBJECTIVE_FLUSH_SECONDS__ -- ObjectiveConfig.FlushSeconds, read from shared/ObjectiveConfig.luau by harness()
+    task.spawn(function()
+        while p.Parent and now < sc.duration do
+            sleep(flushSeconds)
+            if p.Parent and server.Repository.isLoaded(p) then op("objective-flush", server.Repository.objectiveFlush, p) end
+        end
+    end)
+end
+
 -- Egg conservation per UserId: settled run eggs + opened nest eggs == claimed + still queued/banked.
 -- (BD-044 banks eggs; a player may legitimately leave with eggs still banked.)
 local EGGS = {}
@@ -314,11 +334,11 @@ local function revealAll(server, p, rng, sc)
         if now - started >= sc.revealCap then break end
         -- Like the real client: reveal whatever NextChestId names (paged claims credit up to
         -- Config.HatchPageSize eggs per transaction and serve the rest from a server buffer).
-        local eggId = p.attrs.NextChestId
+        local eggId = server.PrivateState.get(p, "NextChestId") -- since BD-360 the next egg id is owner-only state; reading p.attrs saw nothing and no hatch claim ever ran
         if eggId == nil or eggId == "" then break end
         local ok, _, status = op("claim", server.Repository.claimChest, p, eggId)
         if not judge("claim", ok, status) then break end
-        if status ~= "duplicate" then book.claimed += 1 end
+        if status ~= "duplicate" then book.claimed += 1 objectiveEvent(server, p, "egg_hatched", 1) end
         sleep(sc.revealSeconds)
     end
 end
@@ -352,6 +372,7 @@ local function playerLoop(sc, servers, p, index, rng)
     sleep(sc.joinStagger * (index - 1))
     join(server, p)
     if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
+    objectiveFlushLoop(sc, server, p)
     local runs, token = 0, 0
     local hopped = false
     local function sanctuary()
@@ -389,6 +410,7 @@ local function playerLoop(sc, servers, p, index, rng)
         local runEnd = math.min(sc.duration - 30, now + sc.runMin + rng() * (sc.runMax - sc.runMin))
         while now < runEnd do
             sleep(sc.pickupMin + rng() * (sc.pickupMax - sc.pickupMin))
+            objectiveEvent(server, p, "food_eaten", 1)
             if takeCrystal() then
                 token += 1
                 local ok, status = op("pickup", server.Repository.progressionAction, p, "grant", "crystal", p.Name .. "-crystal-" .. token, false, 3)
@@ -402,6 +424,7 @@ local function playerLoop(sc, servers, p, index, rng)
         local ok, outcome, status = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
         if judge("settle", ok, status) and status ~= "duplicate" and type(outcome) == "table" then
             eggBook(p).settled += outcome.eggCount or outcome.chestCount or 0
+            objectiveEvent(server, p, "run_end", 1, "run:" .. runId)
         end
         if ok and rng() < 0.15 then -- duplicate end-run request must be idempotent
             local again, _, againStatus = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
@@ -422,6 +445,7 @@ local function playerLoop(sc, servers, p, index, rng)
             server = servers[2]
             join(server, p)
             if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
+            objectiveFlushLoop(sc, server, p)
         end
     end
     p.Parent = nil
@@ -608,7 +632,10 @@ def harness(root: Path = ROOT) -> str:
     sources = "{\n" + ",\n".join(entries) + "\n}"
     scenarios = "{" + ",".join(
         "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k not in ("gated", "playtestGate")) + "}" for sc in SCENARIOS) + "}"
-    text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources)
+    flush = re.search(r"FlushSeconds = (\d+)", (root / "src/shared/ObjectiveConfig.luau").read_text(encoding="utf-8"))
+    if flush is None:
+        raise SystemExit("ObjectiveConfig.FlushSeconds not found; update the objective flush model in verify_load.py")
+    text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources).replace("__OBJECTIVE_FLUSH_SECONDS__", flush.group(1))
     return "local SCENARIO_FAIL_RATE = 0\n" + text
 
 
@@ -628,6 +655,10 @@ def gate(result: dict) -> list[str]:
     problems = []
     if result["crashes"]:
         problems.append(f"{result['crashes']} coroutine crash(es)")
+    if result["ops"].get("claim", 0) == 0:
+        # docs/149: since BD-360 the next egg id is owner-only state; a harness that reads it from Player attributes sees nothing and
+        # silently never hatches, which hides the biggest write source (hatch pages) from every request number below.
+        problems.append("no hatch claim ran: the load numbers would leave out the hatch writes")
     if result["failures"]:
         problems.append(f"failed operations {result['failures']}")
     if result["queueDrops"]:

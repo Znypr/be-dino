@@ -104,6 +104,12 @@ assert(Workspace.attrs.FoodCount>1400 and Workspace.attrs.FoodPlacementFallbacks
 missingTerrain=false artFailure=true
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"broken art must not remove food")
+-- docs/149 (switch-on rehearsal): the playtest profile runs FoodArtMode = "Kit". A kit clone that RAISES used to leave the error string in `model`
+-- and the loop then called :Destroy() on it, so one bad mesh stopped the whole food spawn. Kit mode is not the committed default, so flip it here.
+FoodConfig.FoodArtMode="Kit"
+Food.start({})
+assert(Workspace.attrs.FoodCount>1400,"a Kit food mesh whose clone raises must not remove food")
+FoodConfig.FoodArtMode=Config.FoodArtMode artFailure=false
 print("Food startup passed: terrain-only placement, 12 nearby starter pickups, missing-ray fallback and broken-art survival")
 -- BD-074 (docs/66 s18): the pickup tick reports food eaten ONCE per player per tick (summed), only while Config.ObjectivesEnabled.
 do
