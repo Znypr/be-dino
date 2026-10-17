@@ -116,6 +116,7 @@ local function handleAction(player: any, request: any)
     if action == "list" then
         local page, reason = repository.listDinosaurs(player, request.cursor, request.limit or FusionService.DefaultListLimit)
         if not page then return fail(reason or "fusion_disabled") end
+        if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveService).noteMenuUse(player, "fusion_menu") end -- BD-616: the server saw the menu's own first request
         return {ok = true, dinosaurs = page.dinosaurs, nextCursor = page.nextCursor}
     elseif action == "details" then
         local details, reason = repository.fusionDetails(player, request.instanceId)
@@ -125,7 +126,7 @@ local function handleAction(player: any, request: any)
         local quote, reason = repository.quoteFusion(player, request.targetStage, copyList(request.donorIds))
         if not quote then return fail(reason or "bad_request") end
         if type(quote.odds) ~= "table" or type(quote.oddsVersion) ~= "string" then return fail("odds_not_approved") end
-        if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveService).recordFusionUse(player) end -- BD-074: the server priced a full, owned donor set (the menu asks only then)
+        -- BD-616: a quote is free and repeatable, so it no longer counts for D5; only a committed fusion does (ProfileFusion.fuseDinosaurs).
         return {ok = true, quote = {speciesId = quote.speciesId, patternId = quote.patternId, targetStage = quote.targetStage,
             donorIds = quote.donorIds, lossManifest = quote.lossManifest, consentRequired = quote.consentRequired,
             consentDigest = quote.consentDigest, quoteDigest = quote.quoteDigest, recipeVersion = quote.recipeVersion,

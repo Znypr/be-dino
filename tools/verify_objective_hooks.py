@@ -69,9 +69,6 @@ SITES = [
     dict(name='fusion commit', file=FUSION_PART, fn=r'^function ProfileRepository\.fuseDinosaurs\(', call=r'objectives\(\)\.recordFusionUse\(player\)',
          guard=r'Config\.ObjectivesEnabled == true and not duplicate', recorder='recordFusionUse',
          anchors=[r'retry\("identity fusion"', r'adopt\(player, updated\)']),
-    dict(name='fusion quote', file=FUSION, fn=r'^local function handleAction\(', call=r'require\(script\.Parent\.ObjectiveService\)\.recordFusionUse\(player\)',
-         guard=r'Config\.ObjectivesEnabled == true', recorder='recordFusionUse',
-         anchors=[r'repository\.quoteFusion\(', r'if not quote then return fail', r'odds_not_approved']),
 ]
 # Files that may mention ObjectiveService at all (everything else, in particular src/client, must not).
 ALLOWED_FILES = {*REPO_FILES, FOOD, LEAP, FUSION, SERVICE, 'src/server/Bootstrap.server.luau', 'src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau'}
@@ -207,6 +204,15 @@ def static_report() -> tuple[list[str], list[str]]:
     seen_rows = [oid for oid, _, event in catalogue() if event == 'fusion_menu_opened']
     if seen_rows != ['T9'] or 'seen = "fusion_menu"' not in (ROOT / 'src/shared/ObjectiveConfig.luau').read_text(encoding='utf-8'):
         errors.append('only T9 listens for fusion_menu_opened and it declares seen = "fusion_menu"')
+    # BD-616: D5 is paid on a committed fusion only (a quote is free); T9 needs the server to have answered the menu's own request first.
+    fusion_text = re.sub(r'--.*$', '', (ROOT / FUSION).read_text(encoding='utf-8'), flags=re.M)
+    if 'recordFusionUse' in fusion_text:
+        errors.append('BD-616: FusionService must not report fusion use for a quote (D5 is paid on a committed fusion only)')
+    if len(re.findall(r'if Config\.ObjectivesEnabled == true then require\(script\.Parent\.ObjectiveService\)\.noteMenuUse\(player, "fusion_menu"\) end', fusion_text)) != 1 \
+            or fusion_text.count('noteMenuUse') != 1:
+        errors.append('BD-616: FusionService must call noteMenuUse(player, "fusion_menu") exactly once, behind the flag guard')
+    if 'not (menusUsed[player] and menusUsed[player][request.id])' not in service_text or '"not_opened"' not in service_text:
+        errors.append('BD-616: the "seen" branch must refuse with not_opened until the menu was used (menusUsed check missing)')
     produced.setdefault('fusion_menu_opened', []).append('ProfileRepository.objectiveSeen (client {action="seen", id="fusion_menu"}, server-validated)')
 
     # No stray hooks: every .record( / recordX( call in the server tree is declared above.
@@ -224,7 +230,8 @@ def static_report() -> tuple[list[str], list[str]]:
             errors.append(f'{rel}: only the objectives panel (view/claim) and ObjectiveSeen (seen) may use ObjectiveAction, no client-reported events')
         if rel in CLIENT_SEEN_FILES:
             actions = re.findall(r'action\s*=\s*"([a-z_]+)"', code)
-            if actions != ['seen'] or code.count('InvokeServer') != 1 or code.count('{action = "seen", id = seenId}') != 1:
+            # two sends, one shape: the report and the single BD-616 retry after "not_opened"
+            if actions != ['seen', 'seen'] or code.count('InvokeServer') != 2 or code.count('{action = "seen", id = seenId}') != 2:
                 errors.append(f'{rel}: must send exactly one request shape, {{action = "seen", id = seenId}} (found actions {actions})')
             if not re.search(r'function ObjectiveSeen\.report\(seenId: string\)\n    if Config\.ObjectivesEnabled ~= true then return end\n', code):
                 errors.append(f'{rel}: report() must return first thing while Config.ObjectivesEnabled is not true (flag off sends nothing)')
@@ -473,7 +480,7 @@ do
  assert(Repository.progressionAction(q,"grant","crystal","hk-grant",false,3) and #take()==0,"other progression actions report nothing")
 end
 
--- B5. fusion use and the service-level recorders (the FusionService quote site is exercised in verify_progression)
+-- B5. fusion use and the service-level recorders (BD-616: a FusionService quote reports nothing; only a committed fusion does)
 do
  local f=user(7407)
  assert(Repository.load(f))
@@ -499,6 +506,7 @@ do
  ObjectiveServiceM.record(z,"leap_used",1)                                     -- T5 (the Leap site: verify_progression)
  local window=Rules.shopWindow(fakeNow)
  assert(Repository.progressionAction(z,"buyPotion",Rules.shopOffers(window)[1].id.."@"..window,"z-potion",false)) -- T6
+ ObjectiveServiceM.noteMenuUse(z,"fusion_menu")                                -- the server answered the Fusion menu's own request (BD-616)
  local seenAnswer=objectiveRemote.OnServerInvoke(z,{action="seen",id="fusion_menu"}) -- T9 (OB2: the client's one-time "seen" report)
  assert(seenAnswer.ok==true and seenAnswer.status=="seen","T9 completes on one seen request: "..tostring(seenAnswer.reason))
  local kinds={}
@@ -634,6 +642,12 @@ do
  clockNow+=100 ObjectiveServiceM.setClock(function() return clockNow end)
  assert(objectiveRemote.OnServerInvoke(u,{action="seen",id="fusion_menu"},"extra").reason=="bad_request","extra arguments refused")
  assert(#take()==0 and select(2,Repository.objectiveFlush(u))=="nothing","nothing was recorded by refused requests")
+ -- BD-616: a script that never used the menu earns nothing, however often it reports; the menu's own request opens the door
+ for _=1,3 do
+  local early=ask(u,{action="seen",id="fusion_menu"}) assert(early.ok==false and early.reason=="not_opened","report before the menu's own request: "..tostring(early.reason))
+ end
+ assert(#take()==0 and select(2,Repository.objectiveFlush(u))=="nothing","not_opened queued nothing")
+ ObjectiveServiceM.noteMenuUse(u,"fusion_menu")
  -- the genuine report completes T9 ONCE
  local first=ask(u,{action="seen",id="fusion_menu"})
  assert(first.ok==true and first.status=="seen" and first.view~=nil,"first report: seen")
@@ -666,6 +680,7 @@ do
  Repository.release(n)
  data[key(n)].collection.compy.base=0
  assert(Repository.load(n))
+ ObjectiveServiceM.noteMenuUse(n,"fusion_menu")
  local none=ask(n,{action="seen",id="fusion_menu"})
  assert(none.ok==false and none.reason=="no_dino","no dino yet: refused")
  assert(select(2,Repository.objectiveFlush(n))=="nothing","a refused report queued nothing")
@@ -676,6 +691,7 @@ do
  -- rate limit: RequestsPerWindow per RateWindowSeconds, then it opens again
  local m=user(7432)
  assert(Repository.load(m))
+ ObjectiveServiceM.noteMenuUse(m,"fusion_menu")
  clockNow+=1000 ObjectiveServiceM.setClock(function() return clockNow end)
  local okCount,limited=0,0
  for _=1,C.RequestsPerWindow+4 do

@@ -736,6 +736,8 @@ end}
 local script={Parent={ObjectiveService="ObjectiveService"}}
 local FusionObjective={calls={},loads=0} -- BD-074 spy
 FusionObjective.recordFusionUse=function(player) table.insert(FusionObjective.calls,player) end
+FusionObjective.menu={} -- BD-616 spy: the menus whose own request the server answered
+FusionObjective.noteMenuUse=function(player,id) table.insert(FusionObjective.menu,{player,id}) end
 local require=function(id) if id=="ObjectiveService" then FusionObjective.loads+=1 return FusionObjective end assert(id=="Config") return GameConfig end
 local FusionService=FUSION_SERVICE_MODULE
 assert(FusionService.handle(pu,{action="list"}).reason=="fusion_disabled","not started")
@@ -771,12 +773,16 @@ assert(q.ok and keys(q)=="ok,quote")
 assert(keys(q.quote)=="consentDigest,consentRequired,donorIds,lossManifest,odds,oddsVersion,patternId,quoteDigest,recipeVersion,speciesId,targetStage")
 assert(keys(q.quote.odds)=="big,mutation,noMutation,primaryColor,secondaryColor,shiny")
 assert(q.quote.oddsVersion=="fusion-odds-provisional-v2" and q.quote.odds.noMutation==1)
-assert(FusionObjective.loads==0 and #FusionObjective.calls==0,"BD-074: flag off, a priced quote reports nothing and never requires the module")
+assert(FusionObjective.loads==0 and #FusionObjective.calls==0 and #FusionObjective.menu==0,"BD-074: flag off, a list and a priced quote report nothing and never require the module")
 mutableConfig.ObjectivesEnabled=true
-local q2=invoke({action="quote",targetStage="gold",donorIds=donors2}) assert(q2.ok,tostring(q2.reason)) assert(#FusionObjective.calls==1 and FusionObjective.calls[1]==pu,"calls="..#FusionObjective.calls..", loads="..FusionObjective.loads..", flag="..tostring(mutableConfig.ObjectivesEnabled)..", same="..tostring(FusionObjective.calls[1]==pu))
-assert(invoke({action="list",limit=1}).ok and invoke({action="details",instanceId=donors2[1]}).ok and #FusionObjective.calls==1,"BD-074: list and details are not fusion use (the Index and the goal line call them too)")
+-- BD-616: a priced quote is free and repeatable, so it must NOT count as a fusion step (D5 is paid on a committed fusion only)
+local q2=invoke({action="quote",targetStage="gold",donorIds=donors2}) assert(q2.ok,tostring(q2.reason)) assert(#FusionObjective.calls==0,"BD-616: a quote reports no fusion use, calls="..#FusionObjective.calls)
+assert(#FusionObjective.menu==0,"BD-616: a quote is not the menu's list request")
+assert(invoke({action="list",limit=1}).ok and #FusionObjective.menu==1 and FusionObjective.menu[1][1]==pu and FusionObjective.menu[1][2]=="fusion_menu","BD-616: the menu's own list request tells the objectives the Fusion menu was used")
+assert(invoke({action="details",instanceId=donors2[1]}).ok and #FusionObjective.calls==0 and #FusionObjective.menu==1,"BD-074: details are not fusion use (the Index and the goal line call them too)")
 local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
-assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner" and #FusionObjective.calls==1,"BD-074: a refused quote reports nothing")
+assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner" and #FusionObjective.calls==0,"BD-074: a refused quote reports nothing")
+assert(invoke({action="list",cursor=-5}).reason=="bad_request" and #FusionObjective.menu==1,"BD-616: a refused list does not open the menu")
 mutableConfig.ObjectivesEnabled=false
 assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
 assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 3 Gold, not 6 Base

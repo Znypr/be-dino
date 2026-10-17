@@ -15,7 +15,8 @@ local finished: {[string]: boolean} = {} -- the server gave a definite answer fo
 local inFlight: {[string]: boolean} = {}
 
 -- Reasons that are worth asking again on the next open (the answer says "not yet", not "never").
-local RETRY = {rate_limited = true, no_dino = true, profile_not_loaded = true, save_failed = true, lease_lost = true}
+-- not_opened (BD-616): the menu's own request had not reached the server yet; asked once more below, then again on the next open.
+local RETRY = {rate_limited = true, no_dino = true, profile_not_loaded = true, save_failed = true, lease_lost = true, not_opened = true}
 
 function ObjectiveSeen.report(seenId: string)
     if Config.ObjectivesEnabled ~= true then return end
@@ -26,6 +27,10 @@ function ObjectiveSeen.report(seenId: string)
     inFlight[seenId] = true
     task.spawn(function() -- InvokeServer yields: the menu must not wait for it
         local ok, response = pcall(function() return (remote :: RemoteFunction):InvokeServer({action = "seen", id = seenId}) end)
+        if ok and typeof(response) == "table" and response.reason == "not_opened" then
+            task.wait(1.5) -- the menu's list request travels beside this one; give it time to land
+            ok, response = pcall(function() return (remote :: RemoteFunction):InvokeServer({action = "seen", id = seenId}) end)
+        end
         inFlight[seenId] = nil
         if ok and typeof(response) == "table" and (response.ok == true or RETRY[response.reason] ~= true) then finished[seenId] = true end
     end)

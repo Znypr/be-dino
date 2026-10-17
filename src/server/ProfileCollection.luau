@@ -25,7 +25,9 @@ local trimOperations = shared.trimOperations
 
 -- variantKey (optional, BD-150): equip one exact owned copy of the species. It must be a variant key of the player's
 -- own collection entry with count > 0, so a client can never equip a copy it does not own.
-function ProfileRepository.equipSpecies(player: Player, speciesId: string, variantKey: string?): (boolean, string)
+-- deferToNextRun (BD-613): every check runs but nothing is written; a valid pick answers (true, "next_run") and the caller
+-- (CollectionService) keeps it in memory until the next spawn, then calls this again without the flag.
+function ProfileRepository.equipSpecies(player: Player, speciesId: string, variantKey: string?, deferToNextRun: boolean?): (boolean, string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, "profile_not_loaded"
@@ -56,6 +58,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
         syncAttributes(player, cached)
         return true, "already_equipped"
     end
+    if deferToNextRun == true then return true, "next_run" end
 
     local leaseLost = false
     local locked = false

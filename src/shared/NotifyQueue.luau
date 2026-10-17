@@ -200,6 +200,7 @@ Q.StatusText = {
     bank_full = "Hatch some eggs first, then open this nest",
     not_ready = "That nest is still incubating",
     nest_pending = "That nest is still incubating",
+    next_run = "Your new dino starts next game",
 }
 function Q.statusText(status: any): string
     return if typeof(status) == "string" and Q.StatusText[status] then Q.StatusText[status] else "Something went wrong. Try again"
