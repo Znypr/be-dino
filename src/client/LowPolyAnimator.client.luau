@@ -164,7 +164,7 @@ local function floorGap(rig: any): number?
 end
 -- Studs the whole visual must be lifted so the hard-landing hip compression (the humanoid's spring) does not sink the feet into the ground.
 local function hipDipFor(rig: any, now: number): number
-    if rig.inAir then return 0 end -- no rays in flight
+    if rig.inAir and rig.root.AssemblyLinearVelocity.Y > -1 then return 0 end -- no rays while rising; a falling dino casts (the touch-down frame still reads as airborne)
     if now - rig.airAt > Pose.HipDipWindow then
         if now - rig.gapAt >= 0.25 then -- settled: learn the normal root-to-floor height
             rig.gapAt = now
