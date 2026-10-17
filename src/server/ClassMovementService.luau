@@ -2,15 +2,14 @@
 -- BD-246 (docs/101 s2, s11-12): applies the class movement rules to the player's Humanoid. Runs ONLY while Config.ClassMovementEnabled
 -- is true; with the flag off start() returns before touching anything (no remote, no loop), so default behaviour is unchanged.
 --  * JumpPower = Config.JumpPower x class powerX (Water 0 = cannot jump). The WalkSpeed class multiplier lives in ProgressionService.
---  * FLY hover cap: while airborne the upward speed is cut at the class height cap above the ground (ClassMovement.limitVertical).
+--  * FLY hover cap and glide: NOT here. The character is owned by its client, so a server velocity write never reached it (BD-593,
+--    measured 0.00 studs). Both run in src/client/ClassGlide.client.luau (ClassMovement.glideStep / hoverStep); BD-595 deleted the dead loop.
 --  * WATER dash: remote "ClassDash" (no arguments). The server validates and answers the SAME player with the velocity; the client
 --    applies it (it owns its physics, like the leap). Rate limited, cooldown from ClassMovement, grounded, Water only, never upward.
---  * FLY glide (BD-246 remainder): remote "ClassGlide" (one boolean: jump held). While held, airborne, Fly and under the glide
---    seconds budget, the fall speed is capped at glideFallSpeed. The same hover cap still applies; the client never sets a speed.
+--  * FLY glide (BD-246 remainder): remote "ClassGlide" (one boolean: jump held). The server only records the flag; the client applies it.
 -- Every number is PROVISIONAL (docs/101); they all come from Shared/ClassMovement and CombatConfig.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local CM = require(ReplicatedStorage.Shared.ClassMovement)
 
@@ -46,7 +45,6 @@ function Service.start()
     glideRemote.Name = "ClassGlide"
     glideRemote.Parent = remote.Parent
     local glideHeld: {[Player]: boolean} = {}
-    local glideUsed: {[Player]: number} = {} -- seconds of glide spent in the current airtime
     local lastGlideRequest: {[Player]: number} = {}
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
@@ -73,7 +71,7 @@ function Service.start()
     Players.PlayerAdded:Connect(hookPlayer)
     for _, p in Players:GetPlayers() do hookPlayer(p) end
     Players.PlayerRemoving:Connect(function(p) lastRequest[p] = nil lastDash[p] = nil
-        glideHeld[p] = nil glideUsed[p] = nil lastGlideRequest[p] = nil end)
+        glideHeld[p] = nil lastGlideRequest[p] = nil end)
     glideRemote.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 1 or typeof((...)) ~= "boolean" then return end
         local now = workspace:GetServerTimeNow()
@@ -106,28 +104,6 @@ function Service.start()
             if c.Parent and lastDash[player] == now then c:SetAttribute("MovementSpeedLimit", nil) end
         end)
         remote:FireClient(player, vx, vy, vz)
-    end)
-
-    -- FLY hover cap: server-side vertical speed clamp for airborne Fly dinos.
-    RunService.Heartbeat:Connect(function(dt)
-        for _, player in Players:GetPlayers() do
-            local c = player.Character
-            if c and c:GetAttribute("RunState") == "Active" and classOf(player) == "Fly" then
-                local root = c:FindFirstChild("HumanoidRootPart")
-                local h = c:FindFirstChildOfClass("Humanoid")
-                if h and h.FloorMaterial ~= Enum.Material.Air then glideUsed[player] = 0 end
-                if root and root:IsA("BasePart") and h and h.FloorMaterial == Enum.Material.Air then
-                    local hit = workspace:Raycast(root.Position, Vector3.new(0, -60, 0), params)
-                    if hit then
-                        local v = root.AssemblyLinearVelocity
-                        local gliding = Service.glideDecision("Fly", glideHeld[player] == true, false, glideUsed[player] or 0)
-                        if gliding and v.Y < 0 then glideUsed[player] = (glideUsed[player] or 0) + dt end
-                        local limited = CM.limitVertical("Fly", "jump", v.Y, root.Position.Y - hit.Position.Y, gliding)
-                        if limited ~= v.Y then root.AssemblyLinearVelocity = Vector3.new(v.X, limited, v.Z) end
-                    end
-                end
-            end
-        end
     end)
 end
 
