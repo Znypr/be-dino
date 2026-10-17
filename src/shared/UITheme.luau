@@ -12,6 +12,11 @@ Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
 -- One tween per target prevents rapid input from stacking competing animations.
 local tweens: {[Instance]: Tween} = setmetatable({}, {__mode="k"}) :: any
+-- Stops the running Theme.animate tween of target (if any) and leaves its properties where they are.
+function Theme.cancel(target: Instance)
+    local previous = tweens[target]
+    if previous then previous:Cancel() tweens[target] = nil end
+end
 function Theme.animate(target: Instance, seconds: number, goals: any, style: Enum.EasingStyle?)
     local previous = tweens[target]
     if previous then previous:Cancel() tweens[target] = nil end
