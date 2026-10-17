@@ -151,6 +151,20 @@ function ClassMovement.limitVertical(class: any, action: string, vy: any, height
     return v
 end
 
+-- BD-593: the Fly glide, one frame, PURE. The character is owned by its client, so a velocity written by the server (the hover loop in
+-- ClassMovementService) has no effect on it; the local client applies this instead (ClassGlide.client.luau), like the dash and the leap.
+-- held = jump button held; grounded = standing on something; vy = current vertical speed; used = glide seconds spent this airtime;
+-- dt = frame seconds. Returns the vertical speed to write and the new `used`. Only a FALL is slowed (never a rise), only while held,
+-- only for `glideSeconds` per airtime, and only for Fly. The height cap is NOT applied here (height 0 is passed): a cap measured to
+-- the root centre would shorten the Fly jump below the Ground jump (docs/145, BD-593).
+function ClassMovement.glideStep(class: any, held: any, grounded: any, vy: any, used: any, dt: any): (number, number)
+    local v, u = num(vy, 0), math.max(0, num(used, 0))
+    if grounded == true then return v, 0 end
+    local r = ClassMovement.Classes[classKey(class)].jump
+    if held ~= true or r.glideFallSpeed <= 0 or v >= 0 or u >= r.glideSeconds then return v, u end
+    return ClassMovement.limitVertical(class, "jump", v, 0, true), u + math.clamp(num(dt, 0), 0, 0.25)
+end
+
 -- Map bounds: planar position never leaves the arena square (Config.ArenaHalfWidth).
 function ClassMovement.clampToArena(x: any, z: any): (number, number)
     local h = Config.ArenaHalfWidth

@@ -169,6 +169,43 @@ caught(function(h,n,vy,b,a) local r={DH.step(h,n,vy,b,a)}; if r[1]=="hold" and n
 caught(function(h,n,vy,b,a) local r={DH.step(h,n+10,vy,b,a)}; if r[1]=="end" then return "hold",h.vx,0,h.vz end return table.unpack(r) end,"never ends")
 caught(function(h,n,vy,b,a) return DH.step(h,n,vy,false,a) end,"ignores wall",6)
 print("dash delivery ok")
+
+-- BD-593 Fly glide on the client (Shared/ClassMovement.glideStep + src/client/ClassGlide.client.luau). Free fall at gravity 250 against
+-- a glide held the whole way down: the fall is held at glideFallSpeed for glideSeconds, then falls freely; it never touches a rise.
+local fly=CM.rules("Fly").jump
+local cap,secs=fly.glideFallSpeed,fly.glideSeconds
+assert(cap==12 and secs==1.0,"BD-593 changes no glide numbers (12 studs/s, 1 s)")
+local function fall(held,class)
+  local vy,used,t,worst,atCap=0,0,0,0,0
+  for k=1,240 do
+    vy-=250*DT                                           -- the physics step
+    vy,used=CM.glideStep(class or "Fly",held,false,vy,used,DT) -- the Heartbeat write
+    t+=DT; worst=math.min(worst,vy)
+    if math.abs(vy+cap)<1e-6 then atCap+=DT end
+  end
+  return worst,atCap,used
+end
+local wFree,cFree=fall(false)
+assert(wFree<-100 and cFree==0,"no glide held: free fall ("..wFree..")")
+local wGlide,cGlide,uGlide=fall(true)
+assert(cGlide>0.9 and cGlide<=secs+2*DT and uGlide<=secs+2*DT,"glide held: fall held at "..cap.." for about "..secs.." s ("..cGlide..")")
+assert(wGlide<-cap,"after the glide budget the dino falls freely again ("..wGlide..")")
+local wG2,cG2=fall(true,"Ground"); assert(cG2==0 and wG2<-100,"Ground never glides")
+local wW,cW=fall(true,"Water"); assert(cW==0,"Water never glides")
+-- rising is never slowed; grounded resets the budget; junk is harmless
+local r1,u1=CM.glideStep("Fly",true,false,40,0.5,DT); assert(r1==40 and u1==0.5,"a rise is untouched")
+local r2,u2=CM.glideStep("Fly",true,true,-50,0.9,DT); assert(r2==-50 and u2==0,"grounded: no limit, budget reset")
+local r3,u3=CM.glideStep("Fly",false,false,-50,0,DT); assert(r3==-50 and u3==0,"button not held: no limit")
+local r4,u4=CM.glideStep("Fly",true,false,-5,0,DT); assert(r4==-5 and math.abs(u4-DT)<1e-9,"slower than the cap: kept, budget still counts")
+for _,j in {0/0,math.huge,-math.huge,"x",nil} do
+  local a,b=CM.glideStep("Fly",true,false,j,j,j); assert(a==a and b==b and a~=math.huge and a~=-math.huge,"junk is finite")
+end
+assert(select(2,CM.glideStep("Fly",true,false,-50,0,5))<=0.25,"one huge frame cannot burn more than 0.25 s")
+-- MUTANTS: a glide that never limits, limits forever, or limits a rise must fail the checks above
+local function limitsFall(f) local vy,used,worst=0,0,0 for k=1,240 do vy-=250*DT vy,used=f(vy,used) worst=math.min(worst,vy) end return worst end
+assert(limitsFall(function(v,u) return v,u end)<-100,"control: no glide falls freely")
+assert(limitsFall(function(v,u) return math.max(v,-cap),0 end)>=-cap-1e-9,"control: a glide that never ends keeps the cap (which the budget check rejects)")
+print("fly glide ok")
 '''
 
 
@@ -220,5 +257,17 @@ if result.returncode == 0:
         assert needle in dash, 'ClassDash.client: ' + why
     assert dash.count('AssemblyLinearVelocity = Vector3.new(') == 1 and 'math.min(v.Y, 0)' not in dash, 'single write site, vertical clamp lives in DashHold'
     assert 'remote:FireClient(player, vx, vy, vz)' in svc and 'dist' in svc and 'Blockcast' in svc, 'server answer + wall check unchanged'
+    glide = (ROOT / 'src/client/ClassGlide.client.luau').read_text(encoding='utf-8')
+    for needle, why in (
+        ('RunService.Heartbeat:Connect', 'glide is applied every frame'),
+        ('CM.glideStep("Fly"', 'per-frame decision comes from the pure module'),
+        ('RunState") ~= "Active"', 'only during a run'),
+        ('remote:FireServer(value)', 'server is still told (one boolean)'),
+    ):
+        assert needle in glide, 'ClassGlide.client: ' + why
+    assert glide.count('AssemblyLinearVelocity = Vector3.new(') == 1, 'ClassGlide.client: single write site'
+    # The character is network-owned by its player (server/FallRecovery.luau, Studio measurement BD-593): a server write to its
+    # velocity does nothing, so the glide must not be (only) a server loop. Fail if the only glide limiter is the server's.
+    assert 'glideStep' in (ROOT / 'src/shared/ClassMovement.luau').read_text(encoding='utf-8'), 'glideStep exists'
     print('class movement wiring ok')
 raise SystemExit(result.returncode)

@@ -1,8 +1,11 @@
 --!strict
--- BD-246: Fly glide. Holding jump in the air tells the server (one boolean); the server caps the fall speed. Does nothing unless
--- the server created the remote (Config.ClassMovementEnabled) and the dino is Fly class.
+-- BD-246: Fly glide. Holding jump in the air tells the server (one boolean) and, since BD-593, slows the fall HERE: the character is
+-- owned by this client, so the server's own velocity write (ClassMovementService hover loop) never reached it (measured: fall 40 to 58
+-- studs/s with the glide held, cap 12). The per-frame decision is Shared/ClassMovement.glideStep (pure, tools/verify_class_movement.py).
+-- Does nothing unless the server created the remote (Config.ClassMovementEnabled) and the dino is Fly class.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CM = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ClassMovement"))
 local player = Players.LocalPlayer
@@ -37,4 +40,19 @@ task.spawn(function()
         local h = if c then c:FindFirstChildOfClass("Humanoid") else nil
         if held and (not h or h.FloorMaterial ~= Enum.Material.Air) and not UserInputService:IsKeyDown(Enum.KeyCode.Space) then set(false) end
     end
+end)
+-- BD-593: the glide itself, every frame, on the local character (single velocity write, vertical only; the planar speed is kept).
+local used = 0
+RunService.Heartbeat:Connect(function(dt: number)
+    local c = player.Character
+    local h = if c then c:FindFirstChildOfClass("Humanoid") else nil
+    local root = if c then c:FindFirstChild("HumanoidRootPart") else nil
+    if not (c and h and root and root:IsA("BasePart")) or h.Health <= 0 or c:GetAttribute("RunState") ~= "Active" or not isFly() then
+        used = 0
+        return
+    end
+    local v = root.AssemblyLinearVelocity
+    local newY, newUsed = CM.glideStep("Fly", held, h.FloorMaterial ~= Enum.Material.Air, v.Y, used, dt)
+    used = newUsed
+    if newY ~= v.Y then root.AssemblyLinearVelocity = Vector3.new(v.X, newY, v.Z) end
 end)
