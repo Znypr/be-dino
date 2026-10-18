@@ -107,6 +107,11 @@ return table.freeze({
     -- card (with GeneBoostEnabled). The server also records a dino's ACCENT colour in the discovery log. false = the Index and the hatch are exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157).
     PatternColourIndexEnabled = false,
+    -- BD-1017 (docs/180 option A): true = each cave stall (and the Heart "Show off" spot) shows a friendly message bubble (stall name, one warm line, a big
+    -- key button: "E Open" on a keyboard, "Tap to open" on a phone, the controller button on a gamepad) and the stall key is E (gamepad X) instead of G
+    -- (gamepad L1). One press opens the existing window; nothing opens by walking near (docs/114 s6.2). Needs CaveHub. false = the round "Open" button with
+    -- [G] exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157).
+    ShopPromptBubbleEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

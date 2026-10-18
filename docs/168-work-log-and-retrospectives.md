@@ -150,6 +150,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1088 slim Bootstrap.client.luau: shop screens to ShopScreens.luau, toast stack to Toasts.luau, ceilings lowered | worker | #528 | 150.0 | 110 | - | good | - | other: first code comments cited a guessed row number (BD-1020) before the real BD-1088 was reserved; fixed in PR 2 | reserve the BD id before writing comments that cite it |
 | 2026-10-18 | Studio round 5: verify the merges of 2026-10-18 (hatch polish, goals, food, gene boost) | worker | - | 75.0 | 190 | - | ok | - | other: mouse tool wants GUI coordinates, first clicks hit the backdrop and I chased a false bug for about 15 min | mouse tool coordinates are AbsolutePosition space, not screenshot pixels (brief: docs/197-studio-round5-verification.md) |
 | 2026-10-18 | BD-1096 settle guard (Ending stuck after telemetry script timeout) | worker | - | 60.0 | - | - | good | - | - | Post-commit hooks must never run unguarded on the settle thread |
+| 2026-10-18 | BD-1017 stall message bubble (docs/180 option A) behind ShopPromptBubbleEnabled | worker | - | 75.0 | 85 | - | good | - | other: mock Destroy kept the Parent key so a later assignment skipped __newindex (found by the smoke), other: verify_private_state wanted the new SetAttribute receiver listed | A mock Instance must delete the Parent key on Destroy; a new SetAttribute receiver in src/server needs an entry in verify_private_state OTHER_RECEIVERS |
 <!-- retro-table:end -->
 
 ## 6. Open items
