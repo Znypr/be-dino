@@ -148,6 +148,7 @@ jobs:
           python tools/verify_shop_preview.py --runner /tmp/luau/luau
           python tools/verify_text_style.py --runner /tmp/luau/luau
           python tools/verify_phone_scale.py --runner /tmp/luau/luau
+          python tools/verify_small_window.py --runner /tmp/luau/luau
           python tools/verify_owner_feedback_p1.py --runner /tmp/luau/luau
           # world and art
           python tools/verify_camera_occlusion.py --runner /tmp/luau/luau
