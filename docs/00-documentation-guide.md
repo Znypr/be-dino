@@ -5,6 +5,8 @@
 > **Handbook first:** [114 Handbook](114-handbook.md) is the single fact-check reference (vision, feel, design language, palette, lighting, sound, asset/UI/FX quality bars, economy cheat sheet, PR checklist). Dated owner decisions: [115](115-decisions-log.md). Open conflicts and owner questions: [116](116-handbook-conflicts.md).
 >
 > **Helper agents:** start with the [160 Agent brief](160-agent-brief.md) (read order, decisions, git/PR workflow, safety, evidence rules, tools, reporting).
+>
+> **Work log:** [168 Work log and retrospectives](168-work-log-and-retrospectives.md) records how long each task took, what went wrong and the rules learned (`tools/retro_log.py`).
 
 ## Authority order (by question)
 
