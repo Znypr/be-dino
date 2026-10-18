@@ -519,25 +519,37 @@ local function tierShares(eggs)
  return w
 end
 local base=tierShares(1)
-assert(math.abs(base[1]-.72)<1e-9 and math.abs(base[5]-.001)<1e-9,"one egg = base odds (shop eggs disclose these)")
+-- BD-1032 (docs/186 s3, PROVISIONAL): Common 91 / Uncommon 8.5 / Rare 0.42 / Epic 0.07 / Legendary 0.01 per egg (was 72 / 24 / 3.2 / 0.7 / 0.1).
+local wantBase={.91,.085,.0042,.0007,.0001}
+for t=1,5 do assert(math.abs(base[t]-wantBase[t])<1e-9,"one egg = base odds (shop eggs disclose these), tier "..t) end
+local compyShare=0 local commonTotal=0
+for _,row in GameConfig.ChestSpeciesWeights do if GameConfig.SpeciesRarities[row.speciesId]==1 then commonTotal+=row.weight if row.speciesId=="compy" then compyShare=row.weight end end end
+assert(math.abs(compyShare/commonTotal-.4)<1e-9,"Compy is 40% of the Common tier (docs/186 s3)")
+for _,id in {"raptor","gallimimus","microraptor","dimorphodon"} do local w for _,row in GameConfig.ChestSpeciesWeights do if row.speciesId==id then w=row.weight end end assert(w<compyShare,"Compy stays the most common: "..id) end
+for _,n in {1,2,10,15} do local sh=tierShares(n) for t=1,5 do assert(math.abs(sh[t]-base[t])<1e-12,"BD-1032: a normal run (up to 15 eggs) is not lifted, n="..n) end end
 local previous=nil
 for _,n in {1,4,12,40,120,300} do
  local sh=tierShares(n)
  for t=1,4 do
   assert(sh[t]>sh[t+1],"rarer tiers are always less likely")
   local ratio=sh[t+1]/sh[t]
-  assert(ratio<=1/3+1e-9 and ratio>=1/8,"exponential: adjacent tier ratio stays within [1/8, 1/3], tier "..t.." n="..n)
+  -- BD-1032: the docs/88 floor of 1/8 is deliberately broken at the top by the owner (first Rare in about 45 minutes, docs/186 s3, docs/116 C-54); never flatter than 1/3 still holds.
+  assert(ratio<=1/3+1e-9 and ratio>=1/25,"adjacent tier ratio stays within [1/25, 1/3], tier "..t.." n="..n)
  end
  if previous then assert(sh[1]<=previous[1]+1e-12 and sh[3]>=previous[3]-1e-12 and sh[5]>=previous[5]-1e-12,"bigger runs expose rarer tiers") end
- for t=3,5 do assert(sh[t]/base[t]<=1.1+1e-9,"BD-165: the run boost never makes a Rare+ tier more than 10% easier, tier "..t) end
+ for t=3,5 do assert(sh[t]/base[t]<=2.02,"BD-1032: the run boost never makes a Rare+ tier much more than 2x as likely, tier "..t) end
  previous=sh
 end
 assert(same(tierShares(120),tierShares(1000)),"boost capped at EggRarityBoostMaxEggs (120 eggs = 5,000 food)")
 -- Expected mixes at the owner's two sizes (BD-418: 500 food = 12 eggs, 5,000 food = 120 eggs).
 local s4,s40=tierShares(12),tierShares(120)
 assert(12*s4[1]>=8.4 and 120*s40[1]>=81 and 120*(s40[3]+s40[4]+s40[5])<=7.8,"120-egg mix stays common-heavy with few rares")
+-- BD-1032: a 120-egg run lifts Rare, Epic and Legendary about 2x and leaves Common/Uncommon alone.
+local s0=tierShares(1)
+for t=3,5 do assert(math.abs(s40[t]/s0[t]-2)<=0.02,"a 120-egg run lifts Rare+ about 2x, tier "..t..": "..s40[t]/s0[t]) end
+assert(s40[2]/s0[2]>=.99 and s40[2]/s0[2]<=1.01 and s40[1]<=s0[1],"Uncommon is not lifted")
 local pRare4=1-(1-(s4[3]+s4[4]+s4[5]))^12
-assert(pRare4<=.45,"BD-418: per-egg Rare+ odds are unchanged; a 12-egg run holds a Rare+ egg about 40% of the time (docs/119): "..pRare4)
+assert(pRare4>.04 and pRare4<.08,"BD-1032 (docs/186 s2-3): a Rare+ in the first 12 eggs (4 minutes) is about 6%, was 39%: "..pRare4)
 -- Seeded rolls through the real computeChestReward agree with the analytic shares.
 local drawsT=40000 local seen={0,0,0,0,0}
 local tierRng=Random.new()
