@@ -1,9 +1,20 @@
-# 188 Game wiki generated from the code (owner intake 2026-10-18)
+# 188 Game catalogue (team wiki) generated from the code (owner intake 2026-10-18)
 
-Status: **SPEC, nothing built.** Rows BD-1052 and BD-1053 in [docs/07](07-kanban.md).
+Status: **SPEC, nothing built (updated after the owner's answer, see below).** Rows BD-1052 and BD-1053 in [docs/07](07-kanban.md).
 
 ## What the owner said
 The project has no wiki pages yet. Wanted: a page for **every dinosaur** with its picture, name, rarity, type (class) and the **chance of getting it**; the same for **colours, patterns, mutations** and so on. (The message was cut off after "mutation,", so the list of page types below is my best reading; the owner can add to it.)
+
+## OWNER ANSWER 2026-10-18 (replaces the player-wiki assumption)
+For now the wiki is **for the owner and the team only**, so everyone (including Codex and other helpers) has ONE consistent place to read the current facts: which dinosaurs, colours, patterns and mutations exist, their pictures and icons, **what is missing**, and the odds. Example: when Codex creates new patterns or pattern icons for the Index, it checks the catalogue first and drops its files where the catalogue says. Later the same pages can be reused for a website or Discord.
+
+**Consequences (LEAD decision):**
+- The catalogue lives **in the repository as generated Markdown under `docs/catalog/`** (works offline, versioned with the code, readable by every agent without a GitHub wiki). A GitHub wiki is NOT needed for now (BD-1053 is parked as P4).
+- `tools/build_wiki.py` becomes `tools/build_catalog.py`; CI checks that `docs/catalog/` is up to date (a stale page fails, like the other generated files).
+- Every page has a **status column**: picture/icon present (path), asset id bound, mask present, odds source. A **"Missing" page** lists every gap (for example "pattern 05 has no index icon") with the exact file name and folder to use, so a helper or Codex knows what to deliver. New art still gets its docs/77 line.
+- Because it is internal, **secret species and PROVISIONAL numbers may appear, clearly marked** ("SECRET, internal only", "PROVISIONAL"). The player-safe filter (no secrets, no off-flag features) is kept as a switch (`--public`) for the day the pages are reused for a website or Discord.
+
+**IMPORTANT, flagged to the owner:** the owner believes the GitHub repository is private. GitHub reports `Znypr/be-dino` as **PUBLIC** (checked 2026-10-18 with `gh repo view`). Everything in the repo, including this catalogue, the secret species roster, design docs and uploaded asset ids, is therefore readable by anyone. Changing repository visibility is an account setting and is the owner's decision; nothing was changed.
 
 ## Facts checked (2026-10-18)
 - The repository `Znypr/be-dino` is **public** and its GitHub wiki feature is **enabled** (empty). A GitHub wiki is its own git repository (`be-dino.wiki.git`); anything pushed there is public at once.
