@@ -49,10 +49,13 @@ def static_errors() -> list[str]:
     found = entries.get('ObjectivesEnabled')
     if not found or found[-1][1] is not False:
         errors.append('Config.ObjectivesEnabled must exist and be false in source')
-    for profile in ('default', 'playtest'):
-        rules = [r for r in release_profiles.rules_for(profile) if r.key == 'ObjectivesEnabled']
-        if not rules or any(r.mode != 'require' or r.value is not False for r in rules):
-            errors.append(f'release profile {profile!r} must pin ObjectivesEnabled to false (mode require)')
+    # docs/157: the default profile pins it off; the playtest profile (owner directive 2026-10-18) turns the built feature on.
+    rules = [r for r in release_profiles.rules_for('default') if r.key == 'ObjectivesEnabled']
+    if not rules or any(r.mode != 'require' or r.value is not False for r in rules):
+        errors.append("release profile 'default' must pin ObjectivesEnabled to false (mode require)")
+    rules = [r for r in release_profiles.rules_for('playtest') if r.key == 'ObjectivesEnabled']
+    if len(rules) != 1 or rules[0].mode != 'set' or rules[0].value is not True:
+        errors.append("release profile 'playtest' must set ObjectivesEnabled to true (docs/157)")
     for path in ('src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau', 'src/server/ObjectiveService.luau'):
         text = re.sub(r'--.*$', '', (ROOT / path).read_text(encoding='utf-8'), flags=re.M)
         for word in ('MarketplaceService', 'PromptProductPurchase', 'PromptGamePassPurchase', 'DeveloperProducts', 'Robux'):

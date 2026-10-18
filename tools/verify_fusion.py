@@ -348,6 +348,30 @@ local futureId=I.copy(spent) futureId.nextId=1
 assert(I.reconcile(f8.collection,futureId,OWNER)==nil)
 -- The ledger is retained so a replay after reload still resolves.
 assert(select(2,F.apply({collection=f8.collection,dinosaurIdentity=spent},OWNER,r8,nil))=="duplicate")
+-- BD-617 (docs/155 s6): a LOCKED or FAVOURITED dinosaur is never erased by a grouped decrement; an unprotected copy is spent first.
+do
+ local lp={collection={compy={base=4,gold=0,diamond=0,events={},variants={}}}}
+ lp.dinosaurIdentity=assert(I.reconcile(lp.collection,nil,OWNER))
+ local lid=idsIn(lp,"compy/base")
+ assert(#lid==4)
+ lp.dinosaurIdentity.instances[lid[4]].locked=true     -- the HIGHEST id: the old order would have deleted it first
+ lp.dinosaurIdentity.instances[lid[3]].favorited=true
+ lp.collection.compy.base=2                            -- two copies leave (e.g. a legacy conversion)
+ local kept=assert(I.reconcile(lp.collection,lp.dinosaurIdentity,OWNER))
+ assert(kept.instances[lid[4]] and kept.instances[lid[3]] and not kept.instances[lid[1]] and not kept.instances[lid[2]],"unprotected copies are spent first")
+ assert(kept.instances[lid[4]].locked==true and kept.instances[lid[3]].favorited==true,"the marks survive")
+ lp.collection.compy.base=1                            -- now a protected one would have to go: fail closed, input untouched
+ local none2,why2=I.reconcile(lp.collection,kept,OWNER)
+ assert(none2==nil and why2=="protected_identity" and kept.instances[lid[4]] and kept.instances[lid[3]])
+ lp.collection.compy.base=0
+ assert(select(2,I.reconcile(lp.collection,kept,OWNER))=="protected_identity")
+ -- unmarked instances behave exactly as before (lowest ids kept)
+ local plain={collection={compy={base=3,gold=0,diamond=0,events={},variants={}}}}
+ plain.dinosaurIdentity=assert(I.reconcile(plain.collection,nil,OWNER))
+ local pid=idsIn(plain,"compy/base") plain.collection.compy.base=1
+ local only=assert(I.reconcile(plain.collection,plain.dinosaurIdentity,OWNER))
+ assert(only.instances[pid[1]] and not only.instances[pid[2]] and not only.instances[pid[3]])
+end
 print("Lineage passed: parent eggs survive consumption, later hatches and grants; legacy Gold decrement keeps fused result or fails closed; ledgerless/mismatched records rejected")
 
 -- ===== Storage and capacity limits =====
