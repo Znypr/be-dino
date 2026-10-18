@@ -86,7 +86,7 @@ for tier=0,#Progression.ConditionWeights-1 do
   assert(rows.count==1)
   local speciesP=Config.ChestSpeciesWeights[1].weight/sum(Config.ChestSpeciesWeights)
   local colorP=(Progression.EggColors[1].weight/sum(Progression.EggColors))^2
-  close(rows.at(1).probability,weights[i]/Progression.ConditionWeightScale*condition.hatchChance*speciesP*colorP/patternCount*(1-Config.BigChance))
+  close(rows.at(1).probability,weights[i]/Progression.ConditionWeightScale*condition.hatchChance*speciesP*colorP*Progression.EggPatterns[1].weight/Progression.PatternWeightScale*(1-Config.BigChance)) -- BD-1033: weighted pattern, no longer 1/N
   total+=weights[i]/Progression.ConditionWeightScale*condition.hatchChance
  end
  close(total,1)

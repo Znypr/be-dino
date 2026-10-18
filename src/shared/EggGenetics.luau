@@ -2,7 +2,24 @@
 local Config=require(script.Parent.ProgressionConfig)
 local Genetics={}
 Genetics.BlendMode="uniform"
-Genetics.Patterns={"01_blank","02_emerald_islands","03_round_spots","04_bold_patches","05_horizontal_bands","06_wavy_stripes","07_diamond_scales","08_freckles"}
+-- BD-1033 (docs/186 s4): patterns come from ONE table, ProgressionConfig.EggPatterns (id, kid name, tier, weight).
+-- Genetics.Patterns stays the ordered list of ids (old callers, stored dinos, fusion); Genetics.Patterns.info[id] carries
+-- {name, rarity, pct} for the hatch reveal and the odds text (through a metatable, so iterating the list still yields ids only). Nothing here rewrites a stored pattern id.
+local patternIds,patternWeights,patternInfo,patternTotal={},{},{},0
+for _,row in Config.EggPatterns do patternTotal+=row.weight end
+for _,row in Config.EggPatterns do
+    table.insert(patternIds,row.id) table.insert(patternWeights,row.weight)
+    patternInfo[row.id]=table.freeze({name=row.name,rarity=row.rarity,pct=100*row.weight/patternTotal})
+end
+Genetics.Patterns=patternIds
+-- `info` is reachable as Genetics.Patterns.info through the metatable only: a plain extra key would show up in every `for _, id in Genetics.Patterns`.
+setmetatable(patternIds,{__index={info=patternInfo}})
+-- Chance (0..1) of a pattern id from the table; nil for an unknown id.
+function Genetics.patternChance(id)
+    local info=patternInfo[id]
+    return if info then info.pct/100 else nil
+end
+function Genetics.patternInfo(id) return patternInfo[id] end
 local function item(rows,id)
     for _,row in rows do if row.id==id then return row end end
     return nil
@@ -29,7 +46,7 @@ function Genetics.roll(level,rng,safe)
         primaryColorId=Config.EggColors[pick(colors,rng:NextNumber())].id,
         secondaryColorId=Config.EggColors[pick(colors,rng:NextNumber())].id,
         blend=1+math.min(98,math.floor(rng:NextNumber()*99))}
-    genes.patternId=Genetics.Patterns[math.min(8,math.floor(rng:NextNumber()*8)+1)]
+    genes.patternId=patternIds[pick(patternWeights,rng:NextNumber())] -- weighted (BD-1033); one draw, same position as before
     genes.blend=if genes.primaryColorId==genes.secondaryColorId then 100 else genes.blend
     return genes
 end
