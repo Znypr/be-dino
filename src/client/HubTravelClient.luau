@@ -117,13 +117,14 @@ local function applyDimming()
 end
 
 -- true = handled here (travelling or blocked); false = the caller opens the menu as before.
-function Client.press(destination: string): boolean
+-- BD-1055: `direct` = a button that SAYS "open" (Run Complete OPEN EGGS), not a rail button: no glow trail, the caller opens the menu now.
+function Client.press(destination: string, direct: boolean?): boolean
     if ctx == nil or Config.CaveHub ~= true then return false end
     if guide then guide.cancel() end -- pressing any rail button cancels a trail still showing
     local decision = Rules.decide({
         caveHub = true, destination = destination, runState = runState(),
         fastTravelPerk = Config.FastTravelPerk == true, fastTravelOwned = ownsFastTravel(),
-        teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy,
+        teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy, direct = direct,
     })
     if decision.kind == "blocked" then
         if decision.toast then ctx.notify(decision.toast, nil) end

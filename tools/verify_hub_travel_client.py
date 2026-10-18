@@ -35,6 +35,13 @@ assert(decide({fastTravelPerk=true,fastTravelOwned=false}).kind=="guide","not bo
 assert(decide({fastTravelPerk=true,fastTravelOwned=true}).kind=="travel","bought travels")
 assert(decide({fastTravelPerk=true,fastTravelOwned=true,teleportShops=false}).kind=="guide","bought but toggled off walks")
 assert(decide({fastTravelPerk=false}).kind=="travel","perk flag off unchanged")
+-- BD-1055: a button that SAYS "open" (Run Complete OPEN EGGS) never draws the glow trail; it opens the menu now. Fast travel still travels.
+assert(decide({direct=true,fastTravelPerk=true,fastTravelOwned=false}).kind=="open","direct: perk not bought opens, no glow")
+assert(decide({direct=true,teleportShops=false}).kind=="open","direct: toggle off opens, no glow")
+assert(decide({direct=true,fastTravelPerk=true,fastTravelOwned=true}).kind=="travel","direct: bought perk still travels")
+assert(decide({direct=true,fastTravelPerk=false}).kind=="travel","direct: perk flag off unchanged")
+assert(decide({direct=false,fastTravelPerk=true,fastTravelOwned=false}).kind=="guide","rail button still glows")
+assert(decide({direct=true,runState="Active"}).kind=="blocked","direct: in a run still At home")
 -- ---- flag off: whatever the input, plain open (behaviour unchanged), nothing dimmed, no chip
 for _,d in dests do for _,rs in {"Sanctuary","Active","Ending","Settled","",5} do for _,ts in {true,false} do for _,rem in {true,false} do
  local r=decide({caveHub=false,destination=d,runState=rs,teleportShops=ts,remote=rem,busy=true})
@@ -172,7 +179,7 @@ def static_checks():
     # Three intentional callers: rail loop (BD-288), results OPEN EGGS (3fdea6b), crystal HUD -> Shop (BD-046, PR #292, press("auras")).
     assert boot.count('HubTravelClient).press(') == 3, 'rail loop, results OPEN EGGS and crystal HUD call press'
     assert 'HubTravelClient).press(entry[3])' in boot, 'rail loop calls press'
-    assert 'HubTravelClient).press("eggs")' in boot, 'results OPEN EGGS calls press'
+    assert 'HubTravelClient).press("eggs",true)' in boot, 'results OPEN EGGS calls press with direct (BD-1055)'
     assert 'HubTravelClient).press("auras")' in boot, 'crystal HUD opens the Shop through press'
     assert 'UDim2.new(0.5, 0, 1, -Rules.ChipBottom)' in client, 'chip position comes from the rules (above EXPLORE ISLAND)'
     gate = (ROOT / 'src/client/HubGateClient.luau').read_text()
