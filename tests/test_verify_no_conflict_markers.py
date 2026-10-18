@@ -118,15 +118,12 @@ class RepoTests(unittest.TestCase):
         # the rehearsal runs the verifiers in a scratch COPY of the tree (no .git): scan the folder instead of failing
         folder = self.root / "plain-copy"
         folder.mkdir()
-        (folder / "a.md").write_text("fine
-", encoding="utf-8")
+        (folder / "a.md").write_text("fine\n", encoding="utf-8")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = vncm.main(["--root", str(folder)])
         self.assertEqual(rc, 0, buf.getvalue())
-        (folder / "b.md").write_text(("<" * 7) + " HEAD
-x
-", encoding="utf-8")
+        (folder / "b.md").write_text(("<" * 7) + " HEAD\nx\n", encoding="utf-8")
         with contextlib.redirect_stdout(io.StringIO()):
             rc = vncm.main(["--root", str(folder)])
         self.assertEqual(rc, 1)
