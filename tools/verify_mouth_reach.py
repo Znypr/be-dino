@@ -46,7 +46,7 @@ local require = function(id) if id == "ScaleLadder" then return ScaleLadder end 
 end)()
 local ids = {}
 for id in ScaleLadder.Dino.species do ids[#ids + 1] = id end
-for id in ScaleLadder.Dino.secret.species do ids[#ids + 1] = id end -- BD-606: the 7 secret species, same rules
+for id in ScaleLadder.Dino.secret.species do ids[#ids + 1] = id end -- BD-606: the 9 secret species, same rules
 table.sort(ids)
 print("N\t" .. #ids)
 local function eaten(id, s, ang, ahead, side)
@@ -236,8 +236,8 @@ def main():
         elif p[0] == 'CAPK':
             capk = None if p[1] == 'nil' else float(p[1])
     problems = []
-    if count != 29:
-        problems.append('expected 22 species + 7 secret species in ScaleLadder, found %d' % count)
+    if count != 31:
+        problems.append('expected 22 species + 9 secret species in ScaleLadder, found %d' % count)
     if capk is None or not 1.0 <= capk <= 1.10:
         problems.append('Config.FoodReachCapCompy is %s, expected a number in the parity band 1.0 to 1.10 (docs/115 MR4)' % (capk,))
     # docs/152 BD-626: the all-on rehearsal Config has both flags on; the numeric rules above and below do not depend on them, so that
@@ -321,7 +321,7 @@ def main():
     for pace, sb, front, radius, old, snout, lift, floor in parity_rows:
         print('  %-8s mean growth %.2f: front edge %.2f (old reach %.2f, snout %.2f), radius %.2f: predicted lift %+.1f%% (snout-rule floor %+.1f%%) -> %s' % (
             pace, sb, front, old, snout, radius, lift * 100, floor * 100, 'PARITY' if abs(lift) <= PARITY_BAND else 'KNOWN GAP (snout rule)'))
-    print('Mouth reach passed: 22 species + 7 secret species x scales 1, 2, 4, 4.8 x 4 directions (snout, head point, beside the snout eaten; 1 stud behind the tail not eaten), Compy zone = snout + 0.25 slack, half head + 1.0 radius, analytic food/min parity proxy (known gap, snout rule), zone cap (front edge and radius <= Config.FoodReachCapCompy x the Compy, parity band 1.0 to 1.10), legacy fallbacks, one shared function, flags')
+    print('Mouth reach passed: 22 species + 9 secret species x scales 1, 2, 4, 4.8 x 4 directions (snout, head point, beside the snout eaten; 1 stud behind the tail not eaten), Compy zone = snout + 0.25 slack, half head + 1.0 radius, analytic food/min parity proxy (known gap, snout rule), zone cap (front edge and radius <= Config.FoodReachCapCompy x the Compy, parity band 1.0 to 1.10), legacy fallbacks, one shared function, flags')
 
 
 if __name__ == '__main__':

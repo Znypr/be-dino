@@ -21,7 +21,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_scale_ladder import MEASURED, SECRET_BOXES, ALL_BOXES  # noqa: E402  (W, H, L at spawn of all 22 species, Studio-measured BD-471 / BD-500; BD-606: plus the 7 secret species, design estimates until their meshes exist)
+from verify_scale_ladder import MEASURED, SECRET_BOXES, ALL_BOXES  # noqa: E402  (W, H, L at spawn of all 22 species, Studio-measured BD-471 / BD-500; BD-606: plus the 9 secret species, design estimates until their meshes exist)
 
 BASE = 12  # Config.CameraMinZoom
 CAP = 90  # CameraFraming.MaxDistance (BD-513)

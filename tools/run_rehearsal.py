@@ -201,6 +201,19 @@ def last_lines(text: str, n: int = 6) -> str:
     return "\n".join(lines[-n:])
 
 
+def effective_profile(name: str) -> str:
+    """`--profile default` is the committed Config (the default release profile overrides no value), so it runs as `none`.
+
+    Sweep 2 (docs/177): with BD_REHEARSAL=default set, rehearsal_env treats the tree as a flags-ON rehearsal, and verify_world_art and
+    verify_spawn then look for the playtest settings in a Config that has none. Both failed for a reason that says nothing about the game
+    (same failure at 77f03e31, before the recent merges). tests/test_rehearsal.py proves the default profile overrides nothing.
+    """
+    if name == "default":
+        print("profile 'default' overrides no committed value: running it as 'none' (the committed Config, BD_REHEARSAL unset)")
+        return "none"
+    return name
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--runner", help="path to the Luau runner (luau / luau.exe)")
@@ -215,6 +228,7 @@ def main(argv=None) -> int:
     parser.add_argument("--keep", action="store_true", help="keep the scratch tree and print its path")
     parser.add_argument("--list", action="store_true", help="print the commands and the flags the profile turns on, then exit")
     args = parser.parse_args(argv)
+    args.profile = effective_profile(args.profile)
 
     luau, compiler = release_playtest.find_luau(args.runner)
     if not luau:
