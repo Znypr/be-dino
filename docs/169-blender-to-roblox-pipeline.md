@@ -46,7 +46,7 @@ Related forum facts (community and staff posts, not the official reference): an 
 
 ### 1.4 What the API upload may NOT keep (the biggest unknown)
 
-The Studio Importer has settings for rig type (R15 / Custom / None), animation, "use imported pivot", and "ignore vertex colours" ([Importer page](https://create.roblox.com/docs/art/modeling/3d-importer)). The API guide does not say which settings an API upload uses. So these are **UNVERIFIED until the acceptance test and the cockatoo run (section 5)**: part names, part pivots (the cockatoo parts keep their joint at the Blender origin), vertex colours, a Motor6D rig, and baked animations. The pipeline is built so that it works even in the worst case: the snippet builds the Motor6D joints itself from the part pivots, and the animation module (`assets/blender/creatures/CockatooAnimations.luau`, BD-621) animates parts without needing an imported animation.
+The Studio Importer has settings for rig type (R15 / Custom / None), animation, "use imported pivot", and "ignore vertex colours" ([Importer page](https://create.roblox.com/docs/art/modeling/3d-importer)). The API guide does not say which settings an API upload uses. So these were **UNVERIFIED until the acceptance test and the cockatoo run, now answered in section 6**: part names, part pivots (the cockatoo parts keep their joint at the Blender origin; confirmed for parts-only, see section 6), vertex colours, a Motor6D rig, and baked animations. The pipeline is built so that it works even in the worst case: the snippet builds the Motor6D joints itself from the part pivots, and the animation module (`assets/blender/creatures/CockatooAnimations.luau`, BD-621) animates parts without needing an imported animation.
 
 ## 2. The pipeline: who does which step
 
@@ -69,7 +69,7 @@ The Studio Importer has settings for rig type (R15 / Custom / None), animation, 
 
 What the pieces do:
 
-- **Export** uses plain `blender --background` (Blender 5.1.2 at `C:\Program Files\Blender Foundation\Blender 5.1\`, or `BLENDER_EXE`). It never touches the Blender MCP or an open Blender window. Settings come from the cockatoo evidence: 1 Blender unit = 1 stud, forward -Z / up Y (a creature facing +Y in Blender faces -Z in Roblox), part origins kept (they become joint pivots), scale 1 / rotation 0 (checked), vertex colours as sRGB, normals only, no extra leaf bones, bone axis Y/X, all actions baked with `--anim`. It refuses a mesh over 21,844 triangles and warns about odd scale, missing UVs/colours, wrong size. It writes `<name>.report.json` (parts, triangles, size in studs). If `tools/check_model_for_roblox.py` exists (the docs/163 model checker, not on main when this was written) it runs it; if not it prints a notice and goes on. The checker's command line is assumed to be `check_model_for_roblox.py <fbx>`: UNVERIFIED.
+- **Export** uses plain `blender --background` (Blender 5.1.2 at `C:\Program Files\Blender Foundation\Blender 5.1\`, or `BLENDER_EXE`). It never touches the Blender MCP or an open Blender window. Settings come from the cockatoo evidence: 1 Blender unit = 1 stud, up Y, FBX forward from `--faces` (default +Y gives FBX forward Z so a creature facing +Y in Blender faces -Z in Roblox; the first run with forward -Z turned it 180 degrees, see section 6), part origins kept (they become joint pivots), scale 1 / rotation 0 (checked), vertex colours as sRGB, normals only, no extra leaf bones, bone axis Y/X, all actions baked with `--anim`. It refuses a mesh over 21,844 triangles and warns about odd scale, missing UVs/colours, wrong size. It writes `<name>.report.json` (parts, triangles, size in studs). If `tools/check_model_for_roblox.py` exists (the docs/163 model checker, not on main when this was written) it runs it; if not it prints a notice and goes on. The checker's command line is assumed to be `check_model_for_roblox.py <fbx>`: UNVERIFIED.
 - **Upload** accepts only `.fbx .gltf .glb` (models), images and sounds, max 20 MB, max 5 files per run, checks the file header, and does nothing but print unless `--upload` is given. It reads the key only from `ROBLOX_OPEN_CLOUD_KEY` and the owner's user id from `ROBLOX_CREATOR_USER_ID` (or `ROBLOX_CREATOR_GROUP_ID`, or a small file `%USERPROFILE%\.be-dino\roblox_upload.json` with `{"creator_user_id": 123}`, which lives outside the repo). The registry line holds asset id, name, file, size, sha256, moderation state and time: no key, no user id.
 - **Studio snippet** (`tools/studio/`, never `src/`): looks at the group folder first (existing models, row z, next free x), refuses to duplicate a model that is already there, loads the asset, aborts if it contains a script, lays the model on y = 0 at the next free x with a 6-stud gap, anchors the parts, and if you pass a `Joints` table it makes Motor6D joints from each part's pivot (`C0`/`C1` computed from the pivot so the rest pose does not move). It does not make signs: a brand-new group needs the cream sign at x = -14 added by hand.
 
@@ -118,19 +118,38 @@ If step 4 fails: HTTP 401 = key wrong or expired; 403 = key lacks Assets Write, 
 - Still UNVERIFIED: vertex colours (needs a rendered Studio frame; the scratch Studio is minimised), multi-part names, pivots, Motor6D/rig and animations (the cockatoo run answers this), cost per upload (none seen), whether `LoadAsset` also works from a Studio signed in as a different account.
 - Both test assets are the owner's account models named AcceptanceCube / AcceptanceCube2 (delete in Creator Hub > Inventory when no longer needed; deleting is the owner's choice).
 
-## 6. NOT verified (be honest)
+## 6. What survived, and what is still not verified (cockatoo run, 2026-10-18)
 
-- **Nothing was uploaded to Roblox.** No key exists yet. The upload tool is tested only with a fake network (32 offline tests). Request field names come from the docs; a real run may need a small fix.
-- Whether `creator.userId` wants a string or a number (the tool sends a string, as in the docs example; UNVERIFIED).
-- Display name and description length limits (the tool caps them at 50 and 1000 itself).
-- Whether the API upload keeps part names, pivots, vertex colours, rig and animations (1.4). Whether it creates Motor6D joints. Whether it supports textures inside the FBX.
-- Whether the Assets key page asks for an experience.
-- Whether Model uploads cost anything or need ID verification (not mentioned for Models in the docs).
-- `InsertService:LoadAsset` inside the Studio MCP `execute_luau` context (the call exists and works for own assets per forum posts, but nobody here ran it). The Luau snippet compiles under the Luau compiler; it has not run in Studio.
-- The exporter was run for real in headless Blender 5.1.2 on the cockatoo `.blend` (10 parts, 17,668 triangles, 0.85 MB FBX) and on the cube, but the FBX has not been imported into Roblox.
-- The model checker `tools/check_model_for_roblox.py` was not available, so that hook is untested.
+Full numbers and the Studio output summary: [evidence/2026-10-18-cockatoo-pipeline](evidence/2026-10-18-cockatoo-pipeline/README.md). Real key, headless Blender 5.1.2, scratch Studio `cockatoo-scratch.rbxl` (Edit mode, `InsertService:LoadAsset`). Three uploads of `Cockatoo_HQ.blend` (all Approved): parts only **116310176815729**, rig **89600501756470**, rig plus animations **102247452194822**.
+
+| Question (1.4) | Result | Status |
+|---|---|---|
+| Upload, approval, `LoadAsset` for a 10-part 17,668-triangle model | works, Model > Model > 10 MeshParts, no script inside | **verified** |
+| Size | 1 Blender unit = 1 stud with `global_scale 0.01`; cockatoo 7.43 studs tall (7.34 after the rest-pose fix) | **verified** |
+| Part names | all 10 kept (Body, Head, Crest, Tail, ArmL, ArmR, LegL, LegR, FootL, FootR) in all variants | **verified** |
+| Pivots (joint at the part origin) | **parts only: kept** (`PivotOffset`, `GetPivot()` = Blender origin; 8 of 10 within 0.001 stud of the animation module's `Joints`) | **verified** |
+| Facing | **FAILED with `axis_forward -Z`**: the creature arrived turned 180 degrees (faces +Z, left and right swapped). Exporter fixed (`--faces +Y` gives forward `Z`); the fixed file was checked in Blender and in Studio by turning the model, NOT re-uploaded | defect found, fix unconfirmed in Roblox |
+| Vertex colours | **kept inside the mesh** (read with `CreateEditableMeshAsync`: Body 24 distinct colours, Head 11, Crest 6, Foot 3; cream, yellow, brown, grey). `MeshPart.Color` stays default grey, `TextureID` empty | **verified in the data**; how they LOOK on the grey part is not seen (no frame) |
+| Rig (`--rig`) | Roblox makes 10 Motor6D plus RootPart, InitialPoses folder, AnimationController (no Animator, no Bone), but the placement is wrong: Foot 0.93 above Leg, Crest turned, Body pivot Y and Z swapped, a Body-to-Body joint | **FAILED** |
+| Baked animation (`--anim`) | **does not arrive**: no KeyframeSequence, no Animation. Identical to the rig variant | **FAILED** (not carried by the API upload) |
+| Part rotations | all 0 in all variants | verified |
+| Snippet joints from pivots | 9 Motor6D, rest error 0.00002 stud; the snippet found "Pipeline test" already there (AcceptanceCube) and added the model after it | **verified** |
+| Animation module in Studio | `CockatooAnimations.luau` ran as a ModuleScript on the parts model; 10 samples per animation: Idle max joint rotation 9.3 degrees, Walk 28.3, Jump 75.8 (arms), Body height change 0.04 / 0.12 / 1.58 studs | **verified (numbers only)** |
+| Leftover pose in the .blend | saved with LegR moved 0.2 and Idle assigned: arrived as a 0.2 pivot error on LegR and FootR; exporter now resets to the rest pose | defect found and fixed |
+
+**Use this path:** export with no `--rig`, upload the parts model, insert with the snippet (`render_insert_snippet.py ... --joints Head=Body,Crest=Head,Tail=Body,ArmL=Body,ArmR=Body,LegL=Body,LegR=Body,FootL=LegL,FootR=LegR`), animate with the Luau module. Do not rely on `--rig` / `--anim` through the API upload.
+
+Still NOT verified:
+
+- The fixed export (forward `Z`, rest pose) in Roblox. Needs one more upload of the parts model.
+- How the vertex colours look in a rendered frame (the scratch Studio is minimised, `screen_capture` is dark); whether a grey `MeshPart.Color` darkens them.
+- Why the rig variant places second-level bones wrongly (bone axes Y/X, bone roll, hierarchy depth). A bone-less export with empties, or a different `primary_bone_axis`, would be the next experiments, each one costs an upload.
+- Animation as a Roblox asset (KeyframeSequence): only the Studio importer by hand is known to make it.
+- Cost per upload (none seen), rate limits (3 uploads in 20 s were fine), `LoadAsset` from a Studio signed in as another account.
+- Whether `creator.userId` as a string is required (it worked as a string).
+- `tools/check_model_for_roblox.py` hook (the checker is still not in this tree).
 - Beta API: Roblox may change it.
 
 ## 7. Files (this PR)
 
-`tools/roblox_asset_upload.py`, `tools/blender_export_roblox.py`, `tools/blender/make_acceptance_cube.py`, `tools/studio/insert_uploaded_model.luau`, `tools/studio/render_insert_snippet.py`, `tests/test_roblox_asset_upload.py`, this page, the BD-659 kanban row, a pointer in [160](160-agent-brief.md), and two ignored folders in `.gitignore` (`build/pipeline-test/`, `build/blender-export/`).
+`tools/roblox_asset_upload.py`, `tools/blender_export_roblox.py` (+ `--faces`, rest pose), `tools/blender/make_acceptance_cube.py`, `tools/studio/insert_uploaded_model.luau`, `tools/studio/render_insert_snippet.py`, `tests/test_roblox_asset_upload.py`, this page, the BD-659 kanban row, a pointer in [160](160-agent-brief.md), and two ignored folders in `.gitignore` (`build/pipeline-test/`, `build/blender-export/`).

@@ -1,0 +1,32 @@
+[
+  {
+    "assetId": "116310176815729",
+    "assetType": "Model",
+    "displayName": "Cockatoo_parts",
+    "file": "Cockatoo_parts.fbx",
+    "bytes": 596092,
+    "sha256": "869baff16142caae038e0f5f578f7353bc799c819dac1d2ea27e356d7fd424c8",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T01:48:46Z"
+  },
+  {
+    "assetId": "89600501756470",
+    "assetType": "Model",
+    "displayName": "Cockatoo_rig",
+    "file": "Cockatoo_rig.fbx",
+    "bytes": 605868,
+    "sha256": "3e134f0d422ca3e733a777b9f6c703126eb8dfceaf2846dba3cc949ea1b7b955",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T01:48:58Z"
+  },
+  {
+    "assetId": "102247452194822",
+    "assetType": "Model",
+    "displayName": "Cockatoo_anim",
+    "file": "Cockatoo_anim.fbx",
+    "bytes": 892940,
+    "sha256": "3466d551614806dd1aa46d547711ac5b0332af35f924d48783631ae36b410dd5",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T01:49:07Z"
+  }
+]

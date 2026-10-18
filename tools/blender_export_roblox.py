@@ -12,7 +12,11 @@ Uses plain `blender --background`. It does NOT use the Blender MCP, so it never 
 
 Inside Blender (this same file is the --python script): checks the scene and calls export_scene.fbx with the settings
 that worked for the cockatoo test model (docs/evidence/2026-10-18-cockatoo-blender):
-  * 1 Blender unit = 1 stud (apply_unit_scale), forward -Z, up Y  -> the creature that faces +Y in Blender faces -Z in Roblox.
+  * 1 Blender unit = 1 stud (global_scale 0.01), up Y. The FBX forward axis follows --faces (default +Y, like the cockatoo): a creature
+    that faces +Y in Blender then faces -Z (the Roblox front). Measured 2026-10-18 (docs/169 section 6): with axis_forward -Z the
+    cockatoo arrived turned 180 degrees (it faced +Z, left and right swapped), because Blender's own front is -Y.
+  * the armature is put in its rest pose first (no action, bones reset): the saved .blend had a leftover pose (LegR 0.2 up, tail yaw 5),
+    which the parts-only export baked in.
   * every part its own mesh object; part origins are kept (they become the joint pivots); scale 1, rotation 0 (checked, and
     fixed with --apply-transforms when there is no armature).
   * vertex colours exported as sRGB (the Roblox importer reads them when "use vertex colours" is on).
@@ -58,8 +62,19 @@ def find_blender(environ=None):
     return candidates[-1] if candidates else None
 
 
-def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None):
-    cmd = [blender, "--background", "--factory-startup", str(blend), "--python", str(SELF), "--", "--out", str(out)]
+FACING_TO_FBX_FORWARD = {"+Y": "Z", "-Y": "-Z"}  # direction the model faces in Blender -> FBX axis_forward (Roblox front is -Z)
+
+
+def fbx_forward_axis(facing):
+    """FBX axis_forward for a model that faces `facing` ('+Y' or '-Y') in Blender, so that it faces -Z (the front) in Roblox."""
+    try:
+        return FACING_TO_FBX_FORWARD[facing]
+    except KeyError:
+        raise ValueError("--faces must be +Y or -Y, got %r" % (facing,))
+
+
+def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None, faces="+Y"):
+    cmd = [blender, "--background", "--factory-startup", str(blend), "--python", str(SELF), "--", "--out", str(out), "--faces", faces]
     if rig:
         cmd.append("--rig")
     if anim:
@@ -90,6 +105,7 @@ def outer_main(argv, runner=subprocess.run, environ=None, out=print):
     ap.add_argument("--rig", action="store_true", help="include the armature (Motor6D rig)")
     ap.add_argument("--anim", action="store_true", help="bake all actions into the FBX (implies --rig)")
     ap.add_argument("--apply-transforms", action="store_true", help="apply rotation+scale to meshes (only when there is no armature)")
+    ap.add_argument("--faces", default="+Y", choices=sorted(FACING_TO_FBX_FORWARD), help="direction the model faces in Blender (default +Y)")
     ap.add_argument("--dry-run", action="store_true", help="print the Blender command, run nothing")
     ap.add_argument("--no-check", action="store_true", help="skip tools/check_model_for_roblox.py")
     args = ap.parse_args(argv)
@@ -107,7 +123,7 @@ def outer_main(argv, runner=subprocess.run, environ=None, out=print):
         return 2
     out_path.parent.mkdir(parents=True, exist_ok=True)
     report = out_path.with_suffix(".report.json")
-    cmd = blender_command(blender, blend, out_path, args.rig or args.anim, args.anim, args.apply_transforms, report)
+    cmd = blender_command(blender, blend, out_path, args.rig or args.anim, args.anim, args.apply_transforms, report, args.faces)
     out("Blender command: " + " ".join('"%s"' % c if " " in c else c for c in cmd))
     if args.dry_run:
         return 0
@@ -177,8 +193,25 @@ def scene_report(meshes, armatures):
     }
 
 
+def reset_to_rest_pose(armatures):
+    """Drop any assigned action and reset every pose bone, so exports start from the rest pose (works on any object with
+    .animation_data and .pose.bones, so it is testable with stand-ins). Returns the number of bones reset."""
+    n = 0
+    for ob in armatures:
+        if getattr(ob, "animation_data", None) is not None:
+            ob.animation_data.action = None
+        for pb in ob.pose.bones:
+            pb.location = (0.0, 0.0, 0.0)
+            pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+            pb.rotation_euler = (0.0, 0.0, 0.0)
+            pb.scale = (1.0, 1.0, 1.0)
+            n += 1
+    return n
+
+
 def inner_main(argv):
     ap = argparse.ArgumentParser()
+    ap.add_argument("--faces", default="+Y")
     ap.add_argument("--out", required=True)
     ap.add_argument("--rig", action="store_true")
     ap.add_argument("--anim", action="store_true")
@@ -201,6 +234,9 @@ def inner_main(argv):
                 ob.select_set(True)
             bpy.context.view_layer.objects.active = meshes[0]
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    if armatures:
+        print("Rest pose: reset %d pose bones, actions unassigned" % reset_to_rest_pose(armatures))
+        bpy.context.view_layer.update()
     report = scene_report(meshes, armatures if use_rig else [])
     for p in report["problems"]:
         print("PROBLEM:", p)
@@ -222,7 +258,7 @@ def inner_main(argv):
         object_types={"MESH", "ARMATURE"} if use_rig else {"MESH"},
         # global_scale 0.01: Blender writes metres as centimetres (x100) and Roblox reads FBX units as studs, so without it a
         # 4-unit cube arrived as 400 studs (measured 2026-10-18 with the acceptance cube, asset 98358657150463).
-        apply_unit_scale=True, global_scale=0.01, axis_forward="-Z", axis_up="Y",
+        apply_unit_scale=True, global_scale=0.01, axis_forward=fbx_forward_axis(args.faces), axis_up="Y",
         colors_type="SRGB", mesh_smooth_type="OFF", add_leaf_bones=False, bake_anim=bool(args.anim and use_rig),
     )
     if use_rig:
