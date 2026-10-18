@@ -88,6 +88,7 @@ assert(Stats.rescaleHp(500,100,200)<=200 and Stats.rescaleHp(-5,100,200)==0,"res
 -- BD-1025 (owner 2026-10-18: fights take too long): an even fight against a wild predator is short.
 -- Wild score 60..250 (NpcPredatorRules.Config); the player has the same size. Ground: 6..10 bites and at most 8 s; every class: at most 8 s.
 assert(Cfg.BiteCooldownSeconds<=0.6 and Cfg.BiteCooldownSeconds*Cfg.BiteRequestsPerSecond>=1,"faster bites, still inside the rate limit")
+assert(Cfg.SizeUnitMax==1+750/Cfg.SizeUnitDivisor and Cfg.OneShotRatio==Cfg.SizeUnitMax and Cfg.WildMaxSizeRatio>1,"size unit config matches the growth cap")
 assert(Cfg.WildHpX>0 and Cfg.WildHpX<=0.5,"wild HP clearly lower")
 assert(Stats.maxHp("Ground",2,nil)==Stats.maxHp("Ground",2) and math.abs(Stats.maxHp("Ground",2,0.4)-0.4*Stats.maxHp("Ground",2))<1e-9,"hpX is optional and multiplies")
 for _,sc in {60,155,250} do
@@ -98,6 +99,48 @@ for _,sc in {60,155,250} do
     assert(secs<=8,pc.." even fight vs wild at score "..sc.." takes "..secs.." s")
     if pc=="Ground" then assert(bites>=6 and bites<=10,"Ground even fight is 6..10 bites, got "..bites) end
   end
+end
+-- BD-1025 part 2: the size difference R = bigger / smaller (size unit z = 1 + growth / 50, 1..16) sets the bites. PROVISIONAL curve.
+assert(Stats.sizeUnits(0)==1 and Stats.sizeUnits(750)==16 and Stats.sizeUnits(1e9)==16 and Stats.sizeUnits(nil)==1,"size unit 1..16")
+assert(math.abs(Stats.sizeRatio(800,100)-16/3)<1e-9,"100 vs 800 growth = R 5.33 (the cap is 750)")
+local wsc=Stats.scale(155)
+local function bigBitesVs(hpX,R) -- ground vs ground at the same combat scale, only R changes
+  local base=Stats.hit("Ground",wsc,"Ground",wsc,0,1)
+  return Stats.bigBites(Stats.maxHp("Ground",wsc,hpX)/base,R)
+end
+for _,hpX in {Cfg.WildHpX,1} do
+  local prev=math.huge
+  for i=0,200 do
+    local R=1+(Cfg.OneShotRatio*1.5-1)*i/200
+    local b=bigBitesVs(hpX,R)
+    assert(b<=prev+1e-9 and b>=1-1e-9,"a bigger R never means a longer fight (hpX "..hpX..", R "..R..")")
+    prev=b
+  end
+  assert(math.abs(bigBitesVs(hpX,Cfg.OneShotRatio)-1)<1e-9 and math.abs(bigBitesVs(hpX,Cfg.OneShotRatio*3)-1)<1e-9,"max R = ONE bite")
+  assert(math.ceil(bigBitesVs(hpX,8)-1e-6)>=4 and math.ceil(bigBitesVs(hpX,8)-1e-6)<=6,"R 8 takes 4 to 6 bites")
+  assert(math.ceil(bigBitesVs(hpX,5.33)-1e-6)<=6,"100 vs 800 growth takes about 5 bites")
+  assert(bigBitesVs(hpX,2)>bigBitesVs(hpX,5) and bigBitesVs(hpX,5)>bigBitesVs(hpX,12),"falls the whole way")
+end
+local e1=math.ceil(bigBitesVs(Cfg.WildHpX,1)-1e-6)
+assert(e1>=6 and e1<=10,"R 1 against a wild predator is 6 to 10 bites, got "..e1)
+assert(math.abs(bigBitesVs(1,1)-Stats.maxHp("Ground",wsc)/Stats.hit("Ground",wsc,"Ground",wsc,0,1))<1e-9,"R 1 = the plain even fight, no step")
+-- the real damage function: one bite at the max ratio, a smaller dino loses damage smoothly but never reaches 0
+local hpT=Stats.maxHp("Ground",Stats.scale(0),Cfg.WildHpX)
+assert(Stats.hitScored("Ground",750,"Ground",0,0,1,{targetHpX=Cfg.WildHpX})>=hpT*(1-1e-9),"capped dino one-shots a fresh one")
+assert(Stats.hitScored("Ground",750,"Ground",0,0,1,nil)>=Stats.maxHp("Ground",Stats.scale(0))*(1-1e-9),"... also a full-HP player")
+assert(Stats.hitScored("Ground",155,"Ground",155,0,1,nil)==Stats.hit("Ground",Stats.scale(155),"Ground",Stats.scale(155),0,1),"equal size = the plain hit")
+assert(Stats.hitScored("Ground",750,"Ground",0,0,1,{wildAttacker=true})==Stats.hit("Ground",Stats.scale(750),"Ground",1,0,1),"a wild predator keeps the plain hit")
+do
+  local prev=math.huge
+  for i=0,40 do
+    local sc=i*20 -- attacker score 0..800; target is a capped dino (z 16): the smaller the attacker the weaker the bite
+    local h=Stats.hitScored("Ground",sc,"Ground",800,0,1,nil)
+    assert(h>=Cfg.MinHit and h==h and h<math.huge,"never 0, never negative, finite")
+    if i>0 then assert(h>=prev-1e-9,"a bigger attacker never hits weaker (score "..sc..")") end
+    prev=h
+  end
+  local fresh=Stats.hitScored("Ground",0,"Ground",750,0,1,nil)
+  assert(math.ceil(Stats.maxHp("Ground",Stats.scale(750))/fresh)>=60,"a fresh dino against a capped one is hopeless (60+ bites)")
 end
 -- the strongest class order is unchanged (T-Rex stays the biggest hitter through size, class table untouched)
 assert(Stats.maxHp("Ground",4)>Stats.maxHp("Ground",1) and Stats.damage("Ground",4,0)>Stats.damage("Ground",1,0),"size still wins")

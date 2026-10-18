@@ -51,7 +51,8 @@ assert(R.attack(w,A.key,2.8,P(0,0,0),P(0,0,0),cand).reason=="facing","no look ve
 assert(R.attack(w,A.key,3.4,P(0,0,0),FWD,{{key=A.key,pos=P(0,0,-1)}}).reason=="no_target","never self")
 local hit=R.attack(w,A.key,4,P(0,0,0),FWD,cand)
 assert(hit.ok and hit.targetKey==B.key and not hit.defeated)
-assert(math.abs(hit.damage-Stats.hit("Ground",1,"Ground",4,0,1))<1e-9,"module damage formula, never client damage")
+assert(math.abs(hit.damage-Stats.hitScored("Ground",0,"Ground",BIG,0,1,{}))<1e-9,"module damage formula, never client damage")
+assert(hit.damage>=Cfg.MinHit and hit.damage<Stats.hit("Ground",1,"Ground",4,0,1),"a fresh dino barely scratches a capped one (BD-1025)")
 assert(math.abs(B.state.hp-(B.state.maxHp-hit.damage))<1e-9)
 assert(math.sqrt(hit.knockX^2+hit.knockZ^2)<=Cfg.KnockbackStuds+1e-9 and hit.knockZ<0,"knockback bounded, away from attacker")
 assert(R.attack(w,A.key,4.5,P(0,0,0),FWD,cand).reason=="cooldown","bite cooldown (Cfg.BiteCooldownSeconds)")
@@ -86,7 +87,7 @@ assert(big.state.hp==0 and R.hpByte(big)==0)
 assert(R.settle(w5,big.key)==true and R.settle(w5,big.key)==false and R.settle(w5,big.key)==false,"settled exactly once")
 for i,s in smalls do assert(R.attack(w5,s.key,t+10+i,P(0,0,0),FWD,{{key=big.key,pos=P(0,0,-3)}}).reason=="no_target","defeated dino cannot be hit again") end
 assert(w5.defeatCount==1 and big.state.hp==0)
-assert(t>=15 and t<=40,"six smalls beat s=4 in 20-35 s of sim (team-up target), got "..t)
+assert(t>=15 and t<=40,"six fresh dinos beat a size-unit-7 dino in 15-40 s of sim (BD-1025: against a capped one they cannot), got "..t)
 -- assist bonuses: whole numbers, capped by the pool, only to real assisters, never eggs
 local total=0
 for key,amount in w5.log[1].b do assert(amount==math.floor(amount) and amount>0); total+=amount; assert(w5.dinos[key],"bonus only to tracked dinos") end

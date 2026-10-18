@@ -62,11 +62,16 @@ function Stats.sizeRatio(attackerScore: any, targetScore: any): number
     return Stats.sizeUnits(attackerScore) / Stats.sizeUnits(targetScore)
 end
 
--- Bites a BIGGER attacker needs, from the bites an even fight would take (evenBites >= 1) and the ratio R >= 1. Smooth, falling, 1 at OneShotRatio.
+-- Bites a BIGGER attacker needs, from the bites an even fight would take (evenBites >= 1) and the ratio R >= 1. Smooth, never rises with R,
+-- evenBites at R = 1 and 1 at OneShotRatio. The curve is 1 + (B0 - 1) x (1 - x^power), B0 = min(evenBites, BigCurveBites); a long even fight
+-- (two players) eases into that curve over the first part of the range (smoothstep weight), so no step appears at R = 1.
 function Stats.bigBites(evenBites: any, ratio: any): number
     local n = math.max(1, num(evenBites, 1))
     local x = math.clamp(math.log(math.max(1, num(ratio, 1))) / math.log(Cfg.OneShotRatio), 0, 1)
-    return 1 + (n - 1) * (1 - x ^ Cfg.BigHitCurvePower)
+    local curve = 1 + (math.min(n, Cfg.BigCurveBites) - 1) * (1 - x ^ Cfg.BigHitCurvePower)
+    local u = math.clamp(x / Cfg.BigCurveBlendX, 0, 1)
+    local w = u * u * (3 - 2 * u)
+    return curve ^ w * n ^ (1 - w)
 end
 
 -- Multiplier on a SMALLER attacker's hit (R = bigger / smaller >= 1): 1 at R = 1, SmallHitFloorX at R >= OneShotRatio, smooth, always > 0.

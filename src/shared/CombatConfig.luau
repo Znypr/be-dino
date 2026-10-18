@@ -50,6 +50,8 @@ local CombatConfig = {
     SizeUnitDivisor = 50,
     SizeUnitMax = 16, -- growth cap 750 -> z = 16
     OneShotRatio = 16, -- R at (and above) which the bigger dino wins in one bite (fresh dino against a capped one)
+    BigCurveBites = 9, -- the curve starts at this many bites (an even fight against a wild predator); a longer even fight eases into it
+    BigCurveBlendX = 0.3, -- ... over this part of x (x = ln R / ln OneShotRatio)
     BigHitCurvePower = 1.37, -- bites = 1 + (even bites - 1) x (1 - x^power), x = ln R / ln OneShotRatio: gentle first, then steeper
     SmallHitFloorX = 0.1, -- a small dino's bite is multiplied by this at R = OneShotRatio (smoothly from 1); never below MinHit
     SmallHitPower = 1.5,
