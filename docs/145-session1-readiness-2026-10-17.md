@@ -513,3 +513,16 @@ Next try for whoever repeats it: open the playtest place in a Studio started by 
 * One game bug found and fixed: the RAIN! weather card came back half visible in the hub after it had faded (`titleBig` not cleared; `verify_cave_weather` now checks it). Not re-run live.
 * One finding left open: **BD-546** (menu cards cover the left rail by 43 px at 1140 wide; Crystals tab shows R$ buttons under Coming soon, confirm inert).
 * Still owed: a phone-size run, a published server, more than one player. BD-317 may take the lines; BD-541 is Review / test with this evidence.
+
+## Studio acceptance 2026-10-18 (BD-663): BLOCKED, not tested
+
+Label: **STUDIO ACCEPTANCE ATTEMPT, appended; no history edited.** Full notes: [evidence/2026-10-18-studio-acceptance/README.md](evidence/2026-10-18-studio-acceptance/README.md). Main `77f03e31`.
+
+| Item | Result | Observation |
+| --- | --- | --- |
+| Build playtest place (`build.py --profile playtest`) | PASS (offline) | `BeDino-Build020-playtest.rbxlx`, 463 scripts, clean tree |
+| `verify_release.py --profile playtest` | PASS (offline) | 37 keys enforced, paid and debug flags false |
+| Open the built place in the existing Studio window | **BLOCKED** | `user_keyboard_input` and `user_mouse_input` only work on the "Client" datamodel, which does not exist in Edit mode (`Client datamodel is not available in Edit mode`); `execute_luau` cannot open a place file. The open place `cockatoo-scratch.rbxl` has no `ReplicatedStorage.Shared`, so it is not Be Dino |
+| Edit-mode world check, Play, every feature flow, console errors, frame time | NOT TESTED | the playtest place was never open |
+
+Rows 8, 9 and 12 of the go / no-go list (movement window, dino swap, weather) stay **Open, needs Studio**. Defect row: BD-663 (P1). The fix is a way to open a built place file in Studio without touching window state; see the evidence README.
