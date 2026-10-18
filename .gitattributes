@@ -1,1 +1,2 @@
 build/*.rbxlx -text
+docs/kanban/rows/*.md text eol=lf
