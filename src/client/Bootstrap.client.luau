@@ -1437,10 +1437,10 @@ local function scales()
             if child:IsA("TextLabel") then
                 child.Position,child.Size,child.TextSize=UDim2.fromOffset(cell.labelX,cell.labelY),UDim2.fromOffset(cell.labelW,cell.labelH),cell.textSize
                 child.Visible=not cell.iconOnly -- BD-333: narrow phones show the icon only
-                child.TextScaled=not layout.touch -- BD-333: phones draw the label at its real >= 14 px size instead of shrinking it to fit
+                child.TextScaled=not layout.touch -- BD-333: phones: real >= 14 px, no shrink
                 local limit=child:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
                 limit.MaxTextSize,limit.Parent=cell.textSize,child
-            elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
+            elseif child:IsA("GuiObject") and child.Name~="ActiveTab" and child.Name~="IndexDot" then
                 child.Position,child.Size=UDim2.fromOffset(cell.iconX,cell.iconY),UDim2.fromOffset(cell.icon,cell.icon)
             end
         end

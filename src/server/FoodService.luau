@@ -9,6 +9,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
+local FoodRespawn = require(ReplicatedStorage.Shared.FoodRespawn) -- BD-1081: respawn time by food kind (flag off = the one old time)
 local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: eating happens at the mouth (the same pure function a client preview can use)
 -- BD-381 rule: the LowPolyDinos flag is read only through LowPoly.enabled (verify_lowpoly_views); a test harness without it falls back to the root rule
 local lowPolyModule: any = false
@@ -311,6 +312,7 @@ function FoodService.start(dinosaur,repository)
             local now = os.clock()
             local trackObjectives = Config.ObjectivesEnabled == true -- BD-074: read once per tick
             local trackTelemetry = Config.RunTelemetryEnabled == true -- BD-575: read once per tick, false = zero further cost
+            local respawnTiers = Config.FoodRespawnTiersEnabled == true -- BD-1081: read once per tick
             local candidates = {}
             for _, player in Players:GetPlayers() do
                 local character = player.Character
@@ -370,7 +372,7 @@ function FoodService.start(dinosaur,repository)
                 end)
             end
             for food, claim in claims do
-                food.readyAt = now + Config.FoodRespawnSeconds
+                food.readyAt = now + FoodRespawn.seconds(food.kind.id, respawnTiers, Config.FoodRespawnByKind, Config.FoodRespawnSeconds) -- BD-1081: one table lookup per eaten food, the hiddenFoods tick below is unchanged
                 food.hidden = true
                 hiddenFoods[food] = true
                 show(food, false)

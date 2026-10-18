@@ -582,6 +582,12 @@ def build_world(ctx: Ctx) -> Page:
     total = sum(k["weight"] for k in kinds)
     names = {"berry": "Berry", "fruit": "Fruit", "egg": "Egg", "amber": "Amber"}
     status, blocks, rows = [], [], []
+    tiers_on = ctx.shown("FoodRespawnTiersEnabled")  # BD-1081: public pages show the one old time while the tiers are off in the default build
+
+    def respawn_seconds(kind_id: str) -> float:
+        by_kind = cfg.get("FoodRespawnByKind") or {}
+        return by_kind.get(kind_id, cfg["FoodRespawnSeconds"]) if tiers_on else cfg["FoodRespawnSeconds"]
+
     for k in kinds:
         a = f"food-{k['id']}"
         label = names.get(k["id"], title_from_id(k["id"]))
@@ -590,11 +596,12 @@ def build_world(ctx: Ctx) -> Page:
         status.append([f"[{label}](#{a})", f"yes: `{pic}`" if pic else "MISSING", f"{len(kit)} world-kit model(s) in code" if kit else "no model in code", "n/a", "`src/server/FoodService.luau` TYPES"])
         share = 100 * k["weight"] / total
         size = ladder["Food"].get(k["id"], {}).get("size")
-        rows.append([f"[{label}](#{a})", k["points"], pct(share)])
+        back = respawn_seconds(k["id"])
+        rows.append([f"[{label}](#{a})", k["points"], pct(share), f"{num(back)} s"])
         blocks.append(item_heading(a, label, 4) + f"id: `{k['id']}`\n\n" + (ctx.image(pic, label, 96) + "\n\n" if pic else "")
-                      + f"- **Food points:** {k['points']}\n- **Share of food on the island:** {pct(share)}" + (f"\n- **Size:** {num(size)} stud" + ("" if size == 1 else "s") if size else ""))
+                      + f"- **Food points:** {k['points']}\n- **Share of food on the island:** {pct(share)}\n- **Comes back after:** {num(back)} seconds" + (f"\n- **Size:** {num(size)} stud" + ("" if size == 1 else "s") if size else ""))
     body = [f"Every pickup gives food points (growth and eggs come from them). The island has {num(cfg['FoodSectorCount'] ** 2)} clusters of {num(cfg['FoodClusterItems'])} pickups.", "",
-            table(["Food", "Food points", "Share"], rows), "", "**STATUS**", "", table(["Food", "Picture", "Model", "Mask", "Points from"], status), ""] + blocks
+            table(["Food", "Food points", "Share", "Comes back after"], rows), "", "**STATUS**", "", table(["Food", "Picture", "Model", "Mask", "Points from"], status), ""] + blocks
     page.add("food", "Food", "\n\n".join(body), [(f"food-{k['id']}", names.get(k["id"], title_from_id(k["id"]))) for k in kinds])
     # -- special food
     if ctx.shown("SpecialFoodsEnabled"):

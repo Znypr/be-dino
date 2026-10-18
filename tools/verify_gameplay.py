@@ -10,7 +10,7 @@ import rehearsal_env
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath",RunLifecycle="RunLifecycle",ObjectiveService="ObjectiveService",TelemetryService="TelemetryService",CooldownMemory="CooldownMemory"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\nlocal CooldownMemoryMod='+wrapped('src/server/CooldownMemory.luau')+'\nlocal WorldLayerMod='+wrapped('src/shared/WorldLayer.luau')+'\nlocal FoodLayerDataMod='+wrapped('src/shared/FoodLayerData.luau')+'\nlocal FoodLayerMod=(function() local require=function(m)return m end local script={Parent={WorldLayer=WorldLayerMod,FoodLayerData=FoodLayerDataMod}} return '+wrapped('src/shared/FoodLayer.luau')+' end)()\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath",RunLifecycle="RunLifecycle",ObjectiveService="ObjectiveService",TelemetryService="TelemetryService",CooldownMemory="CooldownMemory"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal FoodRespawnMod='+wrapped('src/shared/FoodRespawn.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\nlocal CooldownMemoryMod='+wrapped('src/server/CooldownMemory.luau')+'\nlocal WorldLayerMod='+wrapped('src/shared/WorldLayer.luau')+'\nlocal FoodLayerDataMod='+wrapped('src/shared/FoodLayerData.luau')+'\nlocal FoodLayerMod=(function() local require=function(m)return m end local script={Parent={WorldLayer=WorldLayerMod,FoodLayerData=FoodLayerDataMod}} return '+wrapped('src/shared/FoodLayer.luau')+' end)()\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==12 and carry<1e-8)
 local accumulated,total=0,0
@@ -65,7 +65,7 @@ function Workspace:Raycast(origin,direction,params)
 end
 local workspace=Workspace
 local AdminMutationScale='''+wrapped('src/shared/AdminMutationScale.luau')+'''
-local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",MovementWindow="MovementWindow",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",MouthReach="MouthReach",FoodLayer="FoodLayer",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig",RunEggTags="RunEggTags"}}
+local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",MovementWindow="MovementWindow",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",FoodRespawn="FoodRespawn",SpecialFoods="SpecialFoods",MouthReach="MouthReach",FoodLayer="FoodLayer",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig",RunEggTags="RunEggTags"}}
 function Storage:FindFirstChild(name)return if name=="BeDinoRemotes" then Remotes else nil end
 local guid=0
 local Http={GenerateGUID=function()guid+=1 return tostring(guid)end}
@@ -73,7 +73,7 @@ local game={GetService=function(self,name)return ({Players=Players,ReplicatedSto
 local FoodConfig=table.clone(Config) -- BD-074: the tick test flips ObjectivesEnabled on this copy (Config itself may be frozen)
 local ObjectiveSpy={calls={},loads=0}
 local TelemetrySpy={calls={},loads=0} -- BD-575: the real FoodService reports raw food to TelemetryService, only while Config.RunTelemetryEnabled
-local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="TelemetryService" then TelemetrySpy.loads+=1 return {noteFood=function(player,runId,raw,gained)table.insert(TelemetrySpy.calls,{player=player,runId=runId,raw=raw,gained=gained}) end} elseif id=="CooldownMemory" then return CooldownMemoryMod elseif id=="RunLifecycle" then return {noteNestWeather=function()end} elseif id=="RunEggTags" then return {nextScore=function(before,whole,maxScore,runCap)return math.min(maxScore,runCap,before+whole)end,apply=function(events)return events,0 end} elseif id=="ObjectiveService" then ObjectiveSpy.loads+=1 return {record=function(player,kind,amount)table.insert(ObjectiveSpy.calls,{player=player,kind=kind,amount=amount}) return true end} elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="MovementWindow" then return {new=function()return {} end,push=function()return true end,reset=function()end} elseif id=="Config" then return FoodConfig elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="FoodLayer" then return FoodLayerMod elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
+local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="TelemetryService" then TelemetrySpy.loads+=1 return {noteFood=function(player,runId,raw,gained)table.insert(TelemetrySpy.calls,{player=player,runId=runId,raw=raw,gained=gained}) end} elseif id=="CooldownMemory" then return CooldownMemoryMod elseif id=="RunLifecycle" then return {noteNestWeather=function()end} elseif id=="RunEggTags" then return {nextScore=function(before,whole,maxScore,runCap)return math.min(maxScore,runCap,before+whole)end,apply=function(events)return events,0 end} elseif id=="ObjectiveService" then ObjectiveSpy.loads+=1 return {record=function(player,kind,amount)table.insert(ObjectiveSpy.calls,{player=player,kind=kind,amount=amount}) return true end} elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="MovementWindow" then return {new=function()return {} end,push=function()return true end,reset=function()end} elseif id=="Config" then return FoodConfig elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="FoodRespawn" then return FoodRespawnMod elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="FoodLayer" then return FoodLayerMod elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
 local created={}
 local Instance={new=function(kind)
  local o={attrs={},Name="",kind=kind,OnServerEvent={Connect=function(self,fn)self.callback=fn end}}
@@ -90,7 +90,7 @@ local delayed={}
 local task={spawn=function(fn)table.insert(scheduled,fn)end,wait=function()end,delay=function(seconds,fn)table.insert(delayed,{seconds=seconds,fn=fn})end}
 local warnings={}
 local warn=function(s)table.insert(warnings,s)end
-'''+ 'local Food='+wrapped('src/server/FoodService.luau')+'\n'+'''
+'''+ 'local fakeClock=nil'+chr(10)+'local Food=(function() local os=setmetatable({clock=function()return fakeClock or os.clock()end},{__index=os}) return '+wrapped('src/server/FoodService.luau')+' end)()'+'\n'+'''
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"food generation produced too few pickups")
 assert(Workspace.attrs.FoodSpawnStatus=="Ready")
@@ -326,6 +326,98 @@ do
  end
  pickupRays=false
  print("Food telemetry hook passed: raw food reported once per player per tick (equals the sum of the pickups, unchanged by the weather multiplier), nothing required or reported with the flag off")
+end
+-- BD-1081 (docs/115 LEAD decision 2026-10-18): with Config.FoodRespawnTiersEnabled an eaten food comes back after the time of its kind
+-- (berry 8 s, fruit 12 s, egg 40 s, amber 120 s); flag off = the one old 8 s for every kind; a kind that is not in the table falls back to 8 s.
+do
+ local dinoStub={addGrowth=function()end}
+ local function mockPlayer(id,position)
+  local player={UserId=id,Name="P"..id,attrs={}}
+  local root={Position=position,AssemblyLinearVelocity=vector(0,0,0),CFrame={LookVector=vector(0,0,-1)}}
+  function root:IsA(k)return k=="BasePart"end
+  local humanoid={Health=100,WalkSpeed=16}
+  local character={attrs={DinoAttached=true,RunState="Active",VisualScale=3}}
+  function character:SetAttribute(k,v)self.attrs[k]=v end
+  function character:GetAttribute(k)return self.attrs[k]end
+  function character:FindFirstChild(k)return if k=="HumanoidRootPart" then root else nil end
+  function character:FindFirstChildOfClass(k)return if k=="Humanoid" then humanoid else nil end
+  player.Character=character
+  return player
+ end
+ local times={7,9,11,13,39,41,119,121,149,151}
+ -- one player stands on one food of each kind and eats at fake time 5000; the clock then jumps to 5000 + each time of the list, the
+ -- tick runs once per jump, and the state of the four target foods is recorded after every tick. Returns visible[kind][time] (true = back).
+ local function timeline()
+  artFailure=false missingTerrain=false
+  local mark=#created
+  Food.start(dinoStub)
+  local tick=scheduled[#scheduled]
+  local targets,players,id={},{},9500
+  for i=mark+1,#created do
+   local item=created[i]
+   if item.kind=="Part" and item.attrs.Points and item.Position and not item.destroyed then -- (a food that found no ground was destroyed again)
+    function item:FindFirstChild()return nil end
+    local name=item.Name
+    if targets[name]==nil and (name=="berry" or name=="fruit" or name=="egg" or name=="amber") then
+     local far=true
+     for _,other in targets do local dx,dz=other.Position.X-item.Position.X,other.Position.Z-item.Position.Z if dx*dx+dz*dz<40*40 then far=false end end
+     if far then
+      targets[name]=item id+=1
+      table.insert(players,mockPlayer(id,vector(item.Position.X,item.Position.Y,item.Position.Z)))
+     end
+    end
+   end
+  end
+  assert(targets.berry and targets.fruit and targets.egg and targets.amber,"the field has all four kinds")
+  local calls,rows=0,{}
+  fakeClock=5000
+  pickupRays=true
+  Players.GetPlayers=function()return if calls<=2 then players else {} end -- tick 1 only remembers where the player is (no speed check yet), tick 2 eats
+  task.wait=function()
+   calls+=1
+   if calls>=3 then
+    local row={}
+    for name,part in targets do row[name]=part.Transparency~=1 end
+    table.insert(rows,row)
+   end
+   if calls>=#times+3 then error("STOP_TICKS") end
+   fakeClock=if calls<=2 then 5000 else 5000+times[calls-2]
+  end
+  local ok,err=pcall(tick)
+  fakeClock=nil task.wait=function()end Players.GetPlayers=function()return {} end pickupRays=false
+  assert(not ok and string.find(tostring(err),"STOP_TICKS"),"the tick loop ran: "..tostring(err))
+  local visible={}
+  for name in targets do
+   visible[name]={}
+   assert(rows[1][name]==false,name.." is hidden right after it was eaten")
+   for k,t in times do visible[name][t]=rows[k+1][name] end
+  end
+  return visible
+ end
+ local function expectBack(visible,name,seconds)
+  for _,t in times do
+   assert(visible[name][t]==(t>=seconds),string.format("%s back after %s s: at %s s expected %s",name,tostring(seconds),tostring(t),tostring(t>=seconds)))
+  end
+ end
+ local savedTiers,savedByKind=FoodConfig.FoodRespawnTiersEnabled,FoodConfig.FoodRespawnByKind
+ assert(savedByKind.berry==8 and savedByKind.fruit==12 and savedByKind.egg==40 and savedByKind.amber==120 and savedByKind.golden_drumstick==150,"committed table")
+ -- flag OFF: every kind comes back after the old 8 s (so at the 9 s look), whatever the table says
+ -- the pure rule, including the golden drumstick (it only exists with the special-food flag, so it is not on the walking field above)
+ assert(FoodRespawnMod.seconds("golden_drumstick",true,savedByKind,8)==150 and FoodRespawnMod.seconds("golden_drumstick",false,savedByKind,8)==8,"golden drumstick 150 s with the flag, 8 s without")
+ assert(FoodRespawnMod.seconds("mystery",true,savedByKind,8)==8 and FoodRespawnMod.seconds("amber",true,nil,8)==8 and FoodRespawnMod.seconds("amber",nil,savedByKind,8)==8 and FoodRespawnMod.seconds("amber",true,{amber=-5},8)==8,"unknown kind, missing table, nil flag and a bad number all give the old time")
+ FoodConfig.FoodRespawnTiersEnabled=false -- (the rehearsal profile has it on)
+ local off=timeline()
+ for _,name in {"berry","fruit","egg","amber"} do expectBack(off,name,8) end
+ -- flag ON: the table of the config
+ FoodConfig.FoodRespawnTiersEnabled=true
+ local on=timeline()
+ expectBack(on,"berry",8) expectBack(on,"fruit",12) expectBack(on,"egg",40) expectBack(on,"amber",120)
+ -- flag ON, a kind that is not listed (or a bad number) uses FoodRespawnSeconds
+ FoodConfig.FoodRespawnByKind={berry=8,amber=0/0,egg="slow"}
+ local partial=timeline()
+ expectBack(partial,"fruit",8) expectBack(partial,"egg",8) expectBack(partial,"amber",8)
+ FoodConfig.FoodRespawnTiersEnabled,FoodConfig.FoodRespawnByKind=savedTiers,savedByKind
+ print("Food respawn tiers passed: flag off = 8 s for every kind, flag on = berry 8 / fruit 12 / egg 40 / amber 120 s, unlisted or bad kinds fall back to 8 s")
 end
 task.spawn=function(fn)fn()end
 ProgressionConfig='''+wrapped('src/shared/ProgressionConfig.luau')+'\nRewardMath='+wrapped('src/server/RewardMath.luau')+'\n'+ 'local Lifecycle='+wrapped('src/server/RunLifecycle.luau')+'\n'+'''
