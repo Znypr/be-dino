@@ -71,6 +71,7 @@ function CollectionService.start(profileRepository, dinosaur)
         end
         if not rateAllowed(lastEquipRequest, player) then
             player:SetAttribute("LastEquipStatus", "rate_limited")
+            if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Equip") end) end -- BD-650
             return
         end
 
@@ -100,6 +101,7 @@ function CollectionService.start(profileRepository, dinosaur)
             if not Config.CollectionTestGrantEnabled then return end
             if not rateAllowed(lastGrantRequest, player) then
                 player:SetAttribute("LastCollectionGrantStatus", "rate_limited")
+                if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "CollectionTest") end) end -- BD-650
                 return
             end
             local _, status = profileRepository.grantCollectionTestSpecies(player)

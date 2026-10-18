@@ -186,7 +186,9 @@ local function fairRecord(player: Player, at: number)
     log.tail += 1
     log.at[log.tail] = at
 end
-local function admit(player: Player): boolean
+-- `label` (BD-650, optional): the calling transaction group. Only a caller that ANSWERS "rate_limited" passes it (the coalescing preference
+-- writes and the flush do not), so a refused write is counted once under that label when telemetry is on (docs/167).
+local function admit(player: Player, label: string?): boolean
     if Config.WriteBudgetEnabled == false then return true end
     local at = os.clock()
     local bucket = writeBuckets[player]
@@ -207,6 +209,7 @@ local function admit(player: Player): boolean
     end
     if not admitted then
         writeStats.rejected += 1
+        if label and Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", label) end) end
         return false
     end
     bucket.tokens -= 1
@@ -1093,6 +1096,9 @@ local shared = {
     RewardMath = RewardMath,
     SettingsModel = SettingsModel,
     admit = admit,
+    admitAs = function(label: string): (Player) -> boolean -- BD-650: admit with a service label, for the transaction groups that answer "rate_limited"
+        return function(player: Player): boolean return admit(player, label) end
+    end,
     adopt = adopt,
     advanceNests = advanceNests,
     availableChestCapacity = availableChestCapacity,

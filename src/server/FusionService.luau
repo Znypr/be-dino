@@ -136,6 +136,7 @@ local function handleAction(player: any, request: any)
     local ok, result, status = repository.fuseDinosaurs(player, {token = request.token, targetStage = request.targetStage,
         donorIds = copyList(request.donorIds), quoteDigest = request.quoteDigest, consentDigest = request.consentDigest})
     if not ok or type(result) ~= "table" then return fail(status or "save_failed") end
+    if status == "fused" and Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("fusions", "Fusion", player) end) end -- BD-652
     return {ok = true, status = status, result = {resultId = result.resultId, targetStage = result.targetStage,
         speciesId = result.speciesId, patternId = result.patternId,
         traits = {genes = table.clone(result.traits.genes), big = result.traits.big, shiny = result.traits.shiny,
@@ -146,7 +147,10 @@ end
 function FusionService.handle(player: any, request: any, ...)
     if not repository then return fail("fusion_disabled") end
     if select("#", ...) ~= 0 then return fail("bad_request") end
-    if not allowed(player) then return fail("rate_limited") end
+    if not allowed(player) then
+        if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Fusion") end) end -- BD-650
+        return fail("rate_limited")
+    end
     local invalid = validate(request)
     if invalid then return fail(invalid) end
     local ok, response = pcall(handleAction, player, request)

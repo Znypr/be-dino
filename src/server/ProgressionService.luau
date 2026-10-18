@@ -190,6 +190,8 @@ function Service.start(repository)
         local ran,ok,status=pcall(repository.progressionAction,player,action,id,token,replace)
         if not ran then warn("[Be Dino] ProgressionAction failed: "..tostring(ok)) ok,status=false,"save_failed" end
         if buckets[player] then buckets[player].busy=false end
+        -- BD-652: a committed purchase (not a repeat of the same token, not an equip or a use) is one shop purchase; the label is the action name.
+        if ran and ok==true and status~="duplicate" and GameConfig.RunTelemetryEnabled==true and (string.sub(action,1,3)=="buy" or action=="upgradeCondition") then pcall(function() require(script.Parent.TelemetryHook).count("shop_purchases",action,player) end) end
         if player.Parent then response:FireClient(player,token,ok,status) end
     end)
     nextWeather=clock.nextAt weatherAttributes()
