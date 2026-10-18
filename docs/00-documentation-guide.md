@@ -3,6 +3,8 @@
 **Reviewed 2026-10-08 against GitHub main Build 020.** Use this navigation first when interpreting Be Dino's current rules or asking AI agents to work on the game. There are three separate meanings of "current": **owner-approved goal**, **committed code**, and **verified Studio/release acceptance**. They are not interchangeable. Do not promote a dated build/test record to active authority just because its own heading says "current".
 
 > **Handbook first:** [114 Handbook](114-handbook.md) is the single fact-check reference (vision, feel, design language, palette, lighting, sound, asset/UI/FX quality bars, economy cheat sheet, PR checklist). Dated owner decisions: [115](115-decisions-log.md). Open conflicts and owner questions: [116](116-handbook-conflicts.md).
+>
+> **Helper agents:** start with the [160 Agent brief](160-agent-brief.md) (read order, decisions, git/PR workflow, safety, evidence rules, tools, reporting).
 
 ## Authority order (by question)
 
