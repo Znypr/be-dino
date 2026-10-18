@@ -275,8 +275,12 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     if Config.ObjectivesEnabled == true then -- BD-074: after the committed + adopted settlement (also for the in-call duplicate of a lost acknowledgement; the run id makes a replay count once)
-        local progress = ProfileRepository.progression(player)
-        objectives().recordRunSettled(player, runId, runSeconds, runEggs, if progress then ProgressionRules.level(progress) else nil, catchScore)
+        -- BD-1096: the run is already committed; an error in this hook must not abort the settlement call (the player would stay in "Ending").
+        local hooked, hookError = pcall(function()
+            local progress = ProfileRepository.progression(player)
+            objectives().recordRunSettled(player, runId, runSeconds, runEggs, if progress then ProgressionRules.level(progress) else nil, catchScore)
+        end)
+        if not hooked then warn("[Be Dino] objective hook after settlement failed: " .. tostring(hookError)) end
     end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
