@@ -232,7 +232,7 @@ def resolve_kanban_file(path, base_rows, main_text, swap=False, pr_label="the PR
         return "".join(l + "\n" for l in res)
 
     text = CONFLICT.sub(repl, text)
-    if "<<<<<<<" in text or ">>>>>>>" in text:
+    if vncm.scan_text(text):  # line-start markers only: a row may quote the words in backticks
         raise NeedsHuman("conflict markers are still in the kanban after the rules ran")
     text = dedupe_rows(text, main_text, base_rows, rep)
     write_text(path, text, eol)
