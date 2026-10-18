@@ -205,7 +205,7 @@ stubs.Sfx = {play = function() end, playLayers = function() end, playCue = funct
 stubs.SfxRules = {hatchCues = function(cues) return cues end}
 stubs.ClassBadge = {create = function(parent) return inst("Frame", "ClassBadge", parent) end}
 stubs.InspectView = {attach = function(_, options) stubs.InspectView.last = options return {destroy = function() end, wasDrag = function() return false end} end}
-stubs.HatchFx = {ensure = function() return {} end, begin = function() return {} end, update = function() end, hide = function() end, style = function() end,
+stubs.HatchFx = {ensure = function() return {} end, begin = function() return {} end, update = function() end, hide = function() end, style = function() end, rainbow = function() end,
     splash = function() end, paintStyle = function() end}
 stubs.MutationReveal = {begin = function() return {} end, update = function() end, hide = function() end}
 stubs.HatchEggV2 = {create = function() return nil end, stop = function() end}
@@ -508,6 +508,112 @@ do
     check(not catcher.Visible, "a card with no size gets no catcher")
     handle.cancel()
     menu.gui:Destroy()
+end
+
+-- ===== 6b) Hatch polish (BD-1069..1073, docs/193): exact colours, one chip style, the card layout; driven by tools/verify_hatch_polish.py =====
+do
+    local function rgb255(c) return math.floor(c.R * 255 + .5), math.floor(c.G * 255 + .5), math.floor(c.B * 255 + .5) end
+    local function sameRgb(c, want) local r, g, b = rgb255(c) return r == want[1] and g == want[2] and b == want[3] end
+    local function overlap(a, b)
+        return a.AbsolutePosition.X < b.AbsolutePosition.X + b.AbsoluteSize.X and b.AbsolutePosition.X < a.AbsolutePosition.X + a.AbsoluteSize.X
+            and a.AbsolutePosition.Y < b.AbsolutePosition.Y + b.AbsoluteSize.Y and b.AbsolutePosition.Y < a.AbsolutePosition.Y + a.AbsoluteSize.Y
+    end
+    local CREAM, BLUE = {247, 234, 196}, {36, 132, 211}
+    local TL = requireModule(SharedFolder.HatchTimeline)
+    TL.batchReset(TL.session) -- earlier sections counted eggs; this one starts a fresh party
+    local menu = buildMenu(1280, 720, 860, 520, 1)
+    local handle, args, dino = playHatch(menu, {result = false, remaining = 5})
+    inst("TextLabel", "TraitBadge", dino, {Text = "BIG"})
+    frames(2)
+    local result = resultFor(dino, {remaining = 5, rarity = 2})
+    result.genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}
+    -- the blended shell tint that used to reach the swatch and the bucket: a Cream-and-Blue mix, NOT either colour
+    result.paintColors = {color(.4, .7, .8), color(.2, .5, .3)}
+    result.colorReveal = {name = "Cream", tier = 1, tierName = "Common", rgb = CREAM, id = "white"}
+    result.secondReveal = {name = "Blue", tier = 1, tierName = "Common", rgb = BLUE, id = "blue"}
+    result.patternReveal = {name = "Dots", tier = 1, tierName = "Common", plain = false}
+    handle.supply(result)
+    frames(30 * 2.6) -- both buckets have hit the egg, both chips and the pattern chip are shown (the burst, at 3.6 s, hides them)
+    local function find(name) return menu.gui:FindFirstChild(name, true) end
+    -- 1. the chip swatch is the named colour's own rgb
+    for i, want in {CREAM, BLUE} do
+        local chip = find("PaintChip" .. i)
+        check(chip ~= nil and chip.Visible, "polish: colour chip " .. i .. " is shown")
+        local swatch = chip and chip:FindFirstChild("Swatch")
+        check(swatch ~= nil and sameRgb(swatch.BackgroundColor3, want), "polish: chip " .. i .. " swatch is exactly the named colour's palette rgb (not the shell tint)")
+        local group = find("PaintBucket" .. i)
+        local parts = 0
+        for _, d in group:GetDescendants() do
+            if string.sub(d.Name, 1, 11) == "BucketPaint" then
+                parts += 1
+                check(sameRgb(d.BackgroundColor3, want), "polish: bucket " .. i .. " paint part " .. d.Name .. " is exactly the palette colour")
+            end
+        end
+        check(parts >= 5, "polish: bucket " .. i .. " has a paint surface, a cap and drips (" .. parts .. " paint parts)")
+    end
+    -- 2. one chip style: rounded rectangles (never full-round), 3 px outline, text never under 14 px
+    local chipNames = {"PaintChip1", "PaintChip2", "PatternChip", "ConditionChip", "RarityPill", "StopTag"}
+    local checked = 0
+    local function chipLike(o, name)
+        local corner, stroke = o:FindFirstChildOfClass("UICorner"), o:FindFirstChildOfClass("UIStroke")
+        check(corner ~= nil and corner.CornerRadius.Scale == 0 and corner.CornerRadius.Offset > 0 and corner.CornerRadius.Offset <= 12, "polish: " .. name .. " has a px corner radius (no full-round pill)")
+        check(stroke ~= nil and stroke.Thickness == 3, "polish: " .. name .. " has the 3 px outline")
+        checked += 1
+    end
+    for _, name in chipNames do
+        local o = find(name)
+        check(o ~= nil, "polish: " .. name .. " exists")
+        if o then chipLike(o, name) end
+    end
+    for _, d in menu.gui:GetDescendants() do
+        if d.Name == "Swatch" or d.Name == "TierBadge" then chipLike(d, d.Name) end
+        if d:IsA("UITextSizeConstraint") and d.Parent and d.Parent.Parent and (d.Parent.Parent.Name == "TierBadge" or string.sub(d.Parent.Parent.Name, 1, 9) == "PaintChip" or d.Parent.Parent.Name == "PatternChip") then
+            check(d.MinTextSize >= 14, "polish: chip text is at least 14 px")
+        end
+    end
+    for _, d in menu.gui:GetDescendants() do
+        if d.Name == "Ribbon" then
+            local corner = d:FindFirstChildOfClass("UICorner")
+            check(corner ~= nil and corner.CornerRadius.Scale == 0, "polish: ribbons are rounded rectangles too")
+        end
+    end
+    check(checked >= 10, "polish: enough chips were examined (" .. checked .. ")")
+    -- 3. the counter is in the header, left of X, and nowhere near the dinosaur
+    local counter = find("EggCounter")
+    check(counter ~= nil and counter.Parent == menu.header, "polish: the Egg N of M counter lives in the header strip")
+    if counter then
+        check(counter.Visible and counter.Text == "Egg 1 of 6", "polish: the counter reads 'Egg 1 of 6' (is '" .. tostring(counter.Text) .. "')")
+        check(counter.AbsolutePosition.X + counter.AbsoluteSize.X <= menu.x.AbsolutePosition.X, "polish: the counter ends left of X")
+        check(not overlap(counter, dino), "polish: the counter does not touch the dinosaur view")
+        check(not overlap(counter, menu.x), "polish: the counter does not touch X")
+    end
+    -- 4. card layout: the view starts at the top of the body, ends where the name starts; no label of its own; the stop tag names the reason
+    frames(30 * 6) -- the reveal has settled (the dinosaur pops in from a small scale)
+    check(dino.AbsolutePosition.Y >= menu.body.AbsolutePosition.Y - .5, "polish: the dinosaur view does not start above the card body")
+    check(dino.AbsolutePosition.Y + dino.AbsoluteSize.Y <= args.nameLabel.AbsolutePosition.Y + .5, "polish: the dinosaur view ends where the name starts")
+    check(dino:FindFirstChild("TraitBadge").Visible == false, "polish: the view's own BIG / SHINY label is hidden")
+    check(stubs.InspectView.last ~= nil and stubs.InspectView.last.baseZoom <= 1.2, "polish: the dinosaur is not zoomed so far that the head is cut")
+    local tag = find("StopTag")
+    check(tag ~= nil and tag.Visible, "polish: a Rainbow egg shows why Skip stops")
+    if tag then
+        local label = tag:FindFirstChild("Text")
+        check(label ~= nil and label.Text == "Rainbow egg!", "polish: the stop tag names the Rainbow egg")
+        check(tag:FindFirstChild("StopLine") ~= nil and tag.StopLine.Text == "Skip stops here", "polish: the stop tag says what happens")
+        check(not overlap(tag, dino) or tag.AbsolutePosition.X + tag.AbsoluteSize.X <= dino.AbsolutePosition.X + dino.AbsoluteSize.X * .42, "polish: the stop tag stays out of the dinosaur's middle")
+    end
+    handle.cancel()
+    frames(2)
+    check(find("EggCounter") == nil, "polish: the counter is removed from the header when the egg ends")
+    menu.gui:Destroy()
+    -- 5. a plain egg shows no stop tag
+    local menu2 = buildMenu(1280, 720, 860, 520, 1)
+    local h2, _, dino2 = playHatch(menu2, {result = false, remaining = 5})
+    frames(2)
+    h2.supply(resultFor(dino2, {remaining = 5}))
+    frames(30 * 8)
+    check(menu2.gui:FindFirstChild("StopTag", true) == nil, "polish: an ordinary egg shows no stop tag")
+    h2.cancel()
+    menu2.gui:Destroy()
 end
 
 -- ===== 7) The pure rules =====

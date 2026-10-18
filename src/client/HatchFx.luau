@@ -88,7 +88,7 @@ function M.ensure(back: Frame, front: Frame)
     if existing and existing.front == front then return existing end
     local device = deviceClass()
     local max = Plan.counts(6, device, false)
-    local pool = {back = back, front = front, device = device, max = max, bloom = {}, sparks = {}, motes = {}, puffs = {}, shocks = {}, fg = {}, drops = {}}
+    local pool = {back = back, front = front, device = device, max = max, bloom = {}, sparks = {}, motes = {}, puffs = {}, shocks = {}, fg = {}, drops = {}, rainbow = {}}
     pool.shaft = if Assets.isRealUi("shaftGradient") then shaftNode(back) else nil
     for i = 1, max.bloom do pool.bloom[i] = node(back, 22, "glowPlate", "disc", 1) end
     for i = 1, max.motes do pool.motes[i] = node(back, 23, "sparkSheet", "disc", i) end
@@ -97,6 +97,7 @@ function M.ensure(back: Frame, front: Frame)
     for i = 1, max.shocks do pool.shocks[i] = node(back, 23, "ringShock", "ring", 1) end
     for i = 1, max.fg do pool.fg[i] = node(front, 24, "starFour", "spark", i) end
     for i = 1, max.drops * 2 do pool.drops[i] = node(front, 24, "glowPlate", "disc", 1) end
+    for i = 1, Plan.Rainbow.bands.desktop do pool.rainbow[i] = node(back, 22, "ringSoft", "ring", 1) end -- BD-1072: the Rainbow egg's soft rings
     cache[back] = pool
     return pool
 end
@@ -104,12 +105,18 @@ end
 -- A run of one egg. motion = Theme.MotionEnabled. tier/colour are supplied (and may change) when the server result arrives.
 function M.begin(pool, motion: boolean)
     local h = {pool = pool, motion = motion, tier = 1, shaft = 0, color = Color3.fromRGB(70, 205, 170), failed = false, counts = Plan.counts(1, pool.device, not motion),
-        palette = {WHITE}, dropColors = {{WHITE}, {WHITE}}, dropTier = {1, 1}}
+        palette = {WHITE}, dropColors = {{WHITE}, {WHITE}}, dropTier = {1, 1}, rainbow = false}
     h.palette = M.colors(h, h.color)
     M.hide(h)
     return h
 end
 function M.colors(h, color: Color3)
+    if h.rainbow then
+        -- BD-1072: a Rainbow egg's sparks and confetti cycle the soft rainbow hues instead of one rarity colour
+        local out = {}
+        for i, c in Plan.rainbowPalette() do out[i] = c3(c) end
+        return out
+    end
     local list = Plan.palette(triple(color), h.tier)
     local out = {}
     for i, c in list do out[i] = c3(c) end
@@ -118,10 +125,17 @@ end
 -- tier 1..6 (species rarity for the hatch), colour = the rarity colour; failed eggs only get a soft cream puff.
 function M.style(h, tier: number, color: Color3, failed: boolean)
     h.tier, h.color, h.failed = math.clamp(tier, 1, 6), color, failed
-    h.counts = Plan.counts(h.tier, h.pool.device, not h.motion)
+    h.counts = Plan.counts(h.tier, h.pool.device, not h.motion, h.rainbow and not failed)
     h.palette = M.colors(h, color)
     h.shaft = 0
     if h.pool.shaft then h.counts, h.shaft = Plan.withShaft(h.tier, h.pool.device, not h.motion, Settings.effects()) end -- 0 or 1 sprite, never over the cap
+end
+-- BD-1072: the egg being opened is a Rainbow egg (on = true): soft rainbow rings behind it and rainbow sparks. Safe to call before or after style().
+function M.rainbow(h, on: boolean)
+    if h.rainbow == on then return end
+    h.rainbow = on
+    h.counts = Plan.counts(h.tier, h.pool.device, not h.motion, on and not h.failed)
+    h.palette = M.colors(h, h.color)
 end
 -- The colour / pattern being revealed by a paint bucket (side 1 = colour, 2 = pattern): sets that splash's droplet colours.
 function M.paintStyle(h, side: number, color: Color3, revealTier: number)
@@ -135,7 +149,7 @@ end
 
 function M.hide(h)
     local p = h.pool
-    for _, list in {p.bloom, p.sparks, p.motes, p.puffs, p.shocks, p.fg, p.drops} do hideAll(list) end
+    for _, list in {p.bloom, p.sparks, p.motes, p.puffs, p.shocks, p.fg, p.drops, p.rainbow} do hideAll(list) end
     if p.shaft then p.shaft.obj.Visible = false end
 end
 
@@ -146,7 +160,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     if not h.motion then
         -- Reduce Motion: one still, soft glow behind the dinosaur once it is shown.
         local disc = p.bloom[1]
-        if revealed and disc then put(disc, Plan.Center.dino[1], Plan.Center.dino[2], 320, h.color, 0.22) elseif disc then disc.obj.Visible = false end
+        if revealed and disc then put(disc, Plan.Center.dino[1], Plan.Center.dino[2], 320, if h.rainbow then c3(Plan.Rainbow.still) else h.color, 0.22) elseif disc then disc.obj.Visible = false end
         return
     end
     if since then
@@ -172,6 +186,14 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
         local fade = if failed and since then math.clamp(1 - since / 0.5, 0, 1) else 1
         local col = h.color:Lerp(WHITE, 0.5 - 0.22 * (i - 1))
         put(p.bloom[i], cx, cy, (150 + 110 * (i - 1)) * grow * (1 + 0.04 * Recipes.pulse(vt)), col, Plan.bloomAlpha(i, bp, since) * fade)
+    end
+    -- rainbow rings (Rainbow egg only): red outside to violet inside, breathing slowly behind the egg, then behind the dinosaur
+    local bands = c.rainbow or 0
+    for i, n in p.rainbow do
+        if i <= bands and not failed then
+            local size, opacity = Plan.rainbowBand(i, bands, vt, bp, since)
+            put(n, cx, cy, size, c3(Plan.rainbowHue(i, bands)), opacity)
+        else n.obj.Visible = false end
     end
     -- rim sparks: colour-matched, front/back depth
     local showSparks = not failed or not since

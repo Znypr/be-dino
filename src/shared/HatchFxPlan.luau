@@ -45,11 +45,11 @@ local function scaled(n: number, f: number, floor: number): number
 end
 
 -- counts for a tier (1..6), device and Reduce Motion. Reduce Motion: ONE static glow disc, nothing else.
-function P.counts(tier: number, device: string, reduce: boolean?)
+function P.counts(tier: number, device: string, reduce: boolean?, rainbow: boolean?)
     local t = math.clamp(math.floor(tier), 1, 6)
-    if reduce then return {bloom = 1, sparks = 0, motes = 0, puffs = 0, shocks = 0, fg = 0, drops = 0, colors = 1, tier = t} end
+    if reduce then return {bloom = 1, sparks = 0, motes = 0, puffs = 0, shocks = 0, fg = 0, drops = 0, colors = 1, tier = t, rainbow = 0} end
     local f = P.DeviceScale[device] or 1
-    local c = {bloom = P.Bloom, colors = Recipes.ColorCount[t], tier = t}
+    local c = {bloom = P.Bloom, colors = Recipes.ColorCount[t], tier = t, rainbow = if rainbow then (P.Rainbow.bands[device] or P.Rainbow.bands.desktop) else 0}
     for name, list in P.Base do c[name] = scaled(list[t], f, P.Floors[name]) end
     local cap = P.Caps[device] or P.Caps.desktop
     for _, name in P.TrimOrder do
@@ -58,7 +58,7 @@ function P.counts(tier: number, device: string, reduce: boolean?)
     return c
 end
 function P.total(c): number
-    return c.bloom + c.sparks + c.motes + c.puffs + c.shocks + c.fg + 2 * c.drops
+    return c.bloom + c.sparks + c.motes + c.puffs + c.shocks + c.fg + 2 * c.drops + (c.rainbow or 0)
 end
 
 -- Colour list for a tier: more hues with rarity (Recipes palette rules). primary / accent are RGB 0..255 triples.
@@ -131,6 +131,38 @@ function P.mote(i: number, time: number, tier: number)
     return x, y, size, opacity
 end
 
+-- ---------------------------------------------------------------- Rainbow egg (BD-1072)
+-- A Rainbow egg gets a soft rainbow behind it: concentric soft rings (the existing ringSoft texture, red outside to violet inside) that breathe
+-- slowly, and rainbow-coloured rim sparks and confetti. Matte and calm (docs/87): soft pastel-saturated hues, never above the maxAlpha, no flash,
+-- one still rainbow-coloured glow in Reduce Motion. The old look (thin streaks and white crosses over the shell) stays on the egg itself. A
+-- dedicated Blender rainbow sheen texture would look better still: the `rainbowStrip` slot (docs/120) is the Missing asset for it.
+P.Rainbow = {
+    hues = {{255, 112, 128}, {255, 170, 92}, {255, 224, 104}, {116, 222, 138}, {96, 190, 255}, {170, 136, 255}}, -- red, orange, yellow, green, blue, violet
+    bands = {phone = 4, tablet = 5, desktop = 6},
+    alpha = 0.55,          -- ring opacity at its strongest (limit: P.Limits.maxAlpha)
+    firstDiameter = 330,   -- the outermost (red) ring, px
+    step = 26,             -- each ring inside is this much smaller
+    still = {255, 170, 190}, -- the one static glow with Reduce Motion
+}
+-- Hue (an rgb triple) of rainbow band i of n: band 1 is the outermost and red, the last is violet, whatever the count.
+function P.rainbowHue(i: number, n: number): {number}
+    local hues = P.Rainbow.hues
+    local k = if n <= 1 then 1 else 1 + math.floor((i - 1) * (#hues - 1) / (n - 1) + 0.5)
+    return hues[math.clamp(k, 1, #hues)]
+end
+-- Ring i of n: diameter px and opacity. p = build progress 0..1; since = seconds after the burst (nil while building).
+function P.rainbowBand(i: number, n: number, time: number, p: number, since: number?): (number, number)
+    local R = P.Rainbow
+    local grow = 0.55 + 0.45 * ease(clamp01(p * 1.6))
+    local diameter = (R.firstDiameter - (i - 1) * R.step) * grow * (1 + 0.025 * math.sin(time * 1.3 + i * 0.8))
+    local opacity = R.alpha * clamp01(p * 1.8) * (0.9 + 0.1 * math.sin(time * 1.1 + i))
+    if since then opacity *= 1 - 0.4 * clamp01(since / 2.5) end
+    return diameter, math.min(P.Limits.maxAlpha, opacity)
+end
+function P.rainbowPalette(): {{number}}
+    return P.Rainbow.hues
+end
+
 -- ---------------------------------------------------------------- reveal chips (BD-220 / BD-223)
 -- Centre x, centre y, width, height in panel px. One colour chip right UNDER each paint bucket (bucket hovers at egg x -/+ HatchTimeline.BucketX),
 -- the pattern label just under the egg, the condition chip below it. One line each; none overlap (verified at every phone scale, since the
@@ -149,6 +181,23 @@ function P.overlaps(a: {number}, b: {number}): boolean
     return a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4]
 end
 
+-- ---------------------------------------------------------------- reveal card layout (BD-1073)
+-- Body coordinates (824 x 402). Studio round 4 (docs/192 C6): "Egg N of M" lay over the dinosaur's head, the head was cut at the top of the card
+-- (the view started 12 px above it and was zoomed 1.4x), and the viewport's own "BIG" label sat on the plinth under it. Now: the counter lives in the
+-- header strip (left of X), the dinosaur view starts at the top of the card and ends where the name starts, the zoom is lower, the viewport's own
+-- trait label is hidden (the ribbons already say Shiny / BIG), and why "Skip the rest" stopped is a small tag in the left margin.
+P.Card = {
+    dino = {cx = 412, cy = 118, w = 504, h = 236}, -- the dinosaur view: top 0, bottom 236 (the name label starts at 236)
+    baseZoom = 1.15,                               -- was 1.4: the head was cut
+    nameTop = 236,                                 -- the name label (Bootstrap: y 236)
+    stopTag = {cx = 116, cy = 160, w = 190, h = 46}, -- "Rainbow egg! / Skip stops here"; left margin, under the ribbons, beside the dinosaur
+    counterGap = 12,                               -- px between the "Egg N of M" counter and the X button in the header
+}
+function P.cardRect(name: string): {number}
+    local c = P.Card[name]
+    return {c.cx - c.w / 2, c.cy - c.h / 2, c.cx + c.w / 2, c.cy + c.h / 2}
+end
+
 -- ---------------------------------------------------------------- foreground sparkle pass
 -- Keep-out rectangles {x0, y0, x1, y1} in panel px: the dinosaur, the name / rarity area, the paint chips, the tap hint, the ribbons.
 P.KeepOut = {
@@ -157,6 +206,7 @@ P.KeepOut = {
     {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
     {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
+    {16, 136, 216, 184},   -- BD-1073: the "why Skip stopped" tag (left margin)
     {649, 36, 799, 70},    -- BIG ribbon (right)
 }
 -- Foreground sparkles live ONLY in the two side margins, below the ribbons: returns x, y, size, opacity.
