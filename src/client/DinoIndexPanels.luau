@@ -264,7 +264,7 @@ function Panels.species(ctx)
             return
         end
         if type(response) ~= "table" then
-            W.label(list, "Details unavailable. Tap the dino again.", UDim2.new(1, -10, 0, 40), UDim2.new(), 18, C.red, true)
+            W.label(list, "Tap the dino again to load details.", UDim2.new(1, -10, 0, 40), UDim2.new(), 18, C.red, true)
             return
         end
         if eggHit and eggHit.Parent then paintEggButton(eggHit, response) end
@@ -414,7 +414,7 @@ function Panels.species(ctx)
         if #view == 0 then
             local empty = W.label(right, "No dinos match, clear filters", UDim2.fromOffset(516, 44), UDim2.fromOffset(0, 150), 24, C.gold)
             empty.Name = "EmptyState"
-            W.button(right, "CLEAR FILTERS", UDim2.fromOffset(220, T), UDim2.fromOffset(148, 204), C.blue, function()
+            W.button(right, "Clear filters", UDim2.fromOffset(220, T), UDim2.fromOffset(148, 204), C.blue, function()
                 st.chosen, st.sortKey = {}, "rarest"
                 empty:Destroy()
                 buildRight()
@@ -444,7 +444,7 @@ function Panels.species(ctx)
         local active = MyDinos.activeChips(st.chosen, catalog)
         local sortChanged = st.sortKey ~= "rarest"
         local count = #active + (if sortChanged then 1 else 0)
-        local fb = W.button(right, if count > 0 then "SORT / FILTER (" .. count .. ")" else "SORT / FILTER", UDim2.fromOffset(204, T), UDim2.fromOffset(312, 0), C.purple, function() openSheet() end)
+        local fb = W.button(right, if count > 0 then "Sort/filter (" .. count .. ")" else "Sort/filter", UDim2.fromOffset(204, T), UDim2.fromOffset(312, 0), C.purple, function() openSheet() end)
         fb.Name, filterButton = "FilterButton", fb
         local top = 50
         if #active > 0 then

@@ -81,7 +81,7 @@ def contract(failures: list) -> int:
         if needle not in text:
             failures.append("CONTRACT: the walk uses %r but src/ no longer has it" % lit)
     # names built at run time are covered by their prefix above; titles and tab words below are upper-cased or compared by value
-    for lit in ("Run Complete!", "Oops! Good try!", "Welcome to Be Dino!", "LET'S PLAY", "GO HOME", "OPEN EGGS", "BACK TO SANCTUARY",
+    for lit in ("Run Complete!", "Oops! Good try!", "Welcome to Be Dino!", "Let's play", "GO HOME", "OPEN EGGS", "Back home", "How to play",
                 "An egg is hatching...", "Auto-opened eggs", "Skip the rest", "Tell us!", "BUY EGG", "Random Egg", "You have", "HELP",
                 "Common", "AUTO", "ManualExit", "Sanctuary", "Island", "startWeather", "stopWeather", "foodMultiplier", "buyPotion", "usePotion"):
         checked += 1
