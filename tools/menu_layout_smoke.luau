@@ -57,7 +57,7 @@ stubs.PotionArt = {icon = function() return nil end}
 stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end, readyIds = function() return {} end}
 stubs.PrivateState = {get = function() return nil end, str = function(_, fallback) return fallback or "" end}
 stubs.HudSettings = nil
-local clientNames = {ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
+local clientNames = {RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
@@ -96,25 +96,41 @@ local function isGuiObject(o) return o:IsA("GuiObject") end
 local SIZES = {
     {848, 423}, {848, 481}, {844, 390}, {844, 354}, {667, 375}, {667, 339}, {500, 465}, {500, 400}, {740, 340}, {1156, 793}, {1445, 841},
 }
-local NAV = {"collection", "eggs", "auras", "potions", "fusion", "settings", "home"} -- the rail: seven buttons (the cave hub destinations and the plain ones)
+local NAV = {"collection", "eggs", "fusion", "auras", "potions", "settings"} -- the rail, in Bootstrap's order (each button has a Destination attribute)
+local ConfigHub = nil -- a copy of Config with the Cave hub on (RailRun and the rail rules only act with it)
 
 -- ===== a HUD + modal shaped like Bootstrap's =====
 local ModalCompact
-local function buildWorld(viewW, viewH, touch)
+local RailRun
+local function buildWorld(viewW, viewH, touch, runState)
     loaded.ModalCompact = nil
     ModalCompact = requireModule(ClientFolder.ModalCompact)
+    if ConfigHub == nil then ConfigHub = table.clone(ConfigReal) ConfigHub.CaveHub = true end
+    loaded.RailRun, loaded.Config = nil, ConfigHub
+    RailRun = requireModule(ClientFolder.RailRun)
+    loaded.Config = ConfigReal
+    local character = inst("Model", "Character")
+    character:SetAttribute("RunState", runState or "Sanctuary")
+    Services.Players.LocalPlayer.Character = character
     local gui = inst("ScreenGui", "BeDinoUI", PlayerGui, {ViewSize = Vector2.new(viewW, viewH), DisplayOrder = 0})
-    local layout = TouchLayout.compute({width = viewW, height = viewH, touch = touch, navCount = #NAV, goals = true})
-    -- the rail (ZIndex 2, under the menu) with one button per destination, like Bootstrap's `rail` and `navigationButtons`
-    local r = layout.rail
-    local rail = inst("Frame", "Rail", gui, {Position = UDim2.fromOffset(r.x, r.y), Size = UDim2.fromOffset(r.w, r.h), ZIndex = 2})
-    inst("UIScale", "Scale", rail, {Scale = r.scale})
     local buttons = {}
+    -- Bootstrap's scales(): the rail is laid out for the buttons that are shown (RailRun.count) and each one takes the next slot (RailRun.position)
+    local rail0 = inst("Frame", "Rail", gui, {ZIndex = 2})
+    inst("UIScale", "Scale", rail0, {Scale = 1})
     for i, dest in NAV do
-        local pos = r.positions[i]
-        local b = inst("TextButton", "Rail_" .. dest, rail, {Position = UDim2.fromOffset(pos.x, pos.y), Size = UDim2.fromOffset(r.button.w, r.button.h), ZIndex = 4})
+        local b = inst("TextButton", "Rail_" .. dest, rail0, {ZIndex = 4})
         b:SetAttribute("Destination", dest)
         buttons[i] = b
+    end
+    local layout = TouchLayout.compute({width = viewW, height = viewH, touch = touch, navCount = RailRun.count(buttons), goals = true})
+    local r = layout.rail
+    rail0.Position, rail0.Size = UDim2.fromOffset(r.x, r.y), UDim2.fromOffset(r.w, r.h)
+    rail0:FindFirstChild("Scale").Scale = r.scale
+    local rail = rail0
+    for i, b in buttons do
+        local pos = RailRun.position(buttons, i, r.positions)
+        b.Position, b.Size = UDim2.fromOffset(pos.x, pos.y), UDim2.fromOffset(r.button.w, r.button.h)
+        b.Visible = not RailRun.hidden(b)
     end
     local wallet = inst("Frame", "Crystals", gui, {Position = UDim2.fromOffset(layout.crystal.x, layout.crystal.y), Size = UDim2.fromOffset(layout.crystal.w, layout.crystal.h), ZIndex = 5})
     inst("UIScale", "Scale", wallet, {Scale = layout.crystal.scale})
@@ -138,7 +154,7 @@ local function railRects(world)
     local list = {}
     for _, b in world.buttons do
         local r = rectOf(b)
-        table.insert(list, {kind = "rail", destination = b:GetAttribute("Destination"), x = r.x, y = r.y, w = r.w, h = r.h, enabled = true})
+        if b.Visible then table.insert(list, {kind = "rail", destination = b:GetAttribute("Destination"), x = r.x, y = r.y, w = r.w, h = r.h, enabled = true}) end
     end
     return list
 end
@@ -317,7 +333,7 @@ for _, touch in {false, true} do
             local cards = toastCards(Toasts)
             check(#cards == 3, tagBase .. ": three cards show with no menu (" .. #cards .. ")")
             local avoid = {{"the rail", rectOf(world.rail)}, {"the Crystals plate", rectOf(world.wallet)}}
-            for _, b in world.buttons do table.insert(avoid, {"rail button " .. b.Name, rectOf(b)}) end
+            for _, b in world.buttons do if b.Visible then table.insert(avoid, {"rail button " .. b.Name, rectOf(b)}) end end
             local g = world.layout.goals
             if g then table.insert(avoid, {"the goal line", {x = g.x, y = g.y, w = g.w, h = g.h}}) end
             for _, card in cards do
@@ -326,6 +342,21 @@ for _, touch in {false, true} do
                 for _, a in avoid do
                     check(not overlaps(r, a[2]), string.format("%s: a toast card (%s) covers %s (%s)", tagBase, describe(r), a[1], describe(a[2])))
                 end
+            end
+            world.gui:Destroy()
+        end
+        -- (a2) a rail taller than the plates (40% of the window high): the stack still clears it
+        do
+            local world = buildWorld(w, h, touch)
+            local Toasts = mountToasts(world)
+            local r = world.layout.rail
+            local tall = math.min(170, math.floor(h * 0.4))
+            world.gui:SetAttribute("RailRect", Rect.new(r.x, r.y, r.x + r.w, r.y + tall))
+            pushToasts(Toasts)
+            for _, card in toastCards(Toasts) do
+                local c = rectOf(card)
+                check(not overlaps(c, {x = r.x, y = r.y, w = r.w, h = tall}) or c.x + c.w <= r.x or c.x >= r.x + r.w, string.format("%s: a toast card (%s) covers a tall rail (%s)", tagBase, describe(c), describe({x = r.x, y = r.y, w = r.w, h = tall})))
+                check(c.y + c.h <= h + .5 and c.x >= -.5 and c.x + c.w <= w + .5, string.format("%s: with a tall rail the toast card (%s) leaves the canvas", tagBase, describe(c)))
             end
             world.gui:Destroy()
         end
@@ -347,7 +378,15 @@ for _, touch in {false, true} do
                 toastsSeenAt[Toasts.place.where] = (toastsSeenAt[Toasts.place.where] or 0) + 1
                 check(r.x >= -.5 and r.x + r.w <= w + .5 and r.y >= -.5 and r.y + r.h <= h + .5, string.format("%s: the toast card (%s) is not on the canvas", tag, describe(r)))
                 local forbidden = {{"X", rectOf(world.x)}, {"the heading", rectOf(world.heading)}}
-                for _, d in firstRow(world, page) do table.insert(forbidden, {"'" .. (if d.Text ~= "" then d.Text else d.Name) .. "'", rectOf(d)}) end
+                for _, d in firstRow(world, page) do
+                    local fr = rectOf(d)
+                    if d.Name ~= "Label" and not d:IsA("TextButton") and d.Name ~= "ForDinoHeader" then
+                        -- a card of the first row: its top 60% (name, chips, picture, price) stays free; the BUY button at the bottom stays tappable (a toast
+                        -- along the bottom edge lets taps through) and is what the player just pressed
+                        fr = {x = fr.x, y = fr.y, w = fr.w, h = fr.h * 0.6}
+                    end
+                    table.insert(forbidden, {"'" .. (if d.Text ~= "" then d.Text else d.Name) .. "'", fr})
+                end
                 if page == "potions" or page == "auras" or page == "trails" then
                     for _, f in forbidden do
                         check(not overlaps(r, f[2]), string.format("%s: the toast card (%s, %s) covers %s (%s)", tag, describe(r), Toasts.place.where, f[1], describe(f[2])))
@@ -368,6 +407,72 @@ for _, touch in {false, true} do
     end
 end
 for _, where in {"above", "below", "edge"} do print("  toast place " .. where .. ": " .. (toastsSeenAt[where] or 0) .. " cases") end
+
+-- ===== 5. BD-1105: in a run the "At home" buttons are hidden and the rail closes up =====
+-- Hub (Sanctuary): all six buttons show in their old slots. Run (Active, and every other state that is not Sanctuary): exactly Dinos, Eggs, Fusion and Shop are
+-- hidden, POTIONS and SETTINGS take the first two slots (no gap), stay 44 px, inside the canvas, and neither the toasts nor the rail rect overlap anything else.
+local HOME_ONLY = {collection = true, eggs = true, fusion = true, auras = true}
+for _, touch in {false, true} do
+    for _, size in SIZES do
+        local w, h = size[1], size[2]
+        local tag = string.format("Rail %dx%d%s", w, h, if touch then " touch" else "")
+        local hub = buildWorld(w, h, touch, "Sanctuary")
+        local shownHub = {}
+        for _, b in hub.buttons do if b.Visible then table.insert(shownHub, b:GetAttribute("Destination")) end end
+        check(#shownHub == 6, tag .. ": at home all six rail buttons show (" .. table.concat(shownHub, ",") .. ")")
+        -- the hub slots are the ones the six-button layout gives (nothing moved)
+        local sixLayout = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = true})
+        for i, b in hub.buttons do
+            local p = sixLayout.rail.positions[i]
+            check(b.Position.X.Offset == p.x and b.Position.Y.Offset == p.y, string.format("%s: at home button %s sits in slot %d", tag, b.Name, i))
+        end
+        hub.gui:Destroy()
+        for _, state in {"Active", "Ending", "Dead"} do
+            local run = buildWorld(w, h, touch, state)
+            local tagRun = tag .. " in a run (" .. state .. ")"
+            local shown, hidden = {}, {}
+            for _, b in run.buttons do
+                local dest = b:GetAttribute("Destination")
+                if b.Visible then table.insert(shown, b) else table.insert(hidden, dest) end
+                check(b.Visible == not HOME_ONLY[dest], string.format("%s: button %s must be %s", tagRun, dest, if HOME_ONLY[dest] then "hidden" else "shown"))
+            end
+            if check(#shown == 2, tagRun .. ": two buttons stay (" .. #shown .. ")") then
+                local a, b = rectOf(shown[1]), rectOf(shown[2])
+                local lay = run.layout
+                local p = lay.rail.positions
+                check(shown[1].Position.X.Offset == p[1].x and shown[1].Position.Y.Offset == p[1].y, tagRun .. ": the first button takes slot 1")
+                check(shown[2].Position.X.Offset == p[2].x and shown[2].Position.Y.Offset == p[2].y, tagRun .. ": the second button takes slot 2 (no gap)")
+                check(not overlaps(a, b), tagRun .. ": the two buttons overlap")
+                check(a.w >= 44 - .5 and a.h >= 44 - .5 and b.w >= 44 - .5 and b.h >= 44 - .5, tagRun .. ": the buttons are 44 px or more (" .. describe(a) .. " " .. describe(b) .. ")")
+                local rr = rectOf(run.rail)
+                check(inside(a, rr) and inside(b, rr), tagRun .. ": the buttons are inside the rail frame " .. describe(rr))
+                check(rr.x >= -.5 and rr.y >= -.5 and rr.x + rr.w <= w + .5 and rr.y + rr.h <= h + .5, tagRun .. ": the rail is on the canvas")
+                -- the toast stack and the wallet never lie over the two buttons
+                local Toasts = mountToasts(run)
+                pushToasts(Toasts)
+                for _, card in toastCards(Toasts) do
+                    local c = rectOf(card)
+                    check(not overlaps(c, a) and not overlaps(c, b) and not overlaps(c, rr), string.format("%s: a toast card (%s) covers the rail (%s)", tagRun, describe(c), describe(rr)))
+                    check(not overlaps(c, rectOf(run.wallet)), tagRun .. ": a toast covers the Crystals plate")
+                end
+                check(not overlaps(rr, rectOf(run.wallet)), tagRun .. ": the rail overlaps the Crystals plate")
+            end
+            check(RailRun.count(run.buttons) == 2 and RailRun.anyHidden(run.buttons), tagRun .. ": RailRun.count is 2")
+            run.gui:Destroy()
+        end
+    end
+end
+-- the rail rules themselves, for every destination and run state
+do
+    local HubRulesNow = HubRules
+    for _, dest in {"collection", "eggs", "fusion", "auras", "potions", "settings", "home", "other"} do
+        for _, state in {"Sanctuary", "Active", "Ending", "Dead", "", false} do
+            local want = HOME_ONLY[dest] == true and state ~= "Sanctuary" and state ~= "" and state ~= false
+            check(HubRulesNow.hiddenInRun(dest, true, state) == want, string.format("hiddenInRun(%s, hub on, %s) must be %s", tostring(dest), tostring(state), tostring(want)))
+            check(HubRulesNow.hiddenInRun(dest, false, state) == false, string.format("hiddenInRun(%s, hub OFF, %s) must be false (the default build is unchanged)", tostring(dest), tostring(state)))
+        end
+    end
+end
 
 -- ===== 3. BD-1103: slips of the shop pages (overlaps, text that cannot fit its box) =====
 -- Text cannot be measured in the mock (TextBounds is a constant), so a label's need is estimated: 0.5 em per character, lines wrap on the box width, 1.05 em per line.

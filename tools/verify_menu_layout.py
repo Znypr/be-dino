@@ -36,6 +36,7 @@ MODULES.update({
     'NotifyQueue': 'src/shared/NotifyQueue.luau',
     'AssetSlots': 'src/shared/AssetSlots.luau',
     'Toasts': 'src/client/Toasts.luau',
+    'RailRun': 'src/client/RailRun.luau',
     'ToastSlot': 'src/shared/ToastSlot.luau',
 })
 
@@ -84,6 +85,39 @@ MUTANTS = {
     'the For-dino strip keeps 40 px (the note needs two lines)': {
         'ShopScreens': [('math.ceil(28/viewportScale())+8', '0')],
     },
+    # BD-1102: toasts over the rail and over the top of an open menu
+    'the toast stack ignores the rail (it lies over the rail buttons)': {
+        'Toasts': [('local rail=gui:GetAttribute("RailRect") :: Rect?', 'local rail=nil :: Rect?')],
+    },
+    'the toast stack never drops under a blocker': {
+        'ToastSlot': [('for _, b in p.keepClear do if b.y + b.h + Slot.Gap > Slot.RunY then table.insert(ys, b.y + b.h + Slot.Gap) end end', ''), ('for _, b in p.keepClear do lowest = math.max(lowest, b.y + b.h + Slot.Gap) end', '')],
+    },
+    'with a menu open the toast takes the top of the menu again (y 4)': {
+        'ToastSlot': [('if Slot.MenuY <= clearAbove then', 'if true then'),
+                      ('            if onScreen(r) and not hitsAny(r, p.keepClear) then\n                return {x = xOff, y = Slot.MenuY,', '            if onScreen(r) then\n                return {x = xOff, y = Slot.MenuY,')],
+    },
+    'with a menu open the whole stack of three shows': {
+        'Toasts': [('    if oneCard then shown={shown[#shown]} end', '')],
+    },
+    'a toast along the bottom edge takes the tap (the menu under it cannot be pressed)': {
+        'Toasts': [('for _,slot in toastCards do slot.tap.Active=not passThrough end', 'for _,slot in toastCards do slot.tap.Active=true end')],
+    },
+    # BD-1105: the "At home" buttons in a run
+    'the "At home" buttons stay shown in a run': {
+        'HubTravelClientRules': [('Rules.HideDimmedInRun = true', 'Rules.HideDimmedInRun = false')],
+    },
+    'a run also hides POTIONS and SETTINGS': {
+        'HubTravelClientRules': [('return Rules.HideDimmedInRun == true and Rules.dimmed(destination, caveHub, runState)', 'return Rules.HideDimmedInRun == true and caveHub == true and Rules.inRun(runState)')],
+    },
+    'the hub hides the buttons too (hub state not checked)': {
+        'HubTravelClientRules': [('return Rules.HideDimmedInRun == true and Rules.dimmed(destination, caveHub, runState)', 'return Rules.HideDimmedInRun == true and Rules.RunDimmed[destination] == true')],
+    },
+    'the rail keeps the six-button slots in a run (a gap between POTIONS and SETTINGS and the top)': {
+        'RailRun': [('return positions[math.max(rank, 1)]', 'return positions[i]')],
+    },
+    'the rail is laid out for six buttons in a run': {
+        'RailRun': [('if not M.hidden(b) then n += 1 end', 'n += 1')],
+    },
 }
 
 
@@ -98,8 +132,11 @@ def main():
         print(result.stderr)
         sys.exit(result.returncode or 1)
     if not args.no_mutants:
-        for name, replacements in MUTANTS.items():
-            result = sw.run(args.runner, build(replacements))
+        from concurrent.futures import ThreadPoolExecutor  # each mutant is its own luau process: run them side by side
+        names = list(MUTANTS)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(lambda n: sw.run(args.runner, build(MUTANTS[n])), names))
+        for name, result in zip(names, results):
             assert result.returncode != 0, 'MUTANT SURVIVED (the smoke did not notice): ' + name
             print('  mutant caught: ' + name)
     print('Menu layout passed, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS)))

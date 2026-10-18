@@ -63,7 +63,7 @@ function Slot.place(p: {canvasW: number, canvasH: number, scale: number, keepCle
     local menu = p.menu
     if menu == nil then
         local ys = {Slot.RunY}
-        for _, b in p.keepClear do table.insert(ys, b.y + b.h + Slot.Gap) end
+        for _, b in p.keepClear do if b.y + b.h + Slot.Gap > Slot.RunY then table.insert(ys, b.y + b.h + Slot.Gap) end end
         table.sort(ys)
         for index, y in ys do
             for _, xOff in xChoices(y, Slot.MaxCards) do

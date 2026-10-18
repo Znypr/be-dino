@@ -11,6 +11,7 @@ local PrivateState = require(script.Parent.PrivateState)
 local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FtueRules"))
 local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("UITheme"))
 
+local RailRun = require(script.Parent.RailRun) -- BD-1105
 local Rail = {}
 local player = Players.LocalPlayer
 
@@ -24,6 +25,7 @@ end
 
 -- rail = the left menu frame; buttons = the six nav buttons in order (each has a "Destination" attribute).
 function Rail.attach(rail: Frame, buttons: {TextButton})
+    RailRun.attach(rail.Parent :: Instance, buttons) -- BD-1105
     if require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")).PatternColourIndexEnabled == true then require(script.Parent.IndexTabs).attachDot(buttons) end -- BD-1039: the dot on the Dinos button (flag)
     local chip = Instance.new("TextButton")
     chip.Name, chip.Text, chip.Font, chip.TextSize, chip.TextColor3 = "MenuChip", Rules.MenuChipText, Enum.Font.FredokaOne, 20, Theme.Colors.text
@@ -38,13 +40,13 @@ function Rail.attach(rail: Frame, buttons: {TextButton})
     local collapsed, expanded, openedAt, wasActive = false, false, 0, false
     local function apply()
         for _, b in buttons do
-            b.Visible = Rules.buttonVisible(tostring(b:GetAttribute("Destination")), collapsed, expanded)
+            b.Visible = Rules.buttonVisible(tostring(b:GetAttribute("Destination")), collapsed, expanded) and not RailRun.hidden(b) -- BD-1105: the "At home" buttons are hidden in a run
         end
         -- The empty panel is hidden while collapsed so only the three items float at the edge.
         rail.BackgroundTransparency = if collapsed and not expanded then 1 else panelTransparency
         for _, s in strokes do s.Enabled = not (collapsed and not expanded) end
         local slot = buttons[4]
-        chip.Visible = Rules.chipVisible(collapsed, expanded) and slot ~= nil
+        chip.Visible = Rules.chipVisible(collapsed, expanded) and slot ~= nil and not RailRun.anyHidden(buttons) -- BD-1105: in a run with the hub on the MENU chip would open nothing
         if slot then chip.Position, chip.Size = slot.Position, slot.Size end
     end
     chip.Activated:Connect(function()

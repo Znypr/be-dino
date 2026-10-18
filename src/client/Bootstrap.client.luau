@@ -146,8 +146,7 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
--- The modal blur belongs to a visible modal only (BD-296). Visible means: a menu is open, the scrim is shown, AND the BeDinoUI ScreenGui is
--- enabled and still in the PlayerGui. Disabling or destroying the ScreenGui while a menu was open used to leave the blur at 8 with nothing on screen.
+-- BD-296: the modal blur belongs to a visible modal only (menu open, scrim shown, ScreenGui enabled and in the PlayerGui).
 local function modalState(): ModalBlurGuard.State
     return {active=active, shadeVisible=shade.Visible, guiEnabled=gui.Enabled, guiAttached=gui:IsDescendantOf(player) and shade:IsDescendantOf(gui)}
 end
@@ -955,7 +954,8 @@ local function scales()
     local size=gui.AbsoluteSize
     if size.X<=0 or size.Y<=0 then return end
     local touch=touchMode()
-    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
+    local railRun=require(script.Parent.RailRun)
+    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=railRun.count(navigationButtons),
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
         jump=if touch then coreTouchRect("JumpButton") else nil,
         goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active"), -- BD-531: the hub Goals header takes space under the goal line
@@ -980,7 +980,7 @@ local function scales()
     place(action,actionScale,layout.action)
     local cell=layout.rail.button
     for i,b in navigationButtons do
-        local cellPosition=layout.rail.positions[i]
+        local cellPosition=railRun.position(navigationButtons,i,layout.rail.positions)
         b.Position,b.Size=UDim2.fromOffset(cellPosition.x,cellPosition.y),UDim2.fromOffset(cell.w,cell.h)
         for _,child in b:GetChildren() do
             if child:IsA("TextLabel") then
@@ -1038,6 +1038,7 @@ player.CharacterAdded:Connect(characterAdded)
 if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
+gui:GetAttributeChangedSignal("RailRun"):Connect(scales)
 -- Re-layout when Roblox creates/moves its touch controls or the preferred input changes.
 local layoutQueued=false
 local function queueLayout()
