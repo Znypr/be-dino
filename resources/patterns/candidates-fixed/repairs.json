@@ -1,0 +1,188 @@
+{
+ "a-A1": {
+  "kind": 0.81,
+  "layout": 0.1,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-A2": {
+  "kind": 0.98,
+  "layout": 0.77,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-A3": {
+  "kind": 0.97,
+  "layout": 0.77,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-A4": {
+  "kind": 0.97,
+  "layout": 0.35,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-B1": {
+  "kind": 0.92,
+  "layout": 0.59,
+  "method": "period-crop",
+  "was": "FAIL"
+ },
+ "a-B2": {
+  "kind": 0.95,
+  "layout": 0.31,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-B3": {
+  "kind": 0.95,
+  "layout": 0.07,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-B4": {
+  "kind": 0.91,
+  "layout": 0.23,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-C1": {
+  "kind": 0.96,
+  "layout": 0.92,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-C2": {
+  "kind": 0.84,
+  "layout": 0.2,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-C3": {
+  "kind": 1.0,
+  "layout": 1.0,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-C4": {
+  "kind": 0.93,
+  "layout": 0.11,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-D1": {
+  "kind": 0.96,
+  "layout": 0.91,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-D2": {
+  "kind": 0.85,
+  "layout": 0.55,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "a-D3": {
+  "kind": 0.92,
+  "layout": 0.13,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "a-D4": {
+  "kind": 0.92,
+  "layout": 0.82,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-A1": {
+  "kind": 0.92,
+  "layout": 0.45,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-A2": {
+  "kind": 0.85,
+  "layout": 0.27,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-A3": {
+  "kind": 0.91,
+  "layout": 0.2,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-A4": {
+  "kind": 0.86,
+  "layout": 0.09,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-B1": {
+  "kind": 0.9,
+  "layout": 0.12,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-B3": {
+  "kind": 0.87,
+  "layout": 0.51,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-B4": {
+  "kind": 0.93,
+  "layout": 0.14,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-C1": {
+  "kind": 0.94,
+  "layout": 0.52,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-C2": {
+  "kind": 0.99,
+  "layout": 0.96,
+  "method": "trim",
+  "was": "PASS-SHIFT"
+ },
+ "b-C3": {
+  "kind": 0.95,
+  "layout": 0.77,
+  "method": "period-crop",
+  "was": "FAIL"
+ },
+ "b-C4": {
+  "kind": 0.89,
+  "layout": 0.65,
+  "method": "blend",
+  "was": "FAIL"
+ },
+ "b-D1": {
+  "kind": 0.93,
+  "layout": 0.81,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-D2": {
+  "kind": 0.92,
+  "layout": 0.17,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-D3": {
+  "kind": 0.86,
+  "layout": 0.02,
+  "method": "mirror",
+  "was": "FAIL"
+ },
+ "b-D4": {
+  "kind": 0.87,
+  "layout": 0.17,
+  "method": "mirror",
+  "was": "FAIL"
+ }
+}

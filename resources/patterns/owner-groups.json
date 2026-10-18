@@ -1,0 +1,6 @@
+{
+  "note": "Tiles the owner says look alike (he looked at the ChatGPT sheets himself). Read by tools/pattern_similarity.py --owner-groups. Owner wins over the numbers; keep one tile per group.",
+  "groups": [
+    {"tiles": ["a-A2", "a-D3", "a-D4"], "said": "owner 2026-10-18, first ChatGPT sheet: wavy stripes, zig-zag and honeycomb look really similar"}
+  ]
+}
