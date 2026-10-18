@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""BD-1101 / BD-1102 / BD-1103 (docs/200): the shop tab row can be tapped at every window size, toasts never cover the rail or the top of an open menu,
+"""BD-1101 / BD-1102 / BD-1103 (docs/201): the shop tab row can be tapped at every window size, toasts never cover the rail or the top of an open menu,
 and the shop pages have no small-window slips. Studio round 6 (docs/199, pictures 361 to 379) found at 500 x 465: a tap on the TRAILS tab opened the shop
 landing page, a tap on EGGS closed the shop and pressed the rail EGGS button (the rail buttons lie over the tab row); a toast lay over the whole rail row and
 the top of open menus; price lines under BUY, a hint over a card row, text cut.

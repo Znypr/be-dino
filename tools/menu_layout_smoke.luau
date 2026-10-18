@@ -1,4 +1,4 @@
--- Offline menu-layout smoke (BD-1101, BD-1102, BD-1103; driven by tools/verify_menu_layout.py; docs/200).
+-- Offline menu-layout smoke (BD-1101, BD-1102, BD-1103; driven by tools/verify_menu_layout.py; docs/201).
 -- The REAL ShopScreens (Crystal Shops, Potion Shop, the confirm pages), the REAL Toasts and the REAL TouchLayout / ModalCompact / PhoneScale run in the
 -- geometry mock of tools/close_paths_smoke.luau (the datatypes and instances are copied in by the verifier at the marker line below), inside a tree shaped
 -- like Bootstrap's: BeDinoUI > the HUD rail (under the menu) + ModalScrim > panel > header + body, and the toast stack above everything.

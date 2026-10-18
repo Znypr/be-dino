@@ -1,5 +1,5 @@
 --!strict
--- BD-1102 (docs/200): where the toast stack goes. Pure numbers, no Roblox services (tools/verify_menu_layout.py runs it on the real layouts).
+-- BD-1102 (docs/201): where the toast stack goes. Pure numbers, no Roblox services (tools/verify_menu_layout.py runs it on the real layouts).
 -- Studio round 6 (docs/199, pictures 361, 366, 376) at 500 x 465: a toast lay over the whole HUD rail row, and with a menu open over the shop tab row
 -- and the first row of potion prices. The old rule (TouchLayout.toastPlacement) only knew the Crystals plate.
 --   no menu open: the stack (3 cards tall) sits at the old slot (y 80) when it is clear of every `keepClear` rectangle (the Crystals plate and the goal line
