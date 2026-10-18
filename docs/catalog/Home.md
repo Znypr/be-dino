@@ -195,11 +195,11 @@ Every chance in the game in one table. Details are on the linked pages.
 
 | Chance | Value | For | Page | Source file | Status |
 |---|---|---|---|---|---|
-| Dinosaur: Common | 72% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
-| Dinosaur: Uncommon | 24% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
-| Dinosaur: Rare | 3.2% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
-| Dinosaur: Epic | 0.7% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
-| Dinosaur: Legendary | 0.1% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
+| Dinosaur: Common | 91% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
+| Dinosaur: Uncommon | 8.5% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
+| Dinosaur: Rare | 0.42% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
+| Dinosaur: Epic | 0.07% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
+| Dinosaur: Legendary | 0.01% | per shop egg | [open](Dinosaurs.md#rarity-tiers) | `src/shared/Config.luau ChestSpeciesWeights` | PROVISIONAL |
 | Secret dinosaur | 0.5% | per run or nest egg | [open](Dinosaurs.md#secret-dinosaurs) | `src/shared/SecretSpeciesConfig.luau` | PROVISIONAL (SECRET, internal only) |
 | Egg condition: Cracked | 50% | per egg, tier 0 | [open](Eggs-and-looks.md#conditions) | `src/shared/ProgressionConfig.luau ConditionWeights` | owner target |
 | Egg condition: Dirty | 30% | per egg, tier 0 | [open](Eggs-and-looks.md#conditions) | `src/shared/ProgressionConfig.luau ConditionWeights` | owner target |

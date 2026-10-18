@@ -24,11 +24,11 @@ Chances are per egg. "Shop egg" is one egg bought with crystals. "Big run" is th
 
 | Rarity | Dinos | Shop egg | Big run | Which |
 |---|---|---|---|---|
-| Common | 5 | 72% | 71.71% | Compy, Raptor, Dimorphodon, Gallimimus, Microraptor |
-| Uncommon | 5 | 24% | 23.9% | Stegosaurus, Archaeopteryx, Pachycephalosaurus, Parasaurolophus, Pteranodon |
-| Rare | 5 | 3.2% | 3.506% | Triceratops, Baryonyx, Brachiosaurus, Ichthyosaurus, Plesiosaurus |
-| Epic | 4 | 0.7% | 0.7669% | Ankylosaurus, Elasmosaurus, Quetzalcoatlus, Therizinosaurus |
-| Legendary | 3 | 0.1% | 0.1096% | T-Rex, Mosasaurus, Spinosaurus |
+| Common | 5 | 91% | 90.55% | Compy, Raptor, Dimorphodon, Gallimimus, Microraptor |
+| Uncommon | 5 | 8.5% | 8.458% | Stegosaurus, Archaeopteryx, Pachycephalosaurus, Parasaurolophus, Pteranodon |
+| Rare | 5 | 0.42% | 0.8358% | Triceratops, Baryonyx, Brachiosaurus, Ichthyosaurus, Plesiosaurus |
+| Epic | 4 | 0.07% | 0.1393% | Ankylosaurus, Elasmosaurus, Quetzalcoatlus, Therizinosaurus |
+| Legendary | 3 | 0.01% | 0.0199% | T-Rex, Mosasaurus, Spinosaurus |
 
 <a id="all-dinosaurs"></a>
 ## All dinosaurs
@@ -37,28 +37,28 @@ Chances are per egg. "Shop egg" is one egg bought with crystals. "Big run" is th
 
 | Dino | Class | Rarity | Shop egg (PROVISIONAL) | Big run | Size |
 |---|---|---|---|---|---|
-| [Compy](#dino-compy) | Ground | Common (tier 1 of 5) | 26% | 25.9% | 6.6 studs tall |
-| [Triceratops](#dino-triceratops) | Ground | Rare (tier 3 of 5) | 1% | 1.096% | 8 studs tall |
-| [T-Rex](#dino-tyrannosaurus) | Ground | Legendary (tier 5 of 5) | 0.04% | 0.04382% | 10.6 studs tall |
-| [Raptor](#dino-raptor) | Ground | Common (tier 1 of 5) | 22% | 21.91% | 6.6 studs tall |
-| [Stegosaurus](#dino-stegosaurus) | Ground | Uncommon (tier 2 of 5) | 6% | 5.976% | 7.25 studs tall |
-| [Ankylosaurus](#dino-ankylosaurus) | Armored | Epic (tier 4 of 5) | 0.2% | 0.2191% | 6.51 studs tall |
-| [Archaeopteryx](#dino-archaeopteryx) | Fly | Uncommon (tier 2 of 5) | 6% | 5.976% | 5.31 studs tall |
-| [Baryonyx](#dino-baryonyx) | Ground | Rare (tier 3 of 5) | 0.5% | 0.5478% | 7.99 studs tall |
-| [Brachiosaurus](#dino-brachiosaurus) | Ground | Rare (tier 3 of 5) | 0.7% | 0.7669% | 8 studs tall |
-| [Dimorphodon](#dino-dimorphodon) | Fly | Common (tier 1 of 5) | 7% | 6.972% | 5.13 studs tall |
-| [Elasmosaurus](#dino-elasmosaurus) | Ground | Epic (tier 4 of 5) | 0.2% | 0.2191% | 8.78 studs tall |
-| [Gallimimus](#dino-gallimimus) | Ground | Common (tier 1 of 5) | 9% | 8.964% | 6.61 studs tall |
-| [Ichthyosaurus](#dino-ichthyosaurus) | Water | Rare (tier 3 of 5) | 0.5% | 0.5478% | 5.57 studs tall |
-| [Microraptor](#dino-microraptor) | Fly | Common (tier 1 of 5) | 8% | 7.968% | 4.56 studs tall |
-| [Mosasaurus](#dino-mosasaurus) | Water | Legendary (tier 5 of 5) | 0.03% | 0.03287% | 5.77 studs tall |
-| [Pachycephalosaurus](#dino-pachycephalosaurus) | Ground | Uncommon (tier 2 of 5) | 4% | 3.984% | 7.25 studs tall |
-| [Parasaurolophus](#dino-parasaurolophus) | Ground | Uncommon (tier 2 of 5) | 5% | 4.98% | 7.27 studs tall |
-| [Plesiosaurus](#dino-plesiosaurus) | Water | Rare (tier 3 of 5) | 0.5% | 0.5478% | 7.74 studs tall |
-| [Pteranodon](#dino-pteranodon) | Fly | Uncommon (tier 2 of 5) | 3% | 2.988% | 4.62 studs tall |
-| [Quetzalcoatlus](#dino-quetzalcoatlus) | Fly | Epic (tier 4 of 5) | 0.15% | 0.1643% | 6.12 studs tall |
-| [Spinosaurus](#dino-spinosaurus) | Ground | Legendary (tier 5 of 5) | 0.03% | 0.03287% | 9.66 studs tall |
-| [Therizinosaurus](#dino-therizinosaurus) | Ground | Epic (tier 4 of 5) | 0.15% | 0.1643% | 8.78 studs tall |
+| [Compy](#dino-compy) | Ground | Common (tier 1 of 5) | 36.4% | 36.22% | 6.6 studs tall |
+| [Triceratops](#dino-triceratops) | Ground | Rare (tier 3 of 5) | 0.13% | 0.2587% | 8 studs tall |
+| [T-Rex](#dino-tyrannosaurus) | Ground | Legendary (tier 5 of 5) | 0.004% | 0.00796% | 10.6 studs tall |
+| [Raptor](#dino-raptor) | Ground | Common (tier 1 of 5) | 26% | 25.87% | 6.6 studs tall |
+| [Stegosaurus](#dino-stegosaurus) | Ground | Uncommon (tier 2 of 5) | 2.2% | 2.189% | 7.25 studs tall |
+| [Ankylosaurus](#dino-ankylosaurus) | Armored | Epic (tier 4 of 5) | 0.02% | 0.0398% | 6.51 studs tall |
+| [Archaeopteryx](#dino-archaeopteryx) | Fly | Uncommon (tier 2 of 5) | 2.2% | 2.189% | 5.31 studs tall |
+| [Baryonyx](#dino-baryonyx) | Ground | Rare (tier 3 of 5) | 0.07% | 0.1393% | 7.99 studs tall |
+| [Brachiosaurus](#dino-brachiosaurus) | Ground | Rare (tier 3 of 5) | 0.09% | 0.1791% | 8 studs tall |
+| [Dimorphodon](#dino-dimorphodon) | Fly | Common (tier 1 of 5) | 7% | 6.965% | 5.13 studs tall |
+| [Elasmosaurus](#dino-elasmosaurus) | Ground | Epic (tier 4 of 5) | 0.02% | 0.0398% | 8.78 studs tall |
+| [Gallimimus](#dino-gallimimus) | Ground | Common (tier 1 of 5) | 12% | 11.94% | 6.61 studs tall |
+| [Ichthyosaurus](#dino-ichthyosaurus) | Water | Rare (tier 3 of 5) | 0.065% | 0.1294% | 5.57 studs tall |
+| [Microraptor](#dino-microraptor) | Fly | Common (tier 1 of 5) | 9.6% | 9.552% | 4.56 studs tall |
+| [Mosasaurus](#dino-mosasaurus) | Water | Legendary (tier 5 of 5) | 0.003% | 0.00597% | 5.77 studs tall |
+| [Pachycephalosaurus](#dino-pachycephalosaurus) | Ground | Uncommon (tier 2 of 5) | 1.3% | 1.294% | 7.25 studs tall |
+| [Parasaurolophus](#dino-parasaurolophus) | Ground | Uncommon (tier 2 of 5) | 1.7% | 1.692% | 7.27 studs tall |
+| [Plesiosaurus](#dino-plesiosaurus) | Water | Rare (tier 3 of 5) | 0.065% | 0.1294% | 7.74 studs tall |
+| [Pteranodon](#dino-pteranodon) | Fly | Uncommon (tier 2 of 5) | 1.1% | 1.095% | 4.62 studs tall |
+| [Quetzalcoatlus](#dino-quetzalcoatlus) | Fly | Epic (tier 4 of 5) | 0.015% | 0.02985% | 6.12 studs tall |
+| [Spinosaurus](#dino-spinosaurus) | Ground | Legendary (tier 5 of 5) | 0.003% | 0.00597% | 9.66 studs tall |
+| [Therizinosaurus](#dino-therizinosaurus) | Ground | Epic (tier 4 of 5) | 0.015% | 0.02985% | 8.78 studs tall |
 
 **SECRET, internal only.** 9 secret dinosaurs. The chance is per run or nest egg, never a shop egg.
 
@@ -135,7 +135,7 @@ id: `compy`
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Common (tier 1 of 5)
-- **Chance per egg:** 26% from a shop egg (1 in 3.85); 25.9% in a big run (PROVISIONAL)
+- **Chance per egg:** 36.4% from a shop egg (1 in 2.75); 36.22% in a big run (PROVISIONAL)
 - **Size:** 6.6 studs tall, 7.69 long, 3.49 wide
 
 <a id="dino-triceratops"></a>
@@ -147,7 +147,7 @@ id: `triceratops`
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Rare (tier 3 of 5)
-- **Chance per egg:** 1% from a shop egg (1 in 100); 1.096% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.13% from a shop egg (1 in 769); 0.2587% in a big run (PROVISIONAL)
 - **Size:** 8 studs tall, 8.58 long, 5.79 wide
 
 <a id="dino-tyrannosaurus"></a>
@@ -159,7 +159,7 @@ id: `tyrannosaurus`
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Legendary (tier 5 of 5)
-- **Chance per egg:** 0.04% from a shop egg (1 in 2,500); 0.04382% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.004% from a shop egg (1 in 25,000); 0.00796% in a big run (PROVISIONAL)
 - **Size:** 10.6 studs tall, 11.4 long, 5.83 wide (estimated, not measured in Studio)
 
 <a id="dino-raptor"></a>
@@ -171,7 +171,7 @@ id: `raptor`
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Common (tier 1 of 5)
-- **Chance per egg:** 22% from a shop egg (1 in 4.55); 21.91% in a big run (PROVISIONAL)
+- **Chance per egg:** 26% from a shop egg (1 in 3.85); 25.87% in a big run (PROVISIONAL)
 - **Size:** 6.6 studs tall, 7.74 long, 3.49 wide
 
 <a id="dino-stegosaurus"></a>
@@ -183,7 +183,7 @@ id: `stegosaurus`
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Uncommon (tier 2 of 5)
-- **Chance per egg:** 6% from a shop egg (1 in 17); 5.976% in a big run (PROVISIONAL)
+- **Chance per egg:** 2.2% from a shop egg (1 in 45); 2.189% in a big run (PROVISIONAL)
 - **Size:** 7.25 studs tall, 11.7 long, 5.25 wide
 
 <a id="dino-ankylosaurus"></a>
@@ -195,7 +195,7 @@ id: `ankylosaurus`
 
 - **Class:** Armored (Tough armor)
 - **Rarity:** Epic (tier 4 of 5)
-- **Chance per egg:** 0.2% from a shop egg (1 in 500); 0.2191% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.02% from a shop egg (1 in 5,000); 0.0398% in a big run (PROVISIONAL)
 - **Size:** 6.51 studs tall, 10.7 long, 5.77 wide (estimated, not measured in Studio)
 
 <a id="dino-archaeopteryx"></a>
@@ -207,7 +207,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Fly (Flies and glides)
 - **Rarity:** Uncommon (tier 2 of 5)
-- **Chance per egg:** 6% from a shop egg (1 in 17); 5.976% in a big run (PROVISIONAL)
+- **Chance per egg:** 2.2% from a shop egg (1 in 45); 2.189% in a big run (PROVISIONAL)
 - **Size:** 5.31 studs tall, 5.92 long, 7.17 wide
 
 <a id="dino-baryonyx"></a>
@@ -219,7 +219,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Rare (tier 3 of 5)
-- **Chance per egg:** 0.5% from a shop egg (1 in 200); 0.5478% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.07% from a shop egg (1 in 1,429); 0.1393% in a big run (PROVISIONAL)
 - **Size:** 7.99 studs tall, 9.33 long, 3.99 wide
 
 <a id="dino-brachiosaurus"></a>
@@ -231,7 +231,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Rare (tier 3 of 5)
-- **Chance per egg:** 0.7% from a shop egg (1 in 143); 0.7669% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.09% from a shop egg (1 in 1,111); 0.1791% in a big run (PROVISIONAL)
 - **Size:** 8 studs tall, 8.73 long, 3.73 wide
 
 <a id="dino-dimorphodon"></a>
@@ -243,7 +243,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Fly (Flies and glides)
 - **Rarity:** Common (tier 1 of 5)
-- **Chance per egg:** 7% from a shop egg (1 in 14); 6.972% in a big run (PROVISIONAL)
+- **Chance per egg:** 7% from a shop egg (1 in 14); 6.965% in a big run (PROVISIONAL)
 - **Size:** 5.13 studs tall, 5.73 long, 5.76 wide
 
 <a id="dino-elasmosaurus"></a>
@@ -255,7 +255,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Epic (tier 4 of 5)
-- **Chance per egg:** 0.2% from a shop egg (1 in 500); 0.2191% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.02% from a shop egg (1 in 5,000); 0.0398% in a big run (PROVISIONAL)
 - **Size:** 8.78 studs tall, 10.7 long, 3.95 wide
 
 <a id="dino-gallimimus"></a>
@@ -267,7 +267,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Common (tier 1 of 5)
-- **Chance per egg:** 9% from a shop egg (1 in 11); 8.964% in a big run (PROVISIONAL)
+- **Chance per egg:** 12% from a shop egg (1 in 8.33); 11.94% in a big run (PROVISIONAL)
 - **Size:** 6.61 studs tall, 7.78 long, 2.42 wide
 
 <a id="dino-ichthyosaurus"></a>
@@ -279,7 +279,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Water (Swims and dashes)
 - **Rarity:** Rare (tier 3 of 5)
-- **Chance per egg:** 0.5% from a shop egg (1 in 200); 0.5478% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.065% from a shop egg (1 in 1,538); 0.1294% in a big run (PROVISIONAL)
 - **Size:** 5.57 studs tall, 11.1 long, 4.89 wide
 
 <a id="dino-microraptor"></a>
@@ -291,7 +291,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Fly (Flies and glides)
 - **Rarity:** Common (tier 1 of 5)
-- **Chance per egg:** 8% from a shop egg (1 in 12); 7.968% in a big run (PROVISIONAL)
+- **Chance per egg:** 9.6% from a shop egg (1 in 10); 9.552% in a big run (PROVISIONAL)
 - **Size:** 4.56 studs tall, 5.29 long, 7.11 wide
 
 <a id="dino-mosasaurus"></a>
@@ -303,7 +303,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Water (Swims and dashes)
 - **Rarity:** Legendary (tier 5 of 5)
-- **Chance per egg:** 0.03% from a shop egg (1 in 3,333); 0.03287% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.003% from a shop egg (1 in 33,333); 0.00597% in a big run (PROVISIONAL)
 - **Size:** 5.77 studs tall, 16.9 long, 5.48 wide
 
 <a id="dino-pachycephalosaurus"></a>
@@ -315,7 +315,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Uncommon (tier 2 of 5)
-- **Chance per egg:** 4% from a shop egg (1 in 25); 3.984% in a big run (PROVISIONAL)
+- **Chance per egg:** 1.3% from a shop egg (1 in 77); 1.294% in a big run (PROVISIONAL)
 - **Size:** 7.25 studs tall, 8.43 long, 4.51 wide
 
 <a id="dino-parasaurolophus"></a>
@@ -327,7 +327,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Uncommon (tier 2 of 5)
-- **Chance per egg:** 5% from a shop egg (1 in 20); 4.98% in a big run (PROVISIONAL)
+- **Chance per egg:** 1.7% from a shop egg (1 in 59); 1.692% in a big run (PROVISIONAL)
 - **Size:** 7.27 studs tall, 9.09 long, 5.3 wide
 
 <a id="dino-plesiosaurus"></a>
@@ -339,7 +339,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Water (Swims and dashes)
 - **Rarity:** Rare (tier 3 of 5)
-- **Chance per egg:** 0.5% from a shop egg (1 in 200); 0.5478% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.065% from a shop egg (1 in 1,538); 0.1294% in a big run (PROVISIONAL)
 - **Size:** 7.74 studs tall, 8.34 long, 4.66 wide
 
 <a id="dino-pteranodon"></a>
@@ -351,7 +351,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Fly (Flies and glides)
 - **Rarity:** Uncommon (tier 2 of 5)
-- **Chance per egg:** 3% from a shop egg (1 in 33); 2.988% in a big run (PROVISIONAL)
+- **Chance per egg:** 1.1% from a shop egg (1 in 91); 1.095% in a big run (PROVISIONAL)
 - **Size:** 4.62 studs tall, 6.89 long, 7.07 wide
 
 <a id="dino-quetzalcoatlus"></a>
@@ -363,7 +363,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Fly (Flies and glides)
 - **Rarity:** Epic (tier 4 of 5)
-- **Chance per egg:** 0.15% from a shop egg (1 in 667); 0.1643% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.015% from a shop egg (1 in 6,667); 0.02985% in a big run (PROVISIONAL)
 - **Size:** 6.12 studs tall, 8.04 long, 8.2 wide
 
 <a id="dino-spinosaurus"></a>
@@ -375,7 +375,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Legendary (tier 5 of 5)
-- **Chance per egg:** 0.03% from a shop egg (1 in 3,333); 0.03287% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.003% from a shop egg (1 in 33,333); 0.00597% in a big run (PROVISIONAL)
 - **Size:** 9.66 studs tall, 12.1 long, 5.53 wide
 
 <a id="dino-therizinosaurus"></a>
@@ -387,7 +387,7 @@ _No picture yet (see Missing on the Home page)._
 
 - **Class:** Ground (Fast runner)
 - **Rarity:** Epic (tier 4 of 5)
-- **Chance per egg:** 0.15% from a shop egg (1 in 667); 0.1643% in a big run (PROVISIONAL)
+- **Chance per egg:** 0.015% from a shop egg (1 in 6,667); 0.02985% in a big run (PROVISIONAL)
 - **Size:** 8.78 studs tall, 10.2 long, 4.91 wide
 
 <a id="secret-dinosaurs"></a>

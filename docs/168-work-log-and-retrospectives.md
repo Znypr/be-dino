@@ -127,6 +127,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1030 fill BD-004 slot for newbuild, off-sale field in verify_release_ids | worker | #499 | 45.0 | - | - | good | 1 | conflict: kanban and docs/115 append conflicts at file end | dry-run redirect path was relative and wrote outside the repo; use the scratchpad absolute path |
 | 2026-10-18 | BD-1043 playtest build stamp + freshness check (PR 502) | worker | #502 | 25.0 | 45 | - | good | - | other: BD-1043 row not on main yet (PR 498 open), status change deferred | Reuse the existing on-screen label instead of editing the byte-limited Bootstrap file. |
 | 2026-10-18 | BD-1032 new species much rarer + species timing simulation (PR 505) | worker | #505 | 80.0 | 90 | - | good | 2 | other: hard-coded old odds in verify_eggs, verify_secret_species golden hash and HatchTimeline.pct (would show 0%) | Grep for the old numbers and for display formats before changing rarity; tiny percents need more decimals. |
+| 2026-10-18 | BD-1052 team catalogue generated from the code (docs/catalog) | worker | - | 55.0 | 85 | 330.0 | good | - | other: bash heredocs ate double backslashes in generated Python and Luau (three syntax errors) | Write code with backslashes through the file tools, never through a bash heredoc; and a generated catalogue goes stale whenever main changes data, so merge main and rebuild before the PR. |
 <!-- retro-table:end -->
 
 ## 6. Open items
