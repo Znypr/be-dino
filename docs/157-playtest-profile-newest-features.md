@@ -85,3 +85,5 @@ Label: **CURRENT BUILD BEHAVIOR** of the playtest profile; the default profile o
 - **Tests.** `tests/test_playtest_freshness.py`.
 
 * **Update 2026-10-18 (BD-1038, [115](115-decisions-log.md)):** `GeneBoostEnabled` (the pattern and colour boost to growth and walking, [186](186-pattern-colour-indexes-and-slower-species.md) s6) joins the "on" list: the playtest profile sets it, the default profile requires it false, `PlaytestOnFlagTests.ON` lists it. PROVISIONAL numbers, free eggs only, no Robux; offline evidence only.
+
+* **Update 2026-10-18 (BD-1047, [115](115-decisions-log.md)):** `FoodLayerEnabled` (the designed food map instead of the sector / jitter dice, [187](187-food-map-grid-and-smart-test-bot.md) s G) joins the "on" list: the playtest profile sets it, the default profile requires it false, `PlaytestOnFlagTests.ON` lists it, the rehearsal list has it. PROVISIONAL, offline evidence only (no Studio look yet; pace risk BD-1076).

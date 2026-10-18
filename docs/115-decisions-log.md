@@ -544,3 +544,11 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 
 ## LEAD decision (owner delegated 2026-10-16, applied 2026-10-18): catalogue staleness is a warning (BD-1062)
 - The team catalogue (docs/catalog, BD-1052) is committed, but a stale page only warns in CI. Reason: forcing every data PR to rebuild it would add one more file that all PRs edit. The lead refreshes it in one PR now and then (`python tools/build_catalog.py`). To overturn: run `tools/verify_catalog.py --strict` in the CI list. Page cap and missing or extra pages still fail.
+
+## LEAD decision (owner delegated 2026-10-16, 2026-10-18): the designed food map is built, flag off by default, ON in the playtest (BD-1047)
+- **Decision:** `Config.FoodLayerEnabled` (default false) makes `FoodService` place the 3,600 foods from the generated map `src/shared/FoodLayerData.luau` (blue-noise spacing 7 studs, fruit grove, egg meadow, a lone amber on each mountain top, gentle density near the run start, starter patches kept) instead of the sector / jitter dice. Same total, points per kind, kind mix, Food folder, attributes and respawn timing; ground / obstacle checks stay as a safety net and count relocated / dropped foods. Details and the before / after table: [187](187-food-map-grid-and-smart-test-bot.md) s G.
+- **Flag:** pinned false in the default profile, set true in the playtest profile (standing rule docs/157), in the rehearsal list. Flag false is byte-identical to the old placement.
+- **Choices I made myself:** minimum spacing 7 studs (owner range 6 to 8); hot spot places and sizes; a food respawns where the map put it (the old code moved it inside its cluster); 4 lone ambers (one per mountain).
+- **Options not picked:** smaller spacing near the spawn to keep bundle-like pickup; more ambers to bring the worst amber walk under 60 (changes the 3% share).
+- **Open risk:** the rough offline walker collects 36 to 60% fewer food points on the map than in today's bundles (BD-1076 measures the real pace; the default build is unchanged until then).
+- **To overturn:** set `FoodLayerEnabled` to false in the playtest rule of `tools/release_profiles.py` (one line), or change the numbers at the top of `tools/generate_food_layer.py`, run it with `--write` and commit. **Not verified:** Studio, phone.
