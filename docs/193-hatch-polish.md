@@ -32,7 +32,7 @@ Written 2026-10-18. **CURRENT BUILD** after this change, **offline proof only** 
 
 **New in the helper:** `Chip.apply(frame, fill, outline, small)`. The **small** variant (`Chip.Small`: 6 px corner, 2 px outline, at least 17 px high) is for tags in tight cards (My dinos cards, the mutation badge, a hint over a 3D view) that cannot be 28 px high. `Chip.apply` also removes an old `Theme.decorate` gradient (a chip is a flat fill) and reuses an old outline, so an old tag converts with one call. **LEAD decision (owner delegated 2026-10-16):** small chips are the same style at a smaller size, not a second style; overturn by removing `Chip.Small` and growing the My dinos card rows (`MyDinos.Card`, tests in `tools/verify_inspect.py`).
 
-**Counts:** 10 tag builders converted (10 sites: the Eggs screen, My dinos, mutation badge, class word, three Fusion places, shop cards, tasks chip, drag hint); **37 round shapes left round on purpose** (37 lines, listed below); 0 unexplained.
+**Counts:** 10 tag builders converted (10 sites: the Eggs screen, My dinos, mutation badge, class word, three Fusion places, shop cards, tasks chip, drag hint); **38 round shapes left round on purpose** (38 lines, listed below); 0 unexplained.
 
 ### Converted (these were tags)
 
@@ -82,6 +82,7 @@ Written 2026-10-18. **CURRENT BUILD** after this change, **offline proof only** 
 | `src/client/MutationReveal.luau:33` | round spark and ring pieces of the mutation reveal effects | yes (effect) | no, left round |
 | `src/client/PatternColourCards.luau:49` | the big 84 px colour sample tile of the Colours index is a circle of the exact colour (a picture tile, not a tag); owner may want rounded squares | yes (circle) | no, left round |
 | `src/client/PatternColourCards.luau:94` | the 20 px progress pips on an index card: dots | yes (dot) | no, left round |
+| `src/client/PatternColourDetail.luau:36` | the pattern and colour detail card: a big popup panel with a 24 px corner, not a tag | yes (panel) | no, left round |
 | `src/client/PreviewTraits.luau:41` | the 22 px mutation colour dot on a dino preview while no mutation icon is bound | yes (dot) | no, left round |
 | `src/client/RareHatchClient.client.luau:48` | the rare-hatch banner: a wide 40 to 56 px banner with a 14 px corner, a rounded rectangle and not a pill | yes (panel) | no, left round |
 | `src/client/VolumeSliders.luau:38` | slider knob: a round handle | yes (dot) | no, left round |

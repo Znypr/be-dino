@@ -15,9 +15,9 @@
   },
   {
    "file": "src/client/CombatHud.luau",
-   "contains": "corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = bubble",
-   "kind": "circle",
-   "why": "the round '!' alert bubble over a dinosaur head, one glyph in a circle"
+   "contains": "chipCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "key",
+   "why": "the small F key-cap on the CHOMP button: one letter in a 22 px circle, a keyboard hint and not a tag"
   },
   {
    "file": "src/client/CombatHud.luau",
@@ -27,21 +27,15 @@
   },
   {
    "file": "src/client/CombatHud.luau",
+   "contains": "corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = bubble",
+   "kind": "circle",
+   "why": "the round '!' alert bubble over a dinosaur head, one glyph in a circle"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
    "contains": "fillCorner.CornerRadius = UDim.new(0.5, 0)",
    "kind": "bar",
    "why": "health bar fill: a bar is round on purpose"
-  },
-  {
-   "file": "src/client/CombatHud.luau",
-   "contains": "pill.CornerRadius = UDim.new(0, 28)",
-   "kind": "button",
-   "why": "the CHOMP button (a true 60 px button, not a tag)"
-  },
-  {
-   "file": "src/client/CombatHud.luau",
-   "contains": "chipCorner.CornerRadius = UDim.new(0.5, 0)",
-   "kind": "key",
-   "why": "the small F key-cap on the CHOMP button: one letter in a 22 px circle, a keyboard hint and not a tag"
   },
   {
    "file": "src/client/CombatHud.luau",
@@ -56,16 +50,22 @@
    "why": "own health strip fill: a bar"
   },
   {
-   "file": "src/client/ConditionStage.luau",
-   "contains": "UDim.new(0, 24)",
-   "kind": "panel",
-   "why": "the jungle stage picture frame: a big picture panel (24 px corner), not a tag"
+   "file": "src/client/CombatHud.luau",
+   "contains": "pill.CornerRadius = UDim.new(0, 28)",
+   "kind": "button",
+   "why": "the CHOMP button (a true 60 px button, not a tag)"
   },
   {
    "file": "src/client/ConditionStage.luau",
    "contains": "UDim.new(0, 18)",
    "kind": "panel",
    "why": "the hero egg stage frame: a picture panel, not a tag"
+  },
+  {
+   "file": "src/client/ConditionStage.luau",
+   "contains": "UDim.new(0, 24)",
+   "kind": "panel",
+   "why": "the jungle stage picture frame: a big picture panel (24 px corner), not a tag"
   },
   {
    "file": "src/client/DinoIndexPanels.luau",
@@ -75,15 +75,15 @@
   },
   {
    "file": "src/client/EggPicture.luau",
-   "contains": "corner.CornerRadius = UDim.new(.5, 0) corner.Parent = fallback",
-   "kind": "art",
-   "why": "the fallback egg blob when no egg picture loads: drawn art, an oval egg"
-  },
-  {
-   "file": "src/client/EggPicture.luau",
    "contains": "UDim.new(0, 18) corner.Parent = root",
    "kind": "panel",
    "why": "the egg picture stage tile: a picture panel"
+  },
+  {
+   "file": "src/client/EggPicture.luau",
+   "contains": "corner.CornerRadius = UDim.new(.5, 0) corner.Parent = fallback",
+   "kind": "art",
+   "why": "the fallback egg blob when no egg picture loads: drawn art, an oval egg"
   },
   {
    "file": "src/client/FusionMenu.luau",
@@ -105,15 +105,15 @@
   },
   {
    "file": "src/client/HatchSequence.luau",
-   "contains": "c.CornerRadius = radius or UDim.new(1, 0)",
-   "kind": "effect",
-   "why": "the hatch effects helper (rings, splashes, drops); tags use ChipStyle (checked by verify_hatch_polish.py)"
-  },
-  {
-   "file": "src/client/HatchSequence.luau",
    "contains": "UDim.new(0, 16) corner.Parent = b",
    "kind": "button",
    "why": "the DONE / TRY AGAIN end buttons: true 60 px buttons"
+  },
+  {
+   "file": "src/client/HatchSequence.luau",
+   "contains": "c.CornerRadius = radius or UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "the hatch effects helper (rings, splashes, drops); tags use ChipStyle (checked by verify_hatch_polish.py)"
   },
   {
    "file": "src/client/HubGuideClient.luau",
@@ -129,15 +129,15 @@
   },
   {
    "file": "src/client/HudV2.luau",
-   "contains": "trackCorner.CornerRadius",
-   "kind": "bar",
-   "why": "the level bar track on the HUD: a bar"
-  },
-  {
-   "file": "src/client/HudV2.luau",
    "contains": "fillCorner.CornerRadius",
    "kind": "bar",
    "why": "the level bar fill on the HUD: a bar"
+  },
+  {
+   "file": "src/client/HudV2.luau",
+   "contains": "trackCorner.CornerRadius",
+   "kind": "bar",
+   "why": "the level bar track on the HUD: a bar"
   },
   {
    "file": "src/client/IndexTabs.luau",
@@ -169,6 +169,12 @@
    "contains": "corner.CornerRadius = UDim.new(0.5, 0)",
    "kind": "dot",
    "why": "the 20 px progress pips on an index card: dots"
+  },
+  {
+   "file": "src/client/PatternColourDetail.luau",
+   "contains": "Theme.decorate(box, 24)",
+   "kind": "panel",
+   "why": "the pattern and colour detail card: a big popup panel with a 24 px corner, not a tag"
   },
   {
    "file": "src/client/PreviewTraits.luau",
