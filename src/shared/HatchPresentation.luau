@@ -8,6 +8,7 @@ local RunService=game:GetService("RunService")
 local ModelPreview=require(script.Parent.ModelPreview)
 local Appearance=require(script.Parent.EggAppearance)
 local Overlays=require(script.Parent.ConditionOverlays)
+local EggSize=require(script.Parent.HatchEggSize) -- BD-1071: the flat and the 3D egg are drawn at ONE size
 local Hatch={}
 local shellImage="rbxassetid://95856282289615"
 local crackImage="rbxassetid://126956807167774"
@@ -55,13 +56,17 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     task.spawn(function()
         -- Built inside a hidden holder so nothing (not even a half-built or primitive model) can flash on screen.
         local holder=Instance.new("Frame")
-        holder.Name,holder.BackgroundTransparency,holder.Visible,holder.Size,holder.Parent="EggBuildHolder",1,false,UDim2.fromOffset(268,268),root
+        holder.Name,holder.BackgroundTransparency,holder.Visible,holder.Size,holder.Parent="EggBuildHolder",1,false,UDim2.fromOffset(EggSize.NativeBox,EggSize.NativeBox),root
         local view=ModelPreview.add(holder,"egg")
         if not root.Parent then holder:Destroy() return end
         local authored=view:FindFirstChild("AuthoredBody",true)~=nil
         if not authored then holder:Destroy() return end -- the primitive ball/cube fallback is never shown
         view.Name,view.ZIndex=("NativeHatchEgg"),root.ZIndex+2
-        view.AnchorPoint,view.Position,view.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromOffset(268,268)
+        -- BD-1071: the 3D egg only filled 42.5% of its box (114 px next to the flat egg's 188 px): zoom its camera and centre it on the flat egg.
+        local offsetX,offsetY=EggSize.nativeOffset()
+        local viewport=view
+        viewport:SetAttribute("InspectZoom",EggSize.NativeZoom)
+        view.AnchorPoint,view.Position,view.Size=Vector2.new(.5,.5),UDim2.new(.5,offsetX,.5,offsetY),UDim2.fromOffset(EggSize.NativeBox,EggSize.NativeBox)
         view.ImageTransparency,view.Visible=1,false
         view.Parent=root
         holder:Destroy()

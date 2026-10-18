@@ -66,13 +66,7 @@ end
 
 local KINDS = {"berry", "fruit", "egg", "amber"}
 
-local function groundAt(x: number, z: number): boolean
-    if math.sqrt(x * x + (z - 30) ^ 2) < 11 then return false end
-    if Layout.inPool(x, z, 1.5) then return false end
-    local gx = (Layout.height(x + 2, z) - Layout.height(x - 2, z)) / 4
-    local gz = (Layout.height(x, z + 2) - Layout.height(x, z - 2)) / 4
-    return 1 / math.sqrt(1 + gx * gx + gz * gz) >= 0.62
-end
+@GROUND@
 
 local function layout(seed: number)
     local random = newRng(seed)
@@ -132,11 +126,79 @@ print("OK")
 '''
 
 
+# The ground rule of FoodService.groundAt (safe-spawn disc, pools, slope) as Luau text; BD-1047's generator reads the same rule (ground_model).
+GROUND_LUAU = '''local function groundAt(x: number, z: number): boolean
+    if math.sqrt(x * x + (z - 30) ^ 2) < 11 then return false end
+    if Layout.inPool(x, z, 1.5) then return false end
+    local gx = (Layout.height(x + 2, z) - Layout.height(x - 2, z)) / 4
+    local gz = (Layout.height(x, z + 2) - Layout.height(x, z - 2)) / 4
+    return 1 / math.sqrt(1 + gx * gx + gz * gz) >= 0.62
+end
+'''
+
+GROUND_BODY = r'''
+local Config = (function()
+@CONFIG@
+end)()
+local Layout = (function()
+@LAYOUT@
+end)()
+@GROUND@
+print("A\t" .. tostring(Config.ArenaHalfWidth) .. "\t" .. tostring(Config.FoodSeed))
+local CELL = @CELL@
+local HCELL = @HCELL@
+local cells = math.floor(2 * Config.ArenaHalfWidth / CELL)
+for iz = 0, cells - 1 do
+    local row = table.create(cells)
+    for ix = 0, cells - 1 do
+        row[ix + 1] = if groundAt(-Config.ArenaHalfWidth + (ix + 0.5) * CELL, -Config.ArenaHalfWidth + (iz + 0.5) * CELL) then "1" else "0"
+    end
+    print("M\t" .. table.concat(row))
+end
+local hcells = math.floor(2 * Config.ArenaHalfWidth / HCELL)
+for iz = 0, hcells - 1 do
+    local row = table.create(hcells)
+    for ix = 0, hcells - 1 do
+        row[ix + 1] = string.format("%.2f", Layout.height(-Config.ArenaHalfWidth + (ix + 0.5) * HCELL, -Config.ArenaHalfWidth + (iz + 0.5) * HCELL))
+    end
+    print("H\t" .. table.concat(row, ","))
+end
+print("OK")
+'''
+
+
 def build(seeds):
-    src = BODY
+    src = BODY.replace('@GROUND@', GROUND_LUAU)
     for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LAYOUT@', 'src/shared/IslandLayout.luau')):
         src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
     return src.replace('@SEEDS@', str(seeds))
+
+
+def ground_model(runner, cell=1.0, height_cell=8.0):
+    """BD-1047: FoodService's ground rule evaluated on a fine lattice, from the real Config and IslandLayout.
+    Returns {"arena": half width, "cell": studs, "mask": [row strings of 0/1, rows[iz][ix], x = -arena + (ix + 0.5) cell],
+    "hcell": studs, "height": rows[iz][ix] of the island height in studs, same x/z rule}."""
+    src = GROUND_BODY.replace('@GROUND@', GROUND_LUAU)
+    for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LAYOUT@', 'src/shared/IslandLayout.luau')):
+        src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
+    src = src.replace('@CELL@', repr(float(cell))).replace('@HCELL@', repr(float(height_cell)))
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'ground_model.luau'
+        path.write_text(src, encoding='utf-8')
+        result = subprocess.run([runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+    if result.returncode or 'OK' not in result.stdout:
+        print(result.stdout[-2000:], result.stderr[-2000:])
+        raise SystemExit(result.returncode or 1)
+    arena, mask, heights = 416.0, [], []
+    for line in result.stdout.splitlines():
+        p = line.split('\t')
+        if p[0] == 'A':
+            arena = float(p[1])
+        elif p[0] == 'M':
+            mask.append(p[1])
+        elif p[0] == 'H':
+            heights.append([float(v) for v in p[1].split(',')])
+    return {'arena': arena, 'cell': 2 * arena / len(mask), 'mask': mask, 'hcell': 2 * arena / len(heights), 'height': heights}
 
 
 def dump(runner, seeds):

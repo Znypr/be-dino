@@ -104,6 +104,7 @@ function FoodService.start(dinosaur,repository)
         return ground
     end
     local function relocate(food): boolean
+        if food.fixed then return true end -- BD-1047: a food from the designed map respawns where the map put it (random moves would undo the spread)
         for _ = 1, 24 do
             local angle = random:NextNumber(0, 2 * math.pi)
             local radius = math.sqrt(random:NextNumber()) * Config.FoodClusterRadius
@@ -117,6 +118,36 @@ function FoodService.start(dinosaur,repository)
             end
         end
         return false
+    end
+    -- BD-1047 (docs/187 B): with Config.FoodLayerEnabled the pickups come from the designed food map (FoodLayerData via FoodLayer.plan),
+    -- not from the sector/jitter dice. The ground, water and obstacle checks above stay as the safety net: an item that fails is moved to
+    -- the nearest valid spot of a fixed small spiral, or dropped (both counted in workspace attributes). A broken map falls back to the old code.
+    local layerPlan: any = nil
+    local foodLayer: any = nil
+    local layerRelocated, layerDropped, layerPlanned = 0, 0, 0
+    if Config.FoodLayerEnabled == true then
+        foodLayer = require(ReplicatedStorage.Shared.FoodLayer)
+        local plan, planOrReason = foodLayer.plan(Config.FoodSectorCount, extent)
+        if plan then
+            layerPlan, layerPlanned = plan, planOrReason
+        else
+            warn("[Be Dino] Food map unusable, using the old food placement: " .. tostring(planOrReason))
+        end
+    end
+    local function placeFromMap(food, planned): boolean
+        local ground = groundAt(planned.x, planned.z)
+        if not ground then
+            for _, offset in foodLayer.FallbackOffsets do
+                ground = groundAt(planned.x + offset[1], planned.z + offset[2])
+                if ground then break end
+            end
+            if not ground then layerDropped += 1 return false end
+            layerRelocated += 1
+        end
+        food.fixed = true
+        food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
+        if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
+        return true
     end
     local function show(food, visible: boolean)
         local hint = food.part:FindFirstChild("FoodHint")
@@ -133,19 +164,31 @@ function FoodService.start(dinosaur,repository)
         for sz = 0, Config.FoodSectorCount - 1 do
             local minX, minZ = -extent + sx * sectorWidth, -extent + sz * sectorWidth
             local center = Vector2.new(minX + sectorWidth / 2, minZ + sectorWidth / 2)
-            -- Jitter cluster centers, including edge sectors; no one central food island.
-            for _ = 1, 20 do
-                local proposed = Vector2.new(random:NextNumber(minX + 3, minX + sectorWidth - 3), random:NextNumber(minZ + 3, minZ + sectorWidth - 3))
-                if groundAt(proposed.X, proposed.Y) then center = proposed break end
+            local plannedItems = if layerPlan then layerPlan[sx * Config.FoodSectorCount + sz] else nil -- BD-1047: this sector's items from the food map
+            local sectorStarter = false
+            if not layerPlan then
+                -- Jitter cluster centers, including edge sectors; no one central food island.
+                for _ = 1, 20 do
+                    local proposed = Vector2.new(random:NextNumber(minX + 3, minX + sectorWidth - 3), random:NextNumber(minZ + 3, minZ + sectorWidth - 3))
+                    if groundAt(proposed.X, proposed.Y) then center = proposed break end
+                end
+                local half = Config.FoodSectorCount // 2
+                sectorStarter = (sx == half - 1 or sx == half) and sz == half
+                if sectorStarter then center = Vector2.new(if sx == 7 then -15 else 15, 24) end
             end
-            local half = Config.FoodSectorCount // 2
-            local starter = (sx == half - 1 or sx == half) and sz == half
-            if starter then center = Vector2.new(if sx == 7 then -15 else 15, 24) end
-            for itemIndex = 1, Config.FoodClusterItems do
-                local roll, kind = random:NextInteger(1, 100), TYPES[1]
-                -- BD-207: better mix (owner "food still low quality"): berry 70 / fruit 20 / egg 7 / amber 3 (was 78/15/5/2); points per kind unchanged
-                if roll > 97 then kind = TYPES[4] elseif roll > 90 then kind = TYPES[3] elseif roll > 70 then kind = TYPES[2] end
-                if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
+            local itemCount = if layerPlan then (if plannedItems then #plannedItems else 0) else Config.FoodClusterItems
+            for itemIndex = 1, itemCount do
+                local planned = if plannedItems then plannedItems[itemIndex] else nil
+                local starter = if planned then planned.starter else sectorStarter
+                local kind = TYPES[1]
+                if planned then
+                    kind = TYPES[planned.kind]
+                else
+                    local roll = random:NextInteger(1, 100)
+                    -- BD-207: better mix (owner "food still low quality"): berry 70 / fruit 20 / egg 7 / amber 3 (was 78/15/5/2); points per kind unchanged
+                    if roll > 97 then kind = TYPES[4] elseif roll > 90 then kind = TYPES[3] elseif roll > 70 then kind = TYPES[2] end
+                    if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
+                end
                 -- BD-207: rare special food. The random stream is only consumed while the flag is on, so off keeps placement identical.
                 local special = false
                 if not starter and SpecialFoods.enabled() and SpecialFoods.rolls(random:NextNumber()) then
@@ -227,7 +270,7 @@ function FoodService.start(dinosaur,repository)
                 end
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
                     center = center, minX = minX, maxX = minX + sectorWidth, minZ = minZ, maxZ = minZ + sectorWidth}
-                if relocate(food) then
+                if (if planned then placeFromMap(food, planned) else relocate(food)) then
                     pickup.Parent = folder
                     if visual then
                         pickup.Transparency = 1 -- only while the kit model is the visible pickup; show() mirrors it
@@ -248,6 +291,11 @@ function FoodService.start(dinosaur,repository)
         task.wait() -- avoid one long startup frame while instancing pickup art
     end
     workspace:SetAttribute("FoodPlacementFallbacks", fallbackCount)
+    if layerPlan then -- BD-1047: how the map fared against the ground checks (planned = items in the map)
+        workspace:SetAttribute("FoodLayerPlanned", layerPlanned)
+        workspace:SetAttribute("FoodLayerRelocated", layerRelocated)
+        workspace:SetAttribute("FoodLayerDropped", layerDropped)
+    end
     workspace:SetAttribute("FoodCount", #foods)
     workspace:SetAttribute("FoodSpawnStatus", if #foods > 0 then "Ready" else "No valid ground")
     if #foods == 0 then warn("[Be Dino] Food placement failed: no valid terrain hits") end

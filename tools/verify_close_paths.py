@@ -34,6 +34,7 @@ MODULES = {
     'ProgressionConfig': 'src/shared/ProgressionConfig.luau',
     'Config': 'src/shared/Config.luau',
     'HatchV2Assets': 'src/shared/HatchV2Assets.luau',
+    'ChipStyle': 'src/shared/ChipStyle.luau',
     'ModalClose': 'src/client/ModalClose.luau',
     'HatchSequence': 'src/client/HatchSequence.luau',
 }
