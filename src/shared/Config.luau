@@ -112,6 +112,11 @@ return table.freeze({
     -- (gamepad L1). One press opens the existing window; nothing opens by walking near (docs/114 s6.2). Needs CaveHub. false = the round "Open" button with
     -- [G] exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157).
     ShopPromptBubbleEnabled = false,
+    -- BD-1121 (docs/202 R6): true = the short announcement other players see for a rare hatch (BD-428) is two lines with NO panel: a huge outlined title "RARE FIND!"
+    -- and one sentence with the rarity word in its colour ("A Legendary Compy was found!"), no player name, fade in and out (none with Reduce Motion). The server
+    -- decides and rate-limits exactly as before (RareHatch.luau); only the look and the words change. false = the dark strip with "Sam hatched a Legendary Compy!"
+    -- exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157).
+    RareFindBannerEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

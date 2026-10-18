@@ -60,15 +60,17 @@ def allow_literal(entries):
     return '{' + ', '.join(rows) + '}'
 
 
-def build(replacements=None, allow=None):
+def build(replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None):
     menu = read('tools/menu_layout_smoke.luau')
     assert HEAD_END in menu, 'menu_layout_smoke.luau lost the marker the text-floor smoke is spliced behind'
     head = menu[:menu.index(HEAD_END)]
-    body = read('tools/text_floor_smoke.luau')
+    body = read(body_path)
     assert PREFIX_NOTE in body
     body = body.replace(PREFIX_NOTE, '').replace('@@ALLOW@@', allow_literal(allow or []))
     parts = []
-    for name, path in MODULES.items():
+    modules = dict(MODULES)
+    modules.update(extra_modules or {})
+    for name, path in modules.items():
         source = read(path)
         for old, new in (replacements or {}).get(name, []):
             assert old in source, 'mutant target missing in %s: %s' % (name, old)
@@ -82,8 +84,8 @@ def build(replacements=None, allow=None):
     return combined.replace('local sources = MODULE_SOURCES', 'local sources = {\n' + ''.join(parts) + '}')
 
 
-def run_smoke(runner, replacements=None, allow=None):
-    result = sw.run(runner, build(replacements, allow))
+def run_smoke(runner, replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None):
+    result = sw.run(runner, build(replacements, allow, body_path, extra_modules))
     return result.returncode == 0 and 'passed' in result.stdout, result.stdout + result.stderr
 
 
