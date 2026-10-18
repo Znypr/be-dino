@@ -52,11 +52,14 @@ class RehearsalProfileTests(unittest.TestCase):
 
     def test_the_default_and_playtest_hard_stops(self):
         # the gift flags stay required-false in BOTH shipped profiles (docs/157: no sender is built or approved)
-        for flag in ("GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled", "SecretSpeciesEnabled", "DinoSkinsEnabled", "HatchV2"):
+        for flag in ("GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled", "DinoSkinsEnabled", "HatchV2"):
             for name in ("default", "playtest"):
                 self.assertTrue(any(r.key == flag and r.mode == "require" and r.value is False for r in profiles.rules_for(name)), (flag, name))
         # ObjectivesEnabled: required false in default; since docs/157 the playtest sets it (the rehearsal states it once)
         self.assertTrue(any(r.key == "ObjectivesEnabled" and r.mode == "require" and r.value is False for r in profiles.rules_for("default")))
+        # SecretSpeciesEnabled (docs/173): required false in default; the playtest sets it (owner directive 2026-10-18)
+        self.assertTrue(any(r.key == "SecretSpeciesEnabled" and r.mode == "require" and r.value is False for r in profiles.rules_for("default")))
+        self.assertTrue(any(r.key == "SecretSpeciesEnabled" and r.mode == "set" and r.value is True for r in profiles.rules_for("playtest")))
         rehearsal_config = profiles.apply_profile(CONFIG, PROFILE)[0]
         for name in ("default", "playtest"):
             report = profiles.verify_source(rehearsal_config, name)

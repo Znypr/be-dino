@@ -41,4 +41,6 @@ return {
     quetzalcoatlus = {assetId = 126028097030256, version = "v1", scale = 2.04, tier = 4, class = "Fly"},
     spinosaurus = {assetId = 94005222354362, version = "v1", scale = 4.02, tier = 5, class = "Ground"},
     therizinosaurus = {assetId = 94894343028103, version = "v1", scale = 2.56, tier = 4, class = "Ground"},
+    -- BD-606 (docs/149 s3, docs/175): the secret species whose model slot in Shared/SecretSpeciesConfig is filled. Foxosaurus v2 (BD-602 candidate C, 8 parts).
+    foxosaurus = {assetId = 112996440434481, version = "v2", scale = 0.79, tier = 1, class = "Ground"},
 }
