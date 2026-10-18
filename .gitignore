@@ -37,3 +37,6 @@ build/upload-batch/
 build/vfx-lab-frames/
 build/blender-export/
 build/pipeline-test/
+
+# tools/build_catalog.py --public writes the player-safe catalogue here (BD-1052); docs/catalog is the committed team copy.
+build/catalog-public/
