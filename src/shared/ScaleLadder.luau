@@ -90,7 +90,7 @@ ScaleLadder.Dino = {
             duck = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.90, height = 6.60, length = 6.70, snout = 3.35, headLength = 1.47, measured = false},
             penguin = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 4.40, height = 6.60, length = 5.89, snout = 2.95, headLength = 1.30, measured = false},
             budgiesaurus = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 6.40, height = 5.20, length = 5.14, snout = 2.57, headLength = 1.13, measured = false},
-            foxosaurus = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.40, height = 6.60, length = 8.70, snout = 4.35, headLength = 1.91, measured = false},
+            foxosaurus = {scale = 0.79, tier = 1, basis = "height", target = 6.60, width = 3.00, height = 6.64, length = 6.32, snout = 3.16, headLength = 1.39, measured = true},
         },
     },
 }

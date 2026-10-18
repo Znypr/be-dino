@@ -1,19 +1,19 @@
 # 149 Secret silly creatures: data and rules (BD-604, BD-228)
 
-**Label: CURRENT BUILD BEHAVIOR = nothing changes (flag off). The rules below are LEAD decisions SS1 to SS9 ([115](115-decisions-log.md), owner delegated 2026-10-16), PROVISIONAL and overturnable.** Task: BD-604 (Review / test). Follow-up integration (equip, announcement, odds line, sizing wiring; the meshes and Studio are open): BD-606 (Review / test). The owner asked for the creatures in BD-228 (drop method, rarity, class were open), BD-600 (parakeet) and BD-602 (fox).
+**Label: CURRENT BUILD BEHAVIOR = nothing changes in the DEFAULT profile (flag off); since 2026-10-18 the PLAYTEST profile turns the flag on for the ONE species whose model is bound, the Foxosaurus ([173](173-secret-roster-bind.md), SS10 to SS12). The rules below are LEAD decisions SS1 to SS9 ([115](115-decisions-log.md), owner delegated 2026-10-16), PROVISIONAL and overturnable.** Task: BD-604 (Review / test). Follow-up integration (equip, announcement, odds line, sizing wiring; the meshes and Studio are open): BD-606 (Review / test). The owner asked for the creatures in BD-228 (drop method, rarity, class were open), BD-600 (parakeet) and BD-602 (fox).
 
 ## 1. What exists
-`Config.SecretSpeciesEnabled = false`, **pinned OFF in the default and the playtest release profile** (`tools/release_profiles.py` `COMMON_RULES`, enforced by `tools/verify_release.py` on the source and on both built places). With it off nothing in the game differs: same egg rolls, same profiles, same Index. With it on **and a filled model slot** the game rolls, stores, hatches and lists secret species as below. All seven slots are empty today, so even `true` changes nothing a player can see except the Index cards.
+`Config.SecretSpeciesEnabled = false` in source, **pinned OFF in the default release profile and SET ON in the playtest profile only** (`tools/release_profiles.py`, enforced by `tools/verify_release.py` on the source and on both built places; owner directive 2026-10-18 "always use our newest features in testbuilds", [173](173-secret-roster-bind.md)). With it off nothing in the game differs: same egg rolls, same profiles, same Index. With it on **and a filled model slot** the game rolls, stores, hatches and lists secret species as below. **One of the seven slots is filled (the Foxosaurus, 2026-10-18)**, so in the playtest every secret hit is a Foxosaurus and the other six cards stay a plain "?". Which ids exist, which are missing and who must produce them: [173](173-secret-roster-bind.md) section 1.
 
-| Id | Name | Class (SS5) | Drop weight (PROVISIONAL) | Model slot (`assetId`) | Test mesh, NOT bound (docs/77) |
+| Id | Name | Class (SS5) | Drop weight (PROVISIONAL) | Model slot (`assetId`) | Other known mesh, NOT bound (docs/77, docs/173) |
 |---|---|---|---:|---|---|
-| chickosaurus | Chickosaurus | Ground | 20 | empty | v3 test mesh 108391746824463 (Game studio) |
-| pigeon | Pigeon | Ground | 20 | empty | none yet |
-| dodo | Dodo | Ground | 14 | empty | none yet |
-| duck | Duck | Ground | 18 | empty | none yet |
-| penguin | Penguin | Water | 12 | empty | none yet |
-| budgiesaurus | Budgiesaurus | Fly | 10 | empty | 111728956844490 (v1) / 107910518074360 (v2): being redone |
-| foxosaurus | Foxosaurus | Ground | 6 | empty | 119604460832523: outdated (glasses, beanie), being redone as a plain blue fox (BD-602, P3) |
+| chickosaurus | Chickosaurus | Ground | 20 | empty | v3 test mesh 108391746824463 (box not measured) |
+| pigeon | Pigeon | Ground | 20 | empty | Place 1 model exists, its Model id was never written down |
+| dodo | Dodo | Ground | 14 | empty | Place 1 model exists, its Model id was never written down |
+| duck | Duck | Ground | 18 | empty | Place 1 model exists, its Model id was never written down |
+| penguin | Penguin | Water | 12 | empty | Place 1 model exists, its Model id was never written down |
+| budgiesaurus | Budgiesaurus | Fly | 10 | empty | v2 107910518074360 (owner: keep as is; box not measured); v1 111728956844490 superseded |
+| foxosaurus | Foxosaurus | Ground | 6 | **112996440434481 (bound, v2 plain blue fox)** | v1 119604460832523 outdated (glasses, beanie) |
 
 ## 2. The rules
 - **Secret, not a tier (SS1).** `src/shared/SecretSpeciesConfig.luau` (pure data and rules). The seven are not in `Config.SpeciesOrder`, `SpeciesRarities`, `SpeciesDisplayNames` or `ChestSpeciesWeights`: the 22-species Index number, the odds text and the five tiers are untouched, and a secret never raises `metrics.rarest`.
@@ -32,7 +32,7 @@
 2. Add the `LowPolyDinoAssets` entry (`assetId`, `version`, `scale`, `tier = 1`, `class`) and measure the mesh in Studio at growth scale 1 (Model:GetBoundingBox, the BD-471 method): set the `ScaleLadder.Dino.secret.species` row to the measured width, height, length, snout and head length, set `scale` so the size on its basis (height 6.60, or bulk 5.55) is within 2%, turn `measured = true`, and update `SECRET_BOXES` in `tools/verify_scale_ladder.py` and `--write-doc` for docs/114.
 3. Put the asset id in the species row `assetId` in `SecretSpeciesConfig` (`verify_secret_species`, `verify_scale_ladder` and `verify_lowpoly_dinos` fail if a filled slot has no registry entry of the same id and class, or an estimate row).
 4. Studio: Index card, hatch line, the Compy-sized dino beside the others, equip it, the calm banner on a hatch, the Egg Odds line.
-5. Owner flips `SecretSpeciesEnabled` for a private test (a release decision; it is pinned off in both profiles until then, so also relax the pin on purpose).
+5. `SecretSpeciesEnabled` is set on in the playtest profile (done for the first slot, [173](173-secret-roster-bind.md)); the default profile keeps requiring it off until the owner decides on a real release. Steps 1 to 3 are one command: `python tools/bind_secret_species.py` ([173](173-secret-roster-bind.md) section 4).
 
 ## 4. Evidence
 `python tools/verify_secret_species.py --runner <luau>` (in CI), real modules on the Luau runner:
@@ -45,7 +45,8 @@
 - announcement and odds (SS9): the real `RareHatch` and `OddsCopy` modules: kind `secret`, calm at every Effects setting and Reduce Motion, short words, no name for others, old kinds unchanged; the odds line exists only when the caller says secrets are live, is not a number or a promise, and no shop egg disclosure (groups, notes, long list, buy sentence, upgrade odds) contains the word "secret";
 - sizing with FAKE ids (SS8): a scratch copy of the tree with all seven slots filled by made-up ids, `LowPolyDinoAssets` entries and measured rows passes `verify_scale_ladder`, `verify_camera_framing`, `verify_hit_sizes`, `verify_mouth_reach` and `verify_lowpoly_dinos`; fourteen mutations (estimate in game, missing, invented, drifting or mis-classed registry entry, off-rule target, basis, tier or box, a blind `HitSize`, a blind `MouthReach`) each fail the named verifier. The shipped files are never changed by the test.
 Mutation checks (a removed model gate, a shop origin, a chance that grows, a raised `rarest`, a flag-less hook) each fail the verifier.
-**Not verified:** the Index cards and the hatch line in Studio or on a phone, any model, the real 0.5% with players.
+- **the shipped roster (docs/173):** the shipped slots are exactly the pinned real ids (`BOUND_IDS` in the verifier), each a plain positive whole number with its `LowPolyDinoAssets` entry, a measured ladder row and a line in docs/173; every unit test above runs on an all-empty copy of the module, so the rules do not depend on the shipped ids; flag off with the shipped bound slot is still byte-identical to Build 020 (the golden hash); with the flag on and the shipped roster at a forced 100% chance, only a pinned bound species drops, from run eggs, and a crystal-shop egg never rolls; the fake-id sizing run keeps the real fox and fakes the other six.
+**Not verified:** the Index cards and the hatch line in Studio or on a phone, any model in the game (the Foxosaurus has never been seen as a playing dino), the real 0.5% with players.
 
 ## 5. Policy
 Run and nest eggs are earned for free; the crystal shop and any Robux route never roll a secret (docs/43). With the flag on and a model ready the chance is told in one calm line in the Egg Odds panel, "A tiny chance of a secret dino in free eggs" (SS9, `OddsCopy.freeEggNotes`); it names no number and no promise, and the shop egg's own odds (`OddsCopy`, `ShopOdds`) say what a shop egg can be and never mention a secret (it never can be one). Before the flag is ever turned on in a build that has any paid or Robux-linked route to eggs, a Roblox policy review stays a release gate (`PaidRandomItemsEnabled`).

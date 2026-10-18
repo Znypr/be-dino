@@ -172,7 +172,7 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | spinosaurus | 5 | height | 9.66 | 4.02 | 5.53 x 9.66 x 12.06 | MEASURED | 14.7 | 19.3 | 29.0 | 38.6 | 46.4 |
 | therizinosaurus | 4 | height | 8.78 | 2.56 | 4.91 x 8.78 x 10.24 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
 
-**Secret species (BD-606, docs/115 SS8; behind `SecretSpeciesEnabled`, off).** Sized by the same rule as tier 1 (Compy-sized); 0 of 7 are measured. A row stays an ESTIMATE (design box, bird proportions) until its mesh exists; a secret whose model slot is filled must be MEASURED.
+**Secret species (BD-606, docs/115 SS8; behind `SecretSpeciesEnabled`: off in the default profile, on in the playtest; only a species with a bound model can drop, docs/173).** Sized by the same rule as tier 1 (Compy-sized); 1 of 7 are measured. A row stays an ESTIMATE (design box, bird proportions) until its mesh exists; a secret whose model slot is filled must be MEASURED.
 
 | Secret species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source |
 | --- | ---: | --- | ---: | ---: | --- | --- |
@@ -182,7 +182,7 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | duck | 1 | height | 6.60 | 2.2 | 3.90 x 6.60 x 6.70 | ESTIMATE |
 | penguin | 1 | bulk | 5.55 | 1.85 | 4.40 x 6.60 x 5.89 | ESTIMATE |
 | budgiesaurus | 1 | bulk | 5.55 | 1.85 | 6.40 x 5.20 x 5.14 | ESTIMATE |
-| foxosaurus | 1 | height | 6.60 | 2.2 | 3.40 x 6.60 x 8.70 | ESTIMATE |
+| foxosaurus | 1 | height | 6.60 | 0.79 | 3.00 x 6.64 x 6.32 | MEASURED |
 
 Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Size rule: growth 1.1 per tier, tolerance 2%, height tier 1 = 6.6, bulk top 8.12, length top 10.41.
 
@@ -301,7 +301,7 @@ Four identical poses are compared in concept art: **top left Original, top right
 | First eggs safe | `SafeEggs = 2`: the first 2 eggs are never Cracked; Cracked 50% from the third egg (OWNER 2026-10-16: keep). Run eggs only; shop and nest eggs roll the normal odds. Egg Odds says "Your first 2 eggs from runs are always safe." only while all safe eggs are unused (`OddsCopy.safeEggsLine`, built from the config number) | `ProgressionConfig.SafeEggs`, BD-365, `verify_safe_eggs_line.py` |
 | Run crystals | `min(300, floor((250*min(n,12)+176*max(0,n-12))/100))`: 12 eggs -> 30, 120 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
 | Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), unlimited per run (owner 2026-10-16; only 5 spots, each extra nest becomes crystals, PROVISIONAL 50; +1 per 30 eggs after the first, [119](119-catch-rate-15-per-run.md)), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
-| Secret species (flag OFF) | seven secret silly creatures, not a tier: flat PROVISIONAL 0.5% per run or free-nest egg, never a shop or paid egg, hatch only with a filled model slot; `SecretSpeciesEnabled = false`, pinned off in both profiles | [149](149-secret-species.md), [115](115-decisions-log.md) SS1 to SS6, BD-604 |
+| Secret species (flag OFF in default, ON in the playtest) | seven secret silly creatures, not a tier: flat PROVISIONAL 0.5% per run or free-nest egg, never a shop or paid egg, hatch only with a filled model slot (today only the Foxosaurus has one); `SecretSpeciesEnabled = false` in source and in the default profile, set true by the playtest profile (owner directive 2026-10-18) | [149](149-secret-species.md), [173](173-secret-roster-bind.md), [115](115-decisions-log.md) SS1 to SS12, BD-604, BD-606 |
 | Hatch pace | `HatchRevealSeconds` 1 s per egg, ascending rarity, skippable | [09](09-reward-economy.md), BD-044 |
 | Colour / pattern | colour tiers Common..Mythic (5.4), colour growth bonus +1% per tier; 8 patterns equally likely | `ProgressionConfig`, BD-172, [88](88-exponential-rarity.md) |
 | Prices | trails 0/100/280/390/780/1100/2200/3100/6100/17000; auras 60/470/3700 | `ProgressionConfig` |

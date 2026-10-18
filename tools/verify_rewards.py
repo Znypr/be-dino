@@ -598,7 +598,9 @@ print("BD-044/BD-045 reward loop verified (offline Luau; Studio verification pen
 
 
 # docs/152: inlined at import time (not a token in script()), because rollback/skins/gifts/secret-species build their own prefix from HARNESS
-HARNESS = HARNESS.replace('@@SECRET_SPECIES@@', module('src/shared/SecretSpeciesConfig.luau'))
+# docs/173: the NEUTRAL copy (every model slot 0). The playtest binds a real model, so with the flag on the shipped module would add one random
+# draw per earned egg and shift every seeded sequence of this family. The secret rules and the shipped roster have their own verifier.
+HARNESS = HARNESS.replace('@@SECRET_SPECIES@@', profile_sources.neutral_secret_module())
 
 
 def script():

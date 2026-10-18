@@ -196,6 +196,35 @@ class TrainTests(TrainBase):
         self.assertIn("BD-12", rows)
         self.assertNotIn("BD-13", rows)
 
+    def test_row_both_sides_edited_is_merged_in_the_train(self):
+        self.pr_branch("pr11", [row(1), row(2), row(3, "Review / test", "**Task 3.** does something PR outcome"),
+                                row(4), row(5)])
+        self.main_moves([row(1), row(2), row(3, text="**Task 3.** does something main note"), row(4), row(5)])
+        self.publish()
+        gh = FakeGh([pr_info(11, "pr11")])
+        rc, out = self.run_train(gh, "11", "--keep")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("MERGED BD-3", out)
+        wt = self.env.worktree_of(out)
+        rows = mt.vkm.rows_of((wt / "docs" / "07-kanban.md").read_bytes().decode("utf-8"))
+        self.assertIn("main note PR outcome", rows["BD-3"])
+        self.assertIn("Review / test", rows["BD-3"])
+
+    def test_pr_that_leaves_conflict_markers_is_skipped_not_committed(self):
+        marker_doc = "# Notes\n" + "<" * 7 + " HEAD\nleft over\n" + "=" * 7 + "\nother\n" + ">" * 7 + " main\n"
+        self.pr_branch("pr11", extra_files={"docs/leftover.md": marker_doc})
+        self.pr_branch("pr12", [row(i) for i in range(1, 6)] + [row(12, text="**Twelve.**")])
+        self.publish()
+        gh = FakeGh([pr_info(11, "pr11"), pr_info(12, "pr12")])
+        rc, out = self.run_train(gh, "11", "12", "--keep")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("docs/leftover.md:2:", out)
+        self.assertIn("merged:  #12", out)
+        self.assertIn("#11: conflict markers were left in the merge result", out)
+        wt = self.env.worktree_of(out)
+        self.assertFalse((wt / "docs" / "leftover.md").exists())
+        self.assertEqual(self.env.git("status", "--porcelain", cwd=wt), "")
+
     def test_pr_pushed_with_skipped_list_in_the_body(self):
         self.pr_branch("pr11", notes="line one\nPR eleven\nline three\n")
         self.pr_branch("pr13", notes="line one\nPR thirteen\nline three\n")

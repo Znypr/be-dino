@@ -41,7 +41,7 @@ Secret.Species = {
     duck = { id = "duck", name = "Duck", secret = true, class = "Ground", weight = 18, assetId = 0 },
     penguin = { id = "penguin", name = "Penguin", secret = true, class = "Water", weight = 12, assetId = 0 },
     budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 0 },
-    foxosaurus = { id = "foxosaurus", name = "Foxosaurus", secret = true, class = "Ground", weight = 6, assetId = 0 },
+    foxosaurus = { id = "foxosaurus", name = "Foxosaurus", secret = true, class = "Ground", weight = 6, assetId = 112996440434481 },
 }
 
 function Secret.isSecret(speciesId: any): boolean

@@ -9,7 +9,9 @@ Part A (pure rules): SecretSpeciesConfig + the real RewardMath, Config, Progress
     (1 egg vs 400 eggs) or nest luck;
   * the species split follows the provisional weights, and only secrets with a filled model slot can drop;
   * secrets are counted apart ("2 / 7 secrets found"), the hidden card never leaks the name, the 22-species number is untouched;
-  * no secret hatches while its model slot is empty; shipped slots are empty and agree with the class table.
+  * no secret hatches while its model slot is empty; the shipped slots are EXACTLY the pinned BOUND_IDS (docs/173: only real, plain,
+    positive asset ids, each with its LowPolyDinoAssets entry and a measured ladder row) and agree with the class table; every unit test
+    runs on an all-empty copy of the module so the rules are proved without the shipped ids.
 Part B (repository): the real ProfileRepository on the mocked DataStore of verify_rewards:
   * flag off: no egg, outcome, collection or profile key mentions a secret; flag on with empty slots: byte-identical egg digests;
   * flag on with filled slots: the roll is recorded in the egg metadata (secretRollVersion), a secret hatches into a lazily created
@@ -50,6 +52,24 @@ def module(path):
     return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
+# BD-606 / docs/173: the REAL model asset ids bound in src/shared/SecretSpeciesConfig.luau. Pinned here on purpose: binding another slot (or
+# changing an id) fails this verifier until this table, docs/173 and the evidence line change in the same commit. Every id is a published
+# `generate_mesh` Model of the owner's account (Roblox economy details: AssetTypeId 10, creator znyprs, the same as the 22 shipped species).
+# Never invent an id: a slot that is not here stays 0.
+BOUND_IDS = {'foxosaurus': 112996440434481}
+SLOT_RE = re.compile(r'(\{ id = "(\w+)", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )(\d+)( \})')
+
+
+def shipped_slots():
+    """{secret id: assetId} exactly as written in the shipped SecretSpeciesConfig."""
+    return {m.group(2): int(m.group(3)) for m in SLOT_RE.finditer(read('src/shared/SecretSpeciesConfig.luau'))}
+
+
+def empty_secret_module():
+    """The real SecretSpeciesConfig with EVERY model slot set to 0: the neutral universe the unit tests run in (the shipped ids are tested apart)."""
+    return profile_sources.neutral_secret_module()
+
+
 # ---------------------------------------------------------------------------------------------------------------- part A
 PURE = r'''
 local Config = @@CONFIG@@
@@ -58,7 +78,9 @@ local CombatConfig = @@COMBAT_CONFIG@@
 local LowPoly = @@LOWPOLY@@
 local GOLDEN = @@GOLDEN@@
 
-local function mkSecret() return @@SECRET@@ end
+local function mkSecret() return @@SECRET@@ end -- an all-empty copy (neutral universe)
+local function mkShipped() return @@SECRET_SHIPPED@@ end -- the module exactly as shipped
+local BOUND = {@@BOUND@@}
 local function mkRM(cfg, secret)
   local MODS = {Config = cfg, ProgressionConfig = ProgressionConfig, Secret = secret}
   local SERVICES = {ReplicatedStorage = {Shared = {Config = "Config", ProgressionConfig = "ProgressionConfig", SecretSpeciesConfig = "Secret"}}}
@@ -121,7 +143,7 @@ for _, id in S0.Order do
   check(typeof(row.name) == "string" and #row.name >= 3 and #row.name <= 14, id .. " has a short kid-friendly name")
   check(typeof(row.weight) == "number" and row.weight > 0, id .. " has a drop weight")
   weightSum += row.weight
-  check(row.assetId == 0 and S0.modelReady(id) == false, id .. " model slot is EMPTY in the shipped config")
+  check(row.assetId == 0 and S0.modelReady(id) == false, id .. " model slot is EMPTY in the neutral copy")
   check(CombatConfig.Classes[row.class] ~= nil and CombatConfig.SpeciesClasses[id] == row.class, id .. " class agrees with CombatConfig.SpeciesClasses")
   check(not table.find(Config.SpeciesOrder, id) and Config.SpeciesRarities[id] == nil and Config.SpeciesDisplayNames[id] == nil
     and Config.LegacySpeciesRarities[id] == nil, id .. " is not in the normal 22-species tables")
@@ -129,7 +151,26 @@ for _, id in S0.Order do
   check(table.find(CombatConfig.SecretSpecies, id) ~= nil, id .. " is in CombatConfig.SecretSpecies")
   check(S0.isSecret(id) and not S0.isSecret(nil) and not S0.isSecret("compy") and not S0.isSecret(5), "isSecret")
   check(S0.displayTier(id) == 5 and S0.displayTier("compy") == nil, "calm Legendary look only")
-  check(LowPoly[id] == nil, id .. " has no LowPolyDinoAssets entry while its slot is empty")
+end
+-- the SHIPPED slots: exactly the pinned real ids, plain positive whole numbers, nothing else (docs/173)
+do
+  local SH = mkShipped()
+  for _, id in SH.Order do
+    local row = SH.Species[id]
+    if BOUND[id] ~= nil then
+      check(row.assetId == BOUND[id] and typeof(row.assetId) == "number" and row.assetId > 0 and row.assetId % 1 == 0 and SH.modelReady(id), id .. " is bound to its pinned real id")
+      local entry = LowPoly[id]
+      check(entry ~= nil and entry.assetId == row.assetId and entry.class == row.class and entry.tier == 1, id .. " has its LowPolyDinoAssets entry (same id and class, size tier 1)")
+    else
+      check(row.assetId == 0 and not SH.modelReady(id), id .. " model slot is EMPTY in the shipped config (no pinned real id)")
+      check(LowPoly[id] == nil, id .. " has no LowPolyDinoAssets entry while its slot is empty")
+    end
+  end
+  local readyShipped = SH.readyIds()
+  local nBound = 0 for _ in BOUND do nBound += 1 end
+  check(#readyShipped == nBound, "exactly the pinned ids are ready in the shipped config")
+  -- flag off with the SHIPPED module: still byte-identical egg rolls (the flag decides, a bound slot alone changes nothing)
+  check(goldenHash(mkRM(Config, SH), "run") == GOLDEN and goldenHash(mkRM(Config, SH), "nest") == GOLDEN, "flag off with the shipped bound slots: identical to the pre-BD-604 module")
 end
 check(#CombatConfig.SecretSpecies == 7, "CombatConfig.SecretSpecies lists the same seven")
 check(weightSum == 100, "provisional drop weights sum to 100")
@@ -140,8 +181,8 @@ for _, id in {"chickosaurus", "pigeon", "dodo", "duck"} do check(S0.Species[id].
 check(#Config.SpeciesRarityNames == 5 and Config.SpeciesRarityScale == 5 and #Config.SpeciesOrder == 22, "still five tiers and 22 normal species")
 check(S0.Chance == 0.005 and S0.RarityLabel == "Secret" and S0.Version == "bd228-secret-v1", "SS2/SS3 constants")
 -- LowPolyDinoAssets consistency guard: a filled slot must come with a registry entry of the same id and class.
-for _, id in S0.Order do
-  local row = S0.Species[id]
+for _, id in mkShipped().Order do
+  local row = mkShipped().Species[id]
   if row.assetId > 0 then
     check(LowPoly[id] ~= nil and LowPoly[id].assetId == row.assetId and LowPoly[id].class == row.class, id .. " slot and LowPolyDinoAssets agree")
   end
@@ -351,10 +392,12 @@ def part_a():
         ('@@PROGRESSION_CONFIG@@', 'src/shared/ProgressionConfig.luau'),
         ('@@COMBAT_CONFIG@@', 'src/shared/CombatConfig.luau'),
         ('@@LOWPOLY@@', 'src/shared/LowPolyDinoAssets.luau'),
-        ('@@SECRET@@', 'src/shared/SecretSpeciesConfig.luau'),
+        ('@@SECRET_SHIPPED@@', 'src/shared/SecretSpeciesConfig.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
     ]:
         s = s.replace(token, module(path))
+    s = s.replace('@@SECRET@@', empty_secret_module())
+    s = s.replace('@@BOUND@@', ', '.join(f'{k} = {v}' for k, v in BOUND_IDS.items()))
     s = s.replace('@@GOLDEN@@', str(GOLDEN_FLAG_OFF_HASH))
     # docs/152 BD-626: under the all-on rehearsal Config part A's flag-off section (the golden hash of the flag-off reward draws) runs on a
     # private copy of the Config with SecretSpeciesEnabled forced off; part B has its own flag-on runs.
@@ -376,7 +419,9 @@ local function check(cond,msg) checks+=1 if not cond then error("FAILED: "..msg,
 local function keyCount(t) local n=0 for _ in t do n+=1 end return n end
 
 -- the secret module the harness serves to RewardMath and to each repository instance
-local function mkSecret() return @@SECRET@@ end
+local function mkSecret() return @@SECRET@@ end -- an all-empty copy (neutral universe)
+local function mkShipped() return @@SECRET_SHIPPED@@ end -- the module exactly as shipped (docs/173)
+local BOUND = {@@BOUND@@}
 local function ready(S, only)
  local i=0
  for _,id in S.Order do i+=1 S.Species[id].assetId=(if only==nil or only==id then 7770000+i else 0) end
@@ -811,6 +856,53 @@ for _,junk in {5,"chickosaurus",{speciesId=5},{speciesId="nope"},{speciesId="pig
 end
 cfg.SecretSpeciesEnabled=true
 
+---------------------------------------------------------------- B9 the SHIPPED roster (docs/173): flag on, the real bound ids, Chance forced to 1
+-- Only the pinned bound species can drop, from run and free nest eggs, never from a shop egg; the real chance is untouched by the forcing below.
+do
+ local shipped=mkShipped()
+ check(shipped.Chance==0.005,"the shipped chance is the flat 0.5%")
+ shipped.Chance=1
+ CURRENT_SECRET=shipped
+ local Rs=makeRepo()
+ local us=newUser(7020)
+ check(Rs.load(us),"load")
+ check(Rs.commitRunSettlement(us,"shipped-run",30,nil,300),"settle 30 eggs with the shipped roster")
+ local n=0
+ for _,list in {data[key(7020)].eggs,data[key(7020)].runEggBank} do
+  for _,egg in list do
+   n+=1
+   check(egg.reward.secretRollVersion=="bd228-secret-v1" and BOUND[egg.reward.secretSpeciesId]~=nil,"every egg carries a secret, and only a pinned real model can drop")
+  end
+ end
+ check(n==30,"all 30 run eggs rolled")
+ local hatched=0
+ for _,h in claimAll(Rs,us) do
+  if not h.failed then hatched+=1 check(h.secret==true and BOUND[h.speciesId]~=nil and h.count==1,"a hatched secret is a pinned bound species") end
+ end
+ check(hatched>=1,"at least one shipped secret hatched")
+ for id in BOUND do
+  local entry=data[key(7020)].collection[id]
+  check(entry~=nil and type(entry.variants)=="table","the lazy collection entry exists for "..id)
+ end
+ for _,id in shipped.Order do
+  if BOUND[id]==nil then check(data[key(7020)].collection[id]==nil,"an empty-slot secret never gets a collection entry: "..id) end
+ end
+ Rs.release(us)
+ -- the crystal shop still never rolls, even with the shipped roster and a 100% chance
+ local Rs2=makeRepo()
+ local us2=newUser(7021)
+ check(Rs2.load(us2),"load")
+ Rs2.release(us2)
+ data[key(7021)].progression.crystals=1000
+ data[key(7021)].eggs={}
+ check(Rs2.load(us2),"reload with crystals")
+ check(Rs2.progressionAction(us2,"buyEgg","random","shipped-shop-1",false),"the crystal shop sold an egg")
+ local bought=data[key(7021)].eggs[#data[key(7021)].eggs]
+ check(bought~=nil and bought.reward.secretSpeciesId==nil and bought.reward.secretRollVersion==nil and keyCount(bought.reward)==4,"a shop egg carries no secret with the shipped roster")
+ Rs2.release(us2)
+end
+cfg.SecretSpeciesEnabled=true
+
 print(string.format("secret species part B passed (%d checks)",checks))
 '''
 
@@ -823,7 +915,7 @@ def part_b():
         ('local seedCounter=1\n', 'local seedCounter=1\nlocal function resetSeed(n) seedCounter=n end\n'),
         # docs/152: verify_rewards' harness now carries the real SecretSpeciesConfig for every rewards-family verifier (the rehearsal turns the flag on).
         # Here the module under test is swapped between sub-tests, so the base module becomes a proxy onto CURRENT_SECRET.
-        ('SecretSpecies=' + verify_rewards.module('src/shared/SecretSpeciesConfig.luau'), 'SecretSpecies=setmetatable({}, {__index = function(_, key) return CURRENT_SECRET[key] end})'),
+        ('SecretSpecies=' + profile_sources.neutral_secret_module(), 'SecretSpecies=setmetatable({}, {__index = function(_, key) return CURRENT_SECRET[key] end})'),
     ]
     for old, new in patches:
         assert prefix.count(old) == 1, 'harness patch target changed in verify_rewards: ' + old[:60]
@@ -840,10 +932,12 @@ def part_b():
         ('@@OLD_TRAITS@@', verify_rollback.FIXTURE + 'EggTraits.luau'),
         ('@@OLD_REWARD_MATH@@', verify_rollback.FIXTURE + 'RewardMath.luau'),
         ('@@OLD_REPO@@', verify_rollback.FIXTURE + 'ProfileRepository.luau'),
-        ('@@SECRET@@', 'src/shared/SecretSpeciesConfig.luau'),
+        ('@@SECRET_SHIPPED@@', 'src/shared/SecretSpeciesConfig.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
         body = body.replace(token, module(path))
+    body = body.replace('@@SECRET@@', empty_secret_module())
+    body = body.replace('@@BOUND@@', ', '.join(f'{k} = {v}' for k, v in BOUND_IDS.items()))
     s = prefix + '\n' + body
     for token, path in [
         ('@@PROGRESSION_CONFIG@@', 'src/shared/ProgressionConfig.luau'),
@@ -883,12 +977,30 @@ def static():
     config = read('src/shared/Config.luau')
     need(re.search(r'^\s*SecretSpeciesEnabled = false,', config, re.M) is not None, 'Config.SecretSpeciesEnabled must be false in source')
 
-    # The flag is pinned OFF in the default AND the playtest profile (verify_release enforces it on the built places).
-    for name in ('default', 'playtest'):
-        rules = [r for r in release_profiles.PROFILES[name] if r.key == 'SecretSpeciesEnabled']
-        need(len(rules) == 1 and rules[0].mode == 'require' and rules[0].value is False and rules[0].missing == 'error',
-             f'release profile {name!r} must require SecretSpeciesEnabled == false (missing = error)')
-    need(any(r.key == 'SecretSpeciesEnabled' for r in release_profiles.COMMON_RULES), 'the pin lives in COMMON_RULES, so every committed build has it')
+    # The flag is pinned OFF in the DEFAULT profile (Build 020 parity) and SET ON in the PLAYTEST profile only (docs/173, owner directive
+    # 2026-10-18); verify_release enforces both on the built places. The committed source stays false.
+    rules = [r for r in release_profiles.PROFILES['default'] if r.key == 'SecretSpeciesEnabled']
+    need(len(rules) == 1 and rules[0].mode == 'require' and rules[0].value is False and rules[0].missing == 'error',
+         "release profile 'default' must require SecretSpeciesEnabled == false (missing = error)")
+    rules = [r for r in release_profiles.PROFILES['playtest'] if r.key == 'SecretSpeciesEnabled']
+    need(len(rules) == 1 and rules[0].mode == 'set' and rules[0].value is True and rules[0].missing == 'error',
+         "release profile 'playtest' must SET SecretSpeciesEnabled == true (docs/173)")
+    need(not any(r.key == 'SecretSpeciesEnabled' for r in release_profiles.COMMON_RULES), 'the flag is not in COMMON_RULES any more (it is set by the playtest)')
+    # The playtest turns it on ONLY because every slot that can drop holds a real id (docs/173): the shipped slots are exactly the pinned ids.
+    slots = shipped_slots()
+    need(sorted(slots) == sorted(['chickosaurus', 'pigeon', 'dodo', 'duck', 'penguin', 'budgiesaurus', 'foxosaurus']), 'seven secret rows in SecretSpeciesConfig: ' + repr(sorted(slots)))
+    need({k: v for k, v in slots.items() if v} == BOUND_IDS, f'the bound model slots {({k: v for k, v in slots.items() if v})} differ from the pinned real ids {BOUND_IDS} (docs/173): bind through tools/bind_secret_species.py and update BOUND_IDS, docs/173 and the evidence line together')
+    need(len(BOUND_IDS) >= 1 and all(isinstance(v, int) and not isinstance(v, bool) and 10 ** 9 < v < 10 ** 16 for v in BOUND_IDS.values()), 'every bound id is a plain positive whole number of a real published asset (10 to 16 digits)')
+    need(len(set(BOUND_IDS.values())) == len(BOUND_IDS), 'no two secrets share a model id')
+    doc173 = read('docs/173-secret-roster-bind.md') if (ROOT / 'docs/173-secret-roster-bind.md').exists() else ''
+    for sid, asset in BOUND_IDS.items():
+        need(str(asset) in doc173, f'docs/173 lists the bound id of {sid} ({asset})')
+    lowpoly = read('src/shared/LowPolyDinoAssets.luau')
+    for sid, asset in BOUND_IDS.items():
+        need(re.search(rf'^\s+{sid} = \{{assetId = {asset}, ', lowpoly, re.M) is not None, f'LowPolyDinoAssets has the entry of {sid} with the pinned id')
+    others = [sid for sid in slots if sid not in BOUND_IDS]
+    for sid in others:
+        need(re.search(rf'^\s+{sid} = \{{assetId', lowpoly, re.M) is None, f'LowPolyDinoAssets has no entry for the empty slot {sid} (never invent ids)')
 
     # Only the two earned-egg origins pass an origin to the egg roll; every other caller passes none.
     callers = []
@@ -958,8 +1070,9 @@ def static():
 
     # docs
     registry = read('docs/77-asset-registry.md')
-    for name, asset in (('secret_dino_budgiesaurus', '111728956844490'), ('secret_dino_foxosaurus', '119604460832523')):
-        need(re.search(rf'^\| {name} \|.*{asset}.*placeholder', registry, re.M | re.I) is not None, f'docs/77 pending line for {name} ({asset})')
+    for name, asset in (('secret_dino_budgiesaurus', '107910518074360'), ('secret_dino_foxosaurus', '112996440434481'), ('secret_dino_chickosaurus', '108391746824463')):
+        need(re.search(rf'^\| {name} \|.*{asset}', registry, re.M) is not None, f'docs/77 line for {name} ({asset})')
+    need(re.search(r'^\| secret_dino_foxosaurus \|.*BOUND', registry, re.M) is not None, 'docs/77 says the Foxosaurus line is BOUND')
     decisions = read('docs/115-decisions-log.md')
     for n in range(1, 10):
         need(re.search(rf'^\| SS{n} \| \*\*LEAD \(owner delegated 2026-10-16', decisions, re.M) is not None, f'docs/115 row SS{n}')
@@ -1066,13 +1179,14 @@ def part_c():
     prefix = base[:-len(verify_odds_copy.BODY)]
     body = PART_C
     body = body.replace('@@RARE@@', module('src/shared/RareHatch.luau'))
-    body = body.replace('@@SECRET@@', module('src/shared/SecretSpeciesConfig.luau'))
+    body = body.replace('@@SECRET@@', empty_secret_module())
     # the odds modules the prefix built: expose them under the names PART_C uses
     glue = 'local ConfigForC, OddsCopyForC, ShopOddsForC = Config, Copy, ShopOdds\nlocal Progression = Progression\n'
     return prefix + glue + body
 
 
-# C2: a secret species WITH a model, tested with FAKE ids for all seven (no real mesh id; the flag and the shipped files stay untouched).
+# C2: a secret species WITH a model, tested with FAKE ids for every slot that is still empty (no real mesh id; the bound real ones stay as shipped;
+# the flag and the shipped files stay untouched).
 # The tree copy is a scratch directory; the shipped sources are only read.
 WIRING_TOOLS = ['verify_scale_ladder.py', 'verify_camera_framing.py', 'verify_hit_sizes.py', 'verify_mouth_reach.py', 'verify_lowpoly_dinos.py']
 SUPPORT_TOOLS = ['rehearsal_env.py']  # imported by the wiring tools above (BD-626); copied, never run
@@ -1087,8 +1201,8 @@ def edit(path, old, new, count=1):
 
 
 def build_tree(dst, fill=True, measured=True, lowpoly=True):
-    """Copy src, the five sizing verifiers and docs/114 into dst; optionally fill all seven model slots with FAKE ids, add the
-    LowPolyDinoAssets entries and mark the ladder rows measured."""
+    """Copy src, the five sizing verifiers and docs/114 into dst; optionally fill every still EMPTY model slot with a FAKE id (the slots bound to a
+    real id keep it), add the missing LowPolyDinoAssets entries and mark the remaining ladder rows measured."""
     shutil.copytree(ROOT / 'src', dst / 'src')
     (dst / 'tools').mkdir()
     for name in WIRING_TOOLS + SUPPORT_TOOLS:
@@ -1101,24 +1215,29 @@ def build_tree(dst, fill=True, measured=True, lowpoly=True):
     classes = dict(re.findall(r'\{ id = "(\w+)", name = "[^"]+", secret = true, class = "(\w+)"', cfg_path.read_text(encoding='utf-8')))
     assert sorted(rows) == sorted(classes) and len(rows) == 7, (sorted(rows), sorted(classes))
     fakes = {}
+    bound = dict(BOUND_IDS)
     for index, sid in enumerate(classes, 1):
+        if sid in bound:
+            fakes[sid] = bound[sid]  # a real bound id stays as shipped (its entry and measured row are already in the copied tree)
+            continue
         fakes[sid] = FAKE_BASE + index
         if fill:
             text = cfg_path.read_text(encoding='utf-8')
             pattern = re.compile(r'(\{ id = "%s", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )0( \})' % sid)
             assert pattern.search(text), sid
             cfg_path.write_text(pattern.sub(lambda m: m.group(1) + str(fakes[sid]) + m.group(2), text), encoding='utf-8', newline='')
+    empties = [sid for sid in classes if sid not in bound]
     if fill and lowpoly:
         lp = dst / 'src/shared/LowPolyDinoAssets.luau'
         text = lp.read_text(encoding='utf-8').rstrip()
         assert text.endswith('}')
-        lines = ''.join(f'    {sid} = {{assetId = {fakes[sid]}, version = "v1", scale = {rows[sid][0]}, tier = {rows[sid][1]}, class = "{classes[sid]}"}},\n' for sid in classes)
+        lines = ''.join(f'    {sid} = {{assetId = {fakes[sid]}, version = "v1", scale = {rows[sid][0]}, tier = {rows[sid][1]}, class = "{classes[sid]}"}},\n' for sid in empties)
         lp.write_text(text[:-1] + lines + '}\n', encoding='utf-8', newline='')
     if fill and measured:
         text = (dst / 'src/shared/ScaleLadder.luau').read_text(encoding='utf-8')
         # BD-992: the T-Rex and Ankylosaurus rows are also `measured = false` (scaled from the Studio box), so only the secret block is flipped
         head, sep, tail = text.partition('    secret = {')
-        assert sep and tail.count(', measured = false}') == 7
+        assert sep and tail.count(', measured = false}') == len(empties), (tail.count(', measured = false}'), len(empties))
         (dst / 'src/shared/ScaleLadder.luau').write_text(head + sep + tail.replace(', measured = false}', ', measured = true}'), encoding='utf-8', newline='')
     return fakes, classes, rows
 
@@ -1141,24 +1260,24 @@ def wiring(runner):
         fakes, classes, rows = build_tree(scratch, **kw)
         return scratch, fakes, classes, rows
 
-    # 1. the shipped tree (all slots empty) passes every sizing verifier with the secret rows present
+    # 1. the shipped tree (the pinned real ids bound, the other slots empty) passes every sizing verifier with the secret rows present
     for name in WIRING_TOOLS:
         code, out = run_tool(ROOT, name, runner)
         need(code == 0, f'{name} fails on the shipped tree: {out[-400:]}')
-    # 2. all seven filled with FAKE ids, entries and measured rows: every verifier still passes
+    # 2. all seven filled (the bound real ids plus FAKE ids for the rest, with entries and measured rows): every verifier still passes
     scratch, fakes, classes, rows = fresh()
     try:
-        need(all(str(v).startswith('99900000000') for v in fakes.values()) and len(set(fakes.values())) == 7, 'the seven ids are fake and distinct')
+        need(all(str(v).startswith('99900000000') for k, v in fakes.items() if k not in BOUND_IDS) and len(set(fakes.values())) == 7, 'the unbound ids are fake and distinct from each other and from the real ones')
         code, out = run_tool(scratch, 'verify_scale_ladder.py', runner, '--write-doc')
         need(code == 0, 'scale ladder (fake ids, regenerated doc) fails: ' + out[-600:])
         for name in WIRING_TOOLS:
             code, out = run_tool(scratch, name, runner)
-            need(code == 0, f'{name} fails with all seven secret species filled (FAKE ids): {out[-600:]}')
+            need(code == 0, f'{name} fails with all seven secret species filled (real + FAKE ids): {out[-600:]}')
             if name == 'verify_lowpoly_dinos.py':
                 need('(7 secret slots, 7 filled)' in out, 'verify_lowpoly_dinos must see the seven filled secret entries: ' + out[-300:])
             if name == 'verify_hit_sizes.py':
                 need('7 secret species' in out, 'hit sizes must cover the secret species')
-        summary.append('7 fake-id secrets: scale ladder, camera framing, hit sizes, mouth reach, low-poly registry all pass')
+        summary.append(f'7 filled secrets ({len(BOUND_IDS)} real, {7 - len(BOUND_IDS)} fake ids): scale ladder, camera framing, hit sizes, mouth reach, low-poly registry all pass')
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -1195,7 +1314,7 @@ def wiring(runner):
     mutate('box drifts from the verifier list', 'verify_scale_ladder.py', 'SECRET_BOXES',
            lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'width = 4.00, height = 6.60, length = 5.80', 'width = 9.00, height = 6.60, length = 5.80'))
     mutate('box off the size rule', 'verify_scale_ladder.py', 'more than 2%',
-           lambda d, f, c, r: edit(d / 'tools/verify_scale_ladder.py', "'foxosaurus': (3.40, 6.60, 8.70)", "'foxosaurus': (3.40, 9.00, 8.70)") or edit(d / 'src/shared/ScaleLadder.luau', 'width = 3.40, height = 6.60, length = 8.70', 'width = 3.40, height = 9.00, length = 8.70'))
+           lambda d, f, c, r: edit(d / 'tools/verify_scale_ladder.py', "'dodo': (5.30, 6.60, 6.50)", "'dodo': (5.30, 9.00, 6.50)") or edit(d / 'src/shared/ScaleLadder.luau', 'width = 5.30, height = 6.60, length = 6.50', 'width = 5.30, height = 9.00, length = 6.50'))
     mutate('HitSize ignores the secret rows', 'verify_hit_sizes.py', 'Luau behavior checks failed',
            lambda d, f, c, r: edit(d / 'src/shared/HitSize.luau', 'ScaleLadder.dinoRow(speciesId)', '(ScaleLadder.Dino.species :: any)[speciesId]'))
     mutate('MouthReach ignores the secret rows', 'verify_mouth_reach.py', 'exceeds the cap',
@@ -1237,7 +1356,7 @@ def main():
             print('FAIL:', error)
         status = 1 if wiring_errors else 0
     if status == 0:
-        print('Secret species verified (offline Luau; Studio check of the Index cards pending, no model slot is filled yet)')
+        print(f'Secret species verified (offline Luau; {len(BOUND_IDS)} of 7 model slots bound to real ids: {sorted(BOUND_IDS)}; Studio check of the Index cards and the models in game pending)')
     raise SystemExit(status)
 
 
