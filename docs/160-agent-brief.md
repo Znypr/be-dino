@@ -129,8 +129,8 @@ After your task the lead logs it with `python tools/retro_log.py add ...` ([168]
 
 | Ceiling | Where | Value after BD-1088 |
 | --- | --- | --- |
-| Size of Bootstrap (bytes, LF) | `KNOWN_OVER` in `tools/verify_server_module_size.py` | 73,100 (was 123,680; 89,450 before BD-1110) |
-| Top-level `local` lines in Bootstrap (every verifier that counts them) | `MAX_TOP_LOCALS` in `tools/bootstrap_sources.py` | 165 (was 193 to 195 in nine places; 170 before BD-1110) |
-| Live locals of the main chunk | `SCOPE_CEILINGS` in `tools/verify_local_budget.py` | 118 (was 142 of 200; 124 before BD-1110) |
+| Size of Bootstrap (bytes, LF) | `KNOWN_OVER` in `tools/verify_server_module_size.py` | 73,100 (was 123,680; 79,000 before the small screens moved, 89,450 before the Index screens) |
+| Top-level `local` lines in Bootstrap (every verifier that counts them) | `MAX_TOP_LOCALS` in `tools/bootstrap_sources.py` | 165 (was 193 to 195 in nine places; 167 before the small screens moved, 170 before the Index screens) |
+| Live locals of the main chunk | `SCOPE_CEILINGS` in `tools/verify_local_budget.py` | 118 (was 142 of 200; 120 before the small screens moved, 124 before the Index screens) |
 
 Verifiers that search Bootstrap's text for a wiring fragment must read `tools/bootstrap_sources.py` (`text()` = Bootstrap plus the modules its screens moved to; add the module to `MODULES` when you move code). Moved so far: the shop screens (Crystal Shops, the odds pages, the purchase confirms, the Potion Shop, the pending-purchase retry) to `ShopScreens.luau`; the toast stack (BD-067) to `Toasts.luau` (`Toasts.notify` is Bootstrap's `notify`); the Dino Index and dino detail screens (BD-1110) to `DinoIndexScreens.luau` (it also owns the selected species; the Patterns and Colours tabs stay `IndexTabs.luau`, the details panels `DinoIndexPanels.luau`). The small screens (`exit`, `crystalReveal`, `batchSummary`, `settings` with its Help page, `food`, `tutorial`; BD-1110) to `SmallScreens.luau`. Still inline: `home`, `eggs`, `results` (small) and the hatch screen (9 KB, deep shared state: needs Studio).
