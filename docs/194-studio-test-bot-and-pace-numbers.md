@@ -93,3 +93,27 @@ Window 500 x 465 (the window the tools got; no phone, no 844 x 390). Build `3ced
 **Defect fixed in this change:** `Bootstrap.client.luau` re-laid every child of a rail button (except `ActiveTab`) as the button's icon, so the Index dot became a 36 x 36 disc at the icon position instead of an 18 px dot in the top right corner. The rule now skips `IndexDot`. Verified in a Studio copy: dot `{1,-4},{0,4}`, 18 x 18. The default build is unchanged (the dot only exists with the flag on).
 
 Open (new rows): the "Found on" line and the Boost line are cut at small widths; at 500 px the HUD rail buttons lie under the Index tabs and a click on the Patterns tab **also** pressed the rail EGGS button and closed the Index (the engine's hit test puts the tab on top, so this is probably the Studio click tool and not a real defect; check with a real mouse). Gamepad B and Escape stay untested. Equipped genes said `conditionId` "astra" (a 0.5 percent condition) while the card showed none: not verified, row opened.
+
+## 4. Respawn by food kind (BD-1081): the same bot, before and after
+
+STUDIO EVIDENCE, 2026-10-18, desktop Studio, one player, unpublished playtest build of main `38cdbb3c` (designed food map on, `FoodRespawnTiersEnabled` on), memory profile, no admin values, no forced chances. "Before" = the same session with the respawn table set to 8 s for every kind (`FoodRespawnByKind` is not frozen, so it can be changed from a Server `execute_luau`; this is exactly what the flag off does). "After" = the committed table (berry 8, fruit 12, egg 40, amber 120, golden drumstick 150 s). Single runs of 300 s, weather as it came. Estimates are the bot's own count (`Bot.summary()`); run 1 also has the server line `food_raw` 3,432, `eggs_food` 82, eggs 88 (the bot said 3,418).
+
+| # | Walker | Respawn | food (est) | per minute | eggs | amber + drumstick share | points from a food eaten a second time |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | sees 60 studs, looks 0.4 s | table | 3,418 | 684 | 88 | 58 % | not counted (the run had no id in the eat lines) |
+| docs/194 s2 run 4 | same | 8 s (old) | 4,262 | 852 | 108 | 66 % | not counted |
+| 2 | sees 170 studs, no pause | table | **4,367** | 873 | 123 | 70 % | **65 (1.5 %)** |
+| 3 | same | 8 s | **4,879** | 976 | 134 | 72 % | **497 (10 %)** |
+| docs/194 s2 run 5 | same | 8 s (old) | 5,358 | 1,072 | 143 | 77 % | not counted |
+| 4 | casual walker | 8 s | 963 | 193 | 26 | 32 % | 34 |
+| 5 | casual walker | table | 1,523 | 305 | 41 | 45 % | 78 |
+| 6 | casual walker | table | 1,230 | 246 | 40 | 42 % | not counted |
+
+What the numbers say (plain words):
+
+* **The loop is gone, the pace is not.** Points from a food the walker had already eaten once fell from 497 (10 percent) to 65 (1.5 percent). But the whole run only fell by about 10 percent (4,879 to 4,367; and by 18 to 20 percent against the older single runs of section 2). The bot still gets 4,400 food (6 to 7 times the docs/119 target of 600 to 700) because it walks to **each** of the map's about 108 ambers and about 36 golden drumsticks **once**: 44 ambers and 14 drumsticks were eaten for the first time in run 2, that is 3,040 points. Respawn time cannot touch that. The numbers that would: how many rich foods exist, what they give, or a per-run cap. A child does not walk to 44 ambers in 5 minutes, so this is a design question for the owner (new row BD-1093), not a bug.
+* **The casual (slow) walker is not hurt.** Before 963, after 1,523 and 1,230. These three runs differ by chance (how many ambers the random walk met: 5 vs 10 vs 8), so the honest reading is "no sign of a drop, noise of about plus or minus 30 percent", not "the table helped". The 80 percent line of the brief (a slow walker must keep at least 80 percent) holds. This walker is faster than the round-3b script (570 food): the map puts food closer together (297 to 335 eats in 5 minutes). It is a stand-in for a casual player, **not a person**.
+* Eggs (15 points, 40 s) still give 19 to 29 percent of the bot's points because there are about 250 of them; the table keeps them at 40 s on purpose.
+* Not measured: a real child, a phone, the effect on the cluster relocation (the map keeps foods in place), servers with more than one player (each food is shared; slower respawn matters more there).
+
+New in the bot (tools/studio): `start --casual --max-distance 90` (the casual walker above) and `summary` (points by kind, the amber + drumstick share, points from a second eat).
