@@ -481,3 +481,10 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - Options not picked: (a) clear the six ids in `Config.DeveloperProducts` (touches paid-line code and BD-612; the ids are needed again when the packs come back); (b) turn the hard stop into a warning for every legacy experience (weakens the guard everywhere).
 - Tests: `tests/test_release_playtest.py` proves a missing pair, half a pair, a false or non-boolean flag, a bad date, a paid line on, a missing paid line, kind "new" and an id/Config mismatch all still fail.
 - How to overturn: remove the two fields from `tools/release_ids.json` (the HARD STOP returns) or clear the ids in Config. The owner publishes (BD-1021); nothing was published or changed in Creator Hub.
+
+## LEAD decision (owner delegated 2026-10-16, 2026-10-18): shop and NPC interaction prompts (BD-1016, [180](180-shop-and-npc-interaction-design.md))
+- **Owner ask (2026-10-18):** shop interactions should be like messages with buttons, with a key like E to interact; research Grow a Garden and Steal an Egg.
+- **Decision:** build option A: a message bubble above each stall (name, one warm line, a big key button; tap anywhere on it on a phone) that opens the existing shop window on one press. Key **E** on PC and **ButtonX** on a gamepad at the stalls (CURRENT BUILD is G and L1). E is safe at home because Leap and bite only act in a run and the stalls only open at home; this changes docs/114 s6.2 and the `verify_cave_gate` assertion when it is built (BD-1017).
+- **Options not picked:** B (speech bubble with 2 or 3 choice buttons: an extra tap for stalls that have one window; use later where a stall has two real choices) and C (window opens when you walk up: breaks the 2026-10-16 owner rule that a stall never opens by walking near it).
+- **To overturn:** tell the lead; nothing is built yet, so only [180](180-shop-and-npc-interaction-design.md) and the BD-1016 to BD-1018 rows change.
+- **Not seen:** the other games' prompts (only Grow a Garden pictures exist), phone, Studio. Research is from pages and a few paused frames.
