@@ -18,3 +18,9 @@ Short rules every contributor and agent follows. The audience is children: keep 
 
 ## Review
 - The lead checks every new screen in Studio with a screenshot before merge (copy rules and art rules above included).
+
+## Close paths (owner bug 2026-10-18, BD-1019, [181](181-ui-close-paths-audit.md))
+- Every menu, popup and sheet has a way out that works: the red X (at least 44 px on screen), a tap on the dark backdrop (unless something is being saved or revealed), Escape and gamepad B, plus the screen's own Back / Cancel / Done button.
+- Nothing may sit above X or the backdrop: no full-screen button or Active frame over a menu. A tap catcher covers only the card body, never the header strip or the buttons. If you add a full-screen button in `src/client`, review it and list it in `tools/verify_close_paths.py`.
+- Closing never claims, skips or buys anything. Test it with `ModalClose.coverOf` (offline) and `W.cover` (Studio walk).
+

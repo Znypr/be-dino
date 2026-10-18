@@ -152,6 +152,7 @@ W.steps[7] = function(ctx)
             local catcher = g and W.find(g, function(d) return d.Name == "HatchTapCatcher" and W.visible(d) end)
             local hint = g and g:FindFirstChild("TapHint", true)
             if m.claims >= 3 and hint and W.visible(hint) then break end
+            if catcher and hint and W.visible(hint) and not m.xChecked then m.xChecked = true W.closeCheck(c) end -- BD-1019: X reachable while an egg is shown
             if catcher and hint and W.visible(hint) and time() - (m.lastTap or 0) > 1.3 then
                 m.lastTap = time()
                 if W.tap(catcher) ~= "ok" then
@@ -168,7 +169,14 @@ W.steps[7] = function(ctx)
         local skip = g and g:FindFirstChild("SkipAll", true)
         add(c, if m.queue0 > 3 then (skip ~= nil and W.visible(skip)) else nil, if skip then "'Skip the rest' button is there" else "no 'Skip the rest' button while eggs remain")
         add(c, copiesTotal() > m.copies0, string.format("dino copies went %d -> %d", m.copies0, copiesTotal()))
-        W.closeModal() -- leaves the rest of the party unopened, so the auto-open check below has eggs
+        -- BD-1019 (owner bug 2026-10-18: "when hatching the egg, pressing X doesnt work"): the REAL X closes the hatch party, mid-party, and the
+        -- eggs not opened yet stay in the queue. Leaves the rest of the party unopened, so the auto-open check below has eggs.
+        local xButton = W.btn(W.scrim(), "X")
+        local queued = W.num("ActiveChestCount") + W.num("QueuedEggsWaiting")
+        local tapped = if xButton then W.tap(xButton, function() return not W.modalOpen() end, 2) else nil
+        add(c, if xButton then (if tapped == "novim" then nil else tapped == "ok") else false, if xButton then "X closes the hatch party mid-way (a real tap)" else "no X button on the hatch screen")
+        W.closeModal() -- fallback when the tap could not close it, so the next phase starts clean
+        add(c, W.num("ActiveChestCount") + W.num("QueuedEggsWaiting") >= queued - 1, "the eggs not opened yet stay queued after X (" .. queued .. " before, " .. (W.num("ActiveChestCount") + W.num("QueuedEggsWaiting")) .. " after)")
         m.ph = "auto"
     end
     if m.ph == "auto" then

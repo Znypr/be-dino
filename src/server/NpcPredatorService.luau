@@ -181,7 +181,7 @@ function NpcPredatorService.start(combat: any?)
                         key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(HitRadius.of(character), 0, 14), -- BD-514: same rule CombatService uses for a bite on this player
                         alive = dino.state.phase == "Alive" and humanoid.Health > 0,
                         active = character:GetAttribute("RunState") == "Active",
-                        protectedUntil = dino.protectedUntil,
+                        protectedUntil = dino.protectedUntil, score = dino.score,
                     })
                 end
             end

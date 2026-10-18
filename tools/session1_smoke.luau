@@ -310,6 +310,11 @@ runScenario(function(env, server)
             if p.attrs.LastChestClaimStatus == "claimed" then
                 revealed += 1
                 if PS.get(p, "LastChestFailed") == true then failed += 1 end
+                if guard == 1 then -- BD-1019: closing the hatch screen (X, tap outside, Escape) and tapping the same egg again must never hatch it twice
+                    sleep(Config.ChestClaimRequestCooldownSeconds + .1)
+                    fire(env, "ClaimChest", p, eggId, "replay" .. guard)
+                    check("a replayed claim of an opened egg hatches nothing " .. tostring(p.UserId), p.attrs.LastChestClaimStatus ~= "claimed", p.attrs.LastChestClaimStatus)
+                end
             end
             sleep(Config.HatchRevealSeconds)
         end

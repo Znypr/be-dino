@@ -18,7 +18,9 @@ BODY = r'''
 local Cfg,Stats,State,R=M.CombatConfig,M.CombatStats,M.CombatState,M.CombatRules
 local function P(x,y,z) return {X=x,Y=y or 0,Z=z or 0} end
 local FWD=P(0,0,-1) -- facing -Z
-local BIG=25500 -- s=4
+local BIG=25500 -- old food score, s=4 (size unit capped at 16)
+local MID=300 -- BD-1025: size unit 7, seven times a fresh dino
+local NEAR=100 -- size unit 3
 -- 1. flag off = identity: nothing joins, every call is a no-op
 local off=R.new(false)
 assert(R.join(off,{userId=1,runId="r",class="Ground",score=0,now=0})==nil,"flag off: nobody joins")
@@ -49,10 +51,11 @@ assert(R.attack(w,A.key,2.8,P(0,0,0),P(0,0,0),cand).reason=="facing","no look ve
 assert(R.attack(w,A.key,3.4,P(0,0,0),FWD,{{key=A.key,pos=P(0,0,-1)}}).reason=="no_target","never self")
 local hit=R.attack(w,A.key,4,P(0,0,0),FWD,cand)
 assert(hit.ok and hit.targetKey==B.key and not hit.defeated)
-assert(math.abs(hit.damage-Stats.hit("Ground",1,"Ground",4,0,1))<1e-9,"module damage formula, never client damage")
+assert(math.abs(hit.damage-Stats.hitScored("Ground",0,"Ground",BIG,0,1,{}))<1e-9,"module damage formula, never client damage")
+assert(hit.damage>=Cfg.MinHit and hit.damage<Stats.hit("Ground",1,"Ground",4,0,1),"a fresh dino barely scratches a capped one (BD-1025)")
 assert(math.abs(B.state.hp-(B.state.maxHp-hit.damage))<1e-9)
 assert(math.sqrt(hit.knockX^2+hit.knockZ^2)<=Cfg.KnockbackStuds+1e-9 and hit.knockZ<0,"knockback bounded, away from attacker")
-assert(R.attack(w,A.key,4.5,P(0,0,0),FWD,cand).reason=="cooldown","0.9 s cooldown")
+assert(R.attack(w,A.key,4.5,P(0,0,0),FWD,cand).reason=="cooldown","bite cooldown (Cfg.BiteCooldownSeconds)")
 -- rate limit: a third request inside one second is refused even after the cooldown
 local w2=world(); local a2=R.join(w2,{userId=1,runId="x",class="Ground",score=0,now=0}); local b2=R.join(w2,{userId=2,runId="y",class="Ground",score=BIG,now=0})
 local c2={{key=b2.key,pos=P(0,0,-4)}}
@@ -67,7 +70,7 @@ assert(R.attack(w3,a3.key,1,P(0,0,0),FWD,c3).reason=="no_target","protected targ
 assert(a3.protectedUntil<=1,"attacking ends the attacker's protection early")
 assert(R.attack(w3,a3.key,6,P(0,0,0),FWD,c3).ok,"protection over")
 -- 4. exactly-once defeat and settlement; hp never negative; later bites ignored
-local w5=world(); local big=R.join(w5,{userId=99,runId="big",class="Ground",score=BIG,now=0})
+local w5=world(); local big=R.join(w5,{userId=99,runId="big",class="Ground",score=MID,now=0})
 local smalls={}
 for i=1,6 do smalls[i]=R.join(w5,{userId=i,runId="s"..i,class="Ground",score=0,now=0}) end
 local t,bites=0,0
@@ -84,11 +87,11 @@ assert(big.state.hp==0 and R.hpByte(big)==0)
 assert(R.settle(w5,big.key)==true and R.settle(w5,big.key)==false and R.settle(w5,big.key)==false,"settled exactly once")
 for i,s in smalls do assert(R.attack(w5,s.key,t+10+i,P(0,0,0),FWD,{{key=big.key,pos=P(0,0,-3)}}).reason=="no_target","defeated dino cannot be hit again") end
 assert(w5.defeatCount==1 and big.state.hp==0)
-assert(t>=15 and t<=40,"six smalls beat s=4 in 20-35 s of sim (team-up target), got "..t)
+assert(t>=15 and t<=40,"six fresh dinos beat a size-unit-7 dino in 15-40 s of sim (BD-1025: against a capped one they cannot), got "..t)
 -- assist bonuses: whole numbers, capped by the pool, only to real assisters, never eggs
 local total=0
 for key,amount in w5.log[1].b do assert(amount==math.floor(amount) and amount>0); total+=amount; assert(w5.dinos[key],"bonus only to tracked dinos") end
-assert(total<=math.floor(BIG*Cfg.TeamUp.BonusCapFraction),"bonus total under the cap")
+assert(total<=math.floor(MID*Cfg.TeamUp.BonusCapFraction),"bonus total under the cap")
 assert(total>0,"assisters get something")
 for k in w5.log[1].b do assert(k~=big.key,"victim never gets a bonus") end
 -- a defeated attacker cannot bite
@@ -108,7 +111,7 @@ local b1,t1=duel(1,0); local b2b,t2=duel(2,t1+1); local b3b,t3=duel(3,t2+1)
 assert(b1>0 and b2b==math.floor(b1*0.5) and b3b==0,"pair factors 1, 0.5, 0: "..b1..","..b2b..","..b3b)
 assert(w6.defeatCount==3)
 -- 5. growth keeps the ratio and food heals 5%; 6. regen after 6 s
-local w7=world(); local g=R.join(w7,{userId=1,runId="g",class="Ground",score=0,now=0}); local h=R.join(w7,{userId=2,runId="h",class="Ground",score=BIG,now=0})
+local w7=world(); local g=R.join(w7,{userId=1,runId="g",class="Ground",score=0,now=0}); local h=R.join(w7,{userId=2,runId="h",class="Ground",score=NEAR,now=0})
 for k=1,5 do assert(R.attack(w7,h.key,k,P(0,0,0),FWD,{{key=g.key,pos=P(0,0,-3)}}).ok) end
 local frac=g.state.hp/g.state.maxHp; assert(frac<0.7 and frac>0)
 R.setScore(w7,g.key,BIG); assert(math.abs(g.state.hp/g.state.maxHp-frac)<1e-9 and g.state.maxHp==Stats.maxHp("Ground",4),"ratio kept on growth")
@@ -118,7 +121,7 @@ R.tick(w7,12,1); assert(math.abs(g.state.hp/g.state.maxHp-(frac+Cfg.FoodHealFrac
 R.tick(w7,13,1000); assert(g.state.hp==g.state.maxHp,"regen clamps at max")
 assert(R.setScore(w7,"none",5)==nil and R.foodHeal(w7,"none")==0)
 -- 7. HP byte: first send, then only on change at <= HpSendHz, defeat (0) never delayed
-local w8=world(); local u=R.join(w8,{userId=1,runId="u",class="Ground",score=0,now=0}); local v=R.join(w8,{userId=2,runId="v",class="Ground",score=BIG,now=0})
+local w8=world(); local u=R.join(w8,{userId=1,runId="u",class="Ground",score=0,now=0}); local v=R.join(w8,{userId=2,runId="v",class="Ground",score=NEAR,now=0})
 assert(R.pendingHpByte(w8,u.key,0)==Cfg.HpByteMax and R.pendingHpByte(w8,u.key,0.5)==nil,"full once, then quiet")
 R.attack(w8,v.key,1,P(0,0,0),FWD,{{key=u.key,pos=P(0,0,-3)}})
 local byte=R.pendingHpByte(w8,u.key,1.0); assert(byte and byte<Cfg.HpByteMax and byte>0,"changed hp is sent")

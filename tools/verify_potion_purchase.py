@@ -273,7 +273,7 @@ def static_checks():
     c = re.search(r'button\(body,"CANCEL",290,339,510,44,C\.red,function\(\) open\("potions"\) end\)', client)
     assert c, 'CANCEL button on the confirm card'
     # The scrim closes the modal (a click outside the panel): documented, never buys.
-    assert 'shade.Activated:Connect(close)' in client
+    assert 'shade.Activated:Connect(function() if require(script.Parent.ModalClose).outsideTap() then close() end end)' in client  # BD-1019: still a close, now through the hatch's backdrop rule
     # Result handler: clears the pending token and re-renders the shop list.
     r = re.search(r'shopResult\.OnClientEvent:Connect\(function\(token,ok,status\)(.*?)\nend\)', client, re.S)
     assert r, 'ProgressionResult handler'
