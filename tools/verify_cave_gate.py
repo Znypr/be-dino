@@ -121,7 +121,10 @@ for _,a in W.stations() do for _,b in W.stations() do if a~=b then assert(math.s
 
 -- OWNER 2026-10-16: a station never opens by walking up: no step / dwell exists, only trigger() (a prompt press)
 assert(W.step==nil and W.DwellSeconds==nil,"no dwell auto-open API remains")
-assert(W.PromptKey=="G" and W.PromptKey~="E","prompt key is not LEAP [E]")
+-- BD-1017 (docs/180 option A, LEAD decision docs/115 C-52): flag off = the old key G / L1; Config.ShopPromptBubbleEnabled on = E / X. E is safe there: Leap and bite
+-- work only in a run (RunState Active), a stall prompt exists only at home (Sanctuary), so the two never compete. Walking up still opens nothing.
+assert(W.PromptKey=="G" and W.keyFor(false)=="G" and W.keyFor(nil)=="G" and W.gamepadFor(false)=="ButtonL1","flag off: prompt key G, gamepad L1 (Build 020 parity)")
+assert(W.keyFor(true)=="E" and W.gamepadFor(true)=="ButtonX","flag on: prompt key E, gamepad X")
 local ws=W.newState()
 -- arriving by teleport: note() debounces a prompt press in the same instant
 ws=W.newState() W.note(ws,"style",0)
@@ -222,6 +225,7 @@ def static_checks():
     walk = (ROOT / 'src/client/HubWalkUpClient.luau').read_text()
     assert 'Heartbeat' not in walk and 'padAt' not in walk, 'no pad dwell: nothing opens without a prompt press'
     assert 'KeyboardKeyCode' in walk and 'Rules.PromptKey' in walk and 'GamepadKeyCode' in walk, 'prompt has its own key and gamepad key'
+    assert 'Rules.keyFor(true)' in walk and 'Rules.gamepadFor(bubbleOn)' in walk, 'BD-1017: the key is E / X with the bubble flag, G / L1 without'
     assert walk.count('openStation(') == 2, 'openStation is only called from the prompt Triggered handler (one def, one call)'
     boot_c = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     assert 'HubGateClient' not in boot_c and 'HubWalkUpClient' not in boot_c, 'client Bootstrap is untouched (no new locals)'

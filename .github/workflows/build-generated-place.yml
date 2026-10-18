@@ -119,6 +119,7 @@ jobs:
           python tools/verify_cave_weather.py
           python tools/verify_hub_travel.py --runner /tmp/luau/luau
           python tools/verify_hub_walk_there.py --runner /tmp/luau/luau
+          python tools/verify_shop_prompt_bubble.py --runner /tmp/luau/luau
           python tools/verify_spawn.py --runner /tmp/luau/luau
           # combat
           python tools/verify_combat_service.py --runner /tmp/luau/luau
