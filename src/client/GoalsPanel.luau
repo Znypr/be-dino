@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("GoalsRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
+local Stack = require(Shared:WaitForChild("HudPanelStack")) -- BD-1095: one of Goals / Tasks open at a time, the other hides if it is in the way
 
 local Panel = {}
 local state = {dinos = nil :: any, species = {found = 0, owned = 0, total = 0} :: any, dirty = true, width = 260}
@@ -75,17 +76,24 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         root.Size = UDim2.fromOffset(state.width, if folded then HEADER_H else HEADER_H + 2 + #rows * 56)
         header.Text = Rules.Title .. (if folded then "  (tap)" else "")
     end
-    header.Activated:Connect(function() folded = not folded render() end)
+    header.Activated:Connect(function()
+        folded = not folded
+        gui:SetAttribute(Stack.Attribute, Stack.after(gui:GetAttribute(Stack.Attribute), Stack.Goals, not folded)) -- BD-1095: opening Goals folds the Tasks panel
+        render()
+    end)
 
     local elapsed = 0
+    gui:GetAttributeChangedSignal(Stack.Attribute):Connect(function() -- BD-1095: the Tasks panel opened: fold at once, and re-place on the next frame
+        if not folded and Stack.mustFold(gui:GetAttribute(Stack.Attribute), Stack.Goals) then folded = true render() end
+        elapsed = 0.5
+    end)
     RunService.Heartbeat:Connect(function(dt)
         elapsed += dt
         if elapsed < 0.5 then return end
         elapsed = 0
         local character = Players.LocalPlayer.Character
         local inRun = character ~= nil and character:GetAttribute("RunState") == "Active"
-        root.Visible = not inRun and anchor.Visible
-        if not root.Visible then return end
+        if inRun or not anchor.Visible then root.Visible = false return end
         -- sit just under the goal line, right edges aligned. BD-507: the goal line is scaled down on phones (0.6), and GoalsPanel is not part
         -- of the ModalCompact floor pass, so the header would render 44 x 0.6 = 26 px; the panel takes the smallest scale at which the header
         -- tap target is >= 44 px and the text >= 14 px (1:1), growing LEFT from the goal line's right edge.
@@ -106,6 +114,13 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         else
             state.width = 260
         end
+        -- BD-1095: publish the FOLDED rect (the Tasks panel works out the open one from it) and hide while the Tasks sheet is open over this spot.
+        local right = root.Position.X.Offset + state.width * scale.Scale
+        local foldedW = if typeof(reserved) == "Rect" then reserved.Width else 260 * scale.Scale
+        local top = root.Position.Y.Offset
+        local mine = Rect.new(right - foldedW, top, right, top + HEADER_H * scale.Scale)
+        if gui:GetAttribute("GoalsFoldedRect") ~= mine then gui:SetAttribute("GoalsFoldedRect", mine) end
+        root.Visible = not Stack.hidden(Stack.Goals, gui:GetAttribute(Stack.Attribute), Stack.fromRect(mine), Stack.fromRect(gui:GetAttribute("ObjectivesOpenRect")))
         if state.dirty then
             state.dirty = false
             render()

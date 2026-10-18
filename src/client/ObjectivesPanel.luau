@@ -21,6 +21,7 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Chip = require(Shared:WaitForChild("ChipStyle"))
 local TouchLayout = require(Shared:WaitForChild("TouchLayout"))
 local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
+local Stack = require(Shared:WaitForChild("HudPanelStack")) -- BD-1095: one of Goals / Tasks open at a time, the other hides if it is in the way
 
 local Panel = {}
 local state = {playActive = true, onTop = nil :: (() -> ())?, view = nil :: any, fetchedAt = 0, fetching = false, nextFetch = 0}
@@ -366,12 +367,17 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
 
     header.Activated:Connect(function()
         open = not open
+        gui:SetAttribute(Stack.Attribute, Stack.after(gui:GetAttribute(Stack.Attribute), Stack.Tasks, open)) -- BD-1095: opening Tasks folds the Goals panel
         if open then fetch(true) end
         render()
         lastRects = "" -- re-place at once
     end)
 
     local elapsed, sinceFetch = 0, 0
+    gui:GetAttributeChangedSignal(Stack.Attribute):Connect(function() -- BD-1095: the Goals panel opened: fold at once, and re-place on the next frame
+        if open and Stack.mustFold(gui:GetAttribute(Stack.Attribute), Stack.Tasks) then open = false lastRects = "" render() end
+        elapsed = 0.5
+    end)
     RunService.Heartbeat:Connect(function(dt)
         elapsed += dt
         if elapsed < 0.5 then return end
@@ -383,10 +389,13 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         local openRect = gui:GetAttribute("ObjectivesOpenRect")
         local hub = not inRun and anchor.Visible
         -- A view that cannot be fetched (server flag off, not loaded yet) keeps the panel hidden until the first answer.
-        local visible = hub and typeof(folded) == "Rect" and state.view ~= nil
+        -- BD-1095: hidden while the Goals panel is open over this spot (the Goals panel publishes its folded rect; its open rect follows from it).
+        local goalsFolded = Stack.fromRect(gui:GetAttribute("GoalsFoldedRect"))
+        local hiddenByGoals = Stack.hidden(Stack.Tasks, gui:GetAttribute(Stack.Attribute), Stack.fromRect(folded), if goalsFolded then Stack.goalsOpen(goalsFolded) else nil)
+        local visible = hub and typeof(folded) == "Rect" and state.view ~= nil and not hiddenByGoals
         root.Visible = visible
         if not hub then
-            if open then open = false lastRects = "" render() end
+            if open then open = false gui:SetAttribute(Stack.Attribute, Stack.after(gui:GetAttribute(Stack.Attribute), Stack.Tasks, false)) lastRects = "" render() end
             return
         end
         if sinceFetch >= Rules.PollSeconds or state.view == nil or ((remaining() or 1) <= 0 and os.clock() - state.fetchedAt > 5) then
