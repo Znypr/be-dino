@@ -40,7 +40,7 @@ python tools/kanban.py add --title "Short title" --priority P1 [--deps "BD-1, BD
 | `tools/verify_kanban_merge.py` (PRs) | A new number that main already gave to another task; a row removed by accident (rows are never deleted: set Superseded; on purpose: a commit line `Kanban-Remove: BD-n`); a PR that still edits the old table after the cutover |
 | `tools/verify_doc_ids.py` | A repeated BD number |
 
-CI time stays flat: these are read-only checks of 600 small files (under a second). The new test file `tests/test_kanban_rows.py` runs about 45 seconds, in the existing "unit tests" step.
+CI time stays flat: these are read-only checks of 600 small files (under a second). The new test file `tests/test_kanban_rows.py` runs about 70 seconds on a Windows PC (less on the Linux runner), in the existing "unit tests" step.
 
 ## 5. The cutover (for the lead) and old PRs
 
