@@ -174,7 +174,8 @@ class PlaytestOnFlagTests(unittest.TestCase):
     """docs/157 (owner directive 2026-10-18): the playtest turns the built player-facing features on; the default build (Build 020 mirror) keeps them off."""
 
     ON = ("ObjectivesEnabled", "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk",
-          "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled", "CaveHub", "ClassMovementEnabled", "LowPolyDinos")
+          "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled", "CaveHub", "ClassMovementEnabled", "LowPolyDinos",
+          "SecretSpeciesEnabled")
 
     def test_playtest_sets_each_feature_true_and_default_requires_it_false(self):
         playtest = {r.key: r for r in profiles.rules_for("playtest")}
@@ -202,7 +203,7 @@ class PlaytestStayOffTests(unittest.TestCase):
     """docs/157: the flags the playtest keeps off are REQUIRED false (a local edit before a playtest build fails the build), each with a reason."""
 
     OFF = ("GiftClaimEnabled", "GiftingEnabled", "AdminGiftsEnabled", "FoodPickupAtMouth", "PredationAtMouth", "HatchV2", "HatchV2Preview",
-           "SecretSpeciesEnabled", "DinoSkinsEnabled", "PaidRandomItemsEnabled", "CrystalPacksEnabled", "ChestTestGrantEnabled",
+           "DinoSkinsEnabled", "PaidRandomItemsEnabled", "CrystalPacksEnabled", "ChestTestGrantEnabled",
            "CollectionTestGrantEnabled", "MutationTestSetupEnabled", "SecurityTestHarnessEnabled", "ArtTestHarnessEnabled",
            "QaOverlayEnabled", "DemoDirectorEnabled", "DuplicateSettlementProbe", "AutoOpenRequiresPass")
 

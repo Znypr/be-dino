@@ -52,6 +52,21 @@ def module(path: str | Path, root: Path = ROOT) -> str:
     )
 
 
+_SECRET_SLOT = re.compile(r'(\{ id = "\w+", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )\d+( \})')
+
+
+def neutral_secret_module(root: Path = ROOT) -> str:
+    """The real src/shared/SecretSpeciesConfig.luau with EVERY model slot set to 0 (docs/173): a Luau expression like `module()`.
+
+    The playtest binds real model ids (the Foxosaurus), so a harness that serves the shipped module to RewardMath would see one extra random draw per
+    earned egg (the secret roll) the moment SecretSpeciesEnabled is on, which shifts every seeded sequence of the rewards-family verifiers (rewards,
+    rollback, skins, gifts ...). Those verifiers are about eggs, saves and Build 020, not about secrets: they get this neutral copy, and
+    tools/verify_secret_species.py proves the secret rules and the shipped roster on their own.
+    """
+    text = _SECRET_SLOT.sub(lambda m: m.group(1) + "0" + m.group(2), read("src/shared/SecretSpeciesConfig.luau", root))
+    return "(function()\n" + text + "\nend)()"
+
+
 def files(root: Path = ROOT) -> list[str]:
     """Repo-relative paths of the main file and every part."""
     return [MAIN] + [f"src/server/{name}.luau" for name in parts(root)]
