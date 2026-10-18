@@ -70,6 +70,7 @@ class GitError(RuntimeError):
 
 
 NeedsHuman = kmp.NeedsHuman  # one class for both modules: "a file cannot be resolved by the rules; message says why"
+NO_PYC = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")  # tools run inside the worktree must not leave __pycache__ folders in it
 ROW_FILE = re.compile(r"^docs/kanban/rows/BD-\d+\.md$")
 
 
@@ -436,7 +437,7 @@ def run_tool(wt, name, *extra):
     if not script.exists():
         say("  %s: not in this tree, skipped" % name)
         return 0
-    p = subprocess.run([sys.executable, str(script), *extra], cwd=str(wt), capture_output=True)
+    p = subprocess.run([sys.executable, str(script), *extra], cwd=str(wt), capture_output=True, env=NO_PYC)
     out = (p.stdout + p.stderr).decode("utf-8", "replace").strip()
     tail = out.splitlines()[-12:]
     say("  %s: %s" % (name, "ok" if p.returncode == 0 else "FAILED (exit %d)" % p.returncode))
@@ -488,7 +489,7 @@ def check_markers(wt):
 def print_board(wt):
     if os.path.exists(Path(wt) / "tools" / "board_summary.py"):
         say("board counts after the merge:")
-        p = subprocess.run([sys.executable, str(Path(wt) / "tools" / "board_summary.py")], cwd=str(wt), capture_output=True)
+        p = subprocess.run([sys.executable, str(Path(wt) / "tools" / "board_summary.py")], cwd=str(wt), capture_output=True, env=NO_PYC)
         for l in p.stdout.decode("utf-8", "replace").splitlines():
             say("  " + l)
 
