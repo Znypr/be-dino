@@ -60,7 +60,23 @@ M.reset() M.set("weather", "lite") assert(M.factor(M.weather()) == 0.5 and not M
 M.set("weather", "off") assert(M.factor(M.weather()) == 0)
 M.set("weather", "full") M.set("calm", true) assert(M.factor(M.weather()) == 1 and M.calm() == true)
 M.reset() assert(M.equal(M.get(), d), "reset restores defaults")
-print("Settings checks passed: tabs, defaults, clamps, old-profile migration, roundtrip, fast mode, factors")
+-- BD-1065: indexSeen (the dot on the Dinos button survives a rejoin) is an ADDITIVE, lazily stored count
+assert(d.indexSeen == 0 and D.indexSeen == 0 and M.indexSeen() == 0, "default: never looked")
+assert(M.toStore(d).indexSeen == nil, "never looked: the stored table keeps exactly its old shape")
+local looked = M.normalize({indexSeen = 7})
+assert(looked.indexSeen == 7 and M.toStore(looked).indexSeen == 7 and M.equal(M.fromStore(M.toStore(looked)), looked), "a look is stored and round-trips")
+assert(M.normalize({indexSeen = 7.9}).indexSeen == 7 and M.normalize({indexSeen = 5000}).indexSeen == M.IndexSeenMax, "whole number, capped")
+for _, junk in {-1, 0, 0 / 0, "5", {}, true, false} do assert(M.normalize({indexSeen = junk}).indexSeen == 0, "junk reads as never looked") end
+assert(not M.equal(M.normalize({indexSeen = 3}), M.normalize({indexSeen = 4})) and M.equal(M.normalize({indexSeen = 3}), M.normalize({indexSeen = 3})))
+local seenEvents = 0
+M.reset() M.onChange(function() seenEvents += 1 end)
+M.set("indexSeen", 5) assert(M.indexSeen() == 5 and seenEvents == 1)
+M.set("indexSeen", 5) assert(seenEvents == 1, "no change, nothing to send")
+M.set("indexSeen", "x") assert(M.indexSeen() == 0, "a bad value reads as never looked")
+M.set("indexSeen", 9) M.set("effects", "lite") assert(M.indexSeen() == 9 and M.effects() == "lite", "another setting keeps the total")
+M.set("fast", false) assert(M.indexSeen() == 9, "so does the Fast switch")
+M.reset()
+print("Settings checks passed: tabs, defaults, clamps, old-profile migration, roundtrip, fast mode, factors, indexSeen")
 '''
 
 

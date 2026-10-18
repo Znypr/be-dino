@@ -11,13 +11,14 @@ export type Settings = {
     calm: boolean, -- Calm motion = Reduce Motion
     jumpSize: string, -- "small" | "normal" | "big" (no consumer yet: stored for the phone jump button)
     teleportShops: boolean, -- BD-288 (docs/104 s7.6): true (default) = rail buttons teleport to the shop; false = just open the menu (moss-trail guide: BD-289)
+    indexSeen: number, -- BD-1065: how many patterns + colours were found when the player last looked at the Patterns / Colours tab (0 = never; the dot on the Dinos button compares)
 }
 
 Model.Tabs = table.freeze({"sound", "look", "controls", "help"})
 Model.TabLabels = table.freeze({sound = "SOUND", look = "LOOK", controls = "CONTROLS", help = "HELP"})
 Model.Levels = table.freeze({"full", "lite", "off"})
 Model.JumpSizes = table.freeze({"small", "normal", "big"})
-Model.Defaults = table.freeze({master = 0.8, sfx = 0.7, ambience = 0.6, effects = "full", weather = "full", calm = false, jumpSize = "normal", teleportShops = true})
+Model.Defaults = table.freeze({master = 0.8, sfx = 0.7, ambience = 0.6, effects = "full", weather = "full", calm = false, jumpSize = "normal", teleportShops = true, indexSeen = 0})
 -- Particle share per level (consumers multiply their emitter rate by this).
 Model.LevelFactor = table.freeze({full = 1, lite = 0.5, off = 0})
 
@@ -29,6 +30,13 @@ end
 local function volume(value: any, fallback: number): number
     if typeof(value) ~= "number" or value ~= value then return fallback end
     return math.clamp(math.floor(math.clamp(value, 0, 1) * 10 + 0.5) / 10, 0, 1)
+end
+
+Model.IndexSeenMax = 1000
+-- BD-1065: a whole number 0..IndexSeenMax; anything else is 0 ("never looked").
+local function seenCount(value: any): number
+    if typeof(value) ~= "number" or value ~= value or value < 1 then return 0 end
+    return math.min(Model.IndexSeenMax, math.floor(value))
 end
 
 -- Any value (nil, junk, old profile without the field) to a complete valid settings table.
@@ -43,16 +51,21 @@ function Model.normalize(raw: any): Settings
         calm = t.calm == true,
         jumpSize = oneOf(Model.JumpSizes, t.jumpSize, d.jumpSize),
         teleportShops = t.teleportShops ~= false, -- default ON; only an explicit false turns it off
+        indexSeen = seenCount(t.indexSeen),
     }
 end
 
 -- The plain primitive table written to profile.settings (and what the client sends).
 function Model.toStore(s: Settings): {[string]: any}
-    return {
+    local out: {[string]: any} = {
         v = 1,
         sound = {master = s.master, sfx = s.sfx, ambience = s.ambience},
         effects = s.effects, weather = s.weather, calm = s.calm, jumpSize = s.jumpSize, teleportShops = s.teleportShops,
     }
+    -- BD-1065: ADDITIVE and lazy. Written only once the player has looked at the Patterns / Colours tabs (a build with the Index flag off never sets
+    -- it), so a stored profile that never had it keeps exactly its old shape. Same `v`: old builds ignore the key, it is cosmetic.
+    if s.indexSeen > 0 then out.indexSeen = s.indexSeen end
+    return out
 end
 function Model.fromStore(raw: any): Settings
     return Model.normalize(raw)
@@ -60,7 +73,7 @@ end
 
 function Model.equal(a: Settings, b: Settings): boolean
     return a.master == b.master and a.sfx == b.sfx and a.ambience == b.ambience and a.effects == b.effects
-        and a.weather == b.weather and a.calm == b.calm and a.jumpSize == b.jumpSize and a.teleportShops == b.teleportShops
+        and a.weather == b.weather and a.calm == b.calm and a.jumpSize == b.jumpSize and a.teleportShops == b.teleportShops and a.indexSeen == b.indexSeen
 end
 
 -- Fast mode is derived: on exactly when both Effects and Weather are Lite.
@@ -81,6 +94,7 @@ function Model.weather(): string return current.weather end
 function Model.calm(): boolean return current.calm end
 function Model.jumpSize(): string return current.jumpSize end
 function Model.teleportShops(): boolean return current.teleportShops end
+function Model.indexSeen(): number return current.indexSeen end
 function Model.onChange(fn: (Settings) -> ()) table.insert(listeners, fn) end
 
 -- Replace the current value (e.g. loaded from the server). Returns true when anything changed.
@@ -101,7 +115,8 @@ function Model.set(key: string, value: any): Settings
     elseif key == "effects" or key == "weather" then n[key] = oneOf(Model.Levels, value, n[key])
     elseif key == "calm" then n.calm = value == true
     elseif key == "jumpSize" then n.jumpSize = oneOf(Model.JumpSizes, value, n.jumpSize)
-    elseif key == "teleportShops" then n.teleportShops = value == true end
+    elseif key == "teleportShops" then n.teleportShops = value == true
+    elseif key == "indexSeen" then n.indexSeen = seenCount(value) end
     Model.load(Model.toStore(n))
     return current
 end
