@@ -150,6 +150,109 @@ class JudgingTests(unittest.TestCase):
         self.assertIn("hint, not a result", pr.render(report))
 
 
+GAME_V2 = FIXTURES / "playtest_game_v2.jsonl"
+
+
+class GameCountersTests(unittest.TestCase):
+    """BD-649 to BD-653: the lines the game itself writes (visit, count, script_error, first_* seconds, server id)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = pr.read_files([GAME_V2])
+        cls.report = pr.analyse(cls.data, rate=(12.0, 500.0))
+        cls.checks = by_name(cls.report)
+
+    def test_reading(self):
+        d = self.data
+        self.assertEqual((d["visits"], len(d["sessions"]), len(d["runs"]), len(d["servers"])), (5, 4, 4, 2))
+        self.assertEqual(d["counts"], {"hatches": 11, "movement_rejects": 6, "rate_limited": 9, "shop_purchases": 2,
+                                       "script_errors": 2, "fusions": 1})
+        self.assertEqual(d["counts_by"]["rate_limited"], {"Chest": 6, "Gift": 3})
+        self.assertEqual(len(d["errors"]), 2)
+        self.assertEqual((d["bad_lines"], d["unknown_events"]), (0, 0))
+        self.assertEqual(d["sessions"][0]["first_food_s"], 40)
+        self.assertIsNone(d["sessions"][3]["first_food_s"])   # a visit that never ate has no step number
+
+    def test_no_grey_for_what_the_game_now_counts(self):
+        for name in ("Set back by the anti-cheat", "Told \"too fast\"", "Errors and crashes", "Shop use", "Hatching"):
+            self.assertNotEqual(self.checks[name]["status"], pr.GREY, name)
+        labels = [label for label, _ in self.report["gaps"]]
+        self.assertEqual(len(labels), 2, labels)                 # only crashes and shop opens stay manual
+        self.assertTrue(any("Crashes" in x for x in labels) and any("Shop opened" in x for x in labels))
+        self.assertEqual({row for _, row in self.report["gaps"]}, {"BD-651", "BD-652"})
+
+    def test_per_visit_rates_use_the_joins(self):
+        # 6 set-backs over 5 JOINS (a visit is logged at join), not over the 4 leave lines
+        self.assertEqual(self.checks["Set back by the anti-cheat"]["number"], "6 (1.2 per visit)")
+        self.assertEqual(self.report["sessions"], 5)
+        self.assertEqual(self.checks["Set back by the anti-cheat"]["status"], pr.YELLOW)
+
+    def test_rate_limited_names_the_services(self):
+        words = self.checks["Told \"too fast\""]["words"]
+        self.assertIn("Most: Chest 6, Gift 3", words)
+
+    def test_script_errors_are_listed_and_counted(self):
+        self.assertEqual(self.checks["Errors and crashes"]["status"], pr.YELLOW)
+        text = pr.render(self.report)
+        self.assertIn("## Script errors seen", text)
+        self.assertIn("attempt to compare nil with number", text)
+        self.assertIn("Crashes are not counted by the game", self.checks["Errors and crashes"]["words"])
+
+    def test_missing_leave_lines_are_named(self):
+        self.assertIn("1 of 5 visits have no leave line", pr.render(self.report))
+
+    def test_funnel_has_steps_before_the_first_run_finished(self):
+        labels = [label for label, _ in self.report["funnel"]]
+        self.assertEqual(labels[:4], ["Came into the game", "Started a run", "Ate food", "Finished 1 run"])
+        self.assertIn("Earned an egg", labels)
+        self.assertIn("Hatched an egg", labels)
+        counts = dict(self.report["funnel"])
+        self.assertEqual((counts["Started a run"], counts["Hatched an egg"]), (3, 1))
+        self.assertEqual({i["step"]: i["median_s"] for i in self.report["step_times"]}["Ate food"], 50)
+
+    def test_time_to_first_food_and_run_lights(self):
+        self.assertEqual(self.checks["Time to first food"]["status"], pr.GREEN)
+        slow = pr.read_lines(['{"event":"session_end","total_s":600,"runs":1,"hub_s":0,"run_s":600,"first_food_s":300,"first_run_s":400}'] * 2)
+        slow_checks = by_name(pr.analyse(slow, rate=(12.0, 500.0)))
+        self.assertEqual(slow_checks["Time to first food"]["status"], pr.RED)
+        self.assertEqual(slow_checks["Time to first run"]["status"], pr.RED)
+
+    def test_old_logs_without_visits_keep_their_greys(self):
+        data = pr.read_lines(['{"event":"session_end","total_s":600,"runs":1,"hub_s":0,"run_s":600}'])
+        checks = by_name(pr.analyse(data, rate=(12.0, 500.0)))
+        self.assertEqual(checks["Set back by the anti-cheat"]["status"], pr.GREY)    # no visit line = an older game, nothing recorded
+        self.assertNotIn("Time to first food", checks)
+
+    def test_a_game_log_with_no_events_of_a_kind_means_zero(self):
+        data = pr.read_lines(['[BD-TELEMETRY] {"event":"visit","server":"aa11bb22","at":1}',
+                              '[BD-TELEMETRY] {"event":"session_end","total_s":600,"runs":1,"hub_s":0,"run_s":600}'])
+        checks = by_name(pr.analyse(data, rate=(12.0, 500.0)))
+        self.assertEqual(checks["Set back by the anti-cheat"]["status"], pr.GREEN)
+        self.assertEqual(checks["Errors and crashes"]["status"], pr.GREEN)
+        self.assertEqual(checks["Shop use"]["status"], pr.YELLOW)       # nobody bought: is the shop easy to find?
+
+    def test_hand_counts_still_work_beside_game_counts(self):
+        data = pr.read_files([GAME_V2, COUNTS])
+        self.assertEqual(data["counts"]["movement_rejects"], 6 + 9)
+        report = pr.analyse(data, rate=(12.0, 500.0))
+        self.assertEqual(by_name(report)["Errors and crashes"]["status"], pr.YELLOW)   # crashes 0 by hand, errors 3
+
+    def test_bad_game_lines_are_counted_not_crashing(self):
+        data = pr.read_lines(['{"event":"visit","server":5}', '{"event":"script_error","text":7}', '{"event":"count","name":"hatches","service":3,"value":2}'])
+        self.assertEqual((data["visits"], len(data["servers"]), len(data["errors"])), (1, 0, 0))
+        self.assertEqual(data["counts"], {"hatches": 2})
+        self.assertEqual(data["counts_by"], {})
+
+    def test_error_text_list_is_bounded(self):
+        lines = ['{"event":"script_error","script":"A","text":"error %d"}' % i for i in range(pr.MAX_ERROR_TEXTS + 30)]
+        self.assertEqual(len(pr.read_lines(lines)["errors"]), pr.MAX_ERROR_TEXTS)
+
+    def test_json_output_carries_the_new_numbers(self):
+        loaded = json.loads(json.dumps(pr.to_json(self.report)))
+        self.assertEqual((loaded["visits"], loaded["servers"], loaded["game_recorded"]), (5, 2, True))
+        self.assertEqual(loaded["counts_by"]["rate_limited"]["Chest"], 6)
+
+
 class OutputTests(unittest.TestCase):
     def test_render_sections_and_footer(self):
         text = pr.render(pr.analyse(pr.read_files([SAMPLE, COUNTS]), rate=(12.0, 500.0)))

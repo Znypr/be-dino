@@ -6,7 +6,7 @@ return function(ProfileRepository: any, shared: any)
 local Config = shared.Config
 local EggTraits = shared.EggTraits
 local ProgressionRules = shared.ProgressionRules
-local admit = shared.admit
+local admit = shared.admitAs("ProfileCollection") -- BD-650: the label names the service in the rate_limited count
 local adopt = shared.adopt
 local equippedOf = shared.equippedOf
 local findOperation = shared.findOperation

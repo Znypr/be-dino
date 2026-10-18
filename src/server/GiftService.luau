@@ -205,7 +205,10 @@ function GiftService.preflight(req: any): (boolean, string)
     local now = clock()
     local window = promptWindows[from]
     if window == nil then window = {start = 0, count = 0} promptWindows[from] = window end
-    if not GiftRules.windowAllow(window, now, Limits.PromptsPerMinute, 60) then return false, "rate_limited" end
+    if not GiftRules.windowAllow(window, now, Limits.PromptsPerMinute, 60) then
+        if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "GiftPrompt") end) end -- BD-650
+        return false, "rate_limited"
+    end
     local pref = readPref(to)
     if pref == nil then return false, "try_again" end
     local allowed, reason = GiftRules.recipientAllows(pref, from, request.isFriend == true, "robux")
@@ -577,7 +580,10 @@ function GiftService.handle(player: any, request: any, ...: any): any
     local now = clock()
     local window = actionWindows[player]
     if window == nil then window = {start = 0, count = 0} actionWindows[player] = window end
-    if not GiftRules.windowAllow(window, now, GiftService.ActionsPerWindow, GiftService.ActionWindowSeconds) then return fail("rate_limited") end
+    if not GiftRules.windowAllow(window, now, GiftService.ActionsPerWindow, GiftService.ActionWindowSeconds) then
+        if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Gift") end) end -- BD-650
+        return fail("rate_limited")
+    end
     if repository == nil or not repository.isLoaded(player) then return fail("profile_not_loaded") end
     local userId = player.UserId :: number
     local action = request.action :: string

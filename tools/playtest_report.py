@@ -5,7 +5,7 @@
 Input files (any mix, docs/167 section 7):
   * server logs exported from Studio Output or Creator Hub (lines with "[BD-TELEMETRY] {json}" and "[BD-FEEDBACK] {json}"; all other
     lines are ignored), or
-  * JSON lines: one JSON object per line, with an "event" (run_end, session_end, feedback, count, funnel, meta), or
+  * JSON lines: one JSON object per line, with an "event" (run_end, session_end, visit, count, script_error, feedback, funnel, meta), or
   * a .csv with the header `name,value[,note]` for numbers the game does not record yet (script_errors, crashes, ...).
 It builds on tools/telemetry_report.py and tools/feedback_report.py (same numbers, same 15-eggs-per-5-minutes target) and adds the
 checks those two do not have: traffic lights, drop-off, plain-word problems, and a list of what the game still does not record.
@@ -42,6 +42,8 @@ LIMITS = {
     "hub_share_green": 0.5, "hub_share_yellow": 0.7,                       # time in the cave instead of in a run
     "rejects_per_session_green": 0.5, "rejects_per_session_yellow": 2.0,
     "rate_limited_per_session_green": 1.0, "rate_limited_per_session_yellow": 5.0,
+    "first_food_s_green": 60, "first_food_s_yellow": 120,                  # median seconds from joining to the first food (BD-653)
+    "first_run_s_green": 90, "first_run_s_yellow": 180,                     # median seconds from joining to the start of the first run
     "script_errors_green": 0, "script_errors_yellow": 3,
     "fun_green": 2.4, "fun_yellow": 1.8,                                   # 1 sad, 2 ok, 3 happy
     "level_green": (1.7, 2.3), "level_yellow": (1.4, 2.6),                 # 2 = just right
@@ -49,18 +51,25 @@ LIMITS = {
     "eggs_per_500_green": (9.0, 18.0), "eggs_per_500_yellow": (6.0, 30.0),
 }
 
-# What the game does not record yet: name -> (plain words, kanban row). A `count` line (or CSV row) fills the number by hand.
+# What the game does not record on its own: name -> (plain words, kanban row). A `count` line (or CSV row) fills the number by hand.
+# BD-649 to BD-653 added server counters (docs/167 section 5): a log with a `visit` line comes from a game that counts
+# GAME_COUNTED itself, so a missing count line there means zero. Crashes, shop opens and the hand funnel stay manual.
 GAPS = {
     "movement_rejects": ("Movement rejects (the anti-cheat set a player back)", "BD-649"),
     "rate_limited": ("Rate limited (the server said \"too fast\" to a button)", "BD-650"),
-    "script_errors": ("Script errors in the server or client", "BD-651"),
-    "crashes": ("Crashes (players kicked or the app closed)", "BD-651"),
-    "shop_opens": ("Shop opened", "BD-652"),
+    "script_errors": ("Script errors on the server", "BD-651"),
+    "crashes": ("Crashes (players kicked or the app closed): read the Creator Hub list", "BD-651"),
+    "shop_opens": ("Shop opened (no server event exists; purchases are counted instead)", "BD-652"),
     "shop_purchases": ("Shop things bought", "BD-652"),
     "hatches": ("Eggs hatched by players", "BD-652"),
+    "fusions": ("Fusions made", "BD-652"),
     "funnel": ("Steps before the first run (first food, first egg, first hatch)", "BD-653"),
 }
+GAME_COUNTED = ("movement_rejects", "rate_limited", "script_errors", "shop_purchases", "hatches", "fusions")
 COUNT_NAMES = tuple(n for n in GAPS if n != "funnel")
+STEPS = (("first_run_s", "Started a run"), ("first_food_s", "Ate food"), ("first_egg_s", "Earned an egg"),
+         ("first_hatch_s", "Hatched an egg"), ("first_shop_s", "Bought in a shop"))
+MAX_ERROR_TEXTS = 50
 
 
 def current_rate(root=ROOT):
@@ -92,11 +101,14 @@ def _normalise_session(e):
     out = dict(e)
     for key in ("total_s", "runs", "hub_s", "run_s"):
         out[key] = _num(e.get(key))
+    for key, _ in STEPS:                       # BD-653: seconds since joining; absent in older lines
+        out[key] = _num(e.get(key), None)
     return out
 
 
 def new_data():
-    return {"runs": [], "sessions": [], "feedback": [], "counts": {}, "funnel": [], "meta": {}, "bad_lines": 0, "unknown_events": 0}
+    return {"runs": [], "sessions": [], "feedback": [], "counts": {}, "counts_by": {}, "funnel": [], "meta": {}, "bad_lines": 0,
+            "unknown_events": 0, "visits": 0, "servers": set(), "errors": []}
 
 
 def _take(data, event):
@@ -105,12 +117,18 @@ def _take(data, event):
         data["runs"].append(_normalise_run(event))
     elif kind == "session_end":
         data["sessions"].append(_normalise_session(event))
+        if isinstance(event.get("server"), str):
+            data["servers"].add(event["server"])
     elif kind == "feedback":
         data["feedback"].append(event)
     elif kind == "count":
         name, value = event.get("name"), _num(event.get("value"), None)
         if isinstance(name, str) and value is not None:
             data["counts"][name] = data["counts"].get(name, 0) + value
+            service = event.get("service")
+            if isinstance(service, str) and service:      # BD-650: the game says which service answered "too fast"
+                by = data["counts_by"].setdefault(name, {})
+                by[service] = by.get(service, 0) + value
         else:
             data["bad_lines"] += 1
     elif kind == "funnel":
@@ -119,6 +137,14 @@ def _take(data, event):
             data["funnel"].append((step, players))
         else:
             data["bad_lines"] += 1
+    elif kind == "visit":                      # BD-653: logged when a player joins
+        data["visits"] += 1
+        if isinstance(event.get("server"), str):
+            data["servers"].add(event["server"])
+    elif kind == "script_error":               # BD-651: scrubbed text, one line per distinct error per server
+        text, name = event.get("text"), event.get("script")
+        if isinstance(text, str) and len(data["errors"]) < MAX_ERROR_TEXTS:
+            data["errors"].append({"script": name if isinstance(name, str) else "Other", "text": text})
     elif kind == "meta":
         data["meta"].update({k: v for k, v in event.items() if k != "event"})
     else:
@@ -208,8 +234,14 @@ def analyse(data, rate=None, limits=None):
     summary = telemetry_report.summarize(data["runs"], data["sessions"])
     feedback = feedback_report.summarize(data["feedback"])
     sessions = data["sessions"]
-    n_sessions = len(sessions) or data["meta"].get("sessions") or 0
-    counts = data["counts"]
+    # A visit is logged when the player JOINS (BD-653), a session when the player LEAVES: per-visit rates use the joins.
+    n_sessions = data["visits"] or len(sessions) or data["meta"].get("sessions") or 0
+    game_recorded = data["visits"] > 0            # the log comes from a game that counts GAME_COUNTED itself: a missing count is zero
+    counts = dict(data["counts"])
+    if game_recorded:
+        for key in GAME_COUNTED:
+            counts.setdefault(key, 0)
+    counts_by = data["counts_by"]
     checks = []
 
     # 1. eggs per 5 minutes against the target
@@ -286,6 +318,11 @@ def analyse(data, rate=None, limits=None):
                             + ("" if s == GREEN else " Too much waiting or menu time between runs.")))
 
     # 7. numbers the game cannot record yet (filled by hand with count lines or a CSV)
+    def top_services(key):
+        by = counts_by.get(key) or {}
+        best = sorted(by.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+        return (" Most: " + ", ".join(f"{name} {value:g}" for name, value in best) + ".") if best else ""
+
     def per_visit(key, label, green, yellow, unit):
         name, gap = GAPS[key]
         if key not in counts:
@@ -298,7 +335,7 @@ def analyse(data, rate=None, limits=None):
         per = total / n_sessions
         s = _high_bad(per, green, yellow)
         checks.append(check(label, s, f"{total:g} ({per:.1f} per visit)", f"{total:g} {unit} in {n_sessions} visits."
-                            + ("" if s == GREEN else " Players hit this often."), gap))
+                            + ("" if s == GREEN else " Players hit this often.") + top_services(key), gap))
 
     per_visit("movement_rejects", "Set back by the anti-cheat", L["rejects_per_session_green"], L["rejects_per_session_yellow"],
               "set-backs")
@@ -311,11 +348,15 @@ def analyse(data, rate=None, limits=None):
     else:
         errs, crashes = counts.get("script_errors", 0), counts.get("crashes", 0)
         s = RED if crashes > 0 else _high_bad(errs, L["script_errors_green"], L["script_errors_yellow"])
+        note = "" if "crashes" in counts else " Crashes are not counted by the game: look at the Creator Hub list."
         checks.append(check("Errors and crashes", s, f"{errs:g} errors, {crashes:g} crashes",
-                            "No errors and no crashes." if s == GREEN else
-                            f"{errs:g} script errors and {crashes:g} crashes were reported. "
-                            + ("Crashes first: open the log and find them." if crashes > 0 else "Open the error list and fix them."), gap_errors))
-    for key, label in (("shop_opens", "Shop use"), ("hatches", "Hatching")):
+                            ("No script errors." if s == GREEN else
+                             f"{errs:g} script errors and {crashes:g} crashes were reported. "
+                             + ("Crashes first: open the log and find them." if crashes > 0 else "Open the error list and fix them."))
+                            + note, gap_errors))
+    # shop: the server cannot see a shop being opened (no event exists), so "opens" is a hand count and purchases come from the game
+    shop_key = "shop_opens" if "shop_opens" in counts else "shop_purchases"
+    for key, label in ((shop_key, "Shop use"), ("hatches", "Hatching")):
         gap = GAPS[key][1]
         if key not in counts:
             checks.append(check(label, GREY, "not recorded", f"The game does not count this yet ({gap}). Add a count line by hand.", gap))
@@ -323,8 +364,26 @@ def analyse(data, rate=None, limits=None):
             total = counts[key]
             per = total / n_sessions if n_sessions else None
             s = GREEN if total > 0 else YELLOW
+            what = {"shop_opens": "opened", "shop_purchases": "bought"}.get(key, "")
             checks.append(check(label, s, f"{total:g}" + (f" ({per:.1f} per visit)" if per is not None else ""),
-                                (f"{total:g} times." if total > 0 else "Nobody used it. Is the door or button easy to find?"), gap))
+                                ((f"{total:g} things {what}." if what == "bought" else f"{total:g} times.") if total > 0
+                                 else "Nobody used it. Is the door or button easy to find?") + top_services(key), gap))
+    if counts.get("fusions"):
+        checks.append(check("Fusion", GREEN, f"{counts['fusions']:g}", f"{counts['fusions']:g} made in the test.", GAPS["fusions"][1]))
+
+    # time to the first food and the first run (BD-653), median over the visits that have the number
+    def median_step(key):
+        values = [x[key] for x in sessions if x.get(key) is not None]
+        return (statistics.median(values), len(values)) if values else (None, 0)
+
+    for key, label, words in (("first_food_s", "Time to first food", "to eat the first food"),
+                              ("first_run_s", "Time to first run", "to start the first run")):
+        med, n = median_step(key)
+        if med is None:
+            continue   # an older log: nothing to judge, and no gap line (the funnel gap covers it)
+        s = _high_bad(med, L[key + "_green"], L[key + "_yellow"])
+        checks.append(check(label, s, f"{med:g} s", f"The middle player needs {med:g} seconds {words} ({n} visits)."
+                            + ("" if s == GREEN else " The start is slow: look at the first minute.")))
 
     # 8. feedback
     def rating(key, label, good):
@@ -354,6 +413,12 @@ def analyse(data, rate=None, limits=None):
         funnel.append(("Came into the game", total))
         for n, label in ((1, "Finished 1 run"), (2, "Finished 2 runs"), (3, "Finished 3 runs")):
             funnel.append((label, sum(1 for x in sessions if x["runs"] >= n)))
+    if any(x.get(key) is not None for x in sessions for key, _ in STEPS):
+        have = {key: sum(1 for x in sessions if x.get(key) is not None) for key, _ in STEPS}
+        labels = dict(STEPS)
+        before = [(labels[k], have[k]) for k in ("first_run_s", "first_food_s")]
+        after = [(labels[k], have[k]) for k in ("first_egg_s", "first_hatch_s")]
+        funnel = funnel[:1] + before + funnel[1:2] + after + funnel[2:]
     funnel.extend((step, players) for step, players in data["funnel"])
     drop = None
     for (a, av), (b, bv) in zip(funnel, funnel[1:]):
@@ -364,12 +429,26 @@ def analyse(data, rate=None, limits=None):
     problems = [c for c in checks if c["status"] in (RED, YELLOW)]
     problems.sort(key=lambda c: ORDER[c["status"]])
     gaps = [c for c in checks if c["status"] == GREY and c["gap"]]
-    gaps_open = sorted({(GAPS[k][0], GAPS[k][1]) for k in GAPS if k not in counts and (k != "funnel" or not data["funnel"])})
+    has_steps = any(x.get(key) is not None for x in sessions for key, _ in STEPS)
+    gaps_open = sorted({(GAPS[k][0], GAPS[k][1]) for k in GAPS
+                        if k not in counts and (k != "funnel" or not (data["funnel"] or has_steps))})
     comments = [c for c in feedback["comments"]]
     return {"checks": checks, "summary": summary, "feedback": feedback, "funnel": funnel, "worst_drop": drop, "problems": problems,
-            "gaps": gaps_open, "comments": comments, "sessions": n_sessions, "rate": rate,
+            "gaps": gaps_open, "comments": comments, "sessions": n_sessions, "rate": rate, "visits": data["visits"],
+            "servers": len(data["servers"]), "leave_lines": len(sessions), "errors": data["errors"], "game_recorded": game_recorded,
+            "counts_by": counts_by, "step_times": step_times(sessions),
             "small_sample": bool(n_sessions) and n_sessions < L["min_sessions"], "bad_lines": data["bad_lines"],
             "unknown_events": data["unknown_events"], "meta": data["meta"], "overall": overall(checks)}
+
+
+def step_times(sessions):
+    """Median seconds from joining to each funnel step, and how many visits reached it (BD-653)."""
+    out = []
+    for key, label in STEPS:
+        values = [x[key] for x in sessions if x.get(key) is not None]
+        if values:
+            out.append({"step": label, "median_s": statistics.median(values), "visits": len(values)})
+    return out
 
 
 def overall(checks):
@@ -395,7 +474,11 @@ def render(report):
     lines = [f"# {title}", ""]
     testers = meta.get("testers")
     lines.append(f"Overall: **{report['overall']}**. {report['sessions']} visits, {s['runs']} runs"
+                 + (f", {report['servers']} servers" if report["servers"] else "")
                  + (f", {testers:g} testers" if isinstance(testers, (int, float)) else "") + ".")
+    if report["visits"] and report["visits"] > report["leave_lines"]:
+        lines.append(f"{report['visits'] - report['leave_lines']} of {report['visits']} visits have no leave line (the server closed first "
+                     f"or the log was copied too early): their run and time numbers are missing.")
     if report["small_sample"]:
         lines.append(f"Only {report['sessions']} visits: treat every light as a hint, not a result.")
     lines += ["", "| Light | Check | Number | In plain words |", "| --- | --- | --- | --- |"]
@@ -412,6 +495,10 @@ def render(report):
             lines += ["", f"Biggest loss: {drop[0] * 100:.0f}% of players are gone between \"{drop[1]}\" and \"{drop[2]}\"."]
     else:
         lines.append("No finished visits, so no funnel.")
+    if report["step_times"]:
+        lines += ["", "## How fast players got there (median, from joining)", ""]
+        for item in report["step_times"]:
+            lines.append(f"    {item['step']:<20} {item['median_s']:>6g} s   ({item['visits']} visit{'s' if item['visits'] != 1 else ''})")
     lines += ["", "## Problems in plain words", ""]
     if report["problems"]:
         for c in report["problems"]:
@@ -425,6 +512,12 @@ def render(report):
         lines.append(f"- [{c.get('location')}, {c.get('species')}] {c['text']}")
     if len(report["comments"]) > 10:
         lines.append(f"- ... and {len(report['comments']) - 10} more in the log.")
+    if report["errors"]:
+        lines += ["", "## Script errors seen (scrubbed text, one line per kind)", ""]
+        for item in report["errors"][:10]:
+            lines.append(f"- {item['script']}: {item['text']}")
+        if len(report["errors"]) > 10:
+            lines.append(f"- ... and {len(report['errors']) - 10} more kinds in the log.")
     lines += ["", "## The game does not record these yet", ""]
     if report["gaps"]:
         for label, row in report["gaps"]:
@@ -442,7 +535,8 @@ def render(report):
 
 
 def to_json(report):
-    out = {k: report[k] for k in ("overall", "sessions", "funnel", "gaps", "small_sample", "bad_lines", "unknown_events", "meta")}
+    out = {k: report[k] for k in ("overall", "sessions", "funnel", "gaps", "small_sample", "bad_lines", "unknown_events", "meta",
+                                  "visits", "servers", "errors", "counts_by", "step_times", "game_recorded")}
     out["checks"] = report["checks"]
     out["summary"] = {k: v for k, v in report["summary"].items() if k != "per_run"}
     out["feedback"] = report["feedback"]

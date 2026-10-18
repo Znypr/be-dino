@@ -48,6 +48,7 @@ function MutationService.start(profileRepository, dinosaur)
             end
             if not allowed(lastSetup, player) then
                 player:SetAttribute("LastMutationSetupStatus", "rate_limited")
+                if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "MutationTest") end) end -- BD-650
                 return
             end
             local ok, status = profileRepository.setMutationTestCopies(
