@@ -33,6 +33,7 @@ grep -n "BD-NNN" docs/07-kanban.md             # your row
 - Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. PR body footer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - Paste the handbook checklist ([114](114-handbook.md) section 13, same text as `.github/pull_request_template.md`) into the PR body and tick it honestly.
 - Auto-merge: `gh pr merge N --repo Znypr/be-dino --squash --auto` (CI must be green).
+- **Many PRs waiting? Use the merge train** instead of merging them one by one (every squash-merge restarts CI for all the others): `python tools/merge_train.py <PR numbers> [--push]` or `--auto-select --hold <active agents' PRs>`, see [172](172-merge-train.md).
 - Do not leave `git stash` entries (the stash is shared between worktrees); use a WIP commit.
 
 **Numbers and the kanban** (one board only: [07-kanban.md](07-kanban.md); status lives only there; never mark Done without recorded evidence):
@@ -80,6 +81,7 @@ python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> 
 - **Blender MCP:** there is one Blender; one agent at a time.
 - **Blender to Roblox without the owner** ([169](169-blender-to-roblox-pipeline.md), BD-659): `tools/blender_export_roblox.py` (headless Blender, does not use the Blender MCP), `tools/roblox_asset_upload.py` (Open Cloud upload; key only from the environment variable `ROBLOX_OPEN_CLOUD_KEY`, dry run by default, never print or paste the key; works only after the owner has created it), `tools/studio/insert_uploaded_model.luau` (paste into `execute_luau`). Backlog until the owner creates the key.
 - **Roblox Studio MCP:** one agent per Studio window. The owner's `Place1.rbxl` window is the owner's: never minimise, move, make topmost or close it, and work done in it is UNSAVED until the owner presses Ctrl+S. A denied window-placement call is never retried or worked around. The owner said to ignore window-placement problems and do other work.
+- **Opening a built place in Studio (BD-663, 2026-10-18):** the MCP tools cannot open a file (`user_keyboard_input` and `user_mouse_input` only reach the running game's Client datamodel). The lead launches Studio with the `.rbxlx` as a command-line argument; it registers as a new studio id in `list_roblox_studios`. Agents use only that id and never open, move or close windows.
 - **Is a tool up?** `python tools/dev_env_check.py` (read-only, 2 s: Blender and its port, Studio windows and minimised state, browsers, PATH tools, power plan; [165](165-dev-env-check.md)). `--launch blender|chrome|edge` can start those three; nothing starts Studio.
 - **No OS-level screenshots, never `SetForegroundWindow`.** Use the Studio MCP capture or the Browser pane.
 
