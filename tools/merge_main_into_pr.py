@@ -365,7 +365,7 @@ def resolve_worklog_jsonl(wt, full):
     return n
 
 
-APPEND_ONLY_DOCS = ("docs/115-decisions-log.md", "docs/116-handbook-conflicts.md")
+APPEND_ONLY_DOCS = ("docs/115-decisions-log.md", "docs/116-handbook-conflicts.md", "docs/157-playtest-profile-newest-features.md")
 HUNK3 = re.compile(r"^<<<<<<< [^\n]*\n(.*?)^\|\|\|\|\|\|\| [^\n]*\n(.*?)^=======\n(.*?)^>>>>>>> [^\n]*\n", re.S | re.M)
 
 

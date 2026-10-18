@@ -206,6 +206,7 @@ local function require(name) return assert(modules[name], "unknown module " .. t
 modules.Config = @@CONFIG@@
 modules.PhoneScale = @@PHONE_SCALE@@
 modules.TouchLayout = @@TOUCH_LAYOUT@@
+modules.HudPanelStack = @@HUD_STACK@@
 modules.ObjectiveConfig = @@OBJ_CONFIG@@
 modules.ObjectiveRules = @@OBJ_RULES@@
 modules.ObjectivePanelRules = @@PANEL_RULES@@
@@ -489,6 +490,7 @@ end}
 local gui = newInstance("ScreenGui")
 gui.attrs = {}
 gui.GetAttribute = function(self, name) return self.attrs[name] end
+gui.SetAttribute = function(self, name, v) self.attrs[name] = v end gui.GetAttributeChangedSignal = function() return {Connect = function() end} end
 local anchor = newInstance("Frame") anchor.Visible = true
 
 local function loadPanel(gameObject)
@@ -976,6 +978,7 @@ local function makeEnv(ids)
  end}
  local gui2 = newInstance("ScreenGui") gui2.attrs = {}
  gui2.GetAttribute = function(self, name) return self.attrs[name] end
+ gui2.SetAttribute = function(self, name, v) self.attrs[name] = v end gui2.GetAttributeChangedSignal = function() return {Connect = function() end} end
  local anchor2 = newInstance("Frame") anchor2.Visible = true
  local panel2 = loadPanel(g)
  panel2.setPlayActive(false)
@@ -1277,6 +1280,7 @@ def script() -> str:
         ('@@CONFIG@@', 'src/shared/Config.luau'),
         ('@@PHONE_SCALE@@', 'src/shared/PhoneScale.luau'),
         ('@@TOUCH_LAYOUT@@', 'src/shared/TouchLayout.luau'),
+        ('@@HUD_STACK@@', 'src/shared/HudPanelStack.luau'),
         ('@@OBJ_CONFIG@@', 'src/shared/ObjectiveConfig.luau'),
         ('@@OBJ_RULES@@', 'src/shared/ObjectiveRules.luau'),
         ('@@PANEL_RULES@@', 'src/shared/ObjectivePanelRules.luau'),
