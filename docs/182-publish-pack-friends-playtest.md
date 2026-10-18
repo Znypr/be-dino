@@ -1,4 +1,4 @@
-# 178 Publish pack for the friends playtest in "newbuild" (BD-004, BD-317, BD-320, BD-1013)
+# 182 Publish pack for the friends playtest in "newbuild" (BD-004, BD-317, BD-320, BD-1021)
 
 Written 2026-10-18. Label: **OWNER STEPS + READ-ONLY CHECK OF THE ROBLOX PAGES.** Nothing was published, nothing was changed in Creator Hub or Studio, no flag, id, profile or build was changed. The lead only LOOKED at the settings pages (Claude in Chrome, Edge, owner logged in, no switch clicked, tabs closed). Pictures: [evidence/2026-10-18-publish-pack/](evidence/2026-10-18-publish-pack/).
 
