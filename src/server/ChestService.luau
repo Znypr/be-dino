@@ -53,10 +53,12 @@ function ChestService.start(profileRepository)
         end
         if not allowed(lastClaim, player) then
             player:SetAttribute("LastChestClaimStatus", "rate_limited")
+            if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Chest") end) end -- BD-650
             return
         end
         local _, _, status = profileRepository.claimChest(player, chestId)
         player:SetAttribute("LastChestClaimStatus", status)
+        if status == "claimed" and Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("hatches", "Egg", player) end) end -- BD-652
     end)
 
     -- BD-090 egg nests: open one READY nest; its rolled eggs join the reveal line next.
@@ -69,10 +71,12 @@ function ChestService.start(profileRepository)
         end
         if not allowed(lastNest, player, Config.NestClaimRequestCooldownSeconds) then
             player:SetAttribute("LastNestClaimStatus", "rate_limited")
+            if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Nest") end) end -- BD-650
             return
         end
         local _, _, status = profileRepository.claimNest(player, nestId)
         player:SetAttribute("LastNestClaimStatus", status)
+        if status == "opened" and Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("hatches", "Nest", player) end) end -- BD-652
         nestClaimCount[player] = (nestClaimCount[player] or 0) + 1
         player:SetAttribute("LastNestClaimAt", nestClaimCount[player]) -- BD-618 (e): a per-player counter (was the server's os.clock()); it changes every request so the client always sees a repeat
     end)
@@ -99,6 +103,7 @@ function ChestService.start(profileRepository)
             if not Config.ChestTestGrantEnabled then return end
             if not allowed(lastGrant, player) then
                 player:SetAttribute("LastChestTestGrantStatus", "rate_limited")
+                if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "ChestTest") end) end -- BD-650
                 return
             end
             local _, status = profileRepository.grantChestTest(player)

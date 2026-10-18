@@ -139,7 +139,10 @@ function SkinService.handle(player: any, request: any, ...: any): any
     if Config.DinoSkinsEnabled ~= true then return fail("disabled") end
     if select("#", ...) > 0 then return fail("bad_request") end
     if repository == nil then return fail("disabled") end
-    if not allowed(player) then return fail("rate_limited") end
+    if not allowed(player) then
+        if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Skin") end) end -- BD-650
+        return fail("rate_limited")
+    end
     local invalid = validate(request)
     if invalid then return fail(invalid) end
     local ok, response = pcall(handleAction, player, request)

@@ -108,7 +108,10 @@ end
 function ObjectiveService.handle(player: any, request: any, ...)
     if not repository or Config.ObjectivesEnabled ~= true then return fail("disabled") end
     if select("#", ...) ~= 0 then return fail("bad_request") end
-    if not allowed(player) then return fail("rate_limited") end
+    if not allowed(player) then
+        if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Objective") end) end -- BD-650
+        return fail("rate_limited")
+    end
     local invalid = validate(request)
     if invalid then return fail(invalid) end
     local ok, response = pcall(handleAction, player, request)

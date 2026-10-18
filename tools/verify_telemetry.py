@@ -4,7 +4,7 @@ rate limit, session accounting), checks the flag wiring statically, and feeds th
     python tools/verify_telemetry.py --runner /path/to/luau
 """
 from pathlib import Path
-import argparse, subprocess, sys, tempfile
+import argparse, re, subprocess, sys, tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import telemetry_report as report
@@ -89,6 +89,82 @@ do
  print(T.line(T.runEnd({runSeconds=300,reason="ManualExit",eggs=97,nests=4,crystals=183,foodCatchRate=rate,foodRaw=3710,eggsFood=89,weatherSeconds=120})))
  print(T.line(T.runEnd({runSeconds=300,reason="Disconnect",eggs=15,nests=1,crystals=30,foodCatchRate=rate,foodRaw=625,eggsFood=15,weatherSeconds=0})))
 end
+-- BD-649..653: counters, labels, errors, visit, funnel steps, server id, budgets
+do
+ local C=T.newCounters()
+ assert(T.bump(C,"movement_rejects",nil,1) and T.bump(C,"rate_limited","Chest",1) and T.bump(C,"rate_limited","Chest",1) and T.bump(C,"rate_limited","Gift",1))
+ assert(not T.bump(C,"user_id","Chest",1) and not T.bump(C,"hatches","Chest",0) and not T.bump(C,"hatches","Chest",0/0),"unknown names and empty amounts are refused")
+ assert(T.bump(C,"rate_limited","bad \"label\"",1) and T.bump(C,"rate_limited",string.rep("x",50),1),"a bad label becomes Other")
+ local taken=T.takeCounts(C)
+ local seen={} for _,it in taken do seen[it.name.."|"..(it.service or "")]=it.value end
+ assert(seen["movement_rejects|"]==1 and seen["rate_limited|Chest"]==2 and seen["rate_limited|Gift"]==1 and seen["rate_limited|Other"]==2,"counts per service")
+ assert(#T.takeCounts(C)==0 and C.keys==0,"flush resets")
+ -- a spammer or a hostile label cannot grow the table: keys are capped, the rest folds into Other
+ for i=1,500 do T.bump(C,"rate_limited","S"..i,1) end
+ assert(C.keys<=T.MaxCounterKeys+1,"bounded keys: "..C.keys)
+ local total=0 for _,it in T.takeCounts(C) do total+=it.value end
+ assert(total==500,"nothing lost when folded: "..total)
+ local ce=T.countEvent("rate_limited",12,"Chest")
+ assert(T.line(ce)=='[BD-TELEMETRY] {"event":"count","name":"rate_limited","service":"Chest","value":12}',T.line(ce))
+ -- visit at join and the random per-server id
+ local id=T.serverId(function(lo,hi) return 4660 end)
+ assert(id=="12341234" and #id==8 and T.cleanId(id)==id and T.cleanId("a\"b")==nil and T.cleanId(string.rep("a",17))==nil and T.cleanId(5)==nil)
+ local vline=T.line(T.visit(id,1760000000))
+ assert(vline=='[BD-TELEMETRY] {"event":"visit","server":"12341234","at":1760000000}',vline)
+ assert(T.visit("bad id",nil).server==nil,"a bad id never reaches the line")
+ -- funnel steps: seconds since join, set once, unknown steps ignored
+ local s2=T.newSession(100,"Sanctuary")
+ T.noteStep(s2,"run",112) T.noteStep(s2,"food",130) T.noteStep(s2,"food",999) T.noteStep(s2,"egg",400.4) T.noteStep(s2,"bogus",5)
+ local e2=T.sessionEnd(s2,700,{server=id,at=1760000600})
+ assert(e2.first_run_s==12 and e2.first_food_s==30 and e2.first_egg_s==300 and e2.first_hatch_s==nil and e2.server==id and e2.at==1760000600,"steps in session_end")
+ local fl=T.line(e2)
+ assert(fl:find('"first_run_s":12',1,true) and fl:find('"server":"12341234"',1,true))
+ -- privacy: every key of every new event is on the whitelist, no id or name can be put into a line
+ local okKeys={event=1,server=1,at=1,name=1,service=1,value=1,script=1,text=1,total_s=1,runs=1,hub_s=1,run_s=1,first_run_s=1,first_food_s=1,first_egg_s=1,first_hatch_s=1,first_shop_s=1}
+ for _,ev in {T.visit(id,1),ce,e2,T.errorEvent(T.newErrorState(),"boom",nil,nil) :: any} do
+  for k in ev do assert(okKeys[k],"unexpected field "..k) end
+ end
+ -- script errors: scrubbed, bounded, deduplicated
+ local E=T.newErrorState()
+ local msg="ServerScriptService.Bootstrap:123: attempt to index nil with 'x' for Workspace.BobTheBuilder.Humanoid user 1234567890 \"q\" \\ {}"
+ local ev1=T.errorEvent(E,msg,nil,{"BobTheBuilder","ab"})
+ assert(ev1 and ev1.event=="script_error" and ev1.script=="Other",ev1 and ev1.text)
+ assert(not ev1.text:find("BobTheBuilder") and not ev1.text:find("1234567890") and not ev1.text:find('"') and not ev1.text:find("\\",1,true) and ev1.text:find("<p>",1,true),ev1.text)
+ assert(T.errorEvent(E,msg,nil,{"BobTheBuilder"})==nil,"the same text is logged once")
+ assert(T.errorEvent(T.newErrorState(),"x","Boot",nil).script=="Boot" and T.errorEvent(T.newErrorState(),"x","a b",nil).script=="Other")
+ assert(#T.scrub(string.rep("a",500),nil)==T.MaxErrorTextLength,"text is cut")
+ assert(T.scrub("line one\nline two with Bob",{"Bob"})=="line one","only the first line")
+ assert(T.scrub("hello ab",{"ab"})=="hello ab","names under 3 characters are not scrubbed (they would eat normal words)")
+ for i=1,100 do T.errorEvent(E,"different error number "..string.rep("z",i),nil,nil) end
+ assert(E.distinct==T.MaxErrorTexts,"distinct texts are bounded per server: "..E.distinct)
+ assert(T.errorEvent(T.newErrorState(),"",nil,nil)==nil,"empty text is not logged")
+ -- log volume budget: the count / error bucket holds 20 a minute and 300 a server; one hour with 24 services spamming still stays under it
+ local cl=T.newLimiter(T.MaxCountLinesPerServer,T.MaxCountLinesPerMinute)
+ local lines,C2=0,T.newCounters()
+ for t=0,3600*6,T.RollupSeconds do
+  for i=1,24 do T.bump(C2,"rate_limited","Svc"..i,1000) end
+  for _,n in {"movement_rejects","script_errors","shop_purchases","hatches","fusions"} do T.bump(C2,n,nil,5) end
+  for _ in T.takeCounts(C2) do if T.allow(cl,nil,t) then lines+=1 end end
+  for i=1,T.MaxErrorTexts*3 do if T.allow(cl,nil,t) then lines+=1 end end
+ end
+ assert(lines==T.MaxCountLinesPerServer,"count lines stop at the cap over six hours: "..lines)
+ assert(#T.takeCounts(T.newCounters())==0,"a quiet server prints nothing")
+ -- the main event bucket is untouched by the count bucket
+ local mainLim=T.newLimiter()
+ assert(T.allow(mainLim,nil,0),"run_end budget is separate")
+ -- golden lines for the python report check (prefixed NEW|, read by playtest_report.py)
+ local gsess=T.newSession(0,"Sanctuary")
+ print("NEW|"..T.line(T.visit(id,1760000000)))
+ T.noteStep(gsess,"run",20) T.noteStep(gsess,"food",35) T.noteStep(gsess,"egg",340) T.noteStep(gsess,"hatch",360) T.noteStep(gsess,"shop",400)
+ T.moved(gsess,20,"Island") T.moved(gsess,320,"Sanctuary") T.runFinished(gsess)
+ print("NEW|"..T.line(T.sessionEnd(gsess,500,{server=id,at=1760000500})))
+ print("NEW|"..T.line(T.countEvent("movement_rejects",3,nil)))
+ print("NEW|"..T.line(T.countEvent("rate_limited",7,"Chest")))
+ print("NEW|"..T.line(T.countEvent("rate_limited",2,"Gift")))
+ print("NEW|"..T.line(T.countEvent("shop_purchases",4,"buyPotion")))
+ print("NEW|"..T.line(T.countEvent("hatches",9,"Egg")))
+ print("NEW|"..T.line(T.errorEvent(T.newErrorState(),"ServerScriptService.Thing:9: attempt to index nil","Thing",nil) :: any))
+end
 -- emit the golden lines for the python report check
 print(T.line(T.runEnd({runSeconds=300,reason="ManualExit",eggs=15,nests=1,crystals=30,foodCatchRate=12/500})))
 print(T.line(T.runEnd({runSeconds=300,reason="Death",eggs=12,nests=1,crystals=20,foodCatchRate=12/500})))
@@ -104,6 +180,22 @@ def static():
     for banned in ('UserId', 'DataStore', 'ProfileRepository', 'SetAttribute', 'FireClient'):
         assert banned not in svc, f'TelemetryService must stay a read-only anonymous observer ({banned})'
     assert 'Telemetry.runSettled' in (ROOT / 'src/server/Bootstrap.server.luau').read_text(encoding='utf-8')
+    for banned in ('GetUserIdFromNameAsync', 'JobId', 'HttpService'):
+        assert banned not in svc, f'TelemetryService must not use {banned} (the server id is random, BD-653)'
+    assert 'ScriptContext' in svc and 'BindToClose' in svc and 'MovementRejectCount' in svc and 'RunTelemetry.visit' in svc
+    # BD-650/652: every counting hook is flag-gated and wrapped in a pcall (telemetry must never throw into gameplay)
+    hooks = {'ChestService': 5, 'CollectionService': 2, 'MutationService': 2, 'GiftService': 2, 'ObjectiveService': 1, 'SkinService': 1,
+             'FusionService': 2, 'ProgressionService': 1, 'ProfileRepository': 1}
+    for name, expected in hooks.items():
+        text = (ROOT / f'src/server/{name}.luau').read_text(encoding='utf-8')
+        found = text.count('pcall(function() require(script.Parent.TelemetryHook).count(')
+        assert found == expected, f'{name}: {found} telemetry hooks, expected {expected}'
+        assert text.count('TelemetryHook') == found, f'{name}: every TelemetryHook use must be the pcall-wrapped call'
+        assert len(re.findall(r'RunTelemetryEnabled\s*==\s*true', text)) >= found, f'{name}: hooks must be flag-gated'
+    hook = (ROOT / 'src/server/TelemetryHook.luau').read_text(encoding='utf-8')
+    assert 'RunTelemetryEnabled ~= true then return end' in hook and 'UserId' not in hook
+    for name in ('ProfileCollection', 'ProfileEggs', 'ProfileFusion', 'ProfileObjectives', 'ProfileShop', 'ProfileSkins'):
+        assert 'shared.admitAs("' + name + '")' in (ROOT / f'src/server/{name}.luau').read_text(encoding='utf-8'), name
     prof = (ROOT / 'tools/release_profiles.py').read_text(encoding='utf-8')
     assert '_flag_off("RunTelemetryEnabled"' in prof and 'Rule("RunTelemetryEnabled", "set", True' in prof
 
@@ -153,6 +245,25 @@ def check_report_columns(runs, sessions):
     assert s['food_source'] == 'mixed', s
     print('Report columns passed: food/min, eggs/min, eggs/500 food, vs target (15 eggs / 5 min), weather min; derived food marked')
 
+def check_playtest_report(lines):
+    """BD-649..653: the lines the REAL RunTelemetry module prints are read by tools/playtest_report.py, and the numbers the game now
+    records are no longer 'not recorded yet'."""
+    import playtest_report as pr
+    assert len(lines) == 8 and all(x.startswith('[BD-TELEMETRY] {') for x in lines), lines
+    data = pr.read_lines(lines)
+    assert data['bad_lines'] == 0 and data['unknown_events'] == 0, data
+    assert data['visits'] == 1 and data['servers'] == {'12341234'}, data
+    assert data['counts'] == {'movement_rejects': 3, 'rate_limited': 9, 'shop_purchases': 4, 'hatches': 9}, data['counts']
+    assert data['counts_by']['rate_limited'] == {'Chest': 7, 'Gift': 2}, data['counts_by']
+    assert data['errors'] == [{'script': 'Thing', 'text': 'ServerScriptService.Thing:9: attempt to index nil'}], data['errors']
+    s = data['sessions'][0]
+    assert (s['first_run_s'], s['first_food_s'], s['first_egg_s'], s['first_hatch_s'], s['first_shop_s']) == (20, 35, 340, 360, 400), s
+    report = pr.analyse(data, rate=(12.0, 500.0))
+    open_gaps = [label for label, _ in report['gaps']]
+    assert open_gaps == [pr.GAPS['crashes'][0], pr.GAPS['shop_opens'][0]] or sorted(open_gaps) == sorted([pr.GAPS['crashes'][0], pr.GAPS['shop_opens'][0]]), open_gaps
+    assert report['game_recorded'] is True and report['visits'] == 1 and report['servers'] == 1
+    print('Playtest report check passed: counts, per-service rate_limited, script error text, visit, funnel steps, server id read from the real lines')
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--runner', required=True); a = ap.parse_args()
     static()
@@ -163,7 +274,10 @@ def main():
         r = subprocess.run([a.runner, str(p)], capture_output=True, text=True)
     print(r.stdout, end=''); print(r.stderr, end='')
     if r.returncode: raise SystemExit(r.returncode)
-    runs, sessions = report.parse(r.stdout.splitlines())
+    all_lines = r.stdout.splitlines()
+    new_lines = [x[4:] for x in all_lines if x.startswith('NEW|')]
+    check_playtest_report(new_lines)
+    runs, sessions = report.parse([x for x in all_lines if not x.startswith('NEW|')])
     s = report.summarize(runs, sessions)
     assert s['runs'] == 4 and s['sessions'] == 1, s
     first = report.summarize(runs[2:], sessions)
