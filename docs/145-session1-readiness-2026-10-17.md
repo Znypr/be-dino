@@ -537,3 +537,22 @@ Label: **STUDIO EVIDENCE, desktop Studio, one player, unpublished copy, viewport
 | Phone, 2 or more players, published server, rejoin after run end or fusion | NOT TESTED | needs a phone, a second client or the owner |
 
 Go / no-go rows 8 (movement window with lag), 9 (dino swap: now PASS in Studio), 12 (weather: PASS for all 7 by number, 3 pictured) change as noted; row 8 stays open (no lag was simulated). New rows: BD-994, BD-995, BD-996.
+
+## Studio acceptance round 2, 2026-10-18 (BD-996): the five newly switched-on features
+
+Label: **STUDIO EVIDENCE, desktop Studio, one player, unpublished copy, viewport 1156 x 793, 60 fps.** Appended; no history edited. Playtest build from `origin/main` `04047216` (docs/157 merged), `verify_release --profile playtest` passes. Full table, numbers and pictures 139 to 156: [evidence/2026-10-18-studio-acceptance-r2/README.md](evidence/2026-10-18-studio-acceptance-r2/README.md).
+
+| Item | Result | Observation |
+| --- | --- | --- |
+| Flags in the open place | PASS | `ObjectivesEnabled`, `CombatEnabled`, `SpecialFoodsEnabled`, `PerDinoCosmeticsEnabled`, `FastTravelPerk` true; `CrystalPacksEnabled`, `PaidRandomItemsEnabled`, `QaOverlayEnabled` false |
+| Objectives (panel, progress, claims) | PASS | tasks pill in the Sanctuary, progress from food, run, hatch, leap, potion; every claim paid its listed amount; "Open the Fusion menu" paid only after the menu was opened (BD-616) |
+| Combat (bite, health bars, wild predators) | PASS (one player) | CHOMP hit 11 of 255 HP; predator bit back twice then gave up; defeat gave about 5 percent growth, no eggs; instant predation is off by source |
+| Fast travel | PASS | 500 crystals, button becomes YOURS, rail buttons travel inside the hub, Back to the middle returns |
+| Special foods | PASS (points), FAIL (name) | 33 Golden Drumsticks of 3,563, 60 points = 6 growth, 1 egg; no name or message shown (BD-1002) |
+| Per-dino auras and trails | PASS | buy, equip, unequip; Raptor shows Meadow Glow unowned while Compy keeps it; Crystals only, no R$ |
+| Regression (run, hatch, cracked egg, fusion, shop Coming soon, potion, weather) | PASS with defects | Skip the rest stops at every cracked egg (BD-1001); plain starter Compy cannot be equipped (BD-1000); fusion roll label overlap (BD-1003) |
+| Console | PASS | 0 game errors or warnings; 5 UIBlox boot warnings |
+| Frame time | Studio desktop only | 60 per second client (p95 19.9 ms), 60 per second server |
+| Bite between two real players, friend shield, team-up, 640 x 360, phone, sounds | NOT TESTED | one client only; no phone |
+
+Go / no-go: the five features are now seen working in Studio, one player. The two-player bite test and a phone pass are still open (BD-996 stays Review / test). New rows: BD-1000 to BD-1003.
