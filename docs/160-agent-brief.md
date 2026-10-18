@@ -43,7 +43,7 @@ python tools/next_bd_id.py --doc        # next free docs/NN number
 python tools/board_summary.py           # counts (the kanban stores no counts; nobody commits them)
 ```
 
-- **Conflict rule for docs/07-kanban.md, per row:** keep YOUR version of a row only if you changed it versus the merge base; otherwise take main's. Keep row titles unchanged and append outcomes to the end of the row. Never put back an older copy of a row.
+- **Conflict rule for docs/07-kanban.md, per row:** keep YOUR version of a row only if you changed it versus the merge base; otherwise take main's. Keep row titles unchanged and append outcomes to the end of the row. Never put back an older copy of a row. **A script does this for you:** `python tools/merge_main_into_pr.py <PR number or branch>` (dry run; `--push` to push, never forced), see [166](166-merge-helper.md).
 - Run the board check **only after committing** (it reads commits, not your working copy): `python tools/verify_kanban_merge.py --base origin/main --head HEAD` (`--fix` rewrites stale rows from main).
 - Also before pushing: `python tools/verify_doc_ids.py` (unique doc numbers and BD ids) and `python tools/verify_handbook.py` (UI floors, sound cap, palette, PR template).
 
