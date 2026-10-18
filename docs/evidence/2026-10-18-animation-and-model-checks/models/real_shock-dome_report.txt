@@ -1,0 +1,30 @@
+Model check: shock-dome.fbx (fbx, 14.5 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 1 warn, 18 pass)
+
+  WARN  materials and textures                   no material on fx_shock_dome (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part fx_shock_dome has 112 of 21,844 allowed
+  PASS  triangles in total                       112 triangles in 1 part(s), 65 vertices
+  PASS  size in studs                            width 4.00, height 2.00, length 4.00 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.30x the Compy's height, 0.52x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): fx_shock_dome
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.01 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part           triangles  W x H x L (studs)   origin         material slots  UV   flags
+  -------------  ---------  ------------------  -------------  --------------  ---  -----
+  fx_shock_dome  112        4.00 x 2.00 x 4.00  bottom centre  0               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

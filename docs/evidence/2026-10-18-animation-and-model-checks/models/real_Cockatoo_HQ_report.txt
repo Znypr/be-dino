@@ -1,0 +1,119 @@
+Model check: Cockatoo_HQ.blend (blend, 502.6 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 1 warn, 18 pass)
+
+  WARN  doubled vertices                         vertices doubled in place on ArmL (16), ArmR (16), FootL (28), FootR (28) and 3 more
+  PASS  triangles per part                       biggest part Body has 5,688 of 21,844 allowed
+  PASS  triangles in total                       17,668 triangles in 10 part(s), 15,569 vertices
+  PASS  size in studs                            all 10 parts together: width 3.36, height 7.43, length 4.66 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.13x the Compy's height, 0.61x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (10 other); whole model box z runs -0.16 to 7.26
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               10 of 10 part(s) are open shells (fine for leaves and wings, not for solid bodies): ArmL, ArmR, Body and 7 more
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on ArmL, ArmR, Body, Crest and 6 more, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 10 of 10 part(s) (Col)
+  PASS  armature                                 1 armature(s), 10 bone(s); 3 action(s): Idle, Jump, Walk
+  PASS  file size                                0.49 MB
+  PASS  part names                               10 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part   triangles  W x H x L (studs)   origin  material slots  UV  flags
+  -----  ---------  ------------------  ------  --------------  --  -----
+  Body   5,688      2.00 x 4.22 x 2.13  other   1               no  -    
+  Head   4,604      2.06 x 1.99 x 2.96  other   1               no  -    
+  ArmL   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  ArmR   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  LegL   1,004      1.20 x 1.46 x 1.24  other   1               no  -    
+  LegR   1,004      1.20 x 1.52 x 1.23  other   1               no  -    
+  Tail   916        1.63 x 1.75 x 2.64  other   1               no  -    
+  FootL  496        1.54 x 0.81 x 2.52  other   1               no  -    
+  FootR  496        1.54 x 1.25 x 2.30  other   1               no  -    
+  Crest  384        2.84 x 2.31 x 2.57  other   1               no  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: Cockatoo_HQ_rigged_anim.fbx (fbx, 872.0 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 2 warn, 17 pass)
+
+  WARN  scale and rotation applied               not applied: ArmL (turned 73, -0, 0 degrees), ArmR (turned 73, -0, 0 degrees), Body (turned -90, 0, 0 degrees) and 7 more (Object, Apply, Rotation and Scale). In an FBX the turns often come from the importer axis change or from the pose at frame 1: check the .blend.
+  WARN  doubled vertices                         vertices doubled in place on ArmL (16), ArmR (16), FootL (28), FootR (28) and 3 more
+  PASS  triangles per part                       biggest part Body has 5,688 of 21,844 allowed
+  PASS  triangles in total                       17,668 triangles in 10 part(s), 15,569 vertices
+  PASS  size in studs                            all 10 parts together: width 3.36, height 7.43, length 4.66 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.13x the Compy's height, 0.61x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (10 other); whole model box z runs -0.16 to 7.26
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               10 of 10 part(s) are open shells (fine for leaves and wings, not for solid bodies): ArmL, ArmR, Body and 7 more
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on ArmL, ArmR, Body, Crest and 6 more, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 10 of 10 part(s) (Col)
+  PASS  armature                                 1 armature(s), 10 bone(s); 3 action(s): CockatooRig|CockatooRig|Idle, CockatooRig|CockatooRig|Jump, CockatooRig|CockatooRig|Walk
+  PASS  file size                                0.85 MB
+  PASS  part names                               10 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part   triangles  W x H x L (studs)   origin  material slots  UV  flags
+  -----  ---------  ------------------  ------  --------------  --  -----
+  Body   5,688      2.00 x 4.22 x 2.13  other   1               no  -    
+  Head   4,604      2.06 x 1.99 x 2.96  other   1               no  -    
+  ArmL   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  ArmR   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  LegL   1,004      1.20 x 1.46 x 1.24  other   1               no  -    
+  LegR   1,004      1.20 x 1.52 x 1.23  other   1               no  -    
+  Tail   916        1.63 x 1.75 x 2.64  other   1               no  -    
+  FootL  496        1.54 x 0.81 x 2.52  other   1               no  -    
+  FootR  496        1.54 x 1.25 x 2.30  other   1               no  -    
+  Crest  384        2.84 x 2.31 x 2.57  other   1               no  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: Cockatoo_HQ_static.fbx (fbx, 582.6 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 2 warn, 17 pass)
+
+  WARN  scale and rotation applied               not applied: FootR (turned 24, -0, -0 degrees), LegR (turned -6, 0, -0 degrees), Tail (turned 0, -0, 5 degrees) (Object, Apply, Rotation and Scale). In an FBX the turns often come from the importer axis change or from the pose at frame 1: check the .blend.
+  WARN  doubled vertices                         vertices doubled in place on ArmL (16), ArmR (16), FootL (28), FootR (28) and 3 more
+  PASS  triangles per part                       biggest part Body has 5,688 of 21,844 allowed
+  PASS  triangles in total                       17,668 triangles in 10 part(s), 15,569 vertices
+  PASS  size in studs                            all 10 parts together: width 3.36, height 7.43, length 4.66 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.13x the Compy's height, 0.61x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (10 other); whole model box z runs -0.16 to 7.26
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               10 of 10 part(s) are open shells (fine for leaves and wings, not for solid bodies): ArmL, ArmR, Body and 7 more
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on ArmL, ArmR, Body, Crest and 6 more, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 10 of 10 part(s) (Col)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.57 MB
+  PASS  part names                               10 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part   triangles  W x H x L (studs)   origin  material slots  UV  flags
+  -----  ---------  ------------------  ------  --------------  --  -----
+  Body   5,688      2.00 x 4.22 x 2.13  other   1               no  -    
+  Head   4,604      2.06 x 1.99 x 2.96  other   1               no  -    
+  ArmL   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  ArmR   1,538      1.09 x 2.33 x 1.53  other   1               no  -    
+  LegL   1,004      1.20 x 1.46 x 1.24  other   1               no  -    
+  LegR   1,004      1.20 x 1.52 x 1.23  other   1               no  -    
+  Tail   916        1.63 x 1.75 x 2.64  other   1               no  -    
+  FootL  496        1.54 x 0.81 x 2.52  other   1               no  -    
+  FootR  496        1.54 x 1.25 x 2.30  other   1               no  -    
+  Crest  384        2.84 x 2.31 x 2.57  other   1               no  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
