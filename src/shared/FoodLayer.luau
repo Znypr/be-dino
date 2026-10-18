@@ -1,7 +1,7 @@
 --!strict
 -- BD-1047 (docs/187 B): the designed food map. FoodLayerData.Map is a WorldLayer (src/shared/WorldLayer.luau) over the arena where every
 -- cell is 0 (no food) or a food kind: 1 berry, 2 fruit, 3 egg, 4 amber (the order of TYPES in FoodService; 5 stays free for special food).
--- tools/generate_food_layer.py makes the text with rules (spacing, hot spots, density near spawn) and tools/verify_food_layer.py checks it.
+-- tools/generate_food_layer.py makes the text with rules (small clusters of 3 to 5 foods, spacing, hot spots, density near spawn) and tools/verify_food_layer.py checks it.
 -- This module is pure (no Instances): it only turns the map into a list of items per FoodService sector. FoodService reads it only while
 -- Config.FoodLayerEnabled is true (off in the default profile, on in the playtest profile).
 local WorldLayer = require(script.Parent.WorldLayer)

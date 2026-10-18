@@ -2,11 +2,15 @@
 """BD-1047 (docs/187 B): make the DESIGNED FOOD MAP, a WorldLayer of food kinds, by rules instead of dice.
 
 Today (FoodService without Config.FoodLayerEnabled) the food comes from 400 jittered cluster centres with 9 foods each: bundles about
-2 studs apart with ~40 studs of nothing between them. This generator writes the map FoodService reads when the flag is on:
+2 studs apart with ~40 studs of nothing between them (and 115 patches farther than 25 studs from any food). This generator writes the map FoodService reads when the flag is on:
 
   * the same totals as today (3,600 foods; kind mix berry 70 / fruit 20 / egg 7 / amber 3 percent, starter patches included:
     berry 2519, fruit 722, egg 251, amber 108);
-  * blue-noise placement (best-candidate sampling): no two foods closer than MIN_SPACING studs, no big gaps;
+  * SMALL CLUSTERS of 3 to 5 foods 3 to 3.5 studs apart (like today's bundles of 9, but smaller: a food-seeking player still gets several
+    pieces per stop, so the food pace stays about the same), cluster centres on a blue-noise grid (best-candidate sampling, at least
+    CLUSTER_SPACING studs apart, foods of different clusters at least BETWEEN_SPACING apart); afterwards clusters are moved so no ground
+    spot (rim included) is far from food and no 32-stud block is empty;
+  * every amber cluster also holds one egg and one fruit (rich stops, like today's rich bundles);
   * gentle extra density near the run start (0, 30) and the Home exit, and two designed hot spots: a FRUIT GROVE and an EGG MEADOW;
   * a lone amber on each of the four mountain tops (high ground to climb to), the other ambers and the eggs spread so that the walk to
     the next one stays short everywhere (cover selection on a lattice of ground spots);
@@ -34,19 +38,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import worldlayer  # noqa: E402
 
 VERSION = 'bd1047-foodlayer-v2'
-SEED = 20261018
+SEED = 103            # picked from seeds 101 to 112 (the best balance of pace, gaps and spread; see docs/187 s G)
 ARENA = 416.0          # Config.ArenaHalfWidth
 EXTENT = 408.0         # FoodService places inside +-(ArenaHalfWidth - 8)
 WIDTH = 1000           # layer cells across the arena
 # Small clusters of 3 to 5 foods (SIZE_WEIGHTS): a food-seeking player still gets several pieces per stop, like today's bundles of 9
-CLUSTER_FOOD_SPACING = (3.2, 4.0)   # studs between neighbours inside a cluster
+CLUSTER_FOOD_SPACING = (3.0, 3.5)   # studs between neighbours inside a cluster
 MIN_SPACING = 2.8      # studs, hard rule between two foods of one cluster (and the starter patches)
 BETWEEN_SPACING = 6.0  # studs, hard rule between foods of different clusters
 CLUSTER_SPACING = 14.0 # studs, minimum distance between cluster centres (blue noise between clusters)
 CANDIDATES = 64        # best-candidate tries per cluster
-SIZE_WEIGHTS = ((3, 0.1), (4, 0.3), (5, 0.6))   # share of clusters of 3, 4 and 5 foods
-GAP_TARGET = 22.0      # studs: after placing, clusters are moved until no ground spot is farther than this from any food (the written rule is 25)
-REPAIR_ROUNDS = 1500   # most cluster moves tried while closing gaps
+SIZE_WEIGHTS = ((3, 0.05), (4, 0.25), (5, 0.7))   # share of clusters of 3, 4 and 5 foods
+GAP_TARGET = 16.0      # studs: after placing, clusters are moved until no ground spot is farther than this from any food (the written rule is 25)
+REPAIR_ROUNDS = 400   # most cluster moves tried while closing gaps
 STARTER_SPACING = 3.6  # studs between starter patch foods
 KIND_IDS = {'berry': 1, 'fruit': 2, 'egg': 3, 'amber': 4}
 KIND_NAMES = {v: k for k, v in KIND_IDS.items()}
@@ -305,7 +309,7 @@ class Placer:
             self.foods.remove(x, z)
 
 
-def repair_gaps(placer, clusters, samples, rng):
+def repair_gaps(placer, clusters, samples, rng, rounds=None):
     """Move clusters so no ground spot is farther than GAP_TARGET from any food: take the spot farthest from every food, lift away the most
     crowded cluster (the one with the closest neighbouring centre, among a few tries) and put one there. A move that would open a bigger gap
     where the cluster was, or that cannot be placed, is undone."""
@@ -314,9 +318,19 @@ def repair_gaps(placer, clusters, samples, rng):
     def near(x, z):
         return placer.foods.nearest(x, z, cap)
 
+    buckets = {}
+    for i, (sx, sz) in enumerate(samples):
+        buckets.setdefault((int(sx // 40), int(sz // 40)), []).append(i)
+
+    def around(x, z):
+        """Indexes of the samples within `cap` studs (a square) of (x, z)."""
+        bx, bz = int(x // 40), int(z // 40)
+        return [i for dx in (-1, 0, 1) for dz in (-1, 0, 1) for i in buckets.get((bx + dx, bz + dz), ())
+                if abs(samples[i][0] - x) < cap and abs(samples[i][1] - z) < cap]
+
     dist = [near(sx, sz) for sx, sz in samples]
     skipped = set()
-    for _ in range(REPAIR_ROUNDS):
+    for _ in range(rounds or REPAIR_ROUNDS):
         far = max((i for i in range(len(samples)) if i not in skipped), key=dist.__getitem__, default=None)
         if far is None or dist[far] <= GAP_TARGET:
             break
@@ -330,7 +344,7 @@ def repair_gaps(placer, clusters, samples, rng):
             if math.hypot(ox - tx, oz - tz) < 2 * GAP_TARGET:
                 continue
             placer.remove(old)
-            area = [i for i, (sx, sz) in enumerate(samples) if abs(sx - ox) < cap and abs(sz - oz) < cap]
+            area = around(ox, oz)
             after = {i: near(*samples[i]) for i in area}
             if max(after.values(), default=0.0) >= 0.97 * dist[far]:  # the hole left behind must stay clearly smaller than the one being closed
                 placer.add(old)
@@ -347,12 +361,62 @@ def repair_gaps(placer, clusters, samples, rng):
                 continue
             placer.add(new)
             clusters[k] = new
-            for i in set(area) | {i for i, (sx, sz) in enumerate(samples) if abs(sx - tx) < cap and abs(sz - tz) < cap}:
+            for i in set(area) | set(around(tx, tz)):
                 dist[i] = near(*samples[i])
             done = True
             break
         if not done:
             skipped.add(far)
+    return clusters
+
+
+BLOCK = 10 * 2 * ARENA / 256   # studs: the small block of tools/layer_stats.py (10 cells of a 256-cell grid, 32.5 studs)
+
+
+def fix_empty_blocks(placer, clusters, rng):
+    """No empty small block: every block of BLOCK studs that is mostly ground gets a cluster. A cluster is taken from the most crowded block
+    nearby (one with at least 12 foods) and put inside the empty one; a move that cannot be placed is undone."""
+    ground = placer.ground
+    n = int(2 * ARENA / BLOCK)
+
+    def block_of(x, z):
+        return int((x + ARENA) / BLOCK), int((z + ARENA) / BLOCK)
+
+    for _ in range(6):
+        counts = {}
+        for k, cluster in enumerate(clusters):
+            for x, z in cluster['shape']:
+                counts.setdefault(block_of(x, z), []).append(k)
+        moved = False
+        for bz in range(n):
+            for bx in range(n):
+                if counts.get((bx, bz)):
+                    continue
+                x0, z0 = -ARENA + bx * BLOCK, -ARENA + bz * BLOCK
+                spots = [(x0 + (i + 0.5) * BLOCK / 8, z0 + (j + 0.5) * BLOCK / 8) for i in range(8) for j in range(8)]
+                if sum(1 for sx, sz in spots if ground.ok(sx, sz)) < 32:
+                    continue  # mostly water or cliff: not counted by the tool either
+                donors = sorted({k for key, ks in counts.items() if len(ks) * 4 >= 12 for k in ks},
+                                key=lambda k: math.hypot(clusters[k]['centre'][0] - x0, clusters[k]['centre'][1] - z0))
+                for k in donors[:8]:
+                    old = clusters[k]
+                    placer.remove(old)
+                    new = None
+                    for _ in range(80):
+                        cx, cz = x0 + rng.uniform(4, BLOCK - 4), z0 + rng.uniform(4, BLOCK - 4)
+                        shape = placer.shape_at(cx, cz, len(old['shape']))
+                        if shape and any(block_of(x, z) == (bx, bz) for x, z in shape):
+                            new = {'centre': (cx, cz), 'shape': shape}
+                            break
+                    if new is None:
+                        placer.add(old)
+                        continue
+                    placer.add(new)
+                    clusters[k] = new
+                    moved = True
+                    break
+        if not moved:
+            break
     return clusters
 
 
@@ -385,6 +449,8 @@ def place_points(ground, layer, rng, fixed):
         placer.add(best)
         clusters.append(best)
     clusters = repair_gaps(placer, clusters, ground.lattice(8.0, ARENA - 2.0), rng)
+    clusters = fix_empty_blocks(placer, clusters, rng)
+    clusters = repair_gaps(placer, clusters, ground.lattice(8.0, ARENA - 2.0), rng, 200)
     cid = [-1] * len(pts)
     for k, cluster in enumerate(clusters):
         for x, z in cluster['shape']:

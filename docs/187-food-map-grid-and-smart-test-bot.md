@@ -74,35 +74,53 @@ docs/114 s9 food values stay unchanged; growth pacing is untouched (the food map
 ## G. The designed food map (BD-1047 second half, 2026-10-18; flag off by default, ON in the playtest profile)
 **CURRENT BUILD (offline evidence only):** `tools/generate_food_layer.py` makes a `WorldLayer` of food kinds by rules, `src/shared/FoodLayerData.luau` holds it (12 KB of text, 1,000 x 1,000 cells, every food in its own cell) and `tools/food_layer_data.py` is the copy for the tools. `src/shared/FoodLayer.luau` turns it into items per FoodService sector. `FoodService` reads it only while `Config.FoodLayerEnabled` is true (default false and pinned false in the default release profile; the playtest profile sets it true, docs/157). With the flag false the old sector / jitter placement runs byte for byte (checked by running the old and new service under the same stub for 3 placements: normal, no terrain rays, Kit art, 1 MB of output, identical).
 
-**Rules the generator follows (PROVISIONAL, LEAD decision, owner delegated 2026-10-16):** same totals as today (3,600 foods; berry 2519, fruit 722, egg 251, amber 108 = the 70 / 20 / 7 / 3 mix plus the starter patches); best-candidate blue noise, no two foods closer than 7 studs; density a little higher around the run start and the Home exit (0, 30) and in two designed hot spots, a **fruit grove** at (-110, 150) and an **egg meadow** at (215, 40); one **lone amber** on each of the 4 mountain tops (nothing else within 18 studs); the other ambers and the eggs chosen so the walk to the next one is short everywhere (cover selection plus smoothing on a 12-stud lattice of ground spots); the two starter patches near (+-15, 24) kept (9 foods each, 2 berries to 1 fruit, marked `StarterFood`); nothing in water, the safe-spawn disc, on ground steeper than the `normal.Y < 0.62` rule or within one stud of an edge (the same ground rule as `FoodService.groundAt`, evaluated by `tools/dump_food_layout.py` `ground_model`). Deterministic from `SEED` (20261018); `tools/verify_food_layer.py` regenerates the map and fails when the committed files differ, so a terrain change needs `python tools/generate_food_layer.py --runner ... --write` and a commit.
+**Version 2 (same day, lead decision: food PACE must stay about the same):** the first version spread single foods 7 studs apart; a rough walker model said a food-seeking player would collect 41% fewer foods, so the foods are now **small clusters of 3 to 5** (mostly 5), 3 to 3.5 studs apart (today's bundles are 9), the clusters spread by blue noise (centres at least 14 studs apart, foods of different clusters at least 6 studs apart). A player who walks to the next visible food still gets several pieces per stop.
+
+**Rules the generator follows (PROVISIONAL, LEAD decision, owner delegated 2026-10-16):** same totals as today (3,600 foods; berry 2519, fruit 722, egg 251, amber 108 = the 70 / 20 / 7 / 3 mix plus the starter patches); clusters placed by best-candidate sampling, then moved so that no ground spot (rim included) is far from food and no 32-stud block is empty; density a little higher around the run start and the Home exit (0, 30) and in two designed hot spots, a **fruit grove** at (-110, 150) and an **egg meadow** at (215, 40); one **lone amber** on each of the 4 mountain tops (nothing else within 18 studs); every other amber cluster also holds an egg and a fruit (rich stops, like today's rich bundles); the other ambers and the eggs chosen so the walk to the next one is short everywhere (cover selection plus smoothing on a 12-stud lattice of ground spots); the two starter patches near (+-15, 24) kept (9 foods each, 3.6 studs apart, 2 berries to 1 fruit, marked `StarterFood`); nothing in water, the safe-spawn disc, on ground steeper than the `normal.Y < 0.62` rule or within one stud of an edge (the same ground rule as `FoodService.groundAt`, evaluated by `tools/dump_food_layout.py` `ground_model`). Deterministic from `SEED` (103, picked from 12 tried); `tools/verify_food_layer.py` regenerates the map and fails when the committed files differ, so a terrain change needs `python tools/generate_food_layer.py --runner ... --write` and a commit.
 
 **How FoodService uses it:** same Food folder, attributes (`Points`, `Sector`, `StarterFood`, ...), points per kind, respawn timing and validation. The ground / water / obstacle raycasts stay as a safety net: a food that fails is moved to the nearest valid spot of a fixed 1 to 4 stud spiral or dropped, and Workspace gets `FoodLayerPlanned`, `FoodLayerRelocated`, `FoodLayerDropped` (read them in Studio: near 0 is expected). A food from the map respawns where the map put it (random moves would undo the spread). An unreadable map falls back to the old placement with a warning.
 
-**Before / after** (BEFORE = the offline model of today's placement, seed 1404, see section F for how close it is; AFTER = the committed map; same ground, 256-cell grid so blocks of 10 / 20 / 30 cells are 32 / 65 / 97 studs; `python tools/compare_food_layers.py --runner ... --png-dir docs/evidence/review-2026-10-17`):
+**Before / after** (BEFORE = the offline model of today's placement, seed 1404 for the spread numbers and the mean of 6 layouts for the pace numbers, see section F for how close it is; AFTER = the committed map; same ground, 256-cell grid so blocks of 10 / 20 / 30 cells are 32 / 65 / 97 studs; `python tools/compare_food_layers.py --runner ... --png-dir docs/evidence/review-2026-10-17`):
 
 | Measure | Before (today) | After (designed map) |
 | --- | ---: | ---: |
 | Foods in total | 3571 | 3600 |
-| Spread score, blocks of 10 x 10 cells (32 studs; random scatter = 1) | 3.66 | 0.29 |
-| Spread score, blocks of 20 x 20 cells (65 studs; random scatter = 1) | 2.45 | 0.45 |
-| Spread score, blocks of 30 x 30 cells (97 studs; random scatter = 1) | 1.64 | 0.66 |
-| Empty small blocks (32 studs), share | 20.1% | 0.0% |
-| Crowded small blocks (more than 2 x the middle) | 37 | 0 |
-| Nearest other food, middle (studs) | 2.0 | 11.3 |
-| Nearest other food, closest pair (studs) | 0.0 | 6.7 |
-| Walk to nearest food, middle (studs) | 12.7 | 5.6 |
-| Walk to nearest food, worst (studs) | 39.3 | 14.9 |
-| Walk to nearest egg, 95th (studs) | 52.2 | 34.6 |
-| Walk to nearest amber, middle (studs) | 38.9 | 32.2 |
-| Walk to nearest amber, worst (studs) | 108.6 | 66.5 |
+| Spread score, blocks of 10 x 10 cells (32 studs; random scatter = 1) | 3.66 | 0.82 |
+| Spread score, blocks of 20 x 20 cells (65 studs; random scatter = 1) | 2.45 | 0.80 |
+| Spread score, blocks of 30 x 30 cells (97 studs; random scatter = 1) | 1.64 | 0.86 |
+| Empty small blocks (32 studs), share | 20.1% | 0.2% |
+| Crowded small blocks (more than 2 x the middle) | 37 | 7 |
+| Nearest other food, middle (studs) | 2.0 | 3.3 |
+| Nearest other food, closest pair (studs) | 0.0 | 3.0 |
+| Walk to nearest food, middle (studs) | 12.7 | 9.4 |
+| Walk to nearest food, worst (studs) | 39.3 | 23.9 |
+| Walk to nearest egg, 95th (studs) | 52.2 | 34.0 |
+| Walk to nearest amber, middle (studs) | 38.9 | 31.7 |
+| Walk to nearest amber, worst (studs) | 108.6 | 70.6 |
 | Empty patches (ground more than 25 studs from any food) | 115 | 0 |
 | Biggest empty circle (radius, studs) | 45.3 | 0.0 |
-| Richest 65-stud square vs the average square (food points) | 4.2 x | 1.9 x |
-| Greedy closest-food walker, 5 minutes: foods / points | 1102 / 5618 | 563 / 2226 |
-| Greedy best-food-per-second walker, 5 minutes: foods / points | 204 / 7270 | 131 / 4660 |
+| Richest 65-stud square vs the average square (food points) | 4.2 x | 2.1 x |
+| 5 minutes, closest-food walker: foods / points | 1072 / 4320 | 908 / 3540 (-18% points) |
+| 5 minutes, best-food-per-second walker: foods / points | 190 / 6904 | 181 / 5776 (-16% points) |
+| 5 minutes, walker that just runs around: foods / points | 162 / 655 | 154 / 654 (-0% points) |
 
-Pictures: `docs/evidence/review-2026-10-17/204-food-map-before-after-dots.png` (today left, map right), `205-food-map-design-hot-spots-lone-ambers.png` (grove, meadow, starter patches), `200` to `202` (heat maps at 10 / 20 / 30 cells), `203` (dots and empty zones of the map).
+The three walker rows come from `tools/food_pace.py`, a rough model (22 studs a second, pick-up radius 2.25, respawn 8 s; the seeking walkers start from 12 spots around the run start and are averaged, the runner is averaged over 12 seeds): NOT a real player. The walker that just runs around collects 655 food points in 5 minutes on today's placement, which is the 600 to 700 food of a normal 5-minute run (docs/119), so it is the walker that matches real play; the two seeking walkers collect 5 to 10 times more than a real player does.
 
-**Written targets** (`tools/targets/food_layer_targets.json`, enforced in CI by `tools/verify_food_layer.py`): exact counts, kind mix within 0.5 points, closest pair at least 6.5 studs, every food on valid ground, starter patches and lone ambers, no empty small block, spread at most 0.6 / 0.8 / 1.0 at 10 / 20 / 30 cells, no empty zone (25 studs), worst walk to any food at most 20 studs, egg 95th at most 42 and worst at most 55, amber 95th at most 58 and worst at most 72. The amber worst walk (66) is a little above the "about 60" wish: 108 ambers cannot cover the island with less unless the count grows, which would change the 3% share.
+**Pace result:** the runner is unchanged (0%). The seeking walkers collect about **15 to 18% less** (closest-food walker: 15% fewer foods, 18% fewer points; best-food-per-second walker: 16% fewer points) because a cluster of 4 to 5 gives fewer pieces per stop than a bundle of 9 and the stops are closer together than the bundles, not more. Trade-off table of what I tried (foods eaten by the closest-food walker, points of the best-food walker and of the runner, each as a share of today; empty small blocks; empty patches; the walker model was re-run for each row, so the shares are good to about 3 points):
 
-**Risk, not decided (BD-1076):** a rough walker that always goes to the closest food gets 60% fewer food points in 5 minutes on the map than from today's bundles, one that goes for the best food per second 36% fewer (offline estimate, NOT a real player; today's bundles hand a food-seeking player 9 foods at once; a player who just runs around collects the same as before). The handbook says food pace stays unchanged, so the flag stays off in the default build and BD-1076 measures it with the smart test bot (BD-1048). Not verified: Studio (real terrain, rocks and trunks, how the grove, meadow and amber tops look), phone density and frame rate (BD-1075).
+| Layout | Closest-food foods | Best-food points | Runner points | Empty 32-stud blocks | Empty patches (> 25 studs) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Version 1: single foods 7 studs apart | 59% | 68% | 100% | 0% | 0 |
+| Clusters of 3 to 5, even placement (64 tries a cluster), no repair | 81% | 86% | 98% | 1.3% | 0 |
+| same, 24 tries a cluster | 82% | 85% | 98% | 2.1% | 0 |
+| same, 8 tries a cluster | 84% | 82% | 86% | 2.6% | 0 |
+| Clusters of 4 or 5, random placement (1 try a cluster) | 85 to 91% | 71 to 75% | 97 to 98% | 8 to 13% | 46 to 67 (radius 46 to 50) |
+| **Version 2 (committed): clusters of 3 to 5, even placement, gaps and empty blocks repaired, rich amber clusters** | 85% | 84% | 100% | 0.2% | 0 |
+
+**Reading it:** more evenly spread clusters (what the spread targets want) means longer walks between clusters, so the seeking walkers lose about 15%; letting the clusters clump (random placement) would win the foods back but leaves holes of 45 studs and 10% empty blocks, which breaks the spread targets. Version 2 sits at the edge: spread targets met (one empty block in 612, no patch above 25 studs, amber worst walk 71 studs), pace of the seeking walkers about 15 to 18% below today, the runner (the real-play match) unchanged. Seeds 101 to 112 gave the same 80 to 87% for the seeking walkers, so this is the structure, not luck. Further steps would need bigger clusters (the lead capped them at 3 to 5), a few more foods, or a smaller gap between clusters.
+
+Pictures: `docs/evidence/review-2026-10-17/276-food-map-before-after-dots.png` (today left, map right), `277-food-map-design-hot-spots-lone-ambers.png` (grove, meadow, starter patches), `272` to `274` (heat maps at 10 / 20 / 30 cells), `275` (dots and empty zones of the map).
+
+**Written targets** (`tools/targets/food_layer_targets.json`, enforced in CI by `tools/verify_food_layer.py`): exact counts, kind mix within 0.5 points, clusters of 3 to 5 foods (mean at least 4.2) apart by at least 12 studs centre to centre and 5.5 studs food to food, only the 2 starter patches and the 4 lone ambers as other groups, every amber cluster with an egg and a fruit, every food on valid ground, no empty small block (at most 0.5%), spread at most 1.0 at 10 / 20 / 30 cells, no empty zone (25 studs), worst walk to any food at most 28 studs, egg 95th at most 42 and worst at most 55, amber 95th at most 58 and worst at most 72, and the pace band: closest-food walker foods and best-food walker points at least 80% of today, runner within 8%.
+
+**Risk still open (BD-1076):** the seeking-walker pace is 15 to 18% below today in the model; the real pace has to be measured with the smart test bot (BD-1048) in Studio. The default build is unchanged until then. Not verified: Studio (real terrain, rocks and trunks, how the grove, meadow and amber tops look), phone density and frame rate (BD-1075).

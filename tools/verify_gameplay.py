@@ -120,7 +120,7 @@ print("Food startup passed: terrain-only placement, 12 nearby starter pickups, m
 -- keeps the ground/obstacle safety net (an item on a blocked spot is moved or dropped and counted) and the flag off keeps the old placement.
 do
  local function tally(from)
-  local kinds,starters,sectors,total={berry=0,fruit=0,egg=0,amber=0},0,{},0
+  local kinds,starters,sectors,total={berry=0,fruit=0,egg=0,amber=0,golden_drumstick=0},0,{},0
   for i=from+1,#created do
    local item=created[i]
    if item.kind=="Part" and item.attrs.Points and item.Position then
@@ -135,7 +135,9 @@ do
  local kinds,starters,sectors,total=tally(mark)
  assert(Workspace.attrs.FoodLayerPlanned==3600 and Workspace.attrs.FoodLayerRelocated==0 and Workspace.attrs.FoodLayerDropped==0,"a clear map places every planned food")
  assert(Workspace.attrs.FoodCount==3600 and total==3600,"same total as today's 3,600")
- assert(kinds.berry==2519 and kinds.fruit==722 and kinds.egg==251 and kinds.amber==108,"kind counts of the map")
+ assert(kinds.berry+kinds.fruit+kinds.egg+kinds.amber+kinds.golden_drumstick==3600,"every food is one of the known kinds")
+ if kinds.golden_drumstick==0 then assert(kinds.berry==2519 and kinds.fruit==722 and kinds.egg==251 and kinds.amber==108,"kind counts of the map") -- (with the special-food flag on, about 1% of the slots become golden drumsticks: the rehearsal)
+ else assert(kinds.berry<=2519 and kinds.fruit<=722 and kinds.egg<=251 and kinds.amber<=108 and kinds.golden_drumstick<=80,"special foods only replace planned foods") end
  assert(starters==18,"both starter patches are marked")
  assert(Workspace.attrs.FoodSpawnStatus=="Ready")
  local sectorCount=0 for _ in sectors do sectorCount+=1 end

@@ -50,7 +50,7 @@ return table.freeze({
     FoodClusterItems = 9, -- BD-207/BD-167 density v3 (owner 2026-10-16 "more food"): 9 per cluster = 3,600 pickups (was 8 = 3,200, 6 before BD-387); fits the 9,150 join cap, phone culling keeps the visible part budget (docs/107)
     FoodClusterRadius = 7,
     FoodSeed = 1404,
-    -- BD-1047 (docs/187 B): true = FoodService places the pickups from the designed food map (FoodLayerData.luau, made by tools/generate_food_layer.py: blue-noise spacing,
+    -- BD-1047 (docs/187 B): true = FoodService places the pickups from the designed food map (FoodLayerData.luau, made by tools/generate_food_layer.py: small clusters of 3 to 5 foods on a blue-noise grid,
     -- a fruit grove, an egg meadow, lone ambers on high ground, gentle density near the run start) instead of the sector/jitter dice. Same total (3,600), points per kind
     -- and respawn rules. PROVISIONAL, offline evidence only (no Studio look yet). false = the old placement, byte for byte. Pinned off in the default profile, ON in the playtest profile (docs/157).
     FoodLayerEnabled = false,

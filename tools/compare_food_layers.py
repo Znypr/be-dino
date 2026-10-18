@@ -5,8 +5,9 @@ BEFORE = today's placement re-created offline (tools/dump_food_layout.py, seed C
 AFTER  = the committed designed food map (tools/food_layer_data.py, made by tools/generate_food_layer.py).
 Both go through tools/layer_stats.py on the SAME ground, blocks of 10 / 20 / 30 cells of a 256-cell grid (32 / 65 / 97 studs), so the numbers
 are comparable with docs/187 section F. It prints a table, a food-points-per-block table (do the hot spots make rich areas?) and a rough
-"greedy walker" estimate (a walker that always goes to the closest food, or to the best food per second of walking; NOT a real player: the
-smart test bot of BD-1048 does not exist yet) so the change in food per minute is visible.
+"walker" estimate (tools/food_pace.py: a walker that always goes to the closest food, one that goes for the best food per second of walking,
+and one that just runs around; NOT a real player, the smart test bot of BD-1048 does not exist yet) so the change in food per minute is
+visible. The pace baseline is the mean of 6 layouts of today's placement.
 
   python tools/compare_food_layers.py --runner C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau.exe [--png-dir docs/evidence/review-2026-10-17] [--json out.json]
 """
@@ -20,16 +21,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dump_food_layout  # noqa: E402
+import food_pace  # noqa: E402
 import food_layer_data  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
 import worldlayer  # noqa: E402
 
-POINTS = {'berry': 1, 'fruit': 4, 'egg': 15, 'amber': 50}   # Config / FoodService TYPES
-WALK_SPEED = 22.0      # studs per second (docs/187 F)
-PICKUP_RADIUS = 2.25   # Config.FoodPickupRadius
-RESPAWN = 8.0          # Config.FoodRespawnSeconds
-SPAWN = (0.0, 30.0)
+POINTS = food_pace.POINTS
+OLD_SEEDS = 6   # layouts of today's placement (Config.FoodSeed, +1, ...) averaged for the pace baseline
 
 
 def layer_points(layer):
@@ -56,33 +55,16 @@ def block_points(points, size=65.0, half=416.0):
     return grid
 
 
-def greedy_walk(points, seconds=300.0, policy='nearest'):
-    """A walker from the run start: goes to the closest food ('nearest') or to the food with the most points per second of walking
-    ('value'), eats it, repeats; a food comes back RESPAWN seconds after it was eaten. Returns (foods eaten, points) in `seconds`."""
-    xs = [p[0] for p in points]
-    zs = [p[1] for p in points]
-    pts = [POINTS[p[2]] for p in points]
-    ready = [0.0] * len(points)
-    x, z = SPAWN
-    t, eaten, gained = 0.0, 0, 0
-    while t < seconds:
-        best, best_score = -1, -1.0
-        for i in range(len(points)):
-            if ready[i] > t:
-                continue
-            d = max(0.0, math.hypot(xs[i] - x, zs[i] - z) - PICKUP_RADIUS)
-            score = (1.0 / (d + 1.0)) if policy == 'nearest' else pts[i] / (d / WALK_SPEED + 0.25)
-            if score > best_score:
-                best, best_score = i, score
-        if best < 0:
-            break
-        d = max(0.0, math.hypot(xs[best] - x, zs[best] - z) - PICKUP_RADIUS)
-        t += d / WALK_SPEED + 0.1
-        x, z = xs[best], zs[best]
-        ready[best] = t + RESPAWN
-        eaten += 1
-        gained += pts[best]
-    return eaten, gained
+def mean_pace(layouts):
+    """Average food_pace.pace over several point lists: {'nearest': (foods, points), 'value': ..., 'around': ...}."""
+    runs = [food_pace.pace(points) for points in layouts]
+    return {k: (statistics.fmean(r[k][0] for r in runs), statistics.fmean(r[k][1] for r in runs)) for k in runs[0]}
+
+
+def pace_ratios(before, after):
+    """after / before for the walkers: nearest (foods and points), value (points), around (points)."""
+    return {'nearest_foods': after['nearest'][0] / before['nearest'][0], 'nearest_points': after['nearest'][1] / before['nearest'][1],
+            'value_points': after['value'][1] / before['value'][1], 'around_points': after['around'][1] / before['around'][1]}
 
 
 def numbers(points, mask, half=416.0):
@@ -106,7 +88,6 @@ def numbers(points, mask, half=416.0):
     value = [v for r in block_points(points) for v in r]
     mean = statistics.fmean(value)
     row['value_block_mean'], row['value_block_max'], row['value_block_max_over_mean'] = mean, max(value), max(value) / mean
-    row['walker'] = {p: greedy_walk(points, 300.0, p) for p in ('nearest', 'value')}
     return a, row
 
 
@@ -130,8 +111,9 @@ def table(before, after):
     rows.append(f('Empty patches (ground more than 25 studs from any food)', 'empty_zone_count', '{:.0f}'))
     rows.append(f('Biggest empty circle (radius, studs)', 'empty_zone_radius'))
     rows.append(f'| Richest 65-stud square vs the average square (food points) | {before["value_block_max_over_mean"]:.1f} x | {after["value_block_max_over_mean"]:.1f} x |')
-    for p, name in (('nearest', 'closest-food walker'), ('value', 'best-food-per-second walker')):
-        rows.append(f'| Greedy {name}, 5 minutes: foods / points | {before["walker"][p][0]} / {before["walker"][p][1]} | {after["walker"][p][0]} / {after["walker"][p][1]} |')
+    for key, name in (('nearest', 'closest-food walker'), ('value', 'best-food-per-second walker'), ('around', 'walker that just runs around')):
+        b, a = before['pace'][key], after['pace'][key]
+        rows.append(f'| 5 minutes, {name}: foods / points | {b[0]:.0f} / {b[1]:.0f} | {a[0]:.0f} / {a[1]:.0f} ({a[1] / b[1] - 1:+.0%} points) |')
     return '\n'.join(rows)
 
 
@@ -207,6 +189,10 @@ def main():
     new_points = layer_points(layer)
     a_old, before = numbers(old_points, mask)
     a_new, after = numbers(new_points, mask)
+    older = dump_food_layout.dump(args.runner, OLD_SEEDS)
+    before['pace'] = mean_pace([[tuple(p) for p in item['points']] for item in older.values()])
+    after['pace'] = food_pace.pace(new_points)
+    after['pace_ratios'] = pace_ratios(before['pace'], after['pace'])
     print(table(before, after))
     if args.json:
         Path(args.json).write_text(json.dumps({'before': before, 'after': after, 'seed': seed}, indent=1, default=str), encoding='utf-8')

@@ -9,6 +9,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import compare_food_layers as cmp  # noqa: E402
+import food_pace  # noqa: E402
+import verify_food_layer as vfl  # noqa: E402
 import food_layer_data  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
@@ -97,7 +99,7 @@ class GeneratorPieceTests(unittest.TestCase):
                 self.assertLessEqual(math.hypot(x - centre[0], z - centre[1]), gen.STARTER_RADIUS)
             for i, a in enumerate(sites):
                 for b in sites[i + 1:]:
-                    self.assertGreaterEqual(math.hypot(a[0] - b[0], a[1] - b[1]), gen.MIN_SPACING - 0.9)  # snapping to cells moves a site up to 0.6
+                    self.assertGreaterEqual(math.hypot(a[0] - b[0], a[1] - b[1]), gen.STARTER_SPACING - 0.9)  # snapping to cells moves a site up to 0.6
 
     def test_cover_select_beats_random_picks(self):
         rng = random.Random(5)
@@ -151,7 +153,7 @@ class SmallGenerationTests(unittest.TestCase):
             self.assertTrue(ground.ok(x, z))
             self.assertGreater(math.hypot(x - gen.SPAWN[0], z - gen.SPAWN[1]), 11)
         nearest = min(math.hypot(p[0] - q[0], p[1] - q[1]) for i, p in enumerate(pts) for q in pts[i + 1:])
-        self.assertGreaterEqual(nearest, gen.MIN_SPACING - 0.9)
+        self.assertGreaterEqual(nearest, gen.MIN_SPACING - 0.1)
         self.assertEqual(len(a['tops']), 4)
 
     def test_a_clumped_layout_breaks_the_spread_rules(self):
@@ -163,6 +165,41 @@ class SmallGenerationTests(unittest.TestCase):
         self.assertEqual(len(broken), 2)
 
 
+class ClusterTests(unittest.TestCase):
+    def test_cluster_sizes_add_up_and_stay_3_to_5(self):
+        for count in (3578, 600, 17, 3):
+            sizes = gen.cluster_sizes(count, random.Random(count))
+            self.assertEqual(sum(sizes), count)
+            self.assertTrue(all(3 <= n <= 5 for n in sizes), sizes[:10])
+
+    def test_cluster_shape_keeps_its_foods_3_to_4_studs_apart(self):
+        rng = random.Random(4)
+        for n in (3, 4, 5):
+            for _ in range(50):
+                shape = gen.cluster_shape(n, rng)
+                self.assertEqual(len(shape), n)
+                near = min(math.hypot(a[0] - b[0], a[1] - b[1]) for i, a in enumerate(shape) for b in shape[i + 1:])
+                self.assertGreater(near, 2.4)
+                self.assertLess(max(math.hypot(a[0] - b[0], a[1] - b[1]) for a in shape for b in shape), 8.5)
+
+    def test_groups_finds_clusters_and_lone_foods(self):
+        pts = [(0, 0, 'berry'), (3, 0, 'berry'), (0, 3, 'fruit'), (50, 50, 'amber'), (100, 0, 'berry'), (103, 1, 'egg')]
+        found = sorted(sorted(g) for g in vfl.groups(pts, 5.0))
+        self.assertEqual(found, [[0, 1, 2], [3], [4, 5]])
+
+    def test_pace_ratios_and_walkers_on_a_tiny_layout(self):
+        before = {'nearest': (100, 400), 'value': (50, 900), 'around': (40, 100)}
+        after = {'nearest': (80, 300), 'value': (45, 720), 'around': (40, 95)}
+        r = cmp.pace_ratios(before, after)
+        self.assertAlmostEqual(r['nearest_foods'], 0.8)
+        self.assertAlmostEqual(r['value_points'], 0.8)
+        self.assertAlmostEqual(r['around_points'], 0.95)
+        grid = [(x, z, 'berry') for x in range(-300, 301, 20) for z in range(-300, 301, 20)]
+        p = food_pace.pace(grid, 60.0, 3)
+        self.assertGreater(p['nearest'][0], 10)
+        self.assertGreater(p['around'][0], 0)
+
+
 class CompareToolTests(unittest.TestCase):
     def test_layer_points_round_trip(self):
         layer = worldlayer.WorldLayer(100, 100, 416.0)
@@ -172,8 +209,8 @@ class CompareToolTests(unittest.TestCase):
         self.assertEqual(sorted(p[2] for p in pts), ['amber', 'fruit'])
 
     def test_greedy_walk_eats_the_closest_food_first(self):
-        eaten, points = cmp.greedy_walk([(0.0, 52.0, 'egg'), (0.0, 400.0, 'amber')], 0.5, 'nearest')
-        self.assertEqual((eaten, points), (1, 15))
+        eaten, points = food_pace.greedy_walk([(0.0, 52.0, 'egg'), (0.0, 400.0, 'amber')], 0.5, 'nearest')
+        self.assertEqual((eaten, points), (1, 15.0))
 
     def test_block_points_use_the_points_of_each_kind(self):
         grid = cmp.block_points([(-400.0, -400.0, 'amber'), (-399.0, -399.0, 'berry')], 65.0)
