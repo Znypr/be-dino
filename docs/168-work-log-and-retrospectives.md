@@ -122,6 +122,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | Lead: both-sides-edited kanban row lost main notes | lead | - | 15.0 | - | - | rework | 1 | conflict: BD-621 row edited on main and in the train | merge helpers must merge both texts, not keep one (tool: tools/kanban_merge_lib.py) |
 | 2026-10-18 | Lead: committed leftover conflict markers (CRLF regex); kanban rows edited on both sides lost main's notes | lead | - | - | - | - | rework | 1 | conflict: conflict markers committed in docs; both-sides-edited kanban rows dropped main's notes | a check must treat CRLF like LF, and a both-edited row must keep both sides (tool: tools/verify_no_conflict_markers.py) |
 | 2026-10-18 | Faster fights BD-1025 | worker | #496 | 20.0 | 40 | - | good | - | other: first worktree created as a sibling folder (docs/170 says .claude/worktrees); fetch hit a stale ref lock, doc-number-collision: reserved BD-1026 and doc 184 by mistake, unused | Create the worktree under .claude/worktrees; call next_bd_id once per kind and use the result |
+| 2026-10-18 | Faster fights part 2: size-difference curve BD-1025 | worker | #496 | 35.0 | 30 | - | ok | 1 | ci-red: forgot retro_log render so docs/168 table was stale, conflict: kanban and 115 append conflicts | Run retro_log.py render right after retro_log.py add, before the first push |
 <!-- retro-table:end -->
 
 ## 6. Open items
