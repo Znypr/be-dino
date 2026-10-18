@@ -154,18 +154,9 @@ The OWNER TARGET is the ladder in AGENTS.md line 44 (6 Base any pattern / 3 Gold
 | C-51 | `tools/simulate_fusion_ladder.py:10-14, 43`: docstring "DEFAULT scenario ... Gold = 15 Base, Emerald = 4 Gold" and `GOLD_DONORS = 15`; `docs/57:235` says `--check` asserts 15/4/2 | same file :2-5, :200-204, :295-296: the default and the CI check are 6/3/2 | owner target | **OPEN, no owner question.** Text and constant name only (docs/155 s6 item 5). |
 
 New OWNER QUESTIONS:
-<<<<<<< HEAD
-- **Q20 Ladder confirmation.** Is the ladder still Gold = 6 Base (same species, any pattern) / Emerald = 3 Gold / Diamond = 2 Emerald, as AGENTS.md line 44 says? Options: (a) yes; (b) change it (give the numbers).
+- **Q20 (ladder) Ladder confirmation (OPEN; not the leap question Q20 of C-46, which the owner answered on 2026-10-18).** Is the ladder still Gold = 6 Base (same species, any pattern) / Emerald = 3 Gold / Diamond = 2 Emerald, as AGENTS.md line 44 says? Options: (a) yes; (b) change it (give the numbers).
 - **Q21 Old 50-copy fusion.** What becomes of the legacy `MutateSpecies`? Options: (a) remove the remote and the old Fusion page (BD-617's recommendation); (b) keep it behind a new flag pinned OFF as a test tool; (c) keep it as a separate player feature. **ANSWERED 2026-10-18 as LEAD decision NF4 ([115](115-decisions-log.md)): option (a), following the owner directive "always use our newest features in testbuilds including fusion". The owner can overturn it** (the repository history before BD-617 has the code).
 - **Q22 Diamond without Emerald.** If (b) or (c): may the old path still turn 50 Gold into a Diamond, or must a Diamond come only from 2 Emerald? **ANSWERED 2026-10-18 as LEAD decision NF4: with (a) there is no old path; a Diamond comes only from 2 Emerald. The owner can overturn it.**
-||||||| 5a9a4be0
-- **Q20 Ladder confirmation.** Is the ladder still Gold = 6 Base (same species, any pattern) / Emerald = 3 Gold / Diamond = 2 Emerald, as AGENTS.md line 44 says? Options: (a) yes; (b) change it (give the numbers).
-- **Q21 Old 50-copy fusion.** What becomes of the legacy `MutateSpecies`? Options: (a) remove the remote and the old Fusion page (BD-617's recommendation); (b) keep it behind a new flag pinned OFF as a test tool; (c) keep it as a separate player feature.
-- **Q22 Diamond without Emerald.** If (b) or (c): may the old path still turn 50 Gold into a Diamond, or must a Diamond come only from 2 Emerald?
-=======
-- **Q20 (ladder) Ladder confirmation (OPEN; not the leap question Q20 of C-46, which the owner answered on 2026-10-18).** Is the ladder still Gold = 6 Base (same species, any pattern) / Emerald = 3 Gold / Diamond = 2 Emerald, as AGENTS.md line 44 says? Options: (a) yes; (b) change it (give the numbers).
-- **Q21 Old 50-copy fusion.** What becomes of the legacy `MutateSpecies`? Options: (a) remove the remote and the old Fusion page (BD-617's recommendation); (b) keep it behind a new flag pinned OFF as a test tool; (c) keep it as a separate player feature.
-- **Q22 Diamond without Emerald.** If (b) or (c): may the old path still turn 50 Gold into a Diamond, or must a Diamond come only from 2 Emerald?
 
 ## K. Owner answers from the Decisions dashboard (2026-10-18; history kept above)
 The owner answered the private Decisions dashboard (BD-661). Full words and task effects: [115](115-decisions-log.md) OW1 to OW11. Mapping to this page:
@@ -182,4 +173,3 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | Ankylosaurus biggest? | C-40 / Q14 | T-Rex must be the biggest (OW9) | RESOLVED, build BD-992 |
 | Rain and snow on phones | C-42 / Q16 | a quarter of the drops (OW10) | RESOLVED, already built |
 | Where is the V3 Compy file | not a C row | "i dont know" (OW11); not found by search | **OPEN** (file hunt, not a blocker) |
->>>>>>> origin/main
