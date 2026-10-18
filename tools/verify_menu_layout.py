@@ -35,6 +35,8 @@ MODULES.update({
     'PaidRandomGate': 'src/shared/PaidRandomGate.luau',
     'NotifyQueue': 'src/shared/NotifyQueue.luau',
     'AssetSlots': 'src/shared/AssetSlots.luau',
+    'Toasts': 'src/client/Toasts.luau',
+    'ToastSlot': 'src/shared/ToastSlot.luau',
 })
 
 

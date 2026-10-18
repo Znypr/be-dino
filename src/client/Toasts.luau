@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local NotifyQueue = require(Shared.NotifyQueue)
-local TouchLayout = require(Shared.TouchLayout)
+local ToastSlot = require(Shared.ToastSlot) -- BD-1102: where the stack goes (clear of the rail, the Crystals plate and, with a menu open, the top of the menu)
 local C = Theme.Colors
 
 local Toasts: any = {}
@@ -20,10 +20,15 @@ local toastLayer: any, toastScale: any, notifyQueue: any
 local toastKindColor = {info=C.blue,good=C.accent,warning=C.red,major=C.gold}
 local toastCards = {}
 local drawToasts: any
+local baseScale, wroteScale = 1, 1 -- BD-1102: the layout's toast scale (Bootstrap writes it) and the last value this file wrote (a slim card along the bottom of a menu)
+local oneCard = false -- BD-1102: with a menu open only the newest card shows
+local passThrough = false -- BD-1102: along the bottom edge a tap goes to the menu under the card
 
 drawToasts=function()
+    local shown=notifyQueue.visible
+    if oneCard then shown={shown[#shown]} end -- the newest one, in the top slot of the stack
     for i,slot in toastCards do
-        local entry=notifyQueue.visible[i]
+        local entry=shown[i]
         slot.frame.Visible=entry~=nil
         if entry then
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
@@ -53,18 +58,46 @@ drawToasts=function()
         end
     end
 end
+-- The rect of a GuiObject in the canvas px of `gui` (nil when it is not there).
+local function canvasRect(o: any): ToastSlot.Rect?
+    if o == nil or not o.Visible then return nil end
+    local origin=gui.AbsolutePosition
+    return {x=o.AbsolutePosition.X-origin.X,y=o.AbsolutePosition.Y-origin.Y,w=o.AbsoluteSize.X,h=o.AbsoluteSize.Y}
+end
+-- The open menu: the biggest frame inside the scrim (Bootstrap's panel).
+local function menuRect(): ToastSlot.Rect?
+    local best: any,area=nil,0
+    for _,child in shade:GetChildren() do
+        if child:IsA("Frame") and child.Visible and child.AbsoluteSize.X*child.AbsoluteSize.Y>area then best,area=child,child.AbsoluteSize.X*child.AbsoluteSize.Y end
+    end
+    return canvasRect(best)
+end
 local function pumpToasts()
     -- Slide the stack right, clear of the owner's admin panel (AdminPanel sets AdminPanelRight: px from the left edge, 0 = closed).
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
-    local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
+    if toastScale.Scale~=wroteScale then baseScale=toastScale.Scale wroteScale=baseScale end -- Bootstrap's layout pass wrote a new scale
+    local half,halfCard=gui.AbsoluteSize.X/2,220*baseScale
     local shift=if panelRight>0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
     player:SetAttribute("MenuOpen",shade.Visible) -- BD-328: WeatherVisuals holds its big title card while a menu is open
-    -- BD-304/378: with a menu open the toast rides the top, clear of the title and the wallet plates (WalletRect).
+    -- BD-304/378: the stack keeps clear of the Crystals plate and the goal line under it (WalletRect). BD-1102: also of the HUD rail (RailRect, set by
+    -- HudV2.layout) and, with a menu open, it shows ONE card above, below or along the bottom of the menu panel, never over its top (ToastSlot).
+    local keepClear: {ToastSlot.Rect}={}
     local wallet=toastLayer:GetAttribute("WalletRect") :: Rect?
-    local plates=if wallet then {x=wallet.Min.X,y=wallet.Min.Y,w=wallet.Width,h=wallet.Height} else nil
-    local slide,topY=TouchLayout.toastPlacement(gui.AbsoluteSize.X,toastScale.Scale,plates,shade.Visible,shift)
-    if toastLayer.Position.X.Offset~=slide or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,slide,0,topY) end
-    if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
+    if wallet then table.insert(keepClear,{x=wallet.Min.X,y=wallet.Min.Y,w=wallet.Width,h=wallet.Height}) end
+    local rail=gui:GetAttribute("RailRect") :: Rect?
+    if rail then table.insert(keepClear,{x=rail.Min.X,y=rail.Min.Y,w=rail.Width,h=rail.Height}) end
+    local place=ToastSlot.place({canvasW=gui.AbsoluteSize.X,canvasH=gui.AbsoluteSize.Y,scale=baseScale,keepClear=keepClear,menu=if shade.Visible then menuRect() else nil,shift=shift})
+    Toasts.place=place
+    if place.scale~=toastScale.Scale then toastScale.Scale=place.scale end
+    wroteScale=place.scale
+    if toastLayer.Position.X.Offset~=place.x or toastLayer.Position.Y.Offset~=place.y then toastLayer.Position=UDim2.new(.5,place.x,0,place.y) end
+    local redraw=oneCard~=(place.cards==1)
+    oneCard=place.cards==1
+    if passThrough~=place.passThrough then
+        passThrough=place.passThrough
+        for _,slot in toastCards do slot.tap.Active=not passThrough end
+    end
+    if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) or redraw then drawToasts() end
 end
 -- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
 local function notify(text: string,color: Color3?,opts: any?)
@@ -94,7 +127,7 @@ function Toasts.attach(d: any)
         local tap=Instance.new("TextButton")
         tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="",1,UDim2.fromScale(1,1),55,card
         tap.Activated:Connect(function() if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end end)
-        toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0}
+        toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0,tap=tap}
     end
     Toasts.layer, Toasts.scale = toastLayer, toastScale
     task.spawn(function()

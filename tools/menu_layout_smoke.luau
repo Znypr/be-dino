@@ -34,6 +34,8 @@ function methods.FireServer() end
 function methods.PlayLocalSound() end
 events.DescendantAdded, events.ChildAdded, events.OnClientEvent = true, true, true
 workspace = {GetServerTimeNow = function() return 1000 end}
+do local realNew = Instance.new Instance.new = function(class) local o = realNew(class) if class == "UIScale" then o.Scale = 1 end return o end end -- a UIScale starts at 1 like the engine
+Rect = {new = function(x0, y0, x1, y1) return {Min = {X = x0, Y = y0}, Max = {X = x1, Y = y1}, Width = x1 - x0, Height = y1 - y0} end}
 
 -- ===== stubs for the visual / network modules =====
 local Theme = {MotionEnabled = true, Colors = {panel = color(.2, .2, .2), card = color(.3, .3, .3), outline = color(0, 0, 0), text = color(1, 1, 1), gold = color(1, 1, 0),
@@ -143,23 +145,24 @@ end
 
 -- ===== the REAL shop screens in that world =====
 local Colors = Theme.Colors
+local function uiLabel(parent, text, x, y, w, h, size, col)
+    return inst("TextLabel", "Label", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), Text = text, TextSize = size, BackgroundTransparency = 1,
+        TextWrapped = true, ZIndex = parent.ZIndex + 1, TextColor3 = col or Colors.text})
+end
+local function uiBox(parent, x, y, w, h, col, z) return inst("Frame", "Box", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundColor3 = col, ZIndex = z}) end
+local function uiButton(parent, text, x, y, w, h, col, callback)
+    local b = inst("TextButton", "Button", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundColor3 = col, Text = text, TextSize = 23, ZIndex = parent.ZIndex + 2})
+    b.Activated:Connect(function() callback() end)
+    return b
+end
+local function uiArt(parent, _, x, y, size) return inst("Frame", "Art", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size), ZIndex = parent.ZIndex + 1}) end
 local function mountShop(world, state)
     loaded.ShopScreens, loaded.ShopTiles = nil, nil
     Services.UserInputService.TouchEnabled = state.touch
     local Shop = requireModule(ClientFolder.ShopScreens)
     local ShopTiles = requireModule(ClientFolder.ShopTiles)
     ShopTiles.landing = false
-    local function label(parent, text, x, y, w, h, size, col)
-        return inst("TextLabel", "Label", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), Text = text, TextSize = size, BackgroundTransparency = 1,
-            TextWrapped = true, ZIndex = parent.ZIndex + 1, TextColor3 = col or Colors.text})
-    end
-    local function box(parent, x, y, w, h, col, z) return inst("Frame", "Box", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundColor3 = col, ZIndex = z}) end
-    local function button(parent, text, x, y, w, h, col, callback)
-        local b = inst("TextButton", "Button", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundColor3 = col, Text = text, TextSize = 23, ZIndex = parent.ZIndex + 2})
-        b.Activated:Connect(function() callback() end)
-        return b
-    end
-    local function art(parent, _, x, y, size) return inst("Frame", "Art", parent, {Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size), ZIndex = parent.ZIndex + 1}) end
+    local label, box, button, art = uiLabel, uiBox, uiButton, uiArt
     local shop = {Shop = Shop, ShopTiles = ShopTiles, name = "auras"}
     local values = {Crystals = state.crystals or 1000000, AccountLevel = state.level or 1, ActiveChestCount = 0, QueuedEggsWaiting = 0}
     local profile = {crystals = values.Crystals, auras = {meadow = true}, trails = {}, potions = state.potions or {}, buffs = {}, equippedAura = "meadow", conditionLevel = 0, perks = {}}
@@ -257,6 +260,114 @@ for _, touch in {false, true} do
 end
 check(overRail > 0, "the sizes must include at least one where a tab really lies over a rail button (else the check proves nothing)")
 
+
+-- ===== 2. BD-1102: toasts never cover the rail, a menu's tab row, X or its first row =====
+local function mountToasts(world)
+    loaded.Toasts = nil
+    local Toasts = requireModule(ClientFolder.Toasts)
+    Toasts.attach({gui = world.gui, shade = world.shade, box = uiBox, label = uiLabel, art = uiArt, motion = function() return false end})
+    -- what Bootstrap publishes (the wallet plates) and HudV2.layout (the rail)
+    local wp = TouchLayout.walletPlates(world.layout)
+    Toasts.layer:SetAttribute("WalletRect", Rect.new(wp.x, wp.y, wp.x + wp.w, wp.y + wp.h))
+    local r = world.layout.rail
+    world.gui:SetAttribute("RailRect", Rect.new(r.x, r.y, r.x + r.w * r.scale, r.y + r.h * r.scale))
+    Toasts.scale.Scale = world.layout.toastScale
+    return Toasts
+end
+local function pushToasts(Toasts)
+    for i, text in {"Follow the glow", "Done!", "Level 2!"} do
+        Toasts.notify(text, Colors.red, {key = "k" .. i}) -- a red toast is a warning: no 1.5 s throttle, never held back by a menu
+    end
+    frames(4)
+end
+local function toastCards(Toasts)
+    local out = {}
+    for _, c in Toasts.layer:GetChildren() do
+        if c:IsA("Frame") and c.Visible then table.insert(out, c) end
+    end
+    return out
+end
+local function firstRow(world, page)
+    local out = {}
+    for _, tab in tabsOf(world) do table.insert(out, tab) end
+    for _, d in world.body:GetChildren() do
+        if d:IsA("GuiObject") and d.Visible and (d.Name == "ForDinoHeader" or string.find(d.Name, "AuraCard_", 1, true) or string.find(d.Name, "TrailCard_", 1, true)) then table.insert(out, d) end
+    end
+    local scroller = world.body:FindFirstChild("PotionScroll")
+    if scroller then
+        for _, d in scroller:GetChildren() do
+            if d:IsA("Frame") and d.Position.Y.Offset == 0 then table.insert(out, d) end -- the first row of potion cards (name, price, BUY)
+        end
+        local restock = nil
+        for _, d in world.body:GetChildren() do if d:IsA("TextLabel") and d.Position.Y.Offset == 0 then restock = d end end
+        if restock then table.insert(out, restock) end
+    end
+    return out
+end
+local toastsSeenAt = {}
+for _, touch in {false, true} do
+    for _, size in SIZES do
+        local w, h = size[1], size[2]
+        local tagBase = string.format("Toast %dx%d%s", w, h, if touch then " touch" else "")
+        -- (a) no menu open: the stack is clear of the rail, the Crystals plate and the goal line, and on the canvas
+        do
+            local world = buildWorld(w, h, touch)
+            local Toasts = mountToasts(world)
+            pushToasts(Toasts)
+            local cards = toastCards(Toasts)
+            check(#cards == 3, tagBase .. ": three cards show with no menu (" .. #cards .. ")")
+            local avoid = {{"the rail", rectOf(world.rail)}, {"the Crystals plate", rectOf(world.wallet)}}
+            for _, b in world.buttons do table.insert(avoid, {"rail button " .. b.Name, rectOf(b)}) end
+            local g = world.layout.goals
+            if g then table.insert(avoid, {"the goal line", {x = g.x, y = g.y, w = g.w, h = g.h}}) end
+            for _, card in cards do
+                local r = rectOf(card)
+                check(r.x >= -.5 and r.x + r.w <= w + .5 and r.y >= -.5 and r.y + r.h <= h + .5, string.format("%s: a toast card (%s) is not on the canvas %dx%d", tagBase, describe(r), w, h))
+                for _, a in avoid do
+                    check(not overlaps(r, a[2]), string.format("%s: a toast card (%s) covers %s (%s)", tagBase, describe(r), a[1], describe(a[2])))
+                end
+            end
+            world.gui:Destroy()
+        end
+        -- (b) a menu is open: one card, never over X, the heading, the tab row or the first row; a tap on an edge card goes to the menu
+        for _, page in {"auras", "trails", "potions", "auraConfirm"} do
+            local world = buildWorld(w, h, touch)
+            local shop = mountShop(world, {touch = touch, potions = {speed_common = 2}})
+            showMenu(world)
+            shop.open("auras")
+            if page == "trails" then for _, tab in tabsOf(world) do if tab.Text == "TRAILS" then tab.Activated:Fire() end end
+            elseif page ~= "auras" then shop.open(page) end
+            ModalCompact.enforce()
+            local Toasts = mountToasts(world)
+            pushToasts(Toasts)
+            local tag = string.format("%s, menu on %s", tagBase, page)
+            local cards = toastCards(Toasts)
+            if check(#cards == 1, tag .. ": exactly one card shows with a menu open (" .. #cards .. ")") then
+                local r = rectOf(cards[1])
+                toastsSeenAt[Toasts.place.where] = (toastsSeenAt[Toasts.place.where] or 0) + 1
+                check(r.x >= -.5 and r.x + r.w <= w + .5 and r.y >= -.5 and r.y + r.h <= h + .5, string.format("%s: the toast card (%s) is not on the canvas", tag, describe(r)))
+                local forbidden = {{"X", rectOf(world.x)}, {"the heading", rectOf(world.heading)}}
+                for _, d in firstRow(world, page) do table.insert(forbidden, {"'" .. (if d.Text ~= "" then d.Text else d.Name) .. "'", rectOf(d)}) end
+                if page == "potions" or page == "auras" or page == "trails" then
+                    for _, f in forbidden do
+                        check(not overlaps(r, f[2]), string.format("%s: the toast card (%s, %s) covers %s (%s)", tag, describe(r), Toasts.place.where, f[1], describe(f[2])))
+                    end
+                end
+                -- a tap on the middle of the card: dismisses it, or (along the bottom edge) goes to what is under it
+                local cx, cy = r.x + r.w / 2, r.y + r.h / 2
+                local top = ModalCloseReal.topAt(PlayerGui, cx, cy)
+                local onToast = top ~= nil and top:IsDescendantOf(Toasts.layer)
+                if Toasts.place.passThrough then
+                    check(not onToast, tag .. ": along the bottom edge a tap on the toast must reach the menu under it (" .. (if top then top.Name else "nothing") .. ")")
+                else
+                    check(onToast, tag .. ": a tap on the toast dismisses it (" .. (if top then top.Name else "nothing") .. ")")
+                end
+            end
+            world.gui:Destroy()
+        end
+    end
+end
+for _, where in {"above", "below", "edge"} do print("  toast place " .. where .. ": " .. (toastsSeenAt[where] or 0) .. " cases") end
 
 -- ===== 3. BD-1103: slips of the shop pages (overlaps, text that cannot fit its box) =====
 -- Text cannot be measured in the mock (TextBounds is a constant), so a label's need is estimated: 0.5 em per character, lines wrap on the box width, 1.05 em per line.

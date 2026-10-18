@@ -208,6 +208,11 @@ function Hud.layout(layout: any)
     if not bar then return end
     -- BD-538: the rects come from TouchLayout (SIZE bar + goal hint), so they clear the weather/LEAP column on a 667 px phone.
     local b, h = layout.sizeBar, layout.sizeHint
+    local canvas = bar.Parent
+    local r = layout.rail
+    if canvas and r then -- BD-1102: the toast stack keeps clear of the rail (Toasts reads this attribute)
+        canvas:SetAttribute("RailRect", Rect.new(r.x, r.y, r.x + r.w * r.scale, r.y + r.h * r.scale))
+    end
     bar.AnchorPoint, bar.Position = Vector2.zero, UDim2.fromOffset(b.x, b.y)
     local uiScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
     uiScale.Scale, uiScale.Parent = b.scale, bar
