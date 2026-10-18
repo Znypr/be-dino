@@ -1,6 +1,6 @@
 # 186 Pattern and colour indexes, boosts, slower new species, hatch-screen audit (owner intake 2026-10-18)
 
-Status: **SPEC; BD-1033 (pattern tiers on the 8 existing patterns) is built, flag-free, offline-verified only (see [115](115-decisions-log.md)); the rest is not built.** Per the feature-intake rule the owner's long message of 2026-10-18 was broken into tickets (BD-1032 to BD-1043 in [docs/07](07-kanban.md)) and ordered by priority. Numbers here are **PROPOSALS** (marked PROVISIONAL) until a simulation and a Studio check confirm them. Plain-language summary for the owner is at the end.
+Status: **SPEC; BD-1033 (pattern tiers on the 8 existing patterns) and BD-1038 (the boost, flag `GeneBoostEnabled`, off by default and on in the playtest) are built (BD-1033 needs no flag), offline-verified only (see [115](115-decisions-log.md)); the rest is not built.** Per the feature-intake rule the owner's long message of 2026-10-18 was broken into tickets (BD-1032 to BD-1043 in [docs/07](07-kanban.md)) and ordered by priority. Numbers here are **PROPOSALS** (marked PROVISIONAL) until a simulation and a Studio check confirm them. Plain-language summary for the owner is at the end.
 
 ## 0. What the owner said (condensed)
 1. Players do not know what a **pattern** is; there is no way to see which patterns exist. Make a **Pattern Index** that is easy to find, greyed out until the first dino with that pattern is found.
