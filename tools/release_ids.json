@@ -1,7 +1,9 @@
 {
-  "_readme": "BD-004 answer slot (docs/148). The ONLY place the owner's answer is recorded before publishing. Leave null until the owner has opened Creator Hub and said which experience is the playtest one. tools/release_playtest.py refuses to run while an id is null. When filled, src/shared/Config.luau PlaytestUniverseId / PlaytestPlaceId must hold the same numbers (verify_release_ids.py checks), in the same PR.",
-  "PlaytestUniverseId": null,
-  "PlaytestPlaceId": null,
-  "ExperienceKind": null,
-  "AnsweredOn": null
+  "_readme": "BD-004 answer slot (docs/148). The ONLY place the owner's answer is recorded before publishing. Filled 2026-10-18: the owner chose the existing experience newbuild for the friends playtest (docs/182). tools/release_playtest.py refuses to run while an id is null. src/shared/Config.luau PlaytestUniverseId / PlaytestPlaceId must hold the same numbers (verify_release_ids.py checks). newbuild is the experience docs/55 s2 calls legacy, so ExperienceKind is legacy; the six crystal-pack products stay listed in Config.DeveloperProducts but the owner confirmed all six are OFF SALE (ProductsConfirmedOffSale, accepted only while CrystalPacksEnabled and PaidRandomItemsEnabled are false; LEAD decision in docs/115).",
+  "PlaytestUniverseId": 10769812255,
+  "PlaytestPlaceId": 111259822927673,
+  "ExperienceKind": "legacy",
+  "AnsweredOn": "2026-10-18",
+  "ProductsConfirmedOffSale": true,
+  "ProductsOffSaleConfirmedOn": "2026-10-18"
 }
