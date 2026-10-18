@@ -24,6 +24,7 @@ local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
 local Copy = require(Shared.FtueP1)
 local PhoneScale = require(Shared.PhoneScale)
+local Chip = require(Shared.ChipStyle)
 
 local EggsScreen = {}
 
@@ -59,13 +60,12 @@ local function build(ctx: any, bodyH: number, bodyScale: number)
     local luck = label(body, Copy.NestLine, 224, 2, 600, 26, 18) -- BD-369: says why only one nest opens at a time
     luck.TextXAlignment = Enum.TextXAlignment.Right
 
-    -- A rounded colour pill with one short line of text (friendly timers and chips).
+    -- A chunky colour tag (ChipStyle) with one short line of text (friendly timers and chips).
     local function pill(parent: GuiObject, text: string, color: Color3, x: number, y: number, w: number, h: number, size: number): (Frame, TextLabel)
         local frame = Instance.new("Frame")
-        frame.BackgroundColor3, frame.BorderSizePixel = color, 0
-        frame.Position, frame.Size, frame.ZIndex, frame.Parent = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h), parent.ZIndex + 1, parent
-        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = frame
-        local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = C.outline, 2, frame
+        frame.Position, frame.Size, frame.ZIndex = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h), parent.ZIndex + 1
+        Chip.apply(frame, color, C.outline) -- BD-1077: the chunky tag (rounded rectangle, 3 px outline), never a round pill
+        frame.Parent = parent
         local text = label(frame, text, 0, 0, w, h, size)
         text.TextScaled = true
         -- docs/114 s4.4 / BD-1067: shrink-to-fit text is not raised by ModalCompact's floor pass, so its largest size already renders >= 14 px

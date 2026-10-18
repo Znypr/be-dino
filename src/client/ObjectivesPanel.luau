@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("ObjectivePanelRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
+local Chip = require(Shared:WaitForChild("ChipStyle"))
 local TouchLayout = require(Shared:WaitForChild("TouchLayout"))
 local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
 
@@ -84,7 +85,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
     wait.TextTruncate = Enum.TextTruncate.AtEnd
     local chip = Instance.new("Frame")
     chip.Name, chip.BackgroundColor3, chip.ZIndex, chip.Parent = "Chip", C.card, root.ZIndex + 1, header
-    Theme.decorate(chip, 6)
+    Chip.apply(chip, C.card) -- BD-1077: the shared chunky tag for the progress chip
     chip.Position, chip.Size = UDim2.new(1, -64, 0, 8), UDim2.fromOffset(56, 28)
     local chipText = text(chip, "ChipText", 16, C.text, Enum.TextXAlignment.Center) -- progress "3/10" or "Done!" (folded)
     chipText.Position, chipText.Size = UDim2.fromOffset(0, 0), UDim2.fromScale(1, 1)

@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Input = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
+local Chip = require(Shared.ChipStyle)
 local Math = require(Shared.InspectMath)
 
 local InspectView = {}
@@ -70,7 +71,8 @@ function InspectView.attach(viewport: ViewportFrame, options: Options?): Handle
         hint.AnchorPoint, hint.Position = Vector2.new(.5, 1), o.hintPosition or UDim2.new(.5, 0, 1, -6)
         hint.Size, hint.Text, hint.Font = UDim2.fromOffset(132, 26), "Drag to turn", Enum.Font.FredokaOne
         hint.TextColor3, hint.TextScaled, hint.ZIndex = Color3.new(1, 1, 1), true, z
-        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 13) corner.Parent = hint
+        Chip.apply(hint, Color3.fromRGB(13, 15, 20), nil, true) -- BD-1077: the shared small chunky tag, a little see-through over the 3D view
+        hint.BackgroundTransparency = .25
         local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 18, 14, hint
         hint.Parent = uiParent
         hintLabel = hint

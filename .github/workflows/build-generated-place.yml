@@ -138,6 +138,7 @@ jobs:
           python tools/verify_hatch_fx.py --runner /tmp/luau/luau
           python tools/verify_hatch_v2.py --runner /tmp/luau/luau
           python tools/verify_hatch_polish.py --runner /tmp/luau/luau
+          python tools/verify_chip_style.py --runner /tmp/luau/luau
           python tools/verify_mutation_reveal.py --runner /tmp/luau/luau
           python tools/verify_fx_anime.py --runner /tmp/luau/luau
           python tools/verify_fx_moments.py --runner /tmp/luau/luau
