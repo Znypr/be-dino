@@ -375,7 +375,9 @@ def build_eggs(ctx: Ctx) -> Page:
         if pid not in mask_ids:
             ctx.gaps.add("mask", "Pattern", name, f"Eggs-and-looks#{a}", "no pattern mask in LowPolyPattern.Ids", "src/shared", "LowPolyPattern.luau")
         rows.append([f"[{name}](#{a})", p.get("rarity", "all the same"), pct(chance)])
-        status.append([f"[{name}](#{a})", f"yes: `{icon}`" if icon else "MISSING", "no slot in code yet", mask, f"`{pattern_source}"])
+        slot_value = (d.get("AssetSlots", {}).get("Images") or {}).get(f"pattern_{pid}")  # BD-1039: AssetSlots.Images.pattern_<id>
+        slot_text = ("bound" if slot_value and re.search(r"\d{5,}", str(slot_value)) else f"slot `pattern_{pid}` ready, not bound") if slot_value is not None else "no slot in code yet"
+        status.append([f"[{name}](#{a})", f"yes: `{icon}`" if icon else "MISSING", slot_text, mask, f"`{pattern_source}"])
         blocks.append(item_heading(a, name, 4) + f"id: `{pid}`\n\n" + (ctx.image(icon, name, 120) + "\n\n" if icon else "_No icon yet (see Missing)._\n\n")
                       + f"- **Chance:** {pct(chance)} ({one_in(chance)}) per egg" + (f"\n- **Rarity:** {p['rarity']}" if "rarity" in p else "\n- **Rarity:** every pattern is equally likely"))
     mode = ctx.calls.get("blendMode", "")

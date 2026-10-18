@@ -2478,6 +2478,136 @@
     "src/server/CaveProps.luau",
     "GeneratedMeshes.CaveForms"
    ]
+  },
+  {
+   "name": "pattern_01_blank",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_01_blank",
+   "group": "Images.pattern_01_blank",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_02_emerald_islands",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_02_emerald_islands",
+   "group": "Images.pattern_02_emerald_islands",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_03_round_spots",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_03_round_spots",
+   "group": "Images.pattern_03_round_spots",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_04_bold_patches",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_04_bold_patches",
+   "group": "Images.pattern_04_bold_patches",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_05_horizontal_bands",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_05_horizontal_bands",
+   "group": "Images.pattern_05_horizontal_bands",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_06_wavy_stripes",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_06_wavy_stripes",
+   "group": "Images.pattern_06_wavy_stripes",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_07_diamond_scales",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_07_diamond_scales",
+   "group": "Images.pattern_07_diamond_scales",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "pattern_08_freckles",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "pattern_08_freckles",
+   "group": "Images.pattern_08_freckles",
+   "table": "Images",
+   "reader": [
+    "src/client/PatternColourCards.luau",
+    "pattern_"
+   ]
+  },
+  {
+   "name": "index_tab_patterns",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "index_tab_patterns",
+   "group": "Images.index_tab_patterns",
+   "table": "Images",
+   "reader": [
+    "src/client/IndexTabs.luau",
+    "index_tab_"
+   ]
+  },
+  {
+   "name": "index_tab_colours",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "index_tab_colours",
+   "group": "Images.index_tab_colours",
+   "table": "Images",
+   "reader": [
+    "src/client/IndexTabs.luau",
+    "index_tab_"
+   ]
   }
  ]
 }

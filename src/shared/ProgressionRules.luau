@@ -134,21 +134,25 @@ local function markDiscovered(set,id): boolean
     return true
 end
 -- Records one dino's colour / pattern / mutation. Returns {colour=true, pattern=true, mutation=true} for FIRST-time finds only.
-function Rules.discover(profile,genes,mutationId)
+-- BD-1039: `accent` (the server passes Config.PatternColourIndexEnabled==true) also records the ACCENT (secondary) colour, because the Colour
+-- Index counts both colours of a dino. Absent / false = exactly the BD-436 behaviour (main colour only). Ids are only ever ADDED either way.
+function Rules.discover(profile,genes,mutationId,accent)
     local log=discoveryLog(Rules.upgrade(profile))
     local g=if typeof(genes)=="table" then genes else {}
     local fresh={}
     if markDiscovered(log.colours,g.primaryColorId) then fresh.colour=true end
+    if accent==true and g.secondaryColorId~=g.primaryColorId and markDiscovered(log.colours,g.secondaryColorId) then fresh.colour=true end
     if markDiscovered(log.patterns,g.patternId) then fresh.pattern=true end
     if markDiscovered(log.mutations,mutationId) then fresh.mutation=true end
     return fresh
 end
 -- Lazy backfill on load: adds what the player owns right now (collection variants/events, identity instances). Idempotent, add-only.
-function Rules.backfillDiscovered(profile)
+function Rules.backfillDiscovered(profile,accent)
     local log=discoveryLog(Rules.upgrade(profile))
     local function add(genes,mutationId)
         local g=if typeof(genes)=="table" then genes else {}
         markDiscovered(log.colours,g.primaryColorId)
+        if accent==true then markDiscovered(log.colours,g.secondaryColorId) end -- BD-1039
         markDiscovered(log.patterns,g.patternId)
         markDiscovered(log.mutations,mutationId)
     end
@@ -181,6 +185,20 @@ function Rules.discoveryCounts(profile)
         local n=0
         if typeof(log[key])=="table" then for _ in log[key] do n+=1 end end
         out[key]=n
+    end
+    return out
+end
+-- BD-1039: the discovered colour and pattern ids (sorted lists), for the owner-only PrivateState so the Index can colour in what was found.
+-- Only the ids of the player's own finds; never other players. The server sends them only while Config.PatternColourIndexEnabled is true.
+function Rules.discoveryIds(profile)
+    local p=profile.progression
+    local log=if typeof(p)=="table" and typeof(p.discovered)=="table" then p.discovered else {}
+    local out={}
+    for _,key in {"colours","patterns"} do
+        local list={}
+        if typeof(log[key])=="table" then for id in log[key] do table.insert(list,id) end end
+        table.sort(list)
+        out[key]=list
     end
     return out
 end

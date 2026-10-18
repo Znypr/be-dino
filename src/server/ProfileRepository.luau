@@ -567,7 +567,9 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "CollectionJson", HttpService:JSONEncode(profile.collection))
     PrivateState.set(player, "Crystals",progress.crystals)
     PrivateState.set(player, "ProgressionJson",HttpService:JSONEncode(progress))
-    PrivateState.set(player, "DiscoveryJson",HttpService:JSONEncode(ProgressionRules.discoveryCounts(profile))) -- BD-436 counts only
+    local discovery = ProgressionRules.discoveryCounts(profile) -- BD-436 counts
+    if Config.PatternColourIndexEnabled == true then discovery.ids = ProgressionRules.discoveryIds(profile) end -- BD-1039: the ids of the player's own finds, only with the Index flag
+    PrivateState.set(player, "DiscoveryJson",HttpService:JSONEncode(discovery))
     player:SetAttribute("EquippedAura",progress.equippedAura)
     local collection = profile.collection
     PrivateState.set(player, "CompyCopies", collection.compy.base)
@@ -870,7 +872,7 @@ function ProfileRepository.load(player: Player): boolean
             advanceNests(profileValue, now)
 
             local progress = ProgressionRules.upgrade(profileValue)
-            ProgressionRules.backfillDiscovered(profileValue) -- BD-436: add-only, idempotent
+            ProgressionRules.backfillDiscovered(profileValue, Config.PatternColourIndexEnabled == true) -- BD-436: add-only, idempotent (BD-1039: with the Index flag the accent colours count too)
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local session = profileValue.session
             if typeof(session) == "table"
