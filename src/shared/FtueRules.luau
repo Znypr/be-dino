@@ -146,7 +146,7 @@ end
 -- BD-442 (docs/132): ONE gentle "go" cue on the EXPLORE ISLAND button for a brand-new player, until the first run starts.
 -- Shows only at the hub (Sanctuary), only before any run began this session and before any egg was ever found, and not
 -- while a menu covers the screen (no competing pulses). Reduce Motion = a still highlight (see GoCue).
-Rules.GoCueText = "TAP TO GO!"
+Rules.GoCueText = "Tap to go!"
 function Rules.goCueShown(state: any): boolean
     if type(state) ~= "table" then return false end
     return state.runState == "Sanctuary" and state.runStarted ~= true and state.hasFoundEgg ~= true and state.menuOpen ~= true

@@ -263,7 +263,7 @@ def static_checks():
     # The only early return in transact is the visible "still processing" notice.
     assert t.count('return') == 1 and 'notify("Purchase is still processing"' in t, 'transact may only bail out with the processing notice'
     # BUY POTION: transact first, leave the modal after; no early exit in the handler.
-    b = re.search(r'button\(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C\.accent,function\(\)(.*?)\n        end\)', client, re.S)
+    b = re.search(r'button\(body,if replacing then "Replace" else "BUY POTION",290,263,510,58,C\.accent,function\(\)(.*?)\n        end\)', client, re.S)
     assert b, 'BUY POTION button not found'
     h = b.group(1)
     assert 'return' not in h, 'confirm handler must not return before transact'

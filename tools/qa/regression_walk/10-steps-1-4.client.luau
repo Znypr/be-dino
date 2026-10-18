@@ -28,8 +28,8 @@ W.steps[1] = function(ctx)
     add(c, badge ~= nil and Config ~= nil and string.find(badge.Text, Config.Build, 1, true) ~= nil, "build badge reads " .. (badge and badge.Text or "(missing)"))
     if W.wait(function() return W.modalOpen("Welcome to Be Dino!") end, 8) then
         add(c, true, "welcome card opened by itself")
-        local ok, why = W.ensure(function() return W.modalOpen("Sanctuary") end, function() return W.btn(W.scrim(), "LET'S PLAY") end, "LET'S PLAY")
-        if not add(c, if ok then true else nil, if ok then "LET'S PLAY opens the Sanctuary card" else why) then return "Welcome and first screen", c end
+        local ok, why = W.ensure(function() return W.modalOpen("Sanctuary") end, function() return W.btn(W.scrim(), "Let's play") end, "Let's play")
+        if not add(c, if ok then true else nil, if ok then "Let's play opens the Sanctuary card" else why) then return "Welcome and first screen", c end
     else
         add(c, nil, "no welcome card (already dismissed in this session?)")
     end

@@ -72,7 +72,7 @@ function View.add(body,state,level,height,onChange,onBack)
     local pages=math.max(1,math.ceil(catalog.count/2))
     state.page=math.clamp(state.page,1,pages)
     local y=2*h+14
-    text(body,"Tier "..catalog.level.." | "..catalog.count.." outcomes | Shiny 0% | Event: None",0,y,824,22,16,C.gold)
+    text(body,"Tier "..catalog.level..", "..catalog.count.." outcomes, Shiny 0%, no event",0,y,824,22,16,C.gold)
     y+=28
     local footer=402-h
     local rowHeight=(footer-y-8)/2
@@ -81,7 +81,7 @@ function View.add(body,state,level,height,onChange,onBack)
         if not outcome then continue end
         local top=y+(slot-1)*rowHeight
         local description
-        if outcome.failed then description="No dinosaur\nEgg consumed; no crystal refund"
+        if outcome.failed then description="No dinosaur\nThe egg is used up, no crystals back"
         else
             description=Config.SpeciesDisplayNames[outcome.speciesId].." x"..outcome.count.." | "..outcome.conditionName.." | "..(if outcome.big then "BIG" else "Normal size")
                 .."\n"..outcome.primaryName.." "..outcome.share.."% / "..outcome.secondaryName.." "..(100-outcome.share).."%"
@@ -105,7 +105,7 @@ function View.add(body,state,level,height,onChange,onBack)
     end)
     local nextButton=button(body,">",h+190,footer,h,h,function() state.page=math.min(pages,state.page+1) onChange() end)
     nextButton.Name="NextOutcomePage"
-    text(body,"/ "..pages.." pages\nRounded; totals may differ from 100%",2*h+200,footer,400-2*h,h,15)
+    text(body,"/ "..pages.." pages\nRounded, so totals may not be 100%",2*h+200,footer,400-2*h,h,15)
     button(body,"BACK",610,footer,214,h,onBack)
 end
 return View

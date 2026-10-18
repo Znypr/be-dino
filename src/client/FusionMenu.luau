@@ -635,7 +635,7 @@ local function renderConfirm()
     resultBox(left, quote.speciesId, quote.targetStage or state.targetStage, nil, true)
     W.label(left, "Guaranteed: " .. stageName .. " " .. who .. "!", UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, .62, 4), 20, C.accent)
     W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .62, 32), 18, C.gold)
-    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 44), UDim2.new(0, 0, .62, 56), 17, C.text)
+    W.label(left, "Colours, Shiny, BIG, mutation: new roll.", UDim2.new(1, 0, 0, 44), UDim2.new(0, 0, .62, 56), 17, C.text)
     local list = W.scroll(root, UDim2.new(.66, -6, 1, -(T + 38)), UDim2.new(.34, 6, 0, 0))
     W.list(list, 3)
     local order = 0
@@ -680,7 +680,7 @@ local function renderConfirm()
     calm.Name = "OddsNote"
     W.button(root, "Not now", UDim2.new(.3, -6, 0, T + 4), y, C.red, function() state.mode = "browse" render() end)
     if needs and not state.acknowledged then
-        W.button(root, "I understand: " .. (loss.auraCount + loss.trailCount) .. " effects + " .. #loss.valuables .. " special dinos go away", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.gold, function()
+        W.button(root, "OK, lose " .. (loss.auraCount + loss.trailCount) .. " effects and " .. #loss.valuables .. " special dinos", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.gold, function()
             state.acknowledged = true
             render()
         end).Name = "Acknowledge"
@@ -715,7 +715,7 @@ runFuse = function(attempt)
     fuseInFlight = true
     state.mode = "fusing"
     setTitle("Fusing...", C.gold)
-    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos...\nThis is saved: trying again can never fuse twice.", C.gold)
+    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos, please wait...", C.gold)
     task.spawn(function()
         local tries = 0
         while true do
@@ -960,14 +960,14 @@ end
 
 local function renderUnavailable()
     setTitle("Fusion unavailable", C.card)
-    renderStatus("Fusion unavailable\nFusion is not switched on here yet. Nothing was changed.", C.gold,
+    renderStatus("Fusion is not open yet.", C.gold,
         {{"Close", C.red, function() FusionMenu.close() end, "Close"}})
 end
 
 local function renderResume()
     local attempt = pendingAttempt
-    setTitle("Checking your last fusion", C.gold)
-    renderStatus("Your last fusion did not get an answer.\nCHECK RESULT asks again for the SAME fusion: it shows the saved result or finishes that one. It never fuses twice.", C.gold, {
+    setTitle("Checking your fusion", C.gold)
+    renderStatus("Your last fusion did not finish.\nCheck result is safe: it never fuses twice.", C.gold, {
         {"Check result", C.accent, function() if attempt then runFuse(attempt) end end, "CheckResult"},
         {"Forget it", C.red, function() pendingAttempt = nil state.mode = "browse" render() end, "Discard"},
     })
@@ -1002,7 +1002,7 @@ function FusionMenu.open()
     if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end -- OB2 (docs/115): one-time T9 report; flag off = never required
     if fuseInFlight then
         state.mode = "fusing"
-        renderStatus("Your fusion is still being saved...\nTrying again can never fuse twice.", C.gold)
+        renderStatus("Your fusion is still saving...", C.gold)
         return
     elseif unseenResult then
         -- Committed while closed: show the saved result without replaying odds.

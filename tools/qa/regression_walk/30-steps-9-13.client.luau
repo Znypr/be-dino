@@ -166,7 +166,7 @@ W.steps[12] = function(ctx)
     local keep = W.keep.settings or {done = {}, lines = {}}
     W.keep.settings = keep
     for _, l in keep.lines do table.insert(c, l) end
-    local marker = {sound = "Hatch sound", look = "Calm motion", controls = "Camera", help = "HOW TO PLAY"}
+    local marker = {sound = "Hatch sound", look = "Calm motion", controls = "Camera", help = "How to play"}
     for _, id in {"sound", "look", "controls", "help"} do
         if not keep.done[id] then
             local s = W.scrim()

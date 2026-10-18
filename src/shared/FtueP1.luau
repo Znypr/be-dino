@@ -4,9 +4,9 @@
 local P = {}
 
 -- BD-369 Eggs screen -------------------------------------------------------------------------------------------------------
-P.NestLine = "Nest eggs are lucky! Nests open one at a time."
+P.NestLine = "Lucky nests open one at a time."
 P.EmptyStatus = "Go find eggs on the island!"
-P.EmptyButton = "EXPLORE ISLAND"
+P.EmptyButton = "Explore"
 P.CrackedHint = "Some eggs can crack!"
 P.CrackedHintSafeEggs = 2 -- the first two eggs are never Cracked (FtueRules.SafeEggs); the hint starts after them
 P.CrackedHintWindow = 5 -- ... and stops once the player has seen it work for this many more eggs
