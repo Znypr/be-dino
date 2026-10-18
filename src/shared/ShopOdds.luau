@@ -13,7 +13,7 @@ function Odds.conditionPercents(level)
     return result
 end
 function Odds.lines(level)
-    local lines={"RANDOM EGG ODDS", "Species (one purchased egg; no run-batch boost):"}
+    local lines={"Random egg chances", "Species (bought egg, no run boost):"}
     local total=0 for _,row in Config.ChestSpeciesWeights do total+=row.weight end
     for _,row in Config.ChestSpeciesWeights do table.insert(lines,string.format("%s: %.4f%%",Config.SpeciesDisplayNames[row.speciesId],100*row.weight/total)) end
     total=0 for _,row in Config.ChestQuantityWeights do total+=row.weight end
@@ -33,11 +33,13 @@ function Odds.lines(level)
     table.insert(lines,if mode=="legacy" then "Primary share 0-100%: "..Outcomes.percent(1/101).." each"
         elseif mode=="uniform" then "Mixed share 1-99%: "..Outcomes.percent(1/99).." each; matching genes 100%"
         else "Mixed shares 1% and 99%: "..Outcomes.percent(2/101).." each; shares 2-98%: "..Outcomes.percent(1/101).." each; matching genes 100%")
-    table.insert(lines,string.format("Normal size: %g%%; BIG (Rare): %g%% (size only, 1.2x)",100*(1-Config.BigChance),100*Config.BigChance))
-    table.insert(lines,"Purchased eggs: clear-weather, Shiny 0%; event mutation 0%")
-    table.insert(lines,string.format("Earned eggs: Shiny (Epic) %g%% during Volcano, Northern Lights, Earthquake or Blood Moon; otherwise 0%%. BIG is independent.",100*Config.ShinyChance))
-    table.insert(lines,"Each combined outcome multiplies its independent probabilities; only Cracked can fail.")
-    table.insert(lines,"Displayed percentages are rounded; their total may differ from 100%. Filters retain original odds, not renormalized subset odds.")
+    table.insert(lines,string.format("Normal size: %g%%, BIG (Rare): %g%%. Size only, %g%% bigger.",100*(1-Config.BigChance),100*Config.BigChance,math.floor(100*((Config.BigScaleMultiplier or 1.2)-1)+.5)))
+    table.insert(lines,"Bought eggs hatch in clear weather: Shiny 0%, event mutation 0%")
+    table.insert(lines,string.format("Earned eggs: Shiny (Epic) %g%% in Volcano, Northern Lights, Earthquake or Blood Moon.",100*Config.ShinyChance))
+    table.insert(lines,"Other weather: Shiny 0%. BIG is rolled separately.")
+    table.insert(lines,"Each full result multiplies its separate chances. Only Cracked can fail.")
+    table.insert(lines,"Percentages are rounded, so totals may not be 100%.")
+    table.insert(lines,"Filters keep the original chances of each result.")
     return lines
 end
 return Odds

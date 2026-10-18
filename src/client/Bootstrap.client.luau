@@ -499,7 +499,7 @@ render=function(name: string)
         label(body,"Ready for an adventure?",320,0,495,58,32)
         label(body,require(Shared.FtueCopy).sanctuaryTip1,330,74,474,85,22)
         label(body,require(Shared.FtueCopy).sanctuaryTip2,330,170,474,75,22,C.gold)
-        button(body,"EXPLORE ISLAND",340,280,460,68,C.accent,function()
+        button(body,"Explore",340,280,460,68,C.accent,function()
             local character=player.Character
             if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
             else close() notify("You are already exploring",C.blue) end
@@ -540,7 +540,7 @@ render=function(name: string)
             if not ShopTiles.eggProduct(body,20,cardsY+12,220) then art(body,"egg",20,cardsY+12,220) end
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
-            button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
+            button(body,"Chances",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             if randomBlocked then -- BD-532: greyed out, no confirm, nothing to tap
                 local soon=button(body,string.upper(PaidRandomGate.ComingSoon),270,cardsY+targetHeight+130,535,targetHeight,C.card,function() end)
                 soon.Name,soon.AutoButtonColor,soon.TextTransparency="BuyEggComingSoon",false,.15
@@ -691,7 +691,7 @@ render=function(name: string)
         -- BD-270: short, kid-readable odds (src/shared/OddsCopy). Every group adds up to 100%.
         local OddsCopy=require(Shared.OddsCopy)
         local upgradeOdds=oddsLevelOverride~=nil
-        heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Odds" else "Egg Odds",C.blue
+        heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Chances" else "Egg Chances",C.blue
         local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0,require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting"))) -- BD-365: the safe-eggs line only while true
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.ScrollBarThickness,list.ZIndex,list.Parent="OddsSimple",1,0,UDim2.fromOffset(824,308),8,24,body
         local lineY=0
@@ -712,7 +712,7 @@ render=function(name: string)
         button(body,"MORE DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end).TextSize=20
         button(body,"BACK",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open(if upgradeOdds then "conditionConfirm" else "eggPurchase") end)
     elseif name=="eggOdds" then
-        heading.Text,header.BackgroundColor3="Egg Odds",C.blue
+        heading.Text,header.BackgroundColor3="Egg Chances",C.blue
         local level=oddsLevelOverride or progression().conditionLevel or 0
         local lines=ShopOdds.lines(level)
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.CanvasSize,list.ScrollBarThickness,list.ZIndex,list.Parent="EggOdds",1,0,UDim2.fromOffset(824,308),UDim2.fromOffset(0,#lines*46),8,24,body
@@ -723,8 +723,8 @@ render=function(name: string)
             lineY+=lineHeight+2
         end
         list.CanvasSize=UDim2.fromOffset(0,lineY)
-        button(body,"FINAL OUTCOME DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOutcomes") end).TextSize=20
-        button(body,"BACK TO SHOP",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+        button(body,"All outcomes",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOutcomes") end).TextSize=20
+        button(body,"Back",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
     elseif name=="eggOutcomes" then
         heading.Text,header.BackgroundColor3="Final Egg Outcomes",C.blue
         EggOutcomeView.add(body,outcomeState,oddsLevelOverride or progression().conditionLevel or 0,
@@ -750,7 +750,7 @@ render=function(name: string)
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
         -- BD-270: the odds button sits before every random, crystal-costing action (egg purchase and condition upgrade).
-        button(body,"ODDS / DETAILS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+        button(body,"Chances",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
             oddsLevelOverride=if isEgg then nil else (if upgrade then upgrade.level else nil)
             outcomeState={page=1,filters={}} open("oddsSimple")
         end).TextSize=20
@@ -817,7 +817,7 @@ render=function(name: string)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
         end
-        label(scroller,"Rarer potions appear less often. Six of twelve are offered each restock.",0,284,824,22,15,C.gold)
+        label(scroller,"Rarer potions show up less often.",0,284,824,22,15,C.gold)
         label(scroller,"Your potions (tap to use)",0,310,824,24,18,C.gold)
         local slot=0
         for _,item in ProgressionConfig.Potions do
@@ -838,7 +838,7 @@ render=function(name: string)
                 end
             end
         end
-        if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
+        if slot==0 then label(scroller,"Buy a potion above to use it",0,338,824,32,18) end
         scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*50+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
@@ -846,8 +846,8 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
-        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..UIFormat.duration(item.duration).."?" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
-        button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
+        label(body,if replacing then "Using this ends your old "..item.kind.." potion" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        button(body,if replacing then "Replace" else "BUY POTION",290,263,510,58,C.accent,function()
             if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..potionChoice.window,false) end
             open("potions")
         end)
@@ -941,7 +941,7 @@ render=function(name: string)
             body=body,speciesId=selected,color=rarityColors[index],
             owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil,
             fallbackStage=bestMutation(selected),
-            fallbackLine=string.format("Base: %d • Gold: %d • Diamond: %d",base,gold,diamond),
+            fallbackLine=string.format("Base %d, Gold %d, Diamond %d",base,gold,diamond),
             scale=viewportScale,
             revision=function() return num("ProfileRevision") end,
             equipped=function()
@@ -962,9 +962,9 @@ render=function(name: string)
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
-        label(body,"YOUR COLLECTION",414,0,400,42,28)
+        label(body,"Your collection",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "6 Base make Gold, 3 Gold make Emerald, 2 Emerald make Diamond. Your best is used.",414,173,400,66,22,C.gold)
         do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,require(Shared.ClassInfo).Colors[require(Shared.ClassInfo).forSpecies(selected).class]) -- BD-423: class + one-line feel hint
             line.TextScaled,line.TextWrapped=true,false -- BD-443: shrink to fit one line on a phone, never clip
             local fit=Instance.new("UITextSizeConstraint") fit.MinTextSize,fit.MaxTextSize,fit.Parent=14,22,line end
@@ -973,7 +973,7 @@ render=function(name: string)
             if not owned then notify("Hatch eggs to find this dino") return end
             if not equipped then notify("Equipping...",C.blue) equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
-        button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
+        button(body,"Back",426,341,372,45,C.blue,function() open("collection") end)
     elseif name=="fusion" then
         heading.Text,header.BackgroundColor3="Dinosaur Fusion",C.purple
         local base,gold=copies(selected)
@@ -987,15 +987,15 @@ render=function(name: string)
         button(body,"GOLD",388,0,200,44,C.gold,function() fusionTarget="gold" open("fusion") end)
         button(body,"DIAMOND",600,0,200,44,C.blue,function() fusionTarget="diamond" open("fusion") end)
         label(body,"MAKE IT "..string.upper(target),388,56,420,54,30,if diamond then C.blue else C.gold)
-        label(body,"Consume "..cost.." "..source.." copies for 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..". Cosmetic only.",392,118,420,76,22)
+        label(body,"Use "..cost.." "..source.." copies to make 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..", for looks only.",392,118,420,76,22)
         meter(body,400,214,400,owned,cost,C.gold,string.format("%d / %d %s copies",owned,cost,source))
-        button(body,"FUSE SELECTED DINO",400,277,400,56,if owned>=cost then C.accent else C.card,function()
+        button(body,"Fuse",400,277,400,56,if owned>=cost then C.accent else C.card,function()
             if owned<cost then notify("You need "..cost.." "..source.." copies",C.red) return end
             open("fusionConfirm")
         end)
         button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
         local patternHeight=math.min(60,math.max(47,45/viewportScale()))
-        if fusionMenuOk then button(body,"PATTERN FUSION: 6 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
+        if fusionMenuOk then button(body,"Pattern fusion",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
     elseif name=="fusionConfirm" then
         local diamond=fusionTarget=="diamond"
         local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
@@ -1004,8 +1004,8 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="Confirm "..target.." Fusion",if diamond then C.blue else C.gold
         art(body,"mutation_"..fusionTarget,26,35,230)
         label(body,"Use "..cost.." "..source.." copies?",280,12,510,64,30)
-        label(body,"Receive 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..". The consumed copies are removed after a successful save.",280,100,510,115,24)
-        button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
+        label(body,"You get 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected)).." and the "..source.." copies are used up",280,100,510,115,24)
+        button(body,"Confirm",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
         -- Owner 2026-10-15: ONE Eggs screen = five nest slots + a single Next egg card (src/client/EggsScreen.luau).
@@ -1174,7 +1174,7 @@ render=function(name: string)
             Theme.animate(rewardScale,.22,{Scale=1},Enum.EasingStyle.Back)
             celebrate()
         end)
-        label(body,"Run total: +"..num("LastRunCrystals").." Crystals • already banked",70,353,684,40,22)
+        label(body,"Run total: +"..num("LastRunCrystals").." Crystals, already saved",70,353,684,40,22)
     elseif name=="results" then
         -- BD-315: a defeat is a gentle first section of THIS modal (a toast was covered by it); eggs, crystals and nests stay banked.
         local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
@@ -1199,7 +1199,7 @@ render=function(name: string)
         -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
         local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
         if tab=="help" then
-        button(body,"HOW TO PLAY",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
+        button(body,"How to play",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
         button(body,"FOOD GUIDE",424,70,400,76,C.accent,function() open("food") end).TextSize=26
         label(body,"Auto-open eggs",0,172,824,40,28).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
@@ -1211,7 +1211,7 @@ render=function(name: string)
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
             end).TextSize=22
         end
-        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,324,824,60,20)
+        label(body,"Shiny, BIG and special eggs always show.",0,324,824,60,20)
         end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
@@ -1222,7 +1222,7 @@ render=function(name: string)
             label(card,food[1],0,180,196,42,26)
             label(card,"+"..food[3].." Growth",0,226,196,42,26)
         end
-        label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
+        label(body,string.format("Eat 500 food for %d eggs. Weather can add more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
         local steps=require(Shared.FtueCopy).tutorialSteps
@@ -1233,7 +1233,7 @@ render=function(name: string)
             label(card,step[2],10,110,244,46,25,stepColor)
             label(card,step[3],16,176,232,84,22)
         end
-        button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
+        button(body,"Let's play",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
     end
 end
 -- BD-539: Luau allows 200 locals per function and this main chunk was at 198. Everything from here to the end of the script runs inside
@@ -1377,7 +1377,7 @@ local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
     local left=num("LeapReadyAt")-now
-    leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] • READY"
+    leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] ready"
     leapButton.BackgroundColor3=if left>0 then C.card else C.blue
     local c=player.Character
     leapButton.Active=left<=0 and c~=nil and c:GetAttribute("RunState")=="Active"
@@ -1627,7 +1627,7 @@ RunService.Heartbeat:Connect(function(dt)
     if elapsed<.15 then return end elapsed=0
     local character=player.Character
     local state=if character then character:GetAttribute("RunState") else "Loading"
-    action.Text=if state=="Sanctuary" then (if action:GetAttribute("GoCue")==true then require(Shared.FtueRules).GoCueText else "EXPLORE ISLAND") elseif state=="Active" then "HOME" else "SAVING..."
+    action.Text=if state=="Sanctuary" then (if action:GetAttribute("GoCue")==true then require(Shared.FtueRules).GoCueText else "Explore") elseif state=="Active" then "HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
     if actionIcon then actionIcon.Visible=state=="Active" end
     actionPadding.PaddingLeft=UDim.new(0,if actionIcon and state=="Active" then 52 else 6)

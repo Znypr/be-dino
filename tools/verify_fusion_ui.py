@@ -418,7 +418,7 @@ assert(S.stepSeconds("wheel",true,1.7)>S.stepSeconds("wheel",false,1.7))
 local bar=S.chanceBar({segments={{id="yes",p=.1},{id="no",p=.9}},committed="yes"})
 assert(bar.landedYes and bar.outcome=="YES!" and math.abs(bar.marker-.05)<1e-9 and math.abs(bar.yesShare-.1)<1e-9)
 local bar2=S.chanceBar({segments={{id="yes",p=.1},{id="no",p=.9}},committed="no"})
-assert(not bar2.landedYes and bar2.outcome=="NOT THIS TIME" and bar2.marker>bar2.yesShare and bar2.marker<1)
+assert(not bar2.landedYes and bar2.outcome=="Not this time" and bar2.marker>bar2.yesShare and bar2.marker<1)
 local fillA={dino(),dino(),dino()}
 local idx=S.index(fillA)
 assert(S.autoFillMessage(fillA,{},{fillA[1].instanceId},"gold",idx,cat):find("need 5 more"))

@@ -186,7 +186,7 @@ local stubs = {
         v.Parent = parent
         return v
     end},
-    OddsCopy = {fusionCalm = "Odds are shown before you fuse", fusionDetails = "Fusion uses no real money in this version. The chances above are exact and are shown before you fuse."},
+    OddsCopy = {fusionCalm = "Odds are shown before you fuse", fusionDetails = "Fusion uses no real money in this version. The chances are exact, shown before you fuse."},
     PreviewTraits = {add = function(view, traits) view:SetAttribute("Shiny", traits and traits.shiny) end},
     -- docs/152: FusionMenu requires ObjectiveSeen only while Config.ObjectivesEnabled (OB2); a recording stand-in (the real module has its own offline check)
     ObjectiveSeen = {report = function() end},

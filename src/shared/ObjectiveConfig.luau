@@ -9,7 +9,7 @@ local Catalogue = {
     {id = "T1", group = "tutorial", name = "Eat 10 food", event = "food_eaten", goal = 10, reward = {crystals = 10}},
     {id = "T2", group = "tutorial", name = "Finish your first run", event = "run_end", goal = 1, reward = {crystals = 20}},
     {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}, note = "Cracked eggs count too"}, -- OB3 (docs/115): a failed Cracked egg counts as opened
-    {id = "T4", group = "tutorial", name = "Equip a dino in the Index", event = "dino_equipped", goal = 1, reward = {crystals = 10}},
+    {id = "T4", group = "tutorial", name = "Equip a dino", event = "dino_equipped", goal = 1, reward = {crystals = 10}},
     {id = "T5", group = "tutorial", name = "Use leap once", event = "leap_used", goal = 1, reward = {crystals = 10}},
     {id = "T6", group = "tutorial", name = "Buy a potion", event = "potion_bought", goal = 1, reward = {crystals = 25}},
     {id = "T7", group = "tutorial", name = "Reach level 3", event = "level_reached", minValue = 3, goal = 1, reward = {crystals = 20}},
@@ -26,8 +26,8 @@ local Catalogue = {
     {id = "D2", group = "daily", name = "Finish 3 runs", event = "run_end", goal = 3, reward = {crystals = 40}},
     {id = "D3", group = "daily", name = "Buy any potion", event = "potion_bought", goal = 1, reward = {crystals = 30}},
     {id = "D4", group = "daily", name = "Collect a new species", event = "species_new", goal = 1, reward = {crystals = 60}},
-    {id = "D5", group = "daily", name = "Add a dino toward a fusion step", event = "fusion_step_added", goal = 1, reward = {crystals = 40}},
-    {id = "D6", group = "daily", name = "Hatch a Rare or better", event = "rare_hatched", goal = 1, reward = {crystals = 50}},
+    {id = "D5", group = "daily", name = "Add a fusion dino", event = "fusion_step_added", goal = 1, reward = {crystals = 40}},
+    {id = "D6", group = "daily", name = "Hatch Rare or better", event = "rare_hatched", goal = 1, reward = {crystals = 50}},
 }
 
 local byId = {}

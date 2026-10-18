@@ -552,36 +552,36 @@ end
 
 Sel.FailureText = {
     fusion_disabled = "Fusion is unavailable right now.",
-    rate_limited = "Too many requests. Retrying shortly with the same request.",
-    stale_quote = "Your dinos changed. Odds were refreshed; please review and confirm again.",
-    consent_required = "Please review the itemized loss list and confirm again.",
-    donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
+    rate_limited = "Too fast! Trying again in a moment.",
+    stale_quote = "Your dinos changed. Check the new chances, then confirm.",
+    consent_required = "Please check what you will lose, then confirm again.",
+    donor_missing = "A selected dino is gone. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly the recipe count of matching dinos is required (6 Base, 3 Gold or 2 Emerald).",
+    wrong_donor_count = "Pick exactly 6 Base, 3 Gold or 2 Emerald dinos.",
     species_mismatch = "All dinos must be the same species.",
     pattern_mismatch = "Emerald and Diamond need dinos with the same pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
     odds_not_approved = "Fusion odds are not approved yet. Nothing was consumed.",
-    save_failed = "Saving failed. Nothing is lost; retrying with the same request.",
-    lease_lost = "Your profile session moved. Rejoin, then reopen Fusion to see the result.",
+    save_failed = "Could not save, but nothing was lost. Trying again.",
+    lease_lost = "Rejoin the game, then open Fusion to see the result.",
     storage_limit = "Your collection is full. Make room before fusing.",
-    token_conflict = "Request mismatch. Please confirm again.",
+    token_conflict = "Something did not match. Please confirm again.",
     duplicate_donor = "A dino was selected twice. Selection refreshed.",
     wrong_stage = "A selected dino is the wrong stage. Selection refreshed.",
     missing_pattern = "A selected dino has no recorded egg pattern.",
-    invalid_donor_id = "Selection invalid. Refreshed.",
-    profile_not_loaded = "Your profile is still loading. Try again in a moment.",
-    request_failed = "Connection problem. Retrying with the same request.",
+    invalid_donor_id = "That pick did not work. Selection refreshed.",
+    profile_not_loaded = "Your dinos are still loading. Try again in a moment.",
+    request_failed = "Connection problem. Trying again.",
     unavailable = "Fusion unavailable.",
     identity_unavailable = "Fusion is unavailable for this save right now.",
     random_items_unavailable = "Fusion is not available for this account.",
-    bad_request = "Request was rejected. Please reopen Fusion.",
-    invalid_token = "Request token invalid. Please confirm again.",
-    invalid_instance = "A selected dino is invalid. Selection refreshed.",
+    bad_request = "That did not work. Please open Fusion again.",
+    invalid_token = "That did not work. Please confirm again.",
+    invalid_instance = "A selected dino cannot be used. Selection refreshed.",
     wrong_owner = "A selected dino is not yours. Selection refreshed.",
     unknown_stage = "Unknown fusion stage.",
     projection_unsupported = "This stage is not fusable yet.",
-    identity_capacity = "Your collection is at its identity limit. Nothing was consumed.",
+    identity_capacity = "Your collection is at its limit. Nothing was used up.",
 }
 -- profile_not_loaded: after save_failed/lease_lost the server refuses until reload; the same token stays safe.
 local RetrySame = {rate_limited = true, save_failed = true, request_failed = true, lease_lost = true, profile_not_loaded = true}
@@ -660,7 +660,7 @@ function Sel.chanceBar(stage)
     local landedYes = stage.committed == "yes"
     local marker = if landedYes then yesShare / 2 else yesShare + (1 - yesShare) / 2
     return {yesShare = yesShare, landedYes = landedYes, marker = marker,
-        outcome = if landedYes then "YES!" else "NOT THIS TIME"}
+        outcome = if landedYes then "YES!" else "Not this time"}
 end
 
 function Sel.revealSequence(quote, result, catalog)
@@ -668,7 +668,7 @@ function Sel.revealSequence(quote, result, catalog)
     local g = traits.genes or {}
     local stages = {}
     local patternId = (type(result) == "table" and result.patternId) or g.patternId
-    table.insert(stages, {kind = "pattern", title = "PATTERN LOCKED", value = lookup(catalog, "patterns", patternId)})
+    table.insert(stages, {kind = "pattern", title = "Pattern locked", value = lookup(catalog, "patterns", patternId)})
     local odds = type(quote) == "table" and quote.odds or nil
     if odds then
         local function add(trait, title, committed, detail)
@@ -772,7 +772,7 @@ function Sel.details(d, catalog)
         table.insert(view.origin.lines, "Fused from " .. math.max(#parentIds, #snapshots) .. " dinos")
         table.insert(view.origin.lines, "Recipe " .. tostring(lineage.recipeVersion or origin.recipeVersion or "unknown")
             .. " • Odds " .. tostring(lineage.oddsVersion or origin.oddsVersion or "unknown"))
-        table.insert(view.origin.lines, "Traits were freshly rolled at fusion; the stage is guaranteed, not a drop chance.")
+        table.insert(view.origin.lines, "Traits were rolled fresh. The stage is always guaranteed.")
         local eggs = lineage.parentEggs or {}
         local byParent = {}
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
