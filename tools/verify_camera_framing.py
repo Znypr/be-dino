@@ -32,7 +32,6 @@ SCALES = (1, 2, 4)
 # NOT in this table (cap 75 binds, open question BD-513): BIG at growth scale 4.8: Spinosaurus fill 72%, top 64 px (sail behind the HUD banner),
 # T-Rex fill 51%, top 150 px (head touches the hint line).
 STUDIO = {
-    'ankylosaurus': {1: (18.84, 44, 266), 2: (37.68, 42, 241), 4: (75.0, 41, 222)},
     'archaeopteryx': {1: (12.0, 38, 366), 2: (24.0, 35, 297), 4: (48.0, 35, 272)},
     'baryonyx': {1: (14.72, 40, 268), 2: (29.45, 41, 221), 4: (58.89, 41, 195)},
     'brachiosaurus': {1: (14.36, 46, 261), 2: (28.72, 45, 216), 4: (57.43, 45, 193)},
@@ -53,13 +52,15 @@ STUDIO = {
     'stegosaurus': {1: (15.27, 46, 285), 2: (30.55, 44, 247), 4: (61.09, 45, 211)},
     'therizinosaurus': {1: (16.07, 42, 258), 2: (32.14, 42, 209), 4: (64.29, 44, 178)},
     'triceratops': {1: (14.42, 47, 259), 2: (28.84, 47, 211), 4: (57.68, 46, 190)},
-    'tyrannosaurus': {1: (17.28, 46, 242), 2: (34.57, 45, 204), 4: (69.14, 45, 184)},
 }
 
 # C-39 (BD-537, docs/116): the three Water species were resized from length to bulk and their rows were re-swept in Studio 2026-10-17
 # (docs/evidence/2026-10-17-water-bulk/, real default camera, run on the island, minimum zoom forced; fill and top measured by projecting the
 # visible parts' corners). PENDING_SWEEP lists species whose rows are not yet re-swept (none).
-PENDING_SWEEP = ()
+# BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): the T-Rex (scale 3.47 -> 3.81) and the Ankylosaurus (3.6 -> 2.67, now sized by bulk) changed size, so
+# their 2026-10-17 sweep rows no longer apply (old rows: ankylosaurus 1 18.84/44%/266, 2 37.68/42%/241, 4 75.0/41%/222; tyrannosaurus 1 17.28/46%/242, 2 34.57/45%/204,
+# 4 69.14/45%/184). The module numbers below are the pure size rule on the scaled boxes; the Studio sweep of both is still to do.
+PENDING_SWEEP = ('tyrannosaurus', 'ankylosaurus')
 
 BODY = r'''
 local sizes = {SIZES}
@@ -136,9 +137,15 @@ def main():
             if z > BASE * s * 1.02:
                 problems.append('%s at %s is pushed back (%.2f > %.2f) although its body is not bigger than a Compy' % (species, s, z, BASE * s))
     # long and big bodies are pushed back, in order
-    order = [rows[(sp, 1)][0] for sp in ('compy', 'triceratops', 'tyrannosaurus', 'ankylosaurus', 'spinosaurus')]
-    if not (order[0] < order[1] < order[2] < order[4] and order[1] < order[3]):
-        problems.append('framing order at scale 1 is not Compy < Triceratops < T-Rex < Spinosaurus: %s' % order)
+    # BD-992: the T-Rex is the biggest dinosaur, so it is framed farthest at every growth scale (a tie at the 90 cap is allowed); the Ankylosaurus is a low body, nearer than a Triceratops
+    order = [rows[(sp, 1)][0] for sp in ('compy', 'triceratops', 'spinosaurus', 'tyrannosaurus', 'ankylosaurus')]
+    if not (order[0] < order[1] < order[2] < order[3] and order[4] < order[1]):
+        problems.append('framing order at scale 1 is not Compy < Triceratops < Spinosaurus < T-Rex (Ankylosaurus below Triceratops): %s' % order)
+    for s in (1, 2, 4, 4.8):
+        rex_z = rows[('tyrannosaurus', float(s))][0]
+        farther = [sp for sp in ALL_BOXES if sp != 'tyrannosaurus' and rows[(sp, float(s))][0] > rex_z + 1e-6]
+        if farther:
+            problems.append('T-Rex at %s is not framed farthest (BD-992: the biggest dinosaur): %s are farther' % (s, farther))
     # 4 STUDIO
     for species, per in STUDIO.items():
         for s, (zoom, fill, top) in per.items():

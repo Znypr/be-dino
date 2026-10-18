@@ -161,14 +161,14 @@ end
 do
   -- circle (no spine): distance minus radius, floored at 0
   assert(HitSize.gap(5,0,3,4,1,0)==0 and math.abs(HitSize.gap(3,0,6,8,1,0)-7)<EPS and math.abs(HitSize.gap(3,0,6,8,0,0)-7)<EPS)
-  -- Ankylosaurus at growth 2 (body 15.56 wide, 28.8 long, facing +X): today's capped circle is radius 14
-  local r,span=HitSize.capsule("ankylosaurus",2)
-  assert(math.abs(r-7.78)<1e-6 and math.abs(span-6.62)<1e-6)
-  assert(HitSize.radius("ankylosaurus",2)==14)
+  -- Ankylosaurus at growth 3 (BD-992 box: body 17.31 wide, 32.04 long, facing +X): today's capped circle is radius 14
+  local r,span=HitSize.capsule("ankylosaurus",3)
+  assert(math.abs(r-8.655)<1e-6 and math.abs(span-7.365)<1e-6)
+  assert(HitSize.radius("ankylosaurus",3)==14)
   local oldCircleGap=HitSize.gap(14,0,0,14,1,0)
   assert(oldCircleGap==0,"today's circle hits a point 14 studs beside the middle of the body")
   local sideGap=HitSize.gap(r,span,0,14,1,0)
-  assert(math.abs(sideGap-(14-r))<1e-9 and sideGap>6,"the capsule does NOT hit beside the body (gap "..sideGap..")")
+  assert(math.abs(sideGap-(14-r))<1e-9 and sideGap>5,"the capsule does NOT hit beside the body (gap "..sideGap..")")
   assert(HitSize.gap(r,span,0,r,1,0)<1e-9,"the flank is on the surface")
   -- the nose: past the end of the body by 2 studs
   assert(math.abs(HitSize.gap(r,span,r+span+2,0,1,0)-2)<1e-9,"2 studs past the nose is a gap of 2")
