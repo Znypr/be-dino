@@ -37,6 +37,7 @@ local Theme = {MotionEnabled = true, Colors = {panel = color(.2, .2, .2), card =
     RarityColors = {color(.6, .6, .6), color(.3, .8, .3), color(.3, .5, 1), color(.7, .3, 1), color(1, .8, .2), color(1, .3, .3)},
     ImageIds = {paint_bucket = "", egg_splat = "", egg_shell = ""}, TextStyle = {apply = function() return inst("UIStroke") end}}
 function Theme.decorate() end
+function Theme.icon() return nil end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
 stubs.UITheme = Theme
 stubs.EggPicture = {
@@ -47,7 +48,7 @@ stubs.ConditionStage = {hero = function() return nil end}
 stubs.FxUi = {mount = function() return nil end}
 stubs.FusionSelection = {eggSlotLook = function() return "plain" end}
 stubs.ChipStyle = nil
-local clientNames = {ModalCompact = true, EggsScreen = true, EggPicture = true, ConditionStage = true, HatchSequence = true, ModalClose = true, InspectView = true,
+local clientNames = {IndexTabs = true, PatternColourCards = true, PatternColourDetail = true, ModalCompact = true, EggsScreen = true, EggPicture = true, ConditionStage = true, HatchSequence = true, ModalClose = true, InspectView = true,
     HatchFx = true, MutationReveal = true, HatchEggV2 = true, PrivateState = true}
 stubs.ClassBadge = {create = function(parent) return inst("Frame", "ClassBadge", parent) end}
 stubs.Sfx = {play = function() end, playLayers = function() end, playCue = function() end, revealName = function() return "hatch_reveal" end}
@@ -55,8 +56,17 @@ stubs.SfxRules = {hatchCues = function(cues) return cues end}
 stubs.InspectView = {attach = function() return {destroy = function() end, wasDrag = function() return false end} end}
 stubs.HatchFx = {ensure = function() return {} end, begin = function() return {} end, update = function() end, hide = function() end, style = function() end, rainbow = function() end,
     splash = function() end, paintStyle = function() end}
-stubs.PatternColourIndex = {ribbons = function() return {} end}
-stubs.PrivateState = {str = function(_, fallback) return fallback or "" end}
+stubs.PatternColourIndex = {ribbons = function() return {} end, Tabs = {"dinos", "patterns", "colours"}, TabNames = {dinos = "Dinos", patterns = "Patterns", colours = "Colours"},
+    validTab = function(t) return t end, foundSets = function() return {patterns = {}, colours = {}} end, foundTotal = function() return 0 end, dotVisible = function() return false end,
+    seenBaseline = function() return 0 end, cards = function() return {} end, header = function() return {text = ""} end}
+stubs.PrivateState = {str = function(_, fallback) return fallback or "" end, isReady = function() return true end, onChanged = function() end}
+-- BD-1083 / BD-1082: the REAL IndexTabs runs here; the cards and the detail it draws are checked elsewhere (verify_pattern_colour_index.py)
+stubs.PatternColourCards = {build = function() end}
+stubs.PatternColourDetail = {open = function() end}
+stubs.SettingsModel = {set = function() end, indexSeen = function() return nil end, onChange = function() end}
+stubs.AssetSlots = {image = function() return nil end}
+stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end}
+stubs.NavigationArtwork = {collection = "dinos"}
 stubs.MutationReveal = {begin = function() return {} end, update = function() end, hide = function() end}
 stubs.HatchEggV2 = {create = function() return nil end, stop = function() end}
 Services.HttpService = {JSONDecode = function() return {} end}
@@ -394,6 +404,65 @@ for _, stage in HATCH_STAGES do
         hatchChecks(size[1], size[2], true, stage)
         hatchChecks(size[1], size[2], false, stage)
     end
+end
+
+-- ===== BD-1083: a tap on an Index tab must stay the tab's (docs/197 picture 350) =====
+-- HubTravelClient turns a raw tap into "close the menu and travel" when it lands on a rail button while a menu is up. It used to look at the
+-- position only; at 500 px the Index tabs lie over the EGGS rail button, so a tap on Patterns closed the Index and opened Eggs. The engine's hit
+-- test was right all along (the tab is on top); the raw input event did not ask it. Now the route needs ModalClose.onBackdrop (the top thing is the
+-- dark backdrop). The same decision as HubTravelClient.routeTap, run at every size on the REAL tabs, the X, and a rail rectangle under each of them.
+local ConfigReal = requireModule(SharedFolder.Config)
+local ConfigWithIndex = table.clone(ConfigReal) -- the real Config is frozen: IndexTabs gets a copy with the Index flag on (the playtest profile)
+ConfigWithIndex.PatternColourIndexEnabled = true
+local HubRules = requireModule(SharedFolder.HubTravelClientRules)
+local ModalCloseReal = requireModule(ClientFolder.ModalClose)
+local function routeOf(x, y, targets) -- what HubTravelClient.routeTap decides for a tap at (x, y) with a menu up
+    return HubRules.routeScrimTap(true, true, x, y, targets, ModalCloseReal.onBackdrop(PlayerGui, x, y))
+end
+local function centerOf(o) local r = rectOf(o) return r.x + r.w / 2, r.y + r.h / 2 end
+local function mountIndexTabs(modal)
+    loaded.IndexTabs = nil
+    loaded.Config = ConfigWithIndex
+    local Tabs = requireModule(ClientFolder.IndexTabs)
+    loaded.Config = ConfigReal
+    -- ModalCompact.parts() knows the modal that attach() was given
+    Tabs.mount(function() end)
+    ModalCompact.enforce()
+    return Tabs
+end
+for _, size in SIZES do
+    local w, h = size[1], size[2]
+    local modal = buildModal(w, h)
+    mountIndexTabs(modal)
+    local tag = string.format("Index tabs %dx%d", w, h)
+    local bar = modal.header:FindFirstChild("IndexTabs")
+    if check(bar ~= nil, tag .. ": the tab bar is drawn") then
+        local controls = {modal.x}
+        for _, name in {"Tab_dinos", "Tab_patterns", "Tab_colours"} do
+            local b = bar:FindFirstChild(name)
+            if check(b ~= nil, tag .. ": " .. name .. " exists") then table.insert(controls, b) end
+        end
+        for _, ctrl in controls do
+            local cx, cy = centerOf(ctrl)
+            local top = ModalCloseReal.topAt(PlayerGui, cx, cy)
+            check(top == ctrl or (top ~= nil and top:IsDescendantOf(ctrl)), string.format("%s: the hit test at the centre of %s returns %s", tag, ctrl.Name, if top then top.Name else "nothing"))
+            -- a rail button right under the control (the worst case), and the Studio rail of picture 350 (EGGS at x 151 to 309, y 12 to 104)
+            local under = {{kind = "rail", destination = "eggs", x = cx - 80, y = cy - 27, w = 160, h = 54, enabled = true}}
+            local studio = {{kind = "rail", destination = "collection", x = 151, y = 12, w = 158, h = 44, enabled = true}, {kind = "rail", destination = "eggs", x = 151, y = 60, w = 158, h = 44, enabled = true}}
+            check(routeOf(cx, cy, under) == nil, string.format("%s: a tap on %s is routed to the rail button under it (it closes the menu and opens Eggs)", tag, ctrl.Name))
+            check(routeOf(cx, cy, studio) == nil, string.format("%s: a tap on %s is routed to the Studio rail (picture 350)", tag, ctrl.Name))
+        end
+        -- control: on the bare dark backdrop a rail tap still routes (the BD-382 behaviour stays)
+        local bx, by = 3, 3
+        if ModalCloseReal.onBackdrop(PlayerGui, bx, by) then
+            local rail = HubRules.routeScrimTap(true, true, bx, by, {{kind = "rail", destination = "eggs", x = 0, y = 0, w = 40, h = 40, enabled = true}}, true)
+            local viaClient = routeOf(bx, by, {{kind = "rail", destination = "eggs", x = 0, y = 0, w = 40, h = 40, enabled = true}})
+            check(rail ~= nil and viaClient ~= nil and viaClient.destination == "eggs", tag .. ": a tap on the bare dark backdrop over a rail button still travels")
+        else
+            check(false, tag .. ": the corner (3, 3) should be the bare backdrop")
+        end
+    end
+    modal.gui:Destroy()
 end
 
 if failures > 0 then error(failures .. " small-window check(s) failed") end

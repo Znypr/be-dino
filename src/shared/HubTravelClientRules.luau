@@ -90,8 +90,11 @@ end
 -- targets = list of {kind = "rail" | "chip", destination = string?, x, y, w, h, enabled = bool?} in the same space as (px, py).
 -- Returns nil (the tap belongs to the scrim) or {kind = "rail", destination} | {kind = "chip"}. Later targets win overlaps.
 Rules.SettleSeconds = 0.05 -- wait this long after the tap so the scrim's own close has run first (it must not close the new menu)
-function Rules.routeScrimTap(caveHub: any, scrimUp: any, px: any, py: any, targets: any): any
-    if caveHub ~= true or scrimUp ~= true or typeof(px) ~= "number" or typeof(py) ~= "number" or typeof(targets) ~= "table" then return nil end
+-- BD-1083: onBackdrop must be exactly true = the topmost thing that takes the tap at (px, py) is the dark backdrop itself (ModalClose.onBackdrop). A tap
+-- on a button of the menu (the Index tabs, X, a card) is the menu's own, even when a rail button lies in the same spot far below the backdrop; this
+-- function runs from a raw input event, which does not know what sits on top. Not true = never routed (a missing answer must not route either).
+function Rules.routeScrimTap(caveHub: any, scrimUp: any, px: any, py: any, targets: any, onBackdrop: any): any
+    if caveHub ~= true or scrimUp ~= true or onBackdrop ~= true or typeof(px) ~= "number" or typeof(py) ~= "number" or typeof(targets) ~= "table" then return nil end
     local hit: any = nil
     for _, t in targets do
         if typeof(t) == "table" and t.enabled ~= false and typeof(t.x) == "number" and typeof(t.y) == "number"
