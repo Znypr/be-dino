@@ -1148,7 +1148,7 @@ render=function(name: string)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
         require(script.Parent.RunComplete).build({body=body,C=C,label=label,box=box,art=art,button=button,num=num,oops=oops,hasEggs=hasEggs,
             back=function() open("home") end,
-            openEggs=function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end})
+            openEggs=function() if not require(script.Parent.HubTravelClient).press("eggs",true) then open("eggs") end end})
     elseif name=="batchSummary" then
         heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
