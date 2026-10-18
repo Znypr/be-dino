@@ -4,7 +4,7 @@
 -- tools/verify_profile_golden.py proves the stored profile is byte-identical to before the split.
 return function(ProfileRepository: any, shared: any)
 local Config = shared.Config
-local admit = shared.admit
+local admit = shared.admitAs("ProfileSkins") -- BD-650: the label names the service in the rate_limited count
 local adopt = shared.adopt
 local handleLeaseLost = shared.handleLeaseLost
 local identityAvailable = shared.identityAvailable

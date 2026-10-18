@@ -1,0 +1,30 @@
+18:00:01.100  Server: server started
+18:00:09.310  [BD-TELEMETRY] {"event":"visit","server":"a1b2c3d4","at":1792000009}
+18:00:21.870  [BD-TELEMETRY] {"event":"visit","server":"a1b2c3d4","at":1792000021}
+18:00:40.002  Client warning: texture preload slow
+18:01:15.500  [BD-TELEMETRY] {"event":"visit","server":"a1b2c3d4","at":1792000075}
+18:07:12.400  [BD-TELEMETRY] {"event":"run_end","duration_s":300,"reason":"ManualExit","food":625,"food_is_estimate":true,"food_raw":640,"eggs_food":15,"weather_s":0,"eggs":15,"nests":0,"crystals":30}
+18:07:40.120  [BD-TELEMETRY] {"event":"run_end","duration_s":290,"reason":"ManualExit","food":583,"food_is_estimate":true,"food_raw":600,"eggs_food":14,"weather_s":0,"eggs":14,"nests":0,"crystals":28}
+18:08:02.000  [BD-TELEMETRY] {"event":"count","name":"hatches","service":"Egg","value":11}
+18:08:02.001  [BD-TELEMETRY] {"event":"count","name":"movement_rejects","value":4}
+18:08:02.002  [BD-TELEMETRY] {"event":"count","name":"rate_limited","service":"Chest","value":5}
+18:08:02.003  [BD-TELEMETRY] {"event":"count","name":"rate_limited","service":"Gift","value":3}
+18:08:02.004  [BD-TELEMETRY] {"event":"count","name":"shop_purchases","service":"buyPotion","value":2}
+18:08:02.004  [BD-TELEMETRY] {"event":"count","name":"script_errors","value":1}
+18:08:02.005  [BD-TELEMETRY] {"event":"script_error","script":"ChestService","text":"ServerScriptService.ChestService:88: attempt to index nil with <p>"}
+18:12:40.500  [BD-TELEMETRY] {"event":"run_end","duration_s":310,"reason":"ManualExit","food":667,"food_is_estimate":true,"food_raw":660,"eggs_food":16,"weather_s":0,"eggs":16,"nests":1,"crystals":32}
+18:13:50.000  [BD-TELEMETRY] {"event":"session_end","total_s":780,"runs":2,"hub_s":180,"run_s":600,"first_run_s":25,"first_food_s":40,"first_egg_s":330,"first_hatch_s":355,"first_shop_s":500,"server":"a1b2c3d4","at":1792000789}
+18:14:10.000  [BD-TELEMETRY] {"event":"session_end","total_s":760,"runs":1,"hub_s":250,"run_s":510,"first_run_s":45,"first_food_s":70,"first_egg_s":380,"server":"a1b2c3d4","at":1792000781}
+18:14:11.000  [BD-TELEMETRY] {"event":"count","name":"fusions","value":1}
+19:30:00.100  [BD-TELEMETRY] {"event":"visit","server":"e5f6a7b8","at":1792005000}
+19:30:10.100  [BD-TELEMETRY] {"event":"visit","server":"e5f6a7b8","at":1792005010}
+19:36:12.000  [BD-TELEMETRY] {"event":"run_end","duration_s":300,"reason":"Death","food":600,"food_is_estimate":true,"food_raw":610,"eggs_food":15,"weather_s":0,"eggs":15,"nests":0,"crystals":30}
+19:37:00.000  [BD-TELEMETRY] {"event":"session_end","total_s":400,"runs":1,"hub_s":60,"run_s":340,"first_run_s":30,"first_food_s":50,"first_egg_s":345,"server":"e5f6a7b8","at":1792005400}
+19:37:01.000  [BD-TELEMETRY] {"event":"session_end","total_s":351,"runs":0,"hub_s":351,"run_s":0,"server":"e5f6a7b8","at":1792005361}
+19:37:02.000  [BD-TELEMETRY] {"event":"count","name":"rate_limited","service":"Chest","value":1}
+19:37:02.001  [BD-TELEMETRY] {"event":"count","name":"movement_rejects","value":2}
+19:37:02.002  [BD-TELEMETRY] {"event":"count","name":"script_errors","value":1}
+19:37:02.002  [BD-TELEMETRY] {"event":"script_error","script":"Other","text":"attempt to compare nil with number"}
+[BD-FEEDBACK] {"event":"feedback","fun":3,"level":2,"looks":3,"runs":2,"location":"Run","species":"compy","text":"The eggs are fun"}
+[BD-FEEDBACK] {"event":"feedback","fun":3,"level":2,"looks":2,"runs":1,"location":"Hub","species":"compy","text":""}
+[BD-FEEDBACK] {"event":"feedback","fun":2,"level":2,"looks":3,"runs":1,"location":"Run","species":"compy","text":""}
