@@ -53,7 +53,7 @@ DOC = "docs/151-remote-audit-2026-10-17.md"
 # added here and given a row in the audit document. ProgressionResult and RareHatch are server -> client only (no handler).
 EXPECTED_PLAYTEST_REMOTES = [
     "AdminAction", "ClaimChest", "ClaimNest", "ClassDash", "ClassGlide", "ClientWorldReady", "EquipSpecies", "FusionAction", "HubTravel",
-    "MutateSpecies", "PlaytestFeedback", "PrivateState", "ProgressionAction", "ProgressionResult", "RareHatch", "RequestEndRun",
+    "PlaytestFeedback", "PrivateState", "ProgressionAction", "ProgressionResult", "RareHatch", "RequestEndRun",
     "RequestLeap", "RequestStartRun", "SetRevealSkip", "SetSettings",
     "CombatBite", "ObjectiveAction",  # docs/157: CombatEnabled and ObjectivesEnabled are ON in the playtest profile, so these two exist there now
 ]
@@ -70,7 +70,7 @@ REVIEWED_SITES = {
     ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1,
     ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 1, ("CollectionService.luau", "event"): 2,
     ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
-    ("MutationService.luau", "event"): 2, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
+    ("MutationService.luau", "event"): 1, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
     ("QaService.luau", "event"): 1, ("RunLifecycle.luau", "event"): 3, ("VisualTestService.luau", "event"): 1,
     ("CaveShowOff.luau", "prompt"): 1, ("Bootstrap.server.luau", "receipt"): 1,
 }
@@ -317,9 +317,9 @@ MUTANTS = [
     ("AdminAction answers a non-admin", "published-pins", {
         "src/server/AdminService": ('if admins[player] ~= true then return false, "not_admin" end', "")},
      "published-pins: a non-admin gets not_admin"),
-    ("the 50-copy MutateSpecies works again while fusion is on (docs/157 guard removed)", "published-pins", {
-        "src/server/MutationService": ('if Config.IdentityFusionPreviewEnabled == true then', 'if false then')},
-     "published-pins: the old 50-copy MutateSpecies is refused"),
+    ("the 50-copy MutateSpecies remote is created again (BD-617 reverted)", "published-pins", {
+        "src/server/MutationService": ('    local setupTest = if Config.MutationTestSetupEnabled', '    local mutate = getRemote(folder, "MutateSpecies")\n    local setupTest = if Config.MutationTestSetupEnabled')},
+     "published-pins: the old 50-copy MutateSpecies remote does not exist"),
     ("a dinosaur can be swapped in the middle of a run again (BD-613 reverted)", "equip-next-run", {
         "src/server/CollectionService": ('local inRun = runState == "Active" or runState == "Ending"', "local inRun = false")},
      "equip-next-run: a pick during a run answers next_run"),

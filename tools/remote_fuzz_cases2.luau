@@ -28,13 +28,8 @@ runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)
         server.Config.ChestTestGrantEnabled == false and server.Config.CollectionTestGrantEnabled == false and server.Config.MutationTestSetupEnabled == false
         and server.Config.SecurityTestHarnessEnabled == false and server.Config.ArtTestHarnessEnabled == false and server.Config.QaOverlayEnabled == false,
         "")
-    -- docs/155 s6 / docs/157: with the identity fusion path on (the playtest), the Build 020 50-copy shortcut is closed on the server
-    local miner = seeded(server, 1005, function(profile) profile.collection.compy.base = 80 end)
-    sleep(1)
-    local minerBefore = wealth(1005)
-    fireNow(server, "MutateSpecies", miner, "compy", "gold", tok("moved"))
-    check("published-pins: the old 50-copy MutateSpecies is refused (fusion_moved) while fusion is on and spends nothing",
-        miner:GetAttribute("LastMutationStatus") == "fusion_moved" and wealth(1005) == minerBefore, tostring(miner:GetAttribute("LastMutationStatus")))
+    -- docs/155 s6 / BD-617: the Build 020 50-copy shortcut is gone from the server; fusion is only FusionAction
+    check("published-pins: the old 50-copy MutateSpecies remote does not exist (BD-617)", server.remotes["MutateSpecies"] == nil, "")
     -- AdminAction exists for everybody; only the experience creator (userId 1 here) is an admin
     local stranger = connect(server, 1002)
     sleep(1)

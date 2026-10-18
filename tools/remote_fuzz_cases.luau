@@ -103,7 +103,6 @@ local function templates(server, p)
         SetRevealSkip = function() return {{1, 2}} end,
         SetSettings = function() return {{v = 1, sound = {master = 0.5, sfx = 0.5, ambience = 0.5}, effects = "lite", weather = "lite", calm = false, jumpSize = "normal", teleportShops = true}} end,
         EquipSpecies = function() return {ownedSpecies, tok("equip")} end,
-        MutateSpecies = function() return {ownedSpecies, "gold", tok("mut")} end,
         ProgressionAction = function() return {"buyPotion", offered .. "@" .. win, tok("prog"), false} end,
         FusionAction = function() return {{action = "list"}} end,
         PrivateState = function() return {} end,
@@ -447,13 +446,13 @@ local function stormScenario(hostileCount, label)
         local stormEnds = now + STORM
         local hostileWritesStart = {}
         for _, p in hostile do hostileWritesStart[p] = M.byKeyWrites[keyOf(p.UserId)] or 0 end
-        -- docs/157: with fusion on, the old 50-copy MutateSpecies the storm fires is refused, so it no longer burns ~7,000 points of copies;
+        -- docs/157 / BD-617: the old 50-copy MutateSpecies remote no longer exists, so the storm cannot burn copies with it;
         -- the fixed bound below was only loose because of that burn. A hostile account must also end at or under what it had when the storm began.
         local pointsAtStart = {}
         for _, p in hostile do pointsAtStart[p] = wealthPoints(server, p.UserId) end
         for _, p in hostile do
             task.spawn(function()
-                local names = {"ClaimChest", "ClaimNest", "EquipSpecies", "MutateSpecies", "ProgressionAction", "SetSettings", "SetRevealSkip", "FusionAction", "PrivateState", "HubTravel", "PlaytestFeedback", "RequestLeap", "ClassDash", "ClassGlide", "RequestEndRun", "RequestStartRun"}
+                local names = {"ClaimChest", "ClaimNest", "EquipSpecies", "ProgressionAction", "SetSettings", "SetRevealSkip", "FusionAction", "PrivateState", "HubTravel", "PlaytestFeedback", "RequestLeap", "ClassDash", "ClassGlide", "RequestEndRun", "RequestStartRun"}
                 local i = 0
                 while now < stormEnds do
                     i += 1

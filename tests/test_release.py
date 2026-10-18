@@ -239,16 +239,31 @@ class PlaytestStayOffTests(unittest.TestCase):
                 self.assertTrue(key in decided or key in neither, f"{key} is false in Config and has no playtest rule (docs/157)")
 
 
-class OldMutatePathClosedTests(unittest.TestCase):
-    """docs/155 s6 item 1 / docs/157: the 50-copy MutateSpecies shortcut is refused on the server while the identity fusion path is on."""
+class OldMutatePathRemovedTests(unittest.TestCase):
+    """BD-617 (LEAD decision, owner directive 2026-10-18): the Build 020 50-copy fusion is gone from the player-facing game (server remote and client pages)."""
 
-    def test_the_handler_returns_before_it_reads_anything_when_fusion_is_on(self):
-        text = (ROOT / "src/server/MutationService.luau").read_text(encoding="utf-8")
-        handler = text.index("mutate.OnServerEvent:Connect")
-        guard = text.index("Config.IdentityFusionPreviewEnabled == true", handler)
-        self.assertIn('"fusion_moved"', text[guard:guard + 200])
-        self.assertLess(guard, text.index("invalid_species", handler))
-        self.assertLess(guard, text.index("profileRepository.mutateSpecies", handler))
+    def src(self, name):
+        return (ROOT / "src" / name).read_text(encoding="utf-8")
+
+    def test_the_server_no_longer_creates_a_mutate_remote(self):
+        self.assertNotIn('getRemote(folder, "MutateSpecies")', self.src("server/MutationService.luau"))
+        self.assertNotIn("OnServerEvent:Connect(function(player: Player, speciesId", self.src("server/MutationService.luau"))
+
+    def test_the_client_has_no_old_fusion_page_and_never_fires_the_old_remote(self):
+        client = self.src("client/Bootstrap.client.luau")
+        for needle in ("MutateSpecies", "MutationCost", 'name=="fusion"', "fusionConfirm", "CONFIRM FUSION", "Dinosaur Fusion", "open(\"fusion\")"):
+            self.assertNotIn(needle, client, needle)
+
+    def test_nothing_in_src_calls_the_legacy_repository_transaction(self):
+        callers = [path.name for path in (ROOT / "src").rglob("*.luau") if "mutateSpecies" in path.read_text(encoding="utf-8")]
+        self.assertEqual(callers, ["ProfileCollection.luau"])  # the unreachable LEGACY transaction itself (golden session + Build 020 proofs)
+
+    def test_the_nav_button_has_no_legacy_target(self):
+        text = self.src("shared/FusionSelection.luau")
+        nav = text[text.index("function Sel.navTarget"):]
+        nav = nav[:nav.index("\nend")]
+        self.assertNotIn("legacy", nav)
+        self.assertIn('return "unavailable"', nav)
 
 
 class StreamingProfileTests(unittest.TestCase):
