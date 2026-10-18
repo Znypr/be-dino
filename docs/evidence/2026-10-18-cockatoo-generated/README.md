@@ -67,3 +67,6 @@ H with G's legs and the claws stressed, one change at a time: `cockatoo dinosaur
 
 ## NOT done
 No Place 1 model, no game integration (no `LowPolyDinoAssets` entry, species config, drop weight, class). The scratch place was not saved, so the eight asset ids above (published by the generator, insertable with `insert_asset`) are the record.
+
+## Lead decision 2026-10-18 (recorded in docs/115)
+**K (asset 77920946493998, 6.5 of 10) is accepted as the PLACEHOLDER candidate.** No more generations. Hand-modelled Blender legs are parked as a later P3 improvement (a note in the BD-621 row, no new task). K stays only in the scratch place; the later insertion into Place1 is `insert_asset` with the asset id in a Place1 Studio session once the owner opens it (the docs/169 pipeline does not apply to generated meshes). To overturn: ask for the Blender legs route.
