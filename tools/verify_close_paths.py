@@ -43,7 +43,7 @@ MODULES = {
 # A NEW full-screen button must be reviewed and added here, with the reason.
 FULL_SCREEN_REVIEWED = {
     ('Bootstrap.client.luau', 'shade'): 'ModalScrim (ZIndex 20): the menu itself; its panel and X sit above it',
-    ('Bootstrap.client.luau', 'tap'): 'a Dino Index card tap (inside the card; the compact card)',
+    ('DinoIndexScreens.luau', 'tap'): 'a Dino Index card tap (inside the card; the compact card; the Index screens moved out of Bootstrap, BD-1110)',
     ('Toasts.luau', 'tap'): 'a toast card tap (inside the card; the toast stack moved out of Bootstrap, BD-1088)',
     ('Bootstrap.client.luau', 'crystalOpen'): 'OpenShop inside the crystal plate',
     ('DinoIndexPanels.luau', 'scrim'): 'EggPopup inside the Dino Index body (OK button + tap outside the card)',

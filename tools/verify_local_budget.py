@@ -44,8 +44,8 @@ WARN_ABOVE = 140  # docs/150: WeatherVisuals.client grew 110 -> 147 and Bootstra
 FAIL_ABOVE = 185
 COMPILER_LIMIT = 200
 # A ratchet for scopes that were once close to the limit: (file under the repo, scope name) -> highest live-locals count allowed. Lower it
-# when code moves out, never raise it (BD-1088: the Bootstrap main chunk went 142 -> 128 when the shop screens moved to ShopScreens.luau, then 122 with the toast stack in Toasts.luau).
-SCOPE_CEILINGS = {("src/client/Bootstrap.client.luau", "<main chunk>"): 124}
+# when code moves out, never raise it (BD-1088: the Bootstrap main chunk went 142 -> 128 when the shop screens moved to ShopScreens.luau, then 122 with the toast stack in Toasts.luau, then 118 when the Dino Index and details moved to DinoIndexScreens.luau).
+SCOPE_CEILINGS = {("src/client/Bootstrap.client.luau", "<main chunk>"): 120}
 
 
 def find_tool(explicit, sibling_of, name, env):
