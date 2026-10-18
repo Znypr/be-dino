@@ -76,13 +76,13 @@ docs/90 already makes a Gold keep the most common donor pattern, so a Mythic-pat
   - **Pearl** (soft white shimmer, Epic),
   - **Aurora / RGB Shift** (colour drifts slowly through the rainbow, **Mythic**). Name it "RGB Shift", **not** "Rainbow", because Rainbow is already an egg condition. It is a client-only slow tint animation, one timer for all dinos, cheap on phones.
   - Others on the table: **Glow** (soft inner light), **Sunset** (two-tone). Owner picks.
-- A dino has a primary colour, a secondary colour and a blend. Colour rarity of a dino = its **primary** colour tier; the secondary colour counts half for the boost (so a rare second colour still matters).
+- A dino has a primary colour, a secondary colour and a blend. The **accent (secondary) colour boosts slightly MORE than the main (primary) colour** (OWNER 2026-10-18: "a crazy mythical accent colour is insane, a mythic base colour is less insane"). The colour rarity shown for a dino is the rarer of its two colours.
 - Dinos already owned keep their stored colour ids; new colours are additive, nothing is rewritten in any profile.
 - Art/effects: colour swatches and the Chrome / RGB Shift look need a Blender-rendered reference and a Studio check on phone budgets (`tools/qa/phone_budgets.json`).
 
 ## 6. Proposal D: the boost (BD-1038)
 Points per tier (PROVISIONAL): Common 0, Uncommon 1, Rare 2, Epic 4, Legendary 6, Mythic 10.
-`boostPoints = patternPoints + primaryColourPoints + 0.5 * secondaryColourPoints`.
+`boostPoints = patternPoints + 0.7 * mainColourPoints + 1.0 * accentColourPoints` (PROVISIONAL weights; replaces the first draft 1.0 / 0.5 that favoured the main colour). A dino whose two colours are the same counts both. The totals are still capped (below).
 - **Growth speed:** +1% per point (food gives 1.01x size growth per point), capped at **+15%**.
 - **The caps are totals for one dino** (owner question answered 2026-10-18): all pattern and colour points of that dino together can never give more than +15% growth speed and +7% walk speed. No single pattern or colour has its own separate cap.
 - **Walk speed:** +0.5% per point, capped at **+7%**.
