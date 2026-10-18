@@ -36,7 +36,15 @@ c = L.card(nil, "", 0, 100, 3) assert(c.kind == "banked" and not c.canOpen)
 c = L.card({readyAt = 160}, "e1", 160, 100, 4) assert(c.kind == "growing" and c.remaining == 60 and not c.canOpen and c.waiting == 4)
 t, b = L.cardCopy(c) assert(t == "Growing..." and b == "GROWING")
 c = L.card({readyAt = 160}, "e1", 160, 160, 4) assert(c.kind == "ready" and c.canOpen and c.remaining == 0)
-t, b = L.cardCopy(c) assert(t == "READY!" and b == "OPEN")
+t, b = L.cardCopy(c) assert(t == "Ready to open!" and b == "OPEN EGG", "owner 2026-10-18: a clear ready state")
+assert(L.cardCopy(L.card({readyAt = 160}, "e1", 160, 100, 4))[2] ~= "OPEN EGG", "a growing egg never shows the ready button")
+
+-- Owner 2026-10-18: "Egg 1 of 55" (every unopened egg, the card egg included); the captions name the two chips; only Cracked has a shell line.
+assert(FP.eggOfText(5, 50) == "Egg 1 of 55" and FP.eggOfText(1, 0) == "Egg 1 of 1" and FP.eggOfText(0, 3) == "Egg 1 of 3")
+assert(FP.eggOfText(0, 0) == nil and FP.eggOfText(-2, -1) == nil, "never 'Egg 1 of 0'")
+assert(FP.eggOfText(5, 26) == "Egg 1 of " .. tostring(L.waitingTotal(5, 26, true)), "same count as the waiting total")
+assert(FP.ChipTypeCaption == "Egg type" and FP.ChipShellCaption == "Shell")
+assert(#FP.CrackedShellLine <= 32 and not FP.CrackedShellLine:find("%d"), "short kid copy")
 c = L.card(nil, "e1", 90, 100, 1) assert(c.kind == "ready", "falls back to NextChestReadyAt without a queue entry")
 
 -- Auto-open selection and never-skip rules.
@@ -209,6 +217,11 @@ def static_checks():
     assert 'else' + chr(10) + '        stage = EggPicture.stage(card, stageW, stageH, accent)' in screen, 'no stage id: today tile floor stays'
     assert 'EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)' in screen, 'tinted egg fallback stays'
     assert 'art(icon, "egg_nest_single"' in screen, 'nest slots read the nest icon'
+    # owner 2026-10-18: the card says which egg it is, names both chips, and a Cracked shell says it may not hatch
+    assert 'Copy.eggOfText(' in screen and 'Copy.waitingText(' not in screen, 'card shows Egg 1 of N'
+    assert 'Copy.ChipTypeCaption' in screen and 'Copy.ChipShellCaption' in screen, 'both chips have a caption'
+    assert 'Copy.CrackedShellLine' in screen and 'conditionId == "cracked"' in screen, 'Cracked shell line'
+    assert 'Copy.ReadyStatus' in screen and 'READY!' not in screen, 'ready state text lives in FtueP1'
     stage_ui = (ROOT / 'src/client/ConditionStage.luau').read_text(encoding='utf-8')
     hero = stage_ui[stage_ui.index('function Stage.hero'):]
     assert hero.count('ScaleType.Fit') == 2 and 'Crop' not in hero and 'Stretch' not in hero, 'phone: both images Fit, never stretched'
