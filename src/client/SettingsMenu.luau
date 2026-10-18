@@ -20,8 +20,21 @@ export type Context = {
     cameraReset: () -> (),
 }
 
-local ROW = 56 -- row pitch; every control is 48 px high (above the 44 px touch minimum)
+local ROW = 56 -- row pitch; every control is BTN design px high (48 on a desktop window: above the 44 px touch minimum)
 local TOP = 64 -- first row under the tab bar
+local BTN = 48 -- height of a control
+-- BD-1132 (docs/205 picture 438): in a small window the body is drawn smaller than 1:1 (0.57 at 516 px wide), so a 48 design px control is only 27 px on screen and the
+-- floor pass (ModalCompact) grew each one to 44 px around its middle: the tab row touched the Effects row and the rows touched each other. The numbers are now
+-- worked out from the scale really drawn, as the shop pages do: controls are 44 px on screen, the pitch keeps an 8 px gap, the first row clears the tab bar.
+-- At 1:1 (a desktop window) this gives 48 / 56 / 64, the old numbers exactly.
+local function fitMetrics()
+    local scale = 1
+    local ok, s = pcall(function() return require(script.Parent:WaitForChild("ModalCompact")).bodyScale() end)
+    if ok and typeof(s) == "number" and s > 0 then scale = s end
+    BTN = math.max(48, math.ceil(44 / scale))
+    ROW = BTN + 8
+    TOP = BTN + 16
+end
 local LEVEL_TEXT = {full = "FULL", lite = "LITE", off = "OFF"}
 local SIZE_TEXT = {small = "SMALL", normal = "NORMAL", big = "BIG"}
 
@@ -29,15 +42,15 @@ function Menu.tab(): string return currentTab end
 function Menu.setTab(id: string) if table.find(Model.Tabs, id) then currentTab = id end end
 
 local function toggle(body: Instance, ctx: Context, row: number, text: string, on: boolean, change: () -> ())
-    ctx.label(body, text, 0, TOP + row * ROW, 400, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
-    local b = ctx.button(body, if on then "ON" else "OFF", 420, TOP + row * ROW, 160, 48, if on then C.accent else C.card, change)
+    ctx.label(body, text, 0, TOP + row * ROW, 400, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
+    local b = ctx.button(body, if on then "ON" else "OFF", 420, TOP + row * ROW, 160, BTN, if on then C.accent else C.card, change)
     b.Name = "Toggle_" .. text
 end
 
 local function choice(body: Instance, ctx: Context, row: number, text: string, options: {string}, names: {[string]: string}, selected: string, pick: (string) -> ())
-    ctx.label(body, text, 0, TOP + row * ROW, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
+    ctx.label(body, text, 0, TOP + row * ROW, 250, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
     for i, id in options do
-        local b = ctx.button(body, names[id], 270 + (i - 1) * 180, TOP + row * ROW, 168, 48, if id == selected then C.accent else C.card, function() pick(id) end)
+        local b = ctx.button(body, names[id], 270 + (i - 1) * 180, TOP + row * ROW, 168, BTN, if id == selected then C.accent else C.card, function() pick(id) end)
         b.Name = "Choice_" .. text .. "_" .. id
     end
 end
@@ -49,8 +62,8 @@ local function drawSound(body: Instance, ctx: Context)
     end
     local on = Theme.HatchSoundEnabled ~= false
     toggle(body, ctx, 3, "Hatch sound", on, function() Theme.HatchSoundEnabled = Theme.HatchSoundEnabled == false ctx.open("settings") end)
-    ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, 48, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
-    ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, 48, C.card, function()
+    ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, BTN, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
+    ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, BTN, C.card, function()
         Mixer.reset()
         for _, key in Mixer.Order do Model.set(key, Mixer.get(key)) end
         ctx.open("settings")
@@ -82,8 +95,8 @@ local function drawGifts(body: Instance, ctx: Context, row: number): boolean
 end
 
 local function drawControls(body: Instance, ctx: Context)
-    ctx.label(body, "Camera", 0, TOP, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
-    ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
+    ctx.label(body, "Camera", 0, TOP, 250, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
+    ctx.button(body, "RESET", 270, TOP, 180, BTN, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
     -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
     -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
@@ -105,11 +118,12 @@ end
 
 -- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).
 function Menu.build(body: Instance, ctx: Context): string
+    fitMetrics()
     local lab = currentTab == "sound" and labOpen
     -- The Sound lab is a page of its own: no tab bar under its BACK button (a purple tab sliver and a cut word showed through).
     for i, id in Model.Tabs do
         if lab then break end
-        local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, 48, if id == currentTab then C.purple else C.card, function()
+        local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, BTN, if id == currentTab then C.purple else C.card, function()
             currentTab = id
             ctx.open("settings")
         end)

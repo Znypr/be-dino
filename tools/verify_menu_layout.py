@@ -44,6 +44,9 @@ MODULES.update({
     'IndexProgress': 'src/shared/IndexProgress.luau',
     'CombatConfig': 'src/shared/CombatConfig.luau',
     'ToastSlot': 'src/shared/ToastSlot.luau',
+    'SettingsMenu': 'src/client/SettingsMenu.luau',
+    'SettingsModel': 'src/shared/SettingsModel.luau',
+    'AudioMixer': 'src/shared/AudioMixer.luau',
 })
 
 
@@ -52,6 +55,19 @@ def build(replacements=None):
 
 
 MUTANTS = {
+    # BD-1132: the Settings tabs at a small size (docs/205 picture 438)
+    'Settings controls ignore the drawn scale (they are 48 design px, so 27 px: the floor pass grows them into each other)': {
+        'SettingsMenu': [('BTN = math.max(48, math.ceil(44 / scale))', 'BTN = 48')],
+    },
+    'the Settings row pitch is 56 design px whatever the scale': {
+        'SettingsMenu': [('ROW = BTN + 8', 'ROW = 56')],
+    },
+    'the first Settings row starts at 64 whatever the scale (it touches the tab row)': {
+        'SettingsMenu': [('TOP = BTN + 16', 'TOP = 64')],
+    },
+    'the Settings tab row is 48 design px high whatever the scale': {
+        'SettingsMenu': [('(i - 1) * 209, 0, 197, BTN,', '(i - 1) * 209, 0, 197, 48,')],
+    },
     # BD-1083 / BD-1101: a raw tap is routed to the rail button under a menu control
     'the rail routing looks at the position only, not at what is on top (a tap on a shop tab presses the rail button under it)': {
         'HubTravelClientRules': [(' or onBackdrop ~= true', '')],

@@ -25,7 +25,10 @@ TouchLayout.ACTION = {w = 244, h = 60}
 TouchLayout.FEEDBACK = {w = 120, h = 48, gap = 8}
 -- BD-531: the Studio/admin "Admin" button (AdminPanel). Desktop keeps its old top-left spot (14, 8); on the phone layout that spot is the
 -- egg plate, so it goes in the bottom-left row next to Tell us! (never on a HUD piece). Bootstrap publishes it as the AdminRect attribute.
-TouchLayout.ADMIN = {w = 120, h = 48, desktopX = 14, desktopY = 8}
+-- BD-1130 (docs/205 pictures 434, 435): at 516 px wide the Admin button lay over Explore / HOME (the two bottom-left buttons are 256 px wide, Home starts at 222).
+-- On the phone layout it now shrinks to `minW` (still a 44 px target, its word is 14 px or more) to fit between Tell us! and Home; when even that does not fit
+-- it stacks above Tell us!. A tester tool: it is hidden while any menu is open (MenuWatch), so it never covers a menu either.
+TouchLayout.ADMIN = {w = 120, h = 48, desktopX = 14, desktopY = 8, minW = 72}
 -- BD-531: the hub Goals panel (GoalsPanel.luau): a 44 px tall header under the goal line, right edge on the wallet's right edge, at the scale
 -- PhoneScale.floorScale gives (1:1 on phones). On the phone layout the FOLDED header is only as wide as the wallet (at least MinW), so it
 -- never reaches under the rail; the panel grows to its 260 px width only while the player has it open. Bootstrap publishes the rect as GoalsRect.
@@ -106,6 +109,20 @@ function TouchLayout.toastPlacement(width: number, toastScale: number, plates: R
     local centre = plates.x - T.gap - w / 2
     if shift == 0 and centre - w / 2 >= T.gap then return centre - width / 2, top end
     return shift, math.max(top, plates.y + plates.h + T.gap)
+end
+
+-- BD-1128: the HUD pieces that a floating overlay (the stall bubble, HubPromptBubble) must stay clear of, as plain rectangles in canvas px. HudV2.layout
+-- publishes each one as an attribute of the HUD canvas of the same name; the rail (RailRect), Tell us! (FeedbackRect), Admin (AdminRect) and the chip (ChipRect) are
+-- published by HudV2 and Bootstrap already. `WalletBlockRect` is the top-right block (Crystals plate, goal line, Goals header, objectives pill).
+function TouchLayout.hudRects(layout): {[string]: Rect}
+    return {
+        TimersRect = TouchLayout.rendered(layout.timers),
+        ActionRect = TouchLayout.rendered(layout.action),
+        HudRect = TouchLayout.rendered(layout.hud),
+        BadgeRect = TouchLayout.rendered(layout.badge),
+        NoticeRect = TouchLayout.rendered(layout.notice),
+        WalletBlockRect = TouchLayout.walletPlates(layout),
+    }
 end
 
 local function clamp(value: number, low: number, high: number): number
@@ -189,14 +206,29 @@ local function sizeBarRects(width: number, top: number, scale: number, column: R
 end
 
 -- BD-538: where the "Back to the middle" chip goes: bottom centre, or slid left until it stops short of the column / Goals header on its right.
-local function chipRect(width: number, height: number, blockers: {Rect}): Rect
+local function chipRect(width: number, height: number, blockers: {Rect}, low: {Rect}?): Rect
     local C = TouchLayout.CHIP
     local y = height - C.bottom - C.h
     local x = width / 2 - C.w / 2
     for _, b in blockers do
         if TouchLayout.overlaps({x = x, y = y, w = C.w, h = C.h}, b) then x = math.min(x, b.x - C.gap - C.w) end
     end
-    return {x = math.max(x, Config.TouchSafeMargin), y = y, w = C.w, h = C.h}
+    x = math.max(x, Config.TouchSafeMargin)
+    for _, b in low or {} do -- BD-1130: the bottom-left tester buttons (Tell us!, a stacked Admin): the chip rises above them instead of lying under them
+        if TouchLayout.overlaps({x = x, y = y, w = C.w, h = C.h}, b) then y = math.min(y, b.y - C.gap - C.h) end
+    end
+    return {x = x, y = y, w = C.w, h = C.h}
+end
+
+-- BD-1130: the Admin button on the phone layout. Beside Tell us! (120 wide) when that ends before Home; else as wide as the gap allows (never under
+-- ADMIN.minW); else stacked above Tell us! at its full width.
+local function adminTouchRect(feedback: Rect, action: Rect): Rect
+    local A, gap = TouchLayout.ADMIN, TouchLayout.FEEDBACK.gap
+    local x = feedback.x + feedback.w + gap
+    local room = action.x - gap - x
+    if room >= A.w then return {x = x, y = feedback.y, w = A.w, h = A.h} end
+    if room >= A.minW then return {x = x, y = feedback.y, w = math.floor(room), h = A.h} end
+    return {x = feedback.x, y = feedback.y - gap - A.h, w = A.w, h = A.h}
 end
 
 local function feedbackRect(layout, width: number, height: number): Rect
@@ -216,6 +248,23 @@ local function feedbackRect(layout, width: number, height: number): Rect
         if clear then return candidate end
     end
     return above
+end
+
+-- BD-1130: the desktop Admin button keeps its old top-left spot unless something sits there (a window under about 520 px wide centres the Studio build badge
+-- over it); then the first free spot of: right of Tell us!, above Tell us!. Never over a HUD piece.
+local function adminDesktopRect(layout, width: number, height: number): Rect
+    local A, gap = TouchLayout.ADMIN, TouchLayout.FEEDBACK.gap
+    local fb = layout.feedback
+    local blockers = {TouchLayout.rendered(layout.hud), TouchLayout.rendered(layout.rail), TouchLayout.rendered(layout.timers), TouchLayout.rendered(layout.crystal),
+        TouchLayout.rendered(layout.action), TouchLayout.rendered(layout.badge), TouchLayout.rendered(layout.notice), layout.chip, fb}
+    local default: Rect = {x = A.desktopX, y = A.desktopY, w = A.w, h = A.h}
+    local candidates: {Rect} = {default, {x = fb.x + fb.w + gap, y = fb.y, w = A.w, h = A.h}, {x = fb.x, y = fb.y - gap - A.h, w = A.w, h = A.h}}
+    for _, c in candidates do
+        local clear = c.x >= 0 and c.y >= 0 and c.x + c.w <= width and c.y + c.h <= height
+        for _, b in blockers do if TouchLayout.overlaps(c, b) then clear = false end end
+        if clear then return c end
+    end
+    return default
 end
 
 local function desktop(width: number, height: number, count: number, objectives: boolean?)
@@ -262,7 +311,8 @@ local function desktop(width: number, height: number, count: number, objectives:
     end
     local barScale = clamp(hud.scale, 0.7, 1) -- BD-538: the SIZE bar sits under the build badge at y 64 (HudV2 used to compute this itself)
     result.sizeBar, result.sizeHint = sizeBarRects(width, 64, barScale, TouchLayout.rendered(result.timers))
-    result.chip = chipRect(width, height, {TouchLayout.rendered(result.timers)})
+    result.chip = chipRect(width, height, {TouchLayout.rendered(result.timers)}, {result.feedback})
+    result.admin = adminDesktopRect(result, width, height) -- BD-1130
     return result
 end
 
@@ -403,13 +453,13 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         toastScale = math.min(1, (width - 20) / 440),
     }
     result.feedback = feedbackRect(result, width, height) -- BD-507
-    result.admin = {x = result.feedback.x + result.feedback.w + TouchLayout.FEEDBACK.gap, y = result.feedback.y, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} -- BD-531
+    result.admin = adminTouchRect(result.feedback, TouchLayout.rendered(action)) -- BD-531, BD-1130: never over Explore / HOME
     local column = TouchLayout.rendered(timers)
     local blockers = {column}
     if goals then table.insert(blockers, goals) end
     -- BD-538: SIZE bar under the rail (HudV2 used to compute this itself, centred), clear of the weather column; the hub chip clear of column and Goals header
     result.sizeBar, result.sizeHint = sizeBarRects(width, rail.y + rail.h * rail.scale + 4, clamp(rail.scale, 0.7, 1), column)
-    result.chip = chipRect(width, height, blockers)
+    result.chip = chipRect(width, height, blockers, {result.feedback, result.admin})
     return result
 end
 

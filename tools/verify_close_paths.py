@@ -51,7 +51,7 @@ FULL_SCREEN_REVIEWED = {
     ('PatternColourCards.luau', 'hit'): 'BD-1065: CardHit covers ONE index card (a child of the card frame) so a tap opens its detail; it never reaches the header, X or the backdrop',
     ('PatternColourDetail.luau', 'scrim'): 'BD-1065: the card detail backdrop lives INSIDE the screen body (like the Dino Index egg popup); X, OK and a tap on it all close, the menu X and Escape sit outside it',
     ('HubWalkUpClient.luau', 'button'): 'the proximity prompt button inside its own prompt',
-    ('HubPromptBubble.luau', 'button'): 'BD-1017: the stall message bubble is one button filling its own world BillboardGui (a billboard over the stall sign, never a screen overlay); it is hidden while any window is open',
+    ('HubPromptBubble.luau', 'button'): 'BD-1017, BD-1128: the stall message bubble is one button filling its own small frame (248 x 116 px, placed clear of the HUD in a screen layer above it; never full screen); it is hidden while any window is open',
 }
 
 

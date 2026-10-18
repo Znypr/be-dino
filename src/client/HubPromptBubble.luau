@@ -4,6 +4,9 @@
 -- ("E  Open" on a keyboard, "Tap to open" on a phone, the controller button on a gamepad). The whole bubble is the button (at least 96 x 96 px).
 -- One press opens the existing window (the prompt's own Triggered handler does that: HubWalkUpClient for the stalls, CaveShowOff on the server for
 -- the Heart). NO hold, NO auto-open when walking near (docs/114 s6.2). Only called while Config.ShopPromptBubbleEnabled is true (HubWalkUpClient decides).
+-- BD-1128 (docs/205 picture 421): the bubble is drawn in a screen layer ABOVE the HUD (DisplayOrder 10; a world billboard is always drawn under the HUD, so at 516 px the
+-- rail and the weather plate hid it) and is placed CLEAR of the HUD pieces (HubPromptBubbleRules.place): it follows the stall's projected point each frame, then
+-- slides off the rail, the Crystals block, the weather column, Home, LEAP and the tester buttons. Still a button of its own size, never full screen.
 --   * a prompt takes part when it carries the attribute BubbleStation (the station id, a key of HubSignCopy.BubbleLines); its Style is Custom
 --   * one bubble at a time: the nearest (Rules.step). Hidden while any window is open, while the stall cannot open, for a moment after a press and
 --     after a window closes (so a tap can never fall through to the world). The KEY keeps working while a window is open: pressing it again closes
@@ -14,6 +17,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("HubPromptBubbleRules"))
@@ -26,6 +30,7 @@ local Bubble = {}
 local ACTION = "HubPromptBubbleKey"
 local TICK = 0.2 -- seconds between two looks at the player's distance and the open windows
 local LIFT = 3.5 -- studs above the prompt anchor (the stall sign)
+local LAYER = 10 -- DisplayOrder of the bubble layer: above the HUD (BeDinoUI is 0), under the Fusion menu (20), Admin (30) and Tell us! (40)
 
 local function inputName(): string
     local ok, name = pcall(function() return UserInputService:GetLastInputType().Name end)
@@ -53,7 +58,46 @@ function Bubble.attach(ctx: any): any
     local state = Rules.newState()
     local active: {[ProximityPrompt]: boolean} = {}
     local looping = false
-    local shown: any = nil -- {board, group, scale, id, kind, prompt}
+    local shown: any = nil -- {board, group, scale, id, kind, prompt, layout, pos, step}
+    local layer: any = nil -- the ScreenGui of the bubble (made on the first show)
+
+    local function ensureLayer(): any
+        if layer ~= nil and layer.Parent ~= nil then return layer end
+        local screen = Instance.new("ScreenGui")
+        screen.Name, screen.ResetOnSpawn, screen.DisplayOrder, screen.IgnoreGuiInset = "HubPromptBubbleUI", false, LAYER, false
+        pcall(function() (screen :: any).ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets end) -- the same pixel space as the HUD canvas (BeDinoUI), so its rectangles line up
+        screen.Parent = player:WaitForChild("PlayerGui")
+        layer = screen
+        return screen
+    end
+
+    -- The HUD pieces to keep clear of, read from the attributes of the HUD canvas (published by HudV2.layout and Bootstrap): hard and soft lists in canvas px.
+    local function hudRects(): ({any}, {any})
+        local hard: {any}, soft: {any} = {}, {}
+        local canvas = player:WaitForChild("PlayerGui"):FindFirstChild("BeDinoUI")
+        if canvas == nil then return hard, soft end
+        for _, name in Rules.HardRects do
+            local r = Rules.rectOf(canvas:GetAttribute(name))
+            if r then table.insert(hard, r) end
+        end
+        for _, name in Rules.SoftRects do
+            local r = Rules.rectOf(canvas:GetAttribute(name))
+            if r then table.insert(soft, r) end
+        end
+        return hard, soft
+    end
+
+    local function currentLayout(): any
+        local screen = ensureLayer()
+        local hard, soft = hudRects()
+        local size = screen.AbsoluteSize
+        if size.X <= 0 or size.Y <= 0 then -- a layer made this very frame has no size yet: the camera's viewport is close enough for choosing the size
+            local camera = workspace.CurrentCamera
+            if camera == nil then return Rules.layout(nil) end
+            size = camera.ViewportSize
+        end
+        return (Rules.layoutFor(size.X, size.Y, hard, soft))
+    end
 
     local function rootPart(): BasePart?
         local character = player.Character
@@ -65,6 +109,7 @@ function Bubble.attach(ctx: any): any
         local s = shown
         if s == nil then return end
         shown = nil
+        if s.step then s.step:Disconnect() end
         if immediate or not Theme.MotionEnabled then
             s.board:Destroy()
             return
@@ -87,16 +132,14 @@ function Bubble.attach(ctx: any): any
     local function show(prompt: ProximityPrompt, id: string, kind: string)
         local anchor = prompt.Parent
         if anchor == nil then return end
-        local viewport = workspace.CurrentCamera
-        local layout = Rules.layout(if viewport then viewport.ViewportSize.Y else nil)
+        local layout = currentLayout()
         local keyName = if kind == "Gamepad" then prompt.GamepadKeyCode.Name else prompt.KeyboardKeyCode.Name
         local okLabel, engineLabel = pcall(function() return UserInputService:GetStringForKeyCode(prompt.KeyboardKeyCode) end)
         local words = Rules.words(id, kind, keyName, if okLabel then engineLabel else nil)
         if words == nil then return end
 
-        local board = Instance.new("BillboardGui")
-        board.Name, board.Adornee, board.Size, board.AlwaysOnTop = "HubPromptBubble", anchor, UDim2.fromOffset(layout.w, layout.h), true
-        board.StudsOffset, board.ResetOnSpawn, board.LightInfluence = Vector3.new(0, LIFT, 0), false, 0
+        local board = Instance.new("Frame")
+        board.Name, board.Size, board.BackgroundTransparency, board.Visible = "HubPromptBubble", UDim2.fromOffset(layout.w, layout.h), 1, false
         local group = Instance.new("CanvasGroup")
         group.Name, group.Size, group.BackgroundTransparency, group.GroupTransparency = "Fade", UDim2.fromScale(1, 1), 1, 1
         group.Parent = board
@@ -139,8 +182,29 @@ function Bubble.attach(ctx: any): any
         button.Activated:Connect(function()
             press(prompt)
         end)
-        board.Parent = player:WaitForChild("PlayerGui")
-        shown = {board = board, group = group, scale = scale, id = id, kind = kind, prompt = prompt}
+        board.Parent = ensureLayer()
+        local mine: any = {board = board, group = group, scale = scale, id = id, kind = kind, prompt = prompt, layout = layout, pos = nil}
+        shown = mine
+        -- every frame: project the stall point onto the screen, place the bubble clear of the HUD, glide to the spot (Reduce Motion: jump)
+        local function stepFrame(dt: number)
+            if shown ~= mine or anchor.Parent == nil then return end
+            local camera = workspace.CurrentCamera
+            if camera == nil then return end
+            local screen = ensureLayer()
+            local projected = camera:WorldToViewportPoint(anchor.Position + Vector3.new(0, LIFT, 0))
+            if projected.Z <= 0 then board.Visible = false return end -- the stall is behind the camera: nothing to point at (the key still works)
+            local origin = screen.AbsolutePosition
+            local canvas = screen.AbsoluteSize
+            if canvas.X <= 0 or canvas.Y <= 0 then return end
+            local hard, soft = hudRects()
+            local spot = Rules.place({w = canvas.X, h = canvas.Y, point = {x = projected.X - origin.X, y = projected.Y - origin.Y}, size = {w = layout.w, h = layout.h},
+                blockers = hard, soft = soft})
+            mine.pos = Rules.follow(mine.pos, spot, dt, Theme.MotionEnabled)
+            board.Position = UDim2.fromOffset(math.floor(mine.pos.x + 0.5), math.floor(mine.pos.y + 0.5))
+            board.Visible = true
+        end
+        stepFrame(0)
+        mine.step = RunService.RenderStepped:Connect(stepFrame)
         Theme.animate(group, Rules.FadeIn, {GroupTransparency = 0})
     end
 
@@ -158,7 +222,7 @@ function Bubble.attach(ctx: any): any
         local id = Rules.step(state, {candidates = candidates, canShow = ctx.canShow() == true, windowOpen = ctx.windowOpen() == true}, os.clock())
         if id == nil then hide(false) return end
         local kind = Rules.inputKind(inputName())
-        if shown and shown.id == id and shown.kind == kind and shown.board.Parent ~= nil then return end
+        if shown and shown.id == id and shown.kind == kind and shown.board.Parent ~= nil and shown.layout.w == currentLayout().w then return end -- a resized window may need the other size
         hide(true)
         local prompt = byId[id]
         if prompt then show(prompt, id, kind) end

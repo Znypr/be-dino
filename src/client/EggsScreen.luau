@@ -36,7 +36,7 @@ local function dim(root: Instance, transparency: number)
 end
 
 -- ctx: body, C, label, box, button, art, queue, str, num, nestList, rarityNames, rarityColors, scale (viewportScale),
--- isActive(), openEgg(), openNest(id), openSettings(), autoOpenText(), notify(text, color?)
+-- isActive(), openEgg(), openNest(id), openSettings(tab?), autoOpenText(), notify(text, color?)
 -- Returns refresh(): cheap once-a-second text updates (timers).
 -- BD-1067: bodyH / bodyScale are the visible body height and the scale it renders at (ModalCompact), read NOW by render() below.
 local function build(ctx: any, bodyH: number, bodyScale: number)
@@ -217,7 +217,7 @@ local function build(ctx: any, bodyH: number, bodyScale: number)
     end)
     openButton.Name = "OpenEggButton"
     openButton.TextSize = if compact then 30 else 36
-    local gear = button(card, "AUTO", infoX, gearY, 130, gearH, C.blue, function() ctx.openSettings() end)
+    local gear = button(card, "AUTO", infoX, gearY, 130, gearH, C.blue, function() ctx.openSettings("help") end) -- BD-1132: the auto-open toggles are on the Help tab, not on the last tab used (docs/205 picture 448)
     gear.Name = "AutoOpenSettingsButton"
     gear.TextSize = 22
     local autoLine = label(card, ctx.autoOpenText(), infoX + 142, gearY, infoW - 142, gearH, 17, C.text)
