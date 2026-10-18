@@ -5,7 +5,10 @@
     python tools/verify_release_ids.py --require-filled  # release gate: fails while an id is empty
 
 Slot fields: PlaytestUniverseId, PlaytestPlaceId (null or a positive integer), ExperienceKind ("new" or "legacy", required once the
-ids are filled) and AnsweredOn (free text date).
+ids are filled) and AnsweredOn (free text date). Optional pair, only for a LEGACY experience: ProductsConfirmedOffSale (must be true)
+and ProductsOffSaleConfirmedOn (YYYY-MM-DD): the owner confirmed in Creator Hub that every developer product is OFF SALE (docs/182
+section 3, LEAD decision in docs/115). With the pair present the hard stop below becomes a warning, but ONLY while
+Config.CrystalPacksEnabled and Config.PaidRandomItemsEnabled are both false; with the pair absent nothing changes.
 
 When the ids are filled:
   * src/shared/Config.luau must hold the same two numbers (the build embeds Config's values, not the slot's);
@@ -32,7 +35,10 @@ CONFIG_PATH = ROOT / "src/shared/Config.luau"
 LEGACY_UNIVERSE_ID = 10769812255
 LEGACY_PLACE_ID = 111259822927673
 KINDS = ("new", "legacy")
-FIELDS = ("PlaytestUniverseId", "PlaytestPlaceId", "ExperienceKind", "AnsweredOn")
+OFF_SALE_FIELDS = ("ProductsConfirmedOffSale", "ProductsOffSaleConfirmedOn")
+FIELDS = ("PlaytestUniverseId", "PlaytestPlaceId", "ExperienceKind", "AnsweredOn") + OFF_SALE_FIELDS
+PAID_LINES = ("CrystalPacksEnabled", "PaidRandomItemsEnabled")
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _is_id(value) -> bool:
@@ -51,6 +57,28 @@ def developer_product_ids(config_source: str) -> list[int]:
     if value in (None, {}):
         return []
     return [int(n) for n in re.findall(r"\[(\d+)\]", str(value))]
+
+
+def off_sale_problems(slot: dict, config_source: str, kind) -> tuple[bool, list[str]]:
+    """(accepted, errors) for the optional off-sale confirmation. Accepted ONLY for kind 'legacy', with the flag exactly true,
+    a YYYY-MM-DD date, and both paid lines present and literally false in Config. Anything else is an error (never a silent pass)."""
+    present = [key for key in OFF_SALE_FIELDS if key in slot]
+    if not present:
+        return False, []
+    errors: list[str] = []
+    if kind != "legacy":
+        errors.append("release_ids.json: ProductsConfirmedOffSale / ProductsOffSaleConfirmedOn only apply to ExperienceKind 'legacy'; remove them")
+    if slot.get("ProductsConfirmedOffSale") is not True:
+        errors.append("release_ids.json: ProductsConfirmedOffSale must be exactly true when the off-sale pair is used")
+    when = slot.get("ProductsOffSaleConfirmedOn")
+    if not (isinstance(when, str) and _DATE.match(when)):
+        errors.append("release_ids.json: ProductsOffSaleConfirmedOn must be a YYYY-MM-DD date next to ProductsConfirmedOffSale")
+    entries = release_profiles.config_entries(config_source)
+    for key in PAID_LINES:
+        if entries.get(key, [(0, None)])[-1][1] is not False:
+            errors.append(f"HARD STOP: the off-sale confirmation needs Config.{key} = false (found "
+                          f"{entries.get(key, [(0, None)])[-1][1]!r}); a paid line must stay off in this experience")
+    return not errors, errors
 
 
 def slot_state(slot: dict) -> str:
@@ -98,12 +126,19 @@ def slot_problems(slot: dict, config_source: str, require_filled: bool = False) 
         errors.append(f"ExperienceKind is 'new' but the ids {universe} / {place} are the legacy experience of docs/55 s2: "
                       "one of the two statements is wrong, ask the owner again")
     products = developer_product_ids(config_source)
+    confirmed, off_sale_errors = off_sale_problems(slot, config_source, kind)
+    errors.extend(off_sale_errors)
     if kind == "legacy" or is_legacy_id:
-        if products:
+        if products and confirmed:
+            warnings.append(f"the playtest experience is the LEGACY one and Config.DeveloperProducts lists {len(products)} product id(s), "
+                            f"accepted because the owner confirmed them OFF SALE on {slot['ProductsOffSaleConfirmedOn']} "
+                            "(ProductsConfirmedOffSale, docs/182 s3). CrystalPacksEnabled and PaidRandomItemsEnabled are false; keep it so")
+        elif products:
             errors.append("HARD STOP (docs/145 finding 6): the playtest experience is the LEGACY one and Config.DeveloperProducts still lists "
                           f"{len(products)} Robux product id(s) ({', '.join(str(p) for p in products)}). Clear them in Config (owner decision) "
                           "or remove the products in Creator Hub before publishing: a real developer product in a friends experience "
-                          "breaks the no-Robux line (docs/43, AGENTS.md)")
+                          "breaks the no-Robux line (docs/43, AGENTS.md). If the owner confirmed them OFF SALE, record "
+                          "ProductsConfirmedOffSale + ProductsOffSaleConfirmedOn in tools/release_ids.json (docs/182 s3)")
         else:
             warnings.append("the playtest experience is the LEGACY one: it may still OWN developer products on Roblox's side. In Creator Hub > "
                             "Monetization > Developer Products make sure none is for sale before publishing (docs/148 step 2)")
