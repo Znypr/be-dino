@@ -35,3 +35,5 @@ build/upload-batch/
 
 # VFX lab intermediate Blender frames (tools/render_vfx_lab_fire.py); the assembled sheets live in resources/effects/vfx-lab/
 build/vfx-lab-frames/
+build/blender-export/
+build/pipeline-test/

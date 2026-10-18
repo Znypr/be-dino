@@ -28,6 +28,7 @@ grep -n "BD-NNN" docs/07-kanban.md             # your row
 ## 3. Git and PR workflow
 
 - Work in your own **worktree** (never the owner's checkout). Do not `cd` out of it.
+- **Worktrees (docs/170): one folder only**, `<repo>/.claude/worktrees` (or the session scratchpad); never a sibling folder in Documents. **When your PR is merged, remove your own worktree:** `git -C C:/Users/znypr/Documents/be-dino worktree remove <your-worktree-path>` (no `--force`; if git refuses, something is unsaved). The lead runs `python tools/worktree_hygiene.py clean --go` weekly.
 - `git fetch origin`, base on `origin/main`. **Never rebase, never force-push.** To catch up: `git merge origin/main`.
 - Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. PR body footer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - Paste the handbook checklist ([114](114-handbook.md) section 13, same text as `.github/pull_request_template.md`) into the PR body and tick it honestly.
@@ -77,6 +78,7 @@ python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> 
 - **Claude in Chrome** (the owner's logged-in Chrome). Creator Hub: read-only checks only. ChatGPT image workflow that worked on 2026-10-18: `tabs_context_mcp` with `createIfEmpty`, `navigate` to chatgpt.com, `find` the attach button and `file_upload` the reference, type the prompt, click the send arrow, wait about 40 s, click the image, then the download arrow, then "Download image". Downloads are pre-approved only when saved inside the project, at a sensible size, and a handful of files. Never enter passwords or payment details; stop and ask on a login or CAPTCHA.
 - **ffmpeg** at `C:/ffmpeg/bin`: cut frames from clips (section 7), audio spectrograms.
 - **Blender MCP:** there is one Blender; one agent at a time.
+- **Blender to Roblox without the owner** ([169](169-blender-to-roblox-pipeline.md), BD-659): `tools/blender_export_roblox.py` (headless Blender, does not use the Blender MCP), `tools/roblox_asset_upload.py` (Open Cloud upload; key only from the environment variable `ROBLOX_OPEN_CLOUD_KEY`, dry run by default, never print or paste the key; works only after the owner has created it), `tools/studio/insert_uploaded_model.luau` (paste into `execute_luau`). Backlog until the owner creates the key.
 - **Roblox Studio MCP:** one agent per Studio window. The owner's `Place1.rbxl` window is the owner's: never minimise, move, make topmost or close it, and work done in it is UNSAVED until the owner presses Ctrl+S. A denied window-placement call is never retried or worked around. The owner said to ignore window-placement problems and do other work.
 - **No OS-level screenshots, never `SetForegroundWindow`.** Use the Studio MCP capture or the Browser pane.
 
