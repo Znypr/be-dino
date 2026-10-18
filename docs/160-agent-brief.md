@@ -80,6 +80,7 @@ python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> 
 - **Blender MCP:** there is one Blender; one agent at a time.
 - **Blender to Roblox without the owner** ([169](169-blender-to-roblox-pipeline.md), BD-659): `tools/blender_export_roblox.py` (headless Blender, does not use the Blender MCP), `tools/roblox_asset_upload.py` (Open Cloud upload; key only from the environment variable `ROBLOX_OPEN_CLOUD_KEY`, dry run by default, never print or paste the key; works only after the owner has created it), `tools/studio/insert_uploaded_model.luau` (paste into `execute_luau`). Backlog until the owner creates the key.
 - **Roblox Studio MCP:** one agent per Studio window. The owner's `Place1.rbxl` window is the owner's: never minimise, move, make topmost or close it, and work done in it is UNSAVED until the owner presses Ctrl+S. A denied window-placement call is never retried or worked around. The owner said to ignore window-placement problems and do other work.
+- **Opening a built place in Studio (BD-663, 2026-10-18):** the MCP tools cannot open a file (`user_keyboard_input` and `user_mouse_input` only reach the running game's Client datamodel). The lead launches Studio with the `.rbxlx` as a command-line argument; it registers as a new studio id in `list_roblox_studios`. Agents use only that id and never open, move or close windows.
 - **No OS-level screenshots, never `SetForegroundWindow`.** Use the Studio MCP capture or the Browser pane.
 
 ## 7. Judging motion and sound without watching or listening
