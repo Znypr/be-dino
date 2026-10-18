@@ -94,4 +94,11 @@ function Boost.dinoText(patterns: any, colours: any, genes: any): string?
     return string.format("Boost %d of %d", pips, Boost.MaxPips)
 end
 
+-- BD-1082: one wording everywhere. A trait row of the dino details ("Boost" / "1 of 5") reads "Boost 1 of 5" like the Index card and the hatch card, never
+-- "Boost: 1 of 5". Every other row stays "Label: value".
+function Boost.traitLine(label: string, value: string): string
+    if label == "Boost" then return "Boost " .. value end
+    return label .. ": " .. value
+end
+
 return table.freeze(Boost)

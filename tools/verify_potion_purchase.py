@@ -263,14 +263,14 @@ def static_checks():
     # The only early return in transact is the visible "still processing" notice.
     assert t.count('return') == 1 and 'notify("Purchase is still processing"' in t, 'transact may only bail out with the processing notice'
     # BUY POTION: transact first, leave the modal after; no early exit in the handler.
-    b = re.search(r'button\(body,if replacing then "Replace" else "BUY POTION",290,263,510,58,C\.accent,function\(\)(.*?)\n        end\)', client, re.S)
+    b = re.search(r'button\(body,if replacing then "Replace" else "BUY POTION",290,263,510,buyH,C\.accent,function\(\)(.*?)\n        end\)', client, re.S)
     assert b, 'BUY POTION button not found'
     h = b.group(1)
     assert 'return' not in h, 'confirm handler must not return before transact'
     assert 'transact("buyPotion",item.id.."@"..potionChoice.window,false)' in h, 'buy must send the window-stamped id'
     assert h.index('transact(') < h.index('open("potions")'), 'transact before leaving the modal'
     # CANCEL is the only other control on the confirm card and never transacts.
-    c = re.search(r'button\(body,"CANCEL",290,339,510,44,C\.red,function\(\) open\("potions"\) end\)', client)
+    c = re.search(r'button\(body,"CANCEL",290,263\+buyH\+18,510,buttonH\(44\),C\.red,function\(\) open\("potions"\) end\)', client)
     assert c, 'CANCEL button on the confirm card'
     # The scrim closes the modal (a click outside the panel): documented, never buys.
     assert 'shade.Activated:Connect(function() if require(script.Parent.ModalClose).outsideTap() then close() end end)' in client  # BD-1019: still a close, now through the hatch's backdrop rule

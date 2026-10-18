@@ -9,6 +9,9 @@ local Rules = {}
 Rules.Stations = table.freeze({collection = "index", eggs = "nests", fusion = "fusion", auras = "style", potions = "potions"})
 -- In a run these four are dimmed; POTIONS and SETTINGS stay usable (docs/104 s7.7).
 Rules.RunDimmed = table.freeze({collection = true, eggs = true, fusion = true, auras = true})
+-- BD-1105 (owner 2026-10-18, picture 115: "At home is confusing, maybe just dont show it in the island"): in a run these four buttons are HIDDEN, not dimmed
+-- with the words "At home". LEAD decision (docs/115). Overturn with ONE constant: set this to false and they are dimmed again, exactly as before.
+Rules.HideDimmedInRun = true
 Rules.HomeHint = "At home"
 Rules.MinTarget = 44 -- px: smallest touch target (rail buttons are 54 px high)
 Rules.HeartStation = "heart"
@@ -43,6 +46,11 @@ end
 
 function Rules.dimmed(destination: any, caveHub: any, runState: any): boolean
     return caveHub == true and typeof(destination) == "string" and Rules.RunDimmed[destination] == true and Rules.inRun(runState)
+end
+
+-- BD-1105: is this rail button hidden right now? Only the buttons that would say "At home" (RunDimmed), only in a run, only with the hub on.
+function Rules.hiddenInRun(destination: any, caveHub: any, runState: any): boolean
+    return Rules.HideDimmedInRun == true and Rules.dimmed(destination, caveHub, runState)
 end
 
 -- in = {caveHub, destination, runState, fastTravelPerk, fastTravelOwned, teleportShops, remote (HubTravel exists), busy, direct}

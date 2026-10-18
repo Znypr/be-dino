@@ -52,11 +52,17 @@ function Cards.build(ui, parent: GuiObject, spec)
     local card = ui.box(parent, spec.x, spec.y, Cards.Width, spec.height, ShopCard.cardColor(Color3.fromRGB(40, 46, 66):Lerp(color, .62), data.look), 24)
     card.Name = (if isTrail then "TrailCard_" else "AuraCard_") .. item.id
     ui.label(card, item.name, 6, 4, 252, 32, 25)
-    chip(ui, card, data.chip.text, rgb(data.chip.color):Lerp(Color3.fromRGB(20, 24, 40), .3), 8, 38, 104)
+    -- BD-1103: a chip is as wide as its word at the size the window really draws it (14 px on screen is more design px when the body is shrunk to fit a narrow window)
+    local textPx = math.max(18, math.ceil(14 / math.max(spec.scale or 1, .1)))
+    local function wide(text: string, least: number): number return math.max(least, math.ceil(#text * textPx * .55) + 14) end
+    local rarityW = wide(data.chip.text, 104)
+    chip(ui, card, data.chip.text, rgb(data.chip.color):Lerp(Color3.fromRGB(20, 24, 40), .3), 8, 38, rarityW)
+    local secondX = if rarityW > 104 then 8 + rarityW + 6 else 118
     if isTrail then
-        ui.label(card, data.levelText, 118, 38, 138, 26, 19, if data.kind == "locked" then C.gold else ShopCard.CalmText)
+        ui.label(card, data.levelText, secondX, 38, Cards.Width - 8 - secondX, 26, 19, if data.kind == "locked" then C.gold else ShopCard.CalmText)
     else
-        local tier = chip(ui, card, "Tier " .. string.sub(data.tier, 2), C.purple, 118, 38, 92)
+        local tierText = "Tier " .. string.sub(data.tier, 2)
+        local tier = chip(ui, card, tierText, C.purple, secondX, 38, wide(tierText, 92))
         tier.Name = "TierBadge"
     end
     local previewY = 68
@@ -88,17 +94,18 @@ end
 
 -- BD-393: header strip above the Aura and Trail cards: the equipped dino's dark silhouette (existing DinosaurPreview, no new art),
 -- "For: <dino>" and the one-line note. ui = {label, box}; y = top of the strip in the shop body (824 wide).
-function Cards.forHeader(ui, parent: GuiObject, y: number, speciesId: string)
+function Cards.forHeader(ui, parent: GuiObject, y: number, speciesId: string, height: number?)
     local Copy = require(Shared.ShopForDino)
-    local strip = ui.box(parent, 0, y, 824, Copy.HeaderHeight - 4, Color3.fromRGB(40, 46, 66):Lerp(C.blue, .25), 24)
+    local H = height or Copy.HeaderHeight -- BD-1101: a small window asks for a taller strip so the 14 px note fits (two lines)
+    local strip = ui.box(parent, 0, y, 824, H - 4, Color3.fromRGB(40, 46, 66):Lerp(C.blue, .25), 24)
     strip.Name = "ForDinoHeader"
-    local well = ui.box(strip, 4, 2, 44, Copy.HeaderHeight - 8, Color3.fromRGB(190, 205, 230), strip.ZIndex + 1)
+    local well = ui.box(strip, 4, 2, 44, H - 8, Color3.fromRGB(190, 205, 230), strip.ZIndex + 1)
     well.Name, well.ClipsDescendants = "DinoIcon", true
     local view = Preview.add(well, speciesId, "silhouette") -- the silhouette is black: a light well so it reads
     view.Name, view.ZIndex, view.Size = "DinoSilhouette", well.ZIndex + 1, UDim2.fromScale(1, 1)
-    local title = ui.label(strip, Copy.title(MainConfig.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId)), 54, 2, 270, Copy.HeaderHeight - 8, 26, C.gold)
+    local title = ui.label(strip, Copy.title(MainConfig.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId)), 54, 2, 262, H - 8, 26, C.gold)
     title.Name, title.TextXAlignment = "ForDinoName", Enum.TextXAlignment.Left
-    local note = ui.label(strip, Copy.Note, 320, 2, 496, Copy.HeaderHeight - 8, 19, ShopCard.CalmText)
+    local note = ui.label(strip, Copy.Note, 320, 2, 496, H - 8, 19, ShopCard.CalmText)
     note.Name, note.TextXAlignment = "ForDinoNote", Enum.TextXAlignment.Right
     return strip
 end

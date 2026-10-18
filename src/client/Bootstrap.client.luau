@@ -146,8 +146,7 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
--- The modal blur belongs to a visible modal only (BD-296). Visible means: a menu is open, the scrim is shown, AND the BeDinoUI ScreenGui is
--- enabled and still in the PlayerGui. Disabling or destroying the ScreenGui while a menu was open used to leave the blur at 8 with nothing on screen.
+-- BD-296: the modal blur belongs to a visible modal only (menu open, scrim shown, ScreenGui enabled and in the PlayerGui).
 local function modalState(): ModalBlurGuard.State
     return {active=active, shadeVisible=shade.Visible, guiEnabled=gui.Enabled, guiAttached=gui:IsDescendantOf(player) and shade:IsDescendantOf(gui)}
 end
@@ -435,7 +434,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
                 hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
-                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.ClassInfo).Labels[require(Shared.ClassInfo).forSpecies(id).class].." • "..require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
+                require(script.Parent.ClassRow).card(label,card,id,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(script.Parent.ClassRow).label(id).." • "..require(Shared.FtueP1).indexCount(base,gold,diamond),lay.detailY,lay.compact,lay.heroY)
                 if event then require(script.Parent.MutationBadge).chip(card,event.id,UDim2.new(0.5,0,0,lay.detailY),Vector2.new(0.5,0)) end -- BD-352: real badge, not 9 px text
                 if lay.compact then
                     local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
@@ -955,7 +954,8 @@ local function scales()
     local size=gui.AbsoluteSize
     if size.X<=0 or size.Y<=0 then return end
     local touch=touchMode()
-    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
+    local railRun=require(script.Parent.RailRun)
+    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=railRun.count(navigationButtons),
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
         jump=if touch then coreTouchRect("JumpButton") else nil,
         goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active"), -- BD-531: the hub Goals header takes space under the goal line
@@ -980,7 +980,7 @@ local function scales()
     place(action,actionScale,layout.action)
     local cell=layout.rail.button
     for i,b in navigationButtons do
-        local cellPosition=layout.rail.positions[i]
+        local cellPosition=railRun.position(navigationButtons,i,layout.rail.positions)
         b.Position,b.Size=UDim2.fromOffset(cellPosition.x,cellPosition.y),UDim2.fromOffset(cell.w,cell.h)
         for _,child in b:GetChildren() do
             if child:IsA("TextLabel") then
@@ -1038,6 +1038,7 @@ player.CharacterAdded:Connect(characterAdded)
 if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
+gui:GetAttributeChangedSignal("RailRun"):Connect(scales)
 -- Re-layout when Roblox creates/moves its touch controls or the preferred input changes.
 local layoutQueued=false
 local function queueLayout()

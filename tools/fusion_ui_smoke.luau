@@ -175,6 +175,7 @@ function Theme.decorate(object)
     Instance.new("UICorner").Parent = object
 end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
+local classRowCalls = {}
 local stubs = {
     UITheme = Theme,
     Sfx = {play = function() return false end},
@@ -190,6 +191,8 @@ local stubs = {
     PreviewTraits = {add = function(view, traits) view:SetAttribute("Shiny", traits and traits.shiny) end},
     -- docs/152: FusionMenu requires ObjectiveSeen only while Config.ObjectivesEnabled (OB2); a recording stand-in (the real module has its own offline check)
     ObjectiveSeen = {report = function() end},
+    -- BD-1099: DinoDetails puts the class icon row at the top of its facts list; the row itself is proved by tools/verify_menu_layout.py
+    ClassRow = {row = function(_, speciesId, order) table.insert(classRowCalls, {speciesId = speciesId, order = order}) end},
 }
 local function requireModule(inst)
     local name = inst.Name
@@ -197,10 +200,10 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules", "ChipStyle"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules", "ChipStyle", "GeneBoost"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
-for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu", "ObjectiveSeen"} do
+for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu", "ObjectiveSeen", "ClassRow"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = ClientFolder
 end
 
