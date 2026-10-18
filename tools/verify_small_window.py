@@ -44,15 +44,15 @@ def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
 
 
-def build_script(replacements=None):
+def build_script(replacements=None, harness_path='tools/small_window_smoke.luau', modules=None):
     smoke = read('tools/close_paths_smoke.luau')
     marker = '-- ===== modules: REAL pure ones'
     assert marker in smoke, 'close_paths_smoke.luau lost its module marker'
     prefix = smoke[:smoke.index(marker)]
-    harness = read('tools/small_window_smoke.luau')
+    harness = read(harness_path)
     assert '-- @@PREFIX@@' in harness and harness.count('MODULE_SOURCES') == 1
     parts = []
-    for name, path in MODULES.items():
+    for name, path in (modules or MODULES).items():
         source = read(path)
         for old, new in (replacements or {}).get(name, []):
             assert old in source, 'mutant target missing in %s: %s' % (name, old)

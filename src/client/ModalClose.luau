@@ -75,7 +75,7 @@ end
 -- GuiObject with Active = true, takes the tap; other objects let it fall through to what is under them. Higher DisplayOrder wins between
 -- ScreenGuis. Does not model ClipsDescendants. x / y are in the same space as AbsolutePosition.
 local function sinks(o: GuiObject): boolean
-    return o:IsA("GuiButton") or o.Active
+    return o.Active -- a button is Active unless a script turned it off (then the engine lets the tap through, BD-1102: a toast along the bottom edge)
 end
 
 local function better(a: {number}, b: {number}): boolean -- is key a above key b?

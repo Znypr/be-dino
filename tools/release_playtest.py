@@ -64,7 +64,7 @@ FLAG_KEYS = [
     "CollectionTestGrantEnabled", "ChestTestGrantEnabled", "MutationTestSetupEnabled",
     "CaveHub", "LowPolyDinos", "ClassMovementEnabled", "WorldArtMode", "FoodArtMode", "WorldArtDensity",
     "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled", "RunTelemetryEnabled", "PlaytestFeedbackEnabled",
-    "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk", "GeneBoostEnabled", "FoodLayerEnabled", "PatternColourIndexEnabled", "FoodRespawnTiersEnabled",
+    "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk", "GeneBoostEnabled", "FoodLayerEnabled", "PatternColourIndexEnabled", "FoodRespawnTiersEnabled", "ShopPromptBubbleEnabled",
     "HatchV2", "HatchV2Preview", "QaOverlayEnabled", "DemoDirectorEnabled", "FoodPickupAtMouth",
     "PredationAtMouth", "ObjectivesEnabled", "GiftClaimEnabled", "GiftingEnabled", "AdminGiftsEnabled",
     "SecretSpeciesEnabled", "DinoSkinsEnabled",  # docs/157: shown so the manifest records every decision

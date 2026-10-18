@@ -281,9 +281,13 @@ task.spawn(function()
     local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
     local scrim = main and main:WaitForChild("ModalScrim", 30)
     if not scrim or not scrim:IsA("GuiObject") then return end
-    local function sync() toggle.Visible = panel.Visible or not scrim.Visible end
+    -- BD-1103: the Fusion menu is its own ScreenGui (BeDinoFusionUI), so the Admin button lay over its bottom edge (docs/199 picture 379): it hides for that menu too
+    local fusion = player.PlayerGui:FindFirstChild("BeDinoFusionUI") or player.PlayerGui:WaitForChild("BeDinoFusionUI", 30)
+    local function fusionOpen(): boolean return fusion ~= nil and fusion:IsA("ScreenGui") and fusion.Enabled end
+    local function sync() toggle.Visible = panel.Visible or not (scrim.Visible or fusionOpen()) end
     scrim:GetPropertyChangedSignal("Visible"):Connect(sync)
     panel:GetPropertyChangedSignal("Visible"):Connect(sync)
+    if fusion and fusion:IsA("ScreenGui") then fusion:GetPropertyChangedSignal("Enabled"):Connect(sync) end
     sync()
 end)
 UserInputService.InputBegan:Connect(function(input, processed)

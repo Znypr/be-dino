@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rules = require(ReplicatedStorage.Shared.CaveLightingRules)
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
+local Config = require(ReplicatedStorage.Shared.Config)
 local FallRecovery = require(script.Parent.FallRecovery)
 local CaveShowOff = {}
 
@@ -39,6 +40,13 @@ function CaveShowOff.build(parent: Instance): Instance?
     prompt.MaxActivationDistance = cfg.promptDistance
     prompt.HoldDuration = 0
     prompt.RequiresLineOfSight = false
+    if Config.ShopPromptBubbleEnabled == true then
+        -- BD-1017 (docs/180): the same message bubble and the same key as the stalls. The client (HubPromptBubble) draws it from the station id; the key
+        -- is E and the gamepad button X (the engine defaults, set here so the look and the key cannot drift apart). The press still triggers this prompt.
+        prompt.Style = Enum.ProximityPromptStyle.Custom
+        prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.E, Enum.KeyCode.ButtonX
+        prompt:SetAttribute("BubbleStation", "heart")
+    end
     prompt.Parent = anchor
     prompt.Triggered:Connect(function(player: Player)
         local now = os.clock()

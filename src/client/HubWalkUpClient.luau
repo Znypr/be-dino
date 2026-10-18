@@ -3,6 +3,8 @@
 -- (hold 0, 10 studs, key G, a 96 px tap target on phones). The shop opens ONLY when the player presses it, never by walking up.
 -- Fast travel (HubTravelClient) opens the menu itself because the player chose it. Rules: pure HubWalkUpRules.
 -- attach() returns nil at once while Config.CaveHub is false.
+-- BD-1017 (docs/180 option A): with Config.ShopPromptBubbleEnabled the round "Open" button is replaced by the message bubble of HubPromptBubble (stall
+-- name, one warm line, key button) and the key is E (gamepad X); flag off = the round button with [G] exactly as before.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
@@ -12,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Layout = require(Shared:WaitForChild("CaveHubLayout"))
 local Rules = require(Shared:WaitForChild("HubWalkUpRules"))
+local SignCopy = require(Shared:WaitForChild("HubSignCopy"))
 
 local Client = {}
 local TAP = 96 -- px: the prompt button (docs/104 s8)
@@ -21,12 +24,18 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
     if Config.CaveHub ~= true then return nil end
     local player = Players.LocalPlayer
     local state = Rules.newState()
+    local bubbleOn = Config.ShopPromptBubbleEnabled == true
 
-    local function canOpen(): boolean
+    local function atHome(): boolean -- a dino at home (not in a run) and no hub trip running
         local character = player.Character
-        if not character or character:GetAttribute("RunState") ~= "Sanctuary" or isBusy() then return false end
+        return character ~= nil and character:GetAttribute("RunState") == "Sanctuary" and not isBusy()
+    end
+    local function scrimUp(): boolean
         local scrim = ctx.gui:FindFirstChild("ModalScrim")
-        return not (scrim and scrim:IsA("GuiObject") and scrim.Visible)
+        return scrim ~= nil and scrim:IsA("GuiObject") and scrim.Visible
+    end
+    local function canOpen(): boolean
+        return atHome() and not scrimUp()
     end
     local function openName(): string -- the rail destination on screen now ("" none): the Fusion menu has its own window, every other screen is Bootstrap's
         local fusion = require(script.Parent:WaitForChild("FusionMenu"))
@@ -48,10 +57,11 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         anchor.Position = Vector3.new(s.signX, Layout.FloorY + Rules.PromptHeight, s.signZ + Layout.CenterZ)
         local prompt = Instance.new("ProximityPrompt")
         prompt.Name, prompt.ActionText, prompt.ObjectText = "Open", "Open " .. s.sign, ""
-        prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode[Rules.PromptKey], Enum.KeyCode.ButtonL1
+        prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode[if bubbleOn then Rules.keyFor(true) else Rules.PromptKey], Enum.KeyCode[Rules.gamepadFor(bubbleOn)]
         prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight = 0, Rules.PromptDistance, false
         prompt.Style = Enum.ProximityPromptStyle.Custom
         prompt:SetAttribute("HubWalkUp", true)
+        if bubbleOn and SignCopy.bubbleLine(s.id) ~= nil then prompt:SetAttribute("BubbleStation", s.id) end -- the bubble reads its words by station id
         prompt.Triggered:Connect(function()
             local action = Rules.press(state, s.id, canOpen(), openName(), os.clock())
             if action == "open" then openStation(s.id)
@@ -63,6 +73,15 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         anchor.Parent = folder
     end
     folder.Parent = workspace
+
+    if bubbleOn then
+        -- The prompt face is the message bubble. It also draws the Heart "Show off" prompt (CaveShowOff sets the same attribute).
+        local bubble = require(script.Parent:WaitForChild("HubPromptBubble")).attach({
+            canShow = atHome,
+            windowOpen = function() return scrimUp() or openName() ~= "" end,
+        })
+        return {note = function(station: string) Rules.note(state, station, os.clock()) bubble.refresh() end}
+    end
 
     -- The prompt face: one big round button (phones tap it; keyboards still use the prompt key as usual).
     ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)

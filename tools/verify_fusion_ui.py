@@ -454,6 +454,7 @@ UI_MODULES = {
     'EggGenetics': 'src/shared/EggGenetics.luau',
     'ModalCloseRules': 'src/shared/ModalCloseRules.luau',
     'ChipStyle': 'src/shared/ChipStyle.luau',  # BD-1077: fusion tags use the shared chunky tag
+    'GeneBoost': 'src/shared/GeneBoost.luau',  # BD-1082: the details rows say "Boost N of 5"
     'FusionSelection': 'src/shared/FusionSelection.luau',
     'FusionWidgets': 'src/client/FusionWidgets.luau',
     'DinoDetails': 'src/client/DinoDetails.luau',

@@ -5,10 +5,23 @@ local CaveHubLayout = require(script.Parent.CaveHubLayout)
 local ClientRules = require(script.Parent.HubTravelClientRules)
 local HubWalkUpRules = {}
 HubWalkUpRules.PromptKey = "G" -- keyboard key (E is LEAP, F is BITE, C / B open menus)
+-- BD-1017 (docs/180 option A, LEAD decision docs/115 C-52): with Config.ShopPromptBubbleEnabled the stall key is E (gamepad X), the keys every Roblox player knows.
+-- E (Leap) and X do nothing else at home: Leap and bite work only in a run, a stall prompt exists only at home. PromptKey / L1 stay the flag-off values.
+HubWalkUpRules.PromptKeyBubble = "E"
+HubWalkUpRules.PromptGamepad = "ButtonL1"
+HubWalkUpRules.PromptGamepadBubble = "ButtonX"
 HubWalkUpRules.PromptButtonText = "Open"
 HubWalkUpRules.PromptDistance = 10 -- studs (docs/104 s8)
 HubWalkUpRules.TriggerGap = 0.5 -- seconds between two opens, so a held or hammered prompt never spams
 HubWalkUpRules.PromptHeight = 3 -- studs above the floor
+
+-- The keyboard key name and the gamepad button name of a stall prompt. bubbleOn = Config.ShopPromptBubbleEnabled (anything but true = the old G / L1).
+function HubWalkUpRules.keyFor(bubbleOn: any): string
+    return if bubbleOn == true then HubWalkUpRules.PromptKeyBubble else HubWalkUpRules.PromptKey
+end
+function HubWalkUpRules.gamepadFor(bubbleOn: any): string
+    return if bubbleOn == true then HubWalkUpRules.PromptGamepadBubble else HubWalkUpRules.PromptGamepad
+end
 
 local function finite(n: any): boolean return typeof(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge end
 

@@ -85,8 +85,8 @@ for i, card in pc do assert(card.id == expectOrder[i], "order " .. i .. " " .. c
 assert(pc[1].tier <= pc[#pc].tier and pc[#pc].rarity == "Legendary" and pc[#pc].name == "Diamonds")
 local byId = {}
 for _, card in pc do byId[card.id] = card assert(card.name ~= "" and not string.find(card.name, "%d") and not string.find(card.name, "_"), "kid name, never an id: " .. card.name) end
-assert(byId["03_round_spots"].found and byId["03_round_spots"].line == "Found on: Compy, Raptor")
-assert(byId["07_diamond_scales"].line == "Found on: Compy" and byId["02_emerald_islands"].line == "Found before")
+assert(byId["03_round_spots"].found and byId["03_round_spots"].line == "Found on 2 dinos")
+assert(byId["07_diamond_scales"].line == "Found on Compy" and byId["02_emerald_islands"].line == "Found before")
 assert(not byId["06_wavy_stripes"].found and byId["06_wavy_stripes"].line == "Not found yet" and Index.NotFoundLine == "Not found yet")
 assert(byId["01_blank"].rgb == nil, "patterns have no swatch")
 -- the card list does not reshuffle when a find is made (same order found or not)
@@ -104,14 +104,17 @@ assert(#cc == 9 and cc[1].tier == 0 and cc[#cc].tier == 5)
 local cById = {}
 for _, card in cc do cById[card.id] = card end
 assert(cById.blue.rgb[1] == 36 and cById.blue.rgb[2] == 132 and cById.blue.rgb[3] == 211, "the real colour")
-assert(cById.red.line == "Found on: Compy" and cById.black.line == "Found before" and cById.teal.line == "Not found yet")
+assert(cById.red.line == "Found on Compy" and cById.black.line == "Found before" and cById.teal.line == "Not found yet")
 -- 'Found on': two species, then +N
 local many = {compy = {variants = {a = variant("01_blank", "blue", "blue")}}, raptor = {variants = {a = variant("01_blank", "blue", "blue")}},
     triceratops = {variants = {a = variant("01_blank", "blue", "blue")}}, stegosaurus = {variants = {a = variant("01_blank", "blue", "blue")}},
     tyrannosaurus = {variants = {a = variant("01_blank", "blue", "blue")}}}
 local fm = Index.foundSets(many, nil, order)
-assert(Index.cards("patterns", P, fm, names)[1].line == "Found on: Compy, Raptor +3", Index.cards("patterns", P, fm, names)[1].line)
+assert(Index.cards("patterns", P, fm, names)[1].line == "Found on 5 dinos", Index.cards("patterns", P, fm, names)[1].line)
 assert(Index.foundOnText({"compy", "raptor"}, names) == "Compy, Raptor" and Index.foundOnText({"compy"}, names) == "Compy" and Index.foundOnText({}, names) == nil and Index.foundOnText(nil, names) == nil)
+-- BD-1082: the card line is ONE short line (fits 500 px at 14 px): a short single name, else a count; no colon
+assert(Index.foundLine({"compy"}, names) == "Found on Compy" and Index.foundLine({"stegosaurus"}, names) == "Found on 1 dino" and Index.foundLine({"compy", "raptor"}, names) == "Found on 2 dinos" and Index.foundLine({}, names) == nil and Index.foundLine(nil, names) == nil)
+for _, ids in {{"compy"}, {"stegosaurus"}, {"compy", "raptor"}, {"compy", "raptor", "triceratops", "stegosaurus", "tyrannosaurus"}} do assert(#Index.foundLine(ids, names) <= Index.FoundLineMax, "the card line fits one line") end
 assert(Index.foundOnText({"a", "b", "c"}, nil) == "a, b +1", "no name function: the id is the last resort")
 
 -- 4. header counts and pips
@@ -341,6 +344,7 @@ def mutants(runner):
         ('log ignored', 'local ids = if type(discovered) == "table" and type(discovered.ids) == "table" then discovered.ids else nil', 'local ids = nil'),
         ('saved total ignored (the dot forgets a rejoin)', 'if type(saved) == "number" and saved == saved and saved > 0 then return saved end', ''),
         ('the accent hint shows on a pattern too', 'hint = if isColour then Index.AccentHint else nil', 'hint = Index.AccentHint'),
+        ('the card line keeps the long form (wraps and is cut)', 'if #speciesIds == 1 and #text <= Index.FoundLineMax then return text end', 'return text'),
         ('the Found on list is cut to one line', 'local shown = math.min(#names, perLine * maxLines)', 'local shown = math.min(#names, perLine)'),
         ('a card not found gives away its name', 'local out: any = {title = "???"', 'local out: any = {title = (if type(card) == "table" and card.name then card.name else "???")'),
     ]

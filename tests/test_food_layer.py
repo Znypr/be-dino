@@ -14,6 +14,7 @@ import verify_food_layer as vfl  # noqa: E402
 import food_layer_data  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
+import world_colliders as wc  # noqa: E402
 import worldlayer  # noqa: E402
 
 
@@ -128,12 +129,12 @@ class GeneratorPieceTests(unittest.TestCase):
 class SmallGenerationTests(unittest.TestCase):
     """The whole generator on a synthetic island, with a smaller total so it runs in seconds."""
 
-    def run_small(self):
+    def run_small(self, obstacles=None):
         saved = (gen.TOTAL, dict(gen.COUNTS))
         gen.TOTAL, gen.COUNTS.update({'berry': 420, 'fruit': 120, 'egg': 42, 'amber': 18})
         gen.TOTAL = sum(gen.COUNTS.values())
         try:
-            return gen.generate(flat_ground())
+            return gen.generate(flat_ground(), obstacles)
         finally:
             gen.TOTAL = saved[0]
             gen.COUNTS.clear()
@@ -155,6 +156,40 @@ class SmallGenerationTests(unittest.TestCase):
         nearest = min(math.hypot(p[0] - q[0], p[1] - q[1]) for i, p in enumerate(pts) for q in pts[i + 1:])
         self.assertGreaterEqual(nearest, gen.MIN_SPACING - 0.1)
         self.assertEqual(len(a['tops']), 4)
+
+    def test_solid_props_push_foods_aside_and_nothing_else_breaks(self):
+        # BD-1098 with a mock: rocks (discs) dropped on 25 foods of the plain layout, one of them on a whole cluster
+        plain = self.run_small()
+        pts = plain['points']
+        rocks = [wc.Obstacle('disc', centre=(x, z), radius=1.2) for x, z, _ in pts[30:530:20]]
+        cluster = pts[300:305]
+        rocks.append(wc.Obstacle('disc', centre=(sum(p[0] for p in cluster) / 5, sum(p[1] for p in cluster) / 5), radius=6.0))
+        obstacles = wc.Obstacles(rocks)
+        a = self.run_small(obstacles)
+        b = self.run_small(obstacles)
+        self.assertEqual(a['layer'].encode(), b['layer'].encode())          # deterministic
+        self.assertTrue(a['moved'])
+        self.assertEqual(plain['moved'], [])                                  # no obstacles, nothing moves
+        self.assertEqual(len(a['points']), 600)
+        self.assertEqual(a['layer'].count(), 600)                             # still one food per cell
+        for kind in gen.COUNTS:
+            self.assertEqual(sum(1 for p in a['points'] if p[2] == kind), sum(1 for p in plain['points'] if p[2] == kind))
+        for x, z, _ in a['points']:
+            self.assertGreaterEqual(obstacles.distance(x, z, gen.OBSTACLE_MARGIN), gen.OBSTACLE_MARGIN)
+            self.assertTrue(a['ground'].ok(x, z))
+        moved = {i for i, _, _ in a['moved']}
+        for i, (p, q) in enumerate(zip(plain['points'], a['points'])):
+            if i not in moved:
+                self.assertEqual(p, q, 'only blocked foods may move')          # the rest of the map is exactly as before
+        for i, old, new in a['moved']:
+            self.assertEqual(a['points'][i][:2], new)
+            self.assertLessEqual(math.hypot(new[0] - old[0], new[1] - old[1]), gen.SHIFT_REACH + 1.0)
+        # cluster rules still hold: groups of 3 to 5 linked below 5 studs, mates 2.8 apart, other clusters 5.5 apart
+        xyz = [(x, z, k) for x, z, k in a['points']]
+        groups = vfl.groups(xyz, 5.0)
+        self.assertTrue(all(3 <= len(g) <= 5 or len(g) in (1, 9) for g in groups), sorted(len(g) for g in groups)[:5])
+        near = layer_stats.Buckets([(x, z) for x, z, _ in xyz])
+        self.assertGreaterEqual(min(near.nearest(x, z, skip=i) for i, (x, z, _) in enumerate(xyz)), gen.MIN_SPACING - 0.1)
 
     def test_a_clumped_layout_breaks_the_spread_rules(self):
         rng = random.Random(3)

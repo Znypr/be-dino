@@ -119,6 +119,7 @@ jobs:
           python tools/verify_cave_weather.py
           python tools/verify_hub_travel.py --runner /tmp/luau/luau
           python tools/verify_hub_walk_there.py --runner /tmp/luau/luau
+          python tools/verify_shop_prompt_bubble.py --runner /tmp/luau/luau
           python tools/verify_spawn.py --runner /tmp/luau/luau
           # combat
           python tools/verify_combat_service.py --runner /tmp/luau/luau
@@ -150,6 +151,7 @@ jobs:
           python tools/verify_text_style.py --runner /tmp/luau/luau
           python tools/verify_phone_scale.py --runner /tmp/luau/luau
           python tools/verify_small_window.py --runner /tmp/luau/luau
+          python tools/verify_menu_layout.py --runner /tmp/luau/luau
           python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
           python tools/verify_owner_feedback_p1.py --runner /tmp/luau/luau
           # world and art

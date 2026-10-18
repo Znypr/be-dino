@@ -17,6 +17,9 @@ Today (FoodService without Config.FoodLayerEnabled) the food comes from 400 jitt
   * the two starter patches next to the run start kept: nine foods each around (-15, 24) and (15, 24), two berries to one fruit;
   * nothing in water, in the safe-spawn disc or on steep ground: the same ground rule as FoodService.groundAt (tools/dump_food_layout.py
     evaluates it with the real Config and IslandLayout in the pinned Luau runner), pulled in one stud from every edge;
+  * BD-1098: no food inside or next to a solid world prop. The colliders the server builds (rocks, trunks, logs, landmarks, the arch, the boundary
+    boulders) come from tools/world_colliders.py (the real BiomePlacement grammar run in the Luau runner); the last stage of generate() moves every
+    food closer than OBSTACLE_MARGIN studs to one of them to the nearest free cell of its own cluster (see clear_obstacles), so nothing else moves;
   * 1,000 x 1,000 cells over the arena (about 0.83 stud per cell), every food in its own cell; deterministic from SEED.
 
 Output (only with --write): src/shared/FoodLayerData.luau (the run-length text WorldLayer.encode makes, in a Luau long string) and
@@ -37,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import worldlayer  # noqa: E402
 
-VERSION = 'bd1047-foodlayer-v2'
+VERSION = 'bd1098-foodlayer-v3'
 SEED = 103            # picked from seeds 101 to 112 (the best balance of pace, gaps and spread; see docs/187 s G)
 ARENA = 416.0          # Config.ArenaHalfWidth
 EXTENT = 408.0         # FoodService places inside +-(ArenaHalfWidth - 8)
@@ -72,6 +75,13 @@ ZONES = (
 LLOYD_ROUNDS = 4                          # smoothing rounds for the amber and egg spots
 SAMPLE_STEP = 12.0                        # lattice of ground spots used to judge walking distances while choosing amber / egg spots
 RIM_FREE = 330.0                          # hill tops are looked for inside +-RIM_FREE (the outer rim is a ramp, not a mountain)
+# BD-1098: clearance from solid props. FoodService.groundAt rejects a spot when a 1.25 stud ray along x or z (from 1 stud above the ground) hits a
+# collider, and the Studio check counted a food as inside a box when its part (up to 0.87 stud from its middle) touched it: 1.5 covers both.
+OBSTACLE_MARGIN = 1.5
+MOVE_REACH = 7.0       # studs: farthest a single food is moved away from the spot the generator gave it
+SHIFT_REACH = 14.0     # studs: farthest a whole cluster is shifted when single moves do not work
+LINK_MAX = 4.8         # studs: a moved food stays this close to a mate (verify_food_layer links foods closer than 5.0 into one cluster)
+CENTRE_MIN = 12.5      # studs: moved clusters keep their centres at least this far apart (written rule: 12)
 
 
 # ------------------------------------------------------------------------------ ground
@@ -588,9 +598,171 @@ def assign_kinds(ground, points, fixed_kinds, rng, cid):
     return kinds
 
 
+# ------------------------------------------------------------------------------ BD-1098: keep clear of solid props
+def clear_obstacles(pts, cid, n_starter, n_lone, ground, layer, obstacles):
+    """Move every food closer than OBSTACLE_MARGIN studs to a solid world prop (tools/world_colliders.py) out of its way, changing as little as possible.
+
+    The pipeline before this stage knows only the terrain, so its random choices stay exactly as they were; this last stage then takes each blocked
+    food and puts it on the nearest free cell (at most MOVE_REACH studs away, nearest first) that keeps every rule of the map: valid ground, its own
+    cell, MIN_SPACING to its cluster mates, BETWEEN_SPACING to other clusters, LONE_AMBER_CLEAR around a hill-top amber, within the starter radius for
+    a starter patch, and still linked to its cluster (so groups stay 3 to 5 and connected) with the cluster centres still CENTRE_MIN apart. A cluster
+    in which some food has no such cell is shifted as a whole (up to SHIFT_REACH studs). Kinds are by index, so a moved egg is still an egg.
+    Returns (new points, [(index, old, new)])."""
+    pos = list(pts)
+    groups = []
+    for i, (x, z) in enumerate(pos):
+        if i < n_starter:
+            groups.append(('s', min(range(len(STARTER_CENTRES)), key=lambda k: math.hypot(x - STARTER_CENTRES[k][0], z - STARTER_CENTRES[k][1]))))
+        elif i < n_starter + n_lone:
+            groups.append(('l', i))
+        else:
+            groups.append(('c', cid[i]))
+    size = 8.0
+    buckets, taken, members = {}, {}, {}
+
+    def key(x, z):
+        return math.floor(x / size), math.floor(z / size)
+
+    for i, (x, z) in enumerate(pos):
+        buckets.setdefault(key(x, z), set()).add(i)
+        taken[layer.cell_of(x, z)] = i
+        members.setdefault(groups[i], []).append(i)
+
+    def put(i, x, z):
+        buckets[key(*pos[i])].discard(i)
+        del taken[layer.cell_of(*pos[i])]
+        pos[i] = (x, z)
+        buckets.setdefault(key(x, z), set()).add(i)
+        taken[layer.cell_of(x, z)] = i
+
+    def near(x, z, r):
+        k = key(x, z)
+        reach = int(r // size) + 1
+        for dx in range(-reach, reach + 1):
+            for dz in range(-reach, reach + 1):
+                yield from buckets.get((k[0] + dx, k[1] + dz), ())
+
+    def connected(g, override):
+        """True when the foods of group g (positions overridden by {index: (x, z)}) form one group linked by gaps below LINK_MAX."""
+        pts_g = [override.get(i, pos[i]) for i in members[g]]
+        seen, todo = {0}, [0]
+        while todo:
+            a = pts_g[todo.pop()]
+            for b in range(len(pts_g)):
+                if b not in seen and math.hypot(a[0] - pts_g[b][0], a[1] - pts_g[b][1]) < LINK_MAX + 0.19:
+                    seen.add(b)
+                    todo.append(b)
+        return len(seen) == len(pts_g)
+
+    def centroid(g, override):
+        ids = members[g]
+        return (sum(override.get(i, pos[i])[0] for i in ids) / len(ids), sum(override.get(i, pos[i])[1] for i in ids) / len(ids))
+
+    cluster_ids = [g for g in members if g[0] == 'c']
+
+    def centres_ok(g, override):
+        if g[0] != 'c':
+            return True
+        cx, cz = centroid(g, override)
+        for h in cluster_ids:
+            if h != g:
+                hx, hz = centroid(h, {})
+                if math.hypot(cx - hx, cz - hz) < CENTRE_MIN:
+                    return False
+        return True
+
+    def spot_ok(i, x, z, ignore):
+        """May food i stand at the cell centre (x, z) (the foods in `ignore` are being moved too and do not count)?"""
+        if not ground.ok(x, z) or obstacles.distance(x, z, OBSTACLE_MARGIN) < OBSTACLE_MARGIN:
+            return False
+        holder = taken.get(layer.cell_of(x, z))
+        if holder is not None and holder != i and holder not in ignore:
+            return False
+        g = groups[i]
+        if g[0] == 's' and math.hypot(x - STARTER_CENTRES[g[1]][0], z - STARTER_CENTRES[g[1]][1]) > STARTER_RADIUS - 0.5:
+            return False
+        linked = g[0] == 'l'
+        for j in near(x, z, LONE_AMBER_CLEAR + 1.0):
+            if j == i or j in ignore:
+                continue
+            d = math.hypot(pos[j][0] - x, pos[j][1] - z)
+            h = groups[j]
+            need = LONE_AMBER_CLEAR if (g[0] == 'l' or h[0] == 'l') else (MIN_SPACING if h == g else BETWEEN_SPACING)
+            if d < need:
+                return False
+            if h == g and d < LINK_MAX:
+                linked = True
+        return linked or bool(ignore)   # a whole-cluster shift checks the links of the moved group itself (connected)
+
+    cell_w = 2 * ARENA / WIDTH
+
+    def lattice(x, z, reach):
+        """Every cell centre within `reach` studs of (x, z), nearest first."""
+        ix, iz = layer.cell_of(x, z)
+        n = int(reach / cell_w) + 1
+        out = []
+        for dz in range(-n, n + 1):
+            for dx in range(-n, n + 1):
+                if layer.contains(ix + dx, iz + dz):
+                    cx, cz = layer.centre_of(ix + dx, iz + dz)
+                    d = math.hypot(cx - x, cz - z)
+                    if d <= reach:
+                        out.append((d, cx, cz))
+        out.sort()
+        return out
+
+    def blocked(i):
+        return obstacles.distance(pos[i][0], pos[i][1], OBSTACLE_MARGIN) < OBSTACLE_MARGIN
+
+    moved, stuck = {}, []
+    for i in [i for i in range(len(pos)) if blocked(i)]:
+        old = pos[i]
+        g = groups[i]
+        for _, cx, cz in lattice(old[0], old[1], MOVE_REACH):
+            if not spot_ok(i, cx, cz, ()):
+                continue
+            if g[0] != 'l' and (not connected(g, {i: (cx, cz)}) or not centres_ok(g, {i: (cx, cz)})):
+                continue
+            put(i, cx, cz)
+            moved[i] = (moved[i][0] if i in moved else old, (cx, cz))
+            break
+        else:
+            stuck.append(i)
+    for g in sorted({groups[i] for i in stuck}):
+        if g[0] != 'c':
+            first = [i for i in stuck if groups[i] == g][0]
+            raise SystemExit('a %s food at %r cannot get clear of the solid props' % ('starter' if g[0] == 's' else 'hill-top amber', pos[first]))
+        ids = members[g]
+        ignore = set(ids)
+        base = {i: pos[i] for i in ids}
+        cx0, cz0 = centroid(g, {})
+        for _, ox, oz in lattice(cx0, cz0, SHIFT_REACH):
+            dx, dz = ox - cx0, oz - cz0
+            to = {i: snap(layer, base[i][0] + dx, base[i][1] + dz) for i in ids}
+            if len({layer.cell_of(*p) for p in to.values()}) != len(ids):
+                continue
+            if not all(spot_ok(i, to[i][0], to[i][1], ignore) for i in ids):
+                continue
+            if any(math.hypot(to[a][0] - to[b][0], to[a][1] - to[b][1]) < MIN_SPACING for a in ids for b in ids if a < b):
+                continue
+            if not connected(g, to) or not centres_ok(g, to):
+                continue
+            for i in ids:
+                put(i, *to[i])
+                moved[i] = (moved[i][0] if i in moved else base[i], to[i])
+            break
+        else:
+            raise SystemExit('a cluster near (%.0f, %.0f) cannot get clear of the solid props' % (cx0, cz0))
+    left = [i for i in range(len(pos)) if blocked(i)]
+    if left:
+        raise SystemExit('%d foods are still inside the clearance of a solid prop' % len(left))
+    return pos, [(i, a, b) for i, (a, b) in sorted(moved.items()) if a != b]
+
+
 # ------------------------------------------------------------------------------ whole map
-def generate(ground_model):
-    """Returns {"layer": WorldLayer, "points": [(x, z, kind name)], "tops": [...], "meta": {...}} for a ground model (dump_food_layout.ground_model)."""
+def generate(ground_model, obstacles=None):
+    """Returns {"layer": WorldLayer, "points": [(x, z, kind name)], "tops": [...], "meta": {...}} for a ground model (dump_food_layout.ground_model).
+    `obstacles` (tools/world_colliders.Obstacles, BD-1098) keeps every food OBSTACLE_MARGIN studs clear of the solid props; None = terrain only."""
     ground = Ground(ground_model)
     layer = worldlayer.WorldLayer(WIDTH, WIDTH, ARENA)
     rng = random.Random(SEED)
@@ -608,6 +780,9 @@ def generate(ground_model):
         fixed_kinds[len(starter) + k] = 'amber'
     pts, cid = place_points(ground, layer, rng, {'starter': starter, 'lone': tops})
     kinds = assign_kinds(ground, pts, fixed_kinds, rng, cid)
+    moved = []
+    if obstacles is not None:
+        pts, moved = clear_obstacles(pts, cid, len(starter), len(tops), ground, layer, obstacles)
     out = []
     for i, (x, z) in enumerate(pts):
         kind = kinds[i]
@@ -620,8 +795,8 @@ def generate(ground_model):
     if counts != COUNTS:
         raise SystemExit('kind counts %r differ from the plan %r' % (counts, COUNTS))
     meta = {'version': VERSION, 'seed': SEED, 'min_spacing': MIN_SPACING, 'between_spacing': BETWEEN_SPACING, 'cluster_spacing': CLUSTER_SPACING, 'counts': counts, 'total': TOTAL,
-            'zones': [(z['name'], z['x'], z['z'], z['r']) for z in ZONES], 'lone_ambers': [(round(x, 1), round(z, 1)) for x, z in tops]}
-    return {'layer': layer, 'points': out, 'tops': tops, 'meta': meta, 'ground': ground}
+            'zones': [(z['name'], z['x'], z['z'], z['r']) for z in ZONES], 'lone_ambers': [(round(x, 1), round(z, 1)) for x, z in pts[len(starter):len(starter) + len(tops)]]}
+    return {'layer': layer, 'points': out, 'tops': tops, 'meta': meta, 'ground': ground, 'moved': moved}
 
 
 # ------------------------------------------------------------------------------ files
@@ -669,8 +844,13 @@ def main():
     ap.add_argument('--write', action='store_true', help='write src/shared/FoodLayerData.luau and tools/food_layer_data.py')
     args = ap.parse_args()
     import dump_food_layout
-    result = generate(dump_food_layout.ground_model(args.runner, 1.0, 4.0))
+    import world_colliders
+    obstacles = world_colliders.load(args.runner)
+    print('solid props: %(props)d placed props -> %(obstacles)d footprints; foods keep %(margin)g studs clear' % dict(obstacles.summary, margin=OBSTACLE_MARGIN))
+    result = generate(dump_food_layout.ground_model(args.runner, 1.0, 4.0), obstacles)
     text = result['layer'].encode()
+    far = max((math.hypot(b[0] - a[0], b[1] - a[1]) for _, a, b in result['moved']), default=0.0)
+    print('%d foods moved out of the way of solid props (farthest move %.1f studs)' % (len(result['moved']), far))
     print('%d foods %s, %d characters of text, lone ambers at %s' % (result['meta']['total'], result['meta']['counts'], len(text), result['meta']['lone_ambers']))
     old = committed_text()
     print('committed map: %s' % ('missing' if old is None else ('identical' if old == text else 'DIFFERENT')))
