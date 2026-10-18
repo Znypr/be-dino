@@ -173,3 +173,8 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | Ankylosaurus biggest? | C-40 / Q14 | T-Rex must be the biggest (OW9) | RESOLVED, build BD-992 |
 | Rain and snow on phones | C-42 / Q16 | a quarter of the drops (OW10) | RESOLVED, already built |
 | Where is the V3 Compy file | not a C row | "i dont know" (OW11); not found by search | **OPEN** (file hunt, not a blocker) |
+
+## L. Shop prompt key (BD-1016, 2026-10-18, [180](180-shop-and-npc-interaction-design.md))
+| ID | Statement A | Statement B | Newer | Proposed resolution and OWNER QUESTION |
+|---|---|---|---|---|
+| C-52 | docs/114 s6.2, docs/104 s8, `HubWalkUpRules.PromptKey = "G"` and `tools/verify_cave_gate.py:124` (`PromptKey ~= "E"`): the stall key is G because E is LEAP | Owner 2026-10-18: the shop interaction should be "like E to interact"; the Heart "Show off" prompt already uses the default E | owner 2026-10-18 | **LEAD decision (115): E on PC, ButtonX on a gamepad.** At home Leap and bite do nothing (`RunState` must be "Active"), so E is free; a `ContextActionService` sink keeps Bootstrap from firing a Leap. Docs, rules and the check change in BD-1017. No new OWNER QUESTION. |
