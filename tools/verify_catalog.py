@@ -45,13 +45,24 @@ def problems(root: Path = ROOT, runner: str | None = None, folder: Path | None =
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runner", help="pinned Luau runner")
+    parser.add_argument("--strict", action="store_true", help="a stale page fails too (default: only a warning, see below)")
     args = parser.parse_args(argv)
     errors = problems(ROOT, args.runner)
-    for error in errors:
+    # LEAD decision 2026-10-18 (docs/115): a stale PAGE is a warning, not a failure. If every PR that touches data had to
+    # commit docs/catalog/ it would conflict on every merge (the lesson of BD-1060). The lead refreshes the catalogue in one
+    # PR from time to time. Shape rules (page cap, missing or extra pages) still fail.
+    stale = [e for e in errors if " is out of date (" in e]
+    hard = [e for e in errors if e not in stale] if not args.strict else errors
+    for error in hard:
         print("FAIL:", error)
-    if errors:
-        print(f"The team catalogue is stale or malformed. Run `{FIX}` and commit docs/catalog/.")
+    for error in stale if not args.strict else []:
+        print("WARNING (stale page, refresh later):", error.splitlines()[0])
+    if hard:
+        print(f"The team catalogue is malformed. Run `{FIX}` and commit docs/catalog/.")
         return 1
+    if stale and not args.strict:
+        print(f"catalogue: {len(stale)} stale page(s); refresh with `{FIX}` (warning only)")
+        return 0
     print("catalogue ok: docs/catalog matches the game code")
     return 0
 

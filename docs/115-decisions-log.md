@@ -541,3 +541,6 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **The handbook conflict** (docs/114 s8.5 "growth pacing unchanged") is already C-55 in [116](116-handbook-conflicts.md); not duplicated.
 - **Tests:** `tools/verify_gene_boost.py` (in CI): caps, monotonic, same-colour case, accent worth more than main, no genes = 1, flag off = exactly 1, version constant, wiring checks. **Not verified:** Studio, phone, how the boost feels or whether the 7% walking difference is visible. No UI is shown yet (the Index is BD-1039).
 - **To overturn:** set `GeneBoostEnabled` to false in the playtest rule of `tools/release_profiles.py` (one line), or edit the numbers at the top of `GeneBoost.luau` and bump `Version`.
+
+## LEAD decision (owner delegated 2026-10-16, applied 2026-10-18): catalogue staleness is a warning (BD-1062)
+- The team catalogue (docs/catalog, BD-1052) is committed, but a stale page only warns in CI. Reason: forcing every data PR to rebuild it would add one more file that all PRs edit. The lead refreshes it in one PR now and then (`python tools/build_catalog.py`). To overturn: run `tools/verify_catalog.py --strict` in the CI list. Page cap and missing or extra pages still fail.
