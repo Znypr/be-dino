@@ -292,7 +292,27 @@ function T.colorReveal(colors: any, genes: any, which: string?)
     -- BD-1036: a colour row that declares its rarity shows exactly that tier (the equal-split ladder puts Pink and Teal at 1.6%, which
     -- the percent cut-offs below would call Epic); rows without a rarity fall back to the cut-offs.
     local tier = (if type(row.rarity) == "string" then table.find(T.TierNames, row.rarity) else nil) or T.tier(pct)
-    return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+    -- BD-1069: `rgb` is the colour's OWN palette rgb (EggColors), never the shell tint after blending or Dirty: the chip swatch and the paint bucket use exactly it.
+    return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier], rgb = row.rgb, id = row.id}
+end
+-- BD-1069: the exact rgb a reveal names, as 0..255 numbers; nil when the reveal carries none (the caller keeps its fallback colour).
+function T.revealRgb(reveal: any): {number}?
+    if typeof(reveal) ~= "table" or typeof(reveal.rgb) ~= "table" then return nil end
+    local rgb = reveal.rgb
+    if type(rgb[1]) ~= "number" or type(rgb[2]) ~= "number" or type(rgb[3]) ~= "number" then return nil end
+    return {rgb[1], rgb[2], rgb[3]}
+end
+-- BD-1073: why "Skip the rest" stops on this egg, for the reveal card (the egg's own Rainbow / Astra look is gone once it hatched, and Shiny / BIG /
+-- event dinosaurs always stop it too). info = {conditionId, shiny, big, mutationName, failed}. Returns the short title, or nil when nothing makes it stop.
+T.StopLine = "Skip stops here"
+function T.stopReason(info: any): string?
+    if typeof(info) ~= "table" or info.failed == true then return nil end
+    if info.conditionId == "rainbow" then return "Rainbow egg!" end
+    if info.conditionId == "astra" then return "Astra egg!" end
+    if info.shiny == true then return "Shiny!" end
+    if info.big == true then return "BIG!" end
+    if type(info.mutationName) == "string" and info.mutationName ~= "" then return info.mutationName .. "!" end
+    return nil
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -> display name. The blank pattern is "Plain" (Common).
 function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -> string)
