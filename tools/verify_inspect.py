@@ -256,6 +256,10 @@ def check_wiring():
     assert 'InspectView.attach(a.dino' in hatch and 'surface = overlay' in hatch, 'hatch reveal uses InspectView on the tap catcher'
     assert re.search(r'if inspect and \(inspect :: InspectView\.Handle\)\.wasDrag\(\) then return end', hatch), 'a drag never advances the hatch'
     assert 'inspect.destroy()' in hatch, 'inspect handle is released with the egg'
+    # BD-1019 (docs/181): the drag surface is the tap catcher, which covers the card body only; the inspect hint and reset button live on the layer that
+    # does not sink taps, so turning the dino can never eat a tap meant for X, the end buttons or the dark backdrop.
+    assert 'uiParent = layer' in hatch and 'ModalClose.hatchZone(' in hatch, 'inspect hint and reset live on the non-Active layer'
+    assert 'uiParent = overlay' not in hatch, 'the inspect UI must not be parented to the tap catcher'
     assert 'Timeline.tap(state)' in hatch and 'overlay.Activated:Connect(onTap)' in hatch, 'tap gating intact'
     camera = read('src/shared/PreviewCamera.luau')
     assert 'InspectYaw' in camera and 'InspectZoom' in camera
