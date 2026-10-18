@@ -197,7 +197,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu", "ObjectiveSeen"} do
@@ -478,4 +478,46 @@ press(byName(screen, "Fuse")) runFor(.1)
 audited += audit()
 Menu.close()
 
-print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, unavailable fallback, paged list auto-filtered per tier, 6/3/2 tier tabs, tappable slots, Fill for me, collapsed filters, debounced odds chips, special highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")
+-- 5) BD-1019 close paths: X, a tap on the dark backdrop, Escape and gamepad B all close the menu and release the screen; the backdrop never
+-- interrupts a fusion being saved or the reveal; a key already used by something else (processed) does nothing.
+screen.AbsoluteSize = vec(1280, 720)
+local keys = Services.UserInputService.InputBegan
+local function pressKey(code, processed) keys:Fire({KeyCode = code}, processed == true) end
+local function xButton() for _, b in screen:GetDescendants() do if b.ClassName == "TextButton" and b.Text == "X" then return b end end end
+local backdrop = byName(screen, "FusionScrim")
+local function openMenu() Menu.open() runFor(8) assert(screen.Enabled and Menu.isOpen(), "menu opens") end
+local function assertClosed(why) assert(not screen.Enabled and not Menu.isOpen(), why) end
+assert(xButton() and xButton().Size.X.Offset >= 44 and xButton().Size.Y.Offset >= 44, "X is at least 44 px")
+openMenu() press(xButton()) assertClosed("X closes the menu")
+openMenu() press(backdrop) assertClosed("a tap on the dark backdrop closes the browse screen")
+openMenu() pressKey(Enum.KeyCode.Escape) assertClosed("Escape closes the menu")
+openMenu() pressKey(Enum.KeyCode.ButtonB) assertClosed("gamepad B closes the menu")
+openMenu() pressKey(Enum.KeyCode.ButtonB, true) assert(screen.Enabled, "a key something else already used does nothing")
+pressKey(Enum.KeyCode.Space) assert(screen.Enabled, "other keys do nothing")
+Menu.close() assertClosed("closed for the next step")
+openMenu() press(xButton()) assertClosed("the menu opens again after every kind of close")
+-- Confirm screen: the backdrop cancels (nothing is fused).
+openMenu() press(byName(screen, "AutoFill")) runFor(1) press(byName(screen, "Fuse")) runFor(.1)
+assert(has(screen, "All 6 dinos go away"), "confirm screen is up")
+local tokensBefore = #fuseTokens
+press(backdrop) assertClosed("a tap on the backdrop cancels the confirm screen")
+assert(#fuseTokens == tokensBefore, "closing the confirm screen fused nothing")
+-- Saving: the backdrop and Escape keep working as asked, but the backdrop alone never walks away from a fusion being committed.
+committed, dropNextFuse = nil, false
+local realInvoke = fusionRemote.InvokeServer
+fusionRemote.InvokeServer = function(self, payload) if payload.action == "fuse" then task.wait(30) return nil end return realInvoke(self, payload) end
+openMenu() press(byName(screen, "AutoFill")) runFor(1) press(byName(screen, "Fuse")) runFor(.1)
+press(byName(screen, "FuseNow")) runFor(.5)
+assert(has(screen, "please wait"), "the fusion is being saved")
+press(backdrop) assert(screen.Enabled, "the backdrop does not interrupt a fusion being saved")
+press(xButton()) assertClosed("X always closes, the fusion keeps saving in the background")
+fusionRemote.InvokeServer = realInvoke
+runFor(60)
+-- Reveal (the fusion saved while the menu was closed is shown on the next open): the backdrop does not cut the ceremony short; X does.
+openMenu()
+assert(byName(screen, "Skip") and byName(screen, "Skip").Parent, "the reveal is running")
+press(backdrop) assert(screen.Enabled, "the backdrop does not cut the reveal short")
+press(xButton()) assertClosed("X closes the reveal")
+openMenu() press(xButton()) assertClosed("the menu opens and closes again after a reveal")
+
+print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, close paths (X, backdrop, Escape, gamepad B), unavailable fallback, paged list auto-filtered per tier, 6/3/2 tier tabs, tappable slots, Fill for me, collapsed filters, debounced odds chips, special highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")
