@@ -263,6 +263,25 @@ class CliTests(unittest.TestCase):
         self.assertTrue((self.root / "docs/kanban/rows/BD-1234.md").exists())
 
 
+class CliBeforeTheCutover(unittest.TestCase):
+    """In an old checkout (the table is still in docs/07-kanban.md) the read commands work and set-status edits the table row."""
+
+    def test_list_show_and_set_status_on_the_old_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs").mkdir()
+            (root / "docs" / "07-kanban.md").write_bytes(crlf(MESSY).encode("utf-8"))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(kanban.main(["--root", str(root), "show", "BD-5"]), 0)
+                self.assertEqual(kanban.main(["--root", str(root), "set-status", "BD-5", "Review / test", "--note", "Built."]), 0)
+                self.assertEqual(kanban.main(["--root", str(root), "add", "--title", "x", "--priority", "P1"]), 2)
+            self.assertIn("Second table", out.getvalue())
+            raw = (root / "docs" / "07-kanban.md").read_bytes().decode("utf-8")
+            self.assertIn("| BD-005 | Review / test | P1 | Second table Built. | None |" + CR + LF, raw)
+            self.assertEqual(raw.count(CR + LF), raw.count(LF))
+
+
 class RowFileChecks(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -613,6 +632,81 @@ class RowFileMergesAfterTheCutover(CutoverBase):
         text = (wt / "docs" / "07-kanban.md").read_bytes().decode("utf-8")
         self.assertIn("- PR decision.", text)
         self.assertIn("- Main decision.", text)
+
+
+class ResyncForTheCutover(unittest.TestCase):
+    """The lead's one command: the cutover branch catches up with a main that is still in the old layout."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.env = Env(self.tmp.name, True)
+        self.addCleanup(self.env.restore_env)
+
+    def build(self, intro_change=None):
+        e = self.env
+        e.write("docs/07-kanban.md", kanban_text([row(i) for i in range(1, 6)]))
+        e.commit("old board")
+        e.git("push", "-q", "origin", "main")
+        e.start_branch("cut")
+        msg, rc = kmig.apply(e.dev)
+        self.assertEqual(rc, 0, msg)
+        e.write(kl.row_path("BD-60"), row(60, text="**Mine.**") + LF)  # a row that exists only in the cutover branch
+        e.commit("cutover")
+        e.git("checkout", "-q", "main")
+        board = kanban_text([row(1), row(2, "Done", "**Task 2.** shipped on main"), row(3), row(4), row(5), row(10, text="**Main new.**")])
+        if intro_change:
+            board = board.replace("Some intro text.", intro_change)
+        e.write("docs/07-kanban.md", board)
+        e.commit("main moves")
+        e.git("push", "-q", "origin", "main")
+        e.git("checkout", "-q", "cut")
+
+    def test_resync_merges_main_and_rereads_its_rows(self):
+        self.build(intro_change="Some intro text. Main words.")
+        msg, rc = kmig.resync(self.env.dev)
+        self.assertEqual(rc, 0, msg)
+        self.assertIn("committed", msg)
+        rows = kl.read_rows(self.env.dev)
+        self.assertIn("shipped on main", rows["BD-2"])
+        self.assertIn("BD-10", rows)
+        self.assertIn("BD-60", rows)                       # the branch's own new row is untouched
+        page = (self.env.dev / "docs" / "07-kanban.md").read_text(encoding="utf-8")
+        self.assertIn("Main words.", page)                 # main's newest page text
+        self.assertIsNone(re.search(r"(?m)^\| BD-", page))
+        self.assertEqual(len(self.env.git("log", "-1", "--format=%P").split()), 2, "a real merge commit")
+        self.assertEqual(self.env.git("status", "--porcelain"), "")
+        self.assertEqual(kl.check_rows_dir(self.env.dev), [])
+        msg, rc = kmig.resync(self.env.dev)                # second run: nothing left to do
+        self.assertEqual(rc, 0, msg)
+        self.assertIn("nothing to commit", msg)
+
+    def test_resync_refuses_a_dirty_tree(self):
+        self.build()
+        (self.env.dev / "docs" / "07-kanban.md").write_text("changed\n", encoding="utf-8")
+        msg, rc = kmig.resync(self.env.dev)
+        self.assertEqual(rc, 2)
+        self.assertIn("uncommitted", msg)
+
+    def test_resync_stops_and_undoes_the_merge_when_another_file_conflicts(self):
+        e = self.env
+        e.write("docs/notes.md", "one\n")
+        e.write("docs/07-kanban.md", kanban_text([row(1)]))
+        e.commit("old board")
+        e.git("push", "-q", "origin", "main")
+        e.start_branch("cut")
+        kmig.apply(e.dev)
+        e.write("docs/notes.md", "branch\n")
+        e.commit("cutover and notes")
+        e.git("checkout", "-q", "main")
+        e.write("docs/notes.md", "main\n")
+        e.commit("main notes")
+        e.git("push", "-q", "origin", "main")
+        e.git("checkout", "-q", "cut")
+        msg, rc = kmig.resync(e.dev)
+        self.assertEqual(rc, 1)
+        self.assertIn("docs/notes.md", msg)
+        self.assertEqual(e.git("status", "--porcelain"), "")
 
 
 class VerifyAfterTheCutover(unittest.TestCase):

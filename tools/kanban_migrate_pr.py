@@ -92,7 +92,9 @@ def replay(wt, mb, pr_ref, target_ref, label="the PR"):
     carries main's current pages (origin/main for a PR catching up, HEAD for a merge train). The merge may be
     in progress (uncommitted). Writes and stages the row files and docs/07-kanban.md. -> Replay. Raises NeedsHuman."""
     rep = Replay()
-    old_mb = kl.read_legacy_rows(legacy_text(wt, mb).decode("utf-8")) if mb else {}
+    if not mb:
+        raise NeedsHuman("this branch shares no history with main, so its row changes cannot be compared")
+    old_mb = kl.read_legacy_rows(legacy_text(wt, mb).decode("utf-8"))
     old_pr = kl.read_legacy_rows(legacy_text(wt, pr_ref).decode("utf-8"))
     current = {kl.number(k): (k, v) for k, v in kl.read_rows(wt).items()}
     old_by_n = {kl.number(k): v for k, v in old_mb.items()}

@@ -9,6 +9,8 @@
                                                     # same, but read the OLD table and prose from a git ref (use this at the
                                                     # cutover: it re-syncs with whatever main has right now)
 
+  python tools/kanban_migrate.py --resync           # in the cutover branch: fetch, merge origin/main, re-read rows from it, commit
+
 Idempotent: a second --apply changes nothing. If docs/07-kanban.md has no rows left it says "nothing to move".
 Row files hold the old row line unchanged (plus one newline, LF); nothing is reformatted. The 7 stray ` |` lines inside the
 old table (left over from edits) are dropped; they were not rows. Row ORDER is not stored: `python tools/kanban.py render`
@@ -17,6 +19,7 @@ sorts by number, and the old file was not in number order (nothing reads the ord
 import argparse
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -154,13 +157,50 @@ def apply(root, ref=None, write=True):
                len(rows) - written if write else 0, kl.LEGACY)), 0
 
 
+def resync(root, remote="origin", main_branch="main"):
+    """Cutover helper, run inside the branch that carries the cutover: fetch, merge origin/main (only docs/07-kanban.md may
+    conflict), re-read the newest rows from main, stage and commit. -> (message, exit code). Needs a clean working tree."""
+    root = Path(root)
+    ref = "%s/%s" % (remote, main_branch)
+    if kl.git(root, "status", "--porcelain", "--untracked-files=no").strip():
+        return "the working tree has uncommitted changes: commit or set them aside first", 2
+    kl.git(root, "fetch", remote, main_branch)
+    contained = subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", ref, "HEAD"], capture_output=True).returncode == 0
+    if not contained:
+        p = subprocess.run(["git", "-C", str(root), "merge", "--no-commit", "--no-ff", ref], capture_output=True)
+        unmerged = [l for l in kl.git(root, "diff", "--name-only", "--diff-filter=U").splitlines() if l]
+        other = [u for u in unmerged if u != kl.LEGACY]
+        if other or (p.returncode and not unmerged):
+            subprocess.run(["git", "-C", str(root), "merge", "--abort"], capture_output=True)
+            return ("the merge of %s needs a human (%s); nothing changed" % (ref, ", ".join(other) or p.stderr.decode("utf-8", "replace").strip())), 1
+    msg, rc = apply(root, ref, write=True)
+    if rc:
+        return msg, rc
+    kl.git(root, "add", "-A", "--", kl.LEGACY, "docs/kanban")
+    merging = (root / ".git").exists() and subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "-q", "--verify", "MERGE_HEAD"], capture_output=True).returncode == 0
+    if merging or kl.git(root, "diff", "--cached", "--name-only").strip():
+        kl.git(root, "commit", "-q", "-m",
+               "Cutover re-sync: merge %s, rows re-read from main\n\nDone with tools/kanban_migrate.py --resync (docs/191).\n\n"
+               "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" % ref)
+        msg += "; committed"
+    else:
+        msg += "; already up to date, nothing to commit"
+    return msg, 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--apply", action="store_true", help="write the row files, strip the table, write the CUTOVER marker")
     ap.add_argument("--verify", action="store_true", help="only prove the round trip (writes nothing)")
     ap.add_argument("--from-ref", metavar="REF", help="read the old docs/07-kanban.md from this git ref (for example origin/main)")
+    ap.add_argument("--resync", action="store_true", help="in the cutover branch: git fetch, merge origin/main, apply from it, commit")
     ap.add_argument("--root", default=str(ROOT), help="the checkout to work in (default: this one)")
     a = ap.parse_args(argv)
+    if a.resync:
+        msg, rc = resync(a.root)
+        print(msg)
+        return rc
     msg, rc = apply(a.root, a.from_ref, write=a.apply and not a.verify)
     print(msg)
     return rc
