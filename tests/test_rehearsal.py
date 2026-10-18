@@ -179,6 +179,16 @@ class OverlayTests(unittest.TestCase):
         text, errors, overrides = run_rehearsal.overlay_config(CONFIG, "none")
         self.assertEqual((text, errors, overrides), (CONFIG, [], {}))
 
+    def test_profile_default_is_the_committed_config_and_runs_as_none(self):
+        # Sweep 2 (docs/177): `--profile default` used to set BD_REHEARSAL=default, which made verify_world_art and verify_spawn fail.
+        # It is only an alias while the default profile overrides nothing, so prove that here.
+        text, errors, overrides = run_rehearsal.overlay_config(CONFIG, "default")
+        self.assertEqual(errors, [])
+        self.assertEqual(overrides, {}, "the default profile changed a value: `--profile default` can no longer be an alias of `none`")
+        self.assertEqual(run_rehearsal.effective_profile("default"), "none")
+        self.assertEqual(run_rehearsal.effective_profile("playtest"), "playtest")
+        self.assertEqual(run_rehearsal.effective_profile("all-on-rehearsal"), "all-on-rehearsal")
+
     def test_a_config_without_the_expected_shape_is_refused(self):
         _text, errors, _ = run_rehearsal.overlay_config(CONFIG.replace("return table.freeze({", "return ({", 1), PROFILE)
         self.assertTrue(errors)
