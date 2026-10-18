@@ -50,18 +50,21 @@ return table.freeze({
         {400,1500,5200,1900,1000},
     },
     -- BD-184 / docs/88: colour weights out of EggColorWeightScale (10,000,000 = 100%): tier chances 80/16/3.2/0.64/0.128/0.0256
-    -- (RarityCurve, six tiers renormalised) split inside a tier by the old weights. Verified by tools/verify_rarity.py.
+    -- (RarityCurve, six tiers renormalised). BD-1036 (docs/186 s5): split EQUALLY inside a tier (Cream = Blue, Pink = Teal, Red =
+    -- Black), the old unequal split is gone. Ids, rgb, names and rarity strings are unchanged, so every stored colour id is valid.
+    -- Per slot: Common 80.005%, Uncommon 16.001%, Rare 3.200%, Epic 0.640%, Legendary 0.128%, Mythic 0.0256%.
+    -- Verified by tools/verify_rarity.py (strictly decreasing, adjacent tier ratio in band, equal split, total = scale).
     EggColorWeightScale=10000000,
     EggColors={
-        {id="white",name="Cream",rarity="Common",weight=5263496,rgb={247,234,196}},
-        {id="blue",name="Blue",rarity="Common",weight=2737017,rgb={36,132,211}},
-        {id="green",name="Green",rarity="Uncommon",weight=1600102,rgb={29,175,75}},
-        {id="teal",name="Teal",rarity="Rare",weight=142231,rgb={22,170,151}},
-        {id="pink",name="Pink",rarity="Rare",weight=177789,rgb={215,72,147}},
+        {id="white",name="Cream",rarity="Common",weight=4000256,rgb={247,234,196}},
+        {id="blue",name="Blue",rarity="Common",weight=4000256,rgb={36,132,211}},
+        {id="green",name="Green",rarity="Uncommon",weight=1600103,rgb={29,175,75}},
+        {id="teal",name="Teal",rarity="Rare",weight=160010,rgb={22,170,151}},
+        {id="pink",name="Pink",rarity="Rare",weight=160010,rgb={215,72,147}},
         {id="gold",name="Amber",rarity="Epic",weight=64004,rgb={241,160,36}},
         {id="violet",name="Purple",rarity="Legendary",weight=12801,rgb={158,80,203}},
-        {id="red",name="Red",rarity="Mythic",weight=2048,rgb={237,44,33}},
-        {id="black",name="Black",rarity="Mythic",weight=512,rgb={29,34,41}},
+        {id="red",name="Red",rarity="Mythic",weight=1280,rgb={237,44,33}},
+        {id="black",name="Black",rarity="Mythic",weight=1280,rgb={29,34,41}},
     },
     -- BD-1033 (docs/186 s4, LEAD decision in docs/115): the 8 patterns get a tier and unequal weights. ONE table, ids in the
     -- order of the old list (seeded rolls stay deterministic, every stored patternId stays valid). Five tiers of the shared

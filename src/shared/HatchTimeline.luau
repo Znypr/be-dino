@@ -128,10 +128,10 @@ function T.skipAll(state): string
     return "ignore"
 end
 
--- Reveal skipping: the player's chosen rarities, or every rarity after "Skip all". Shiny, BIG, event
--- mutations and Rainbow/Astra are never skipped (RevealSkip.isNotable).
+-- Reveal skipping: the player's chosen rarities, or every rarity but Legendary after "Skip all" (BD-1057). Shiny, BIG, event
+-- mutations, Rainbow/Astra and secrets are never skipped (RevealSkip.isNotable).
 function T.shouldSkip(selection: any, rarity: number, outcome: any, skipAll: boolean): boolean
-    return RevealSkip.shouldSkip(if skipAll then RevealSkip.Rarities else selection, rarity, outcome)
+    return RevealSkip.shouldSkip(if skipAll then RevealSkip.OpenAllRarities else selection, rarity, outcome)
 end
 
 -- Tap hint copy. remaining = eggs still to open after this one.
@@ -289,7 +289,9 @@ function T.colorReveal(colors: any, genes: any, which: string?)
     if not a or total <= 0 then return nil end
     local row = if which == "secondary" then (find(genes.secondaryColorId) or a) else a
     local pct = 100 * row.weight / total
-    local tier = T.tier(pct)
+    -- BD-1036: a colour row that declares its rarity shows exactly that tier (the equal-split ladder puts Pink and Teal at 1.6%, which
+    -- the percent cut-offs below would call Epic); rows without a rarity fall back to the cut-offs.
+    local tier = (if type(row.rarity) == "string" then table.find(T.TierNames, row.rarity) else nil) or T.tier(pct)
     return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -> display name. The blank pattern is "Plain" (Common).
