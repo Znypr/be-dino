@@ -560,3 +560,21 @@ Go / no-go: the five features are now seen working in Studio, one player. The tw
 ## Studio acceptance round 3, 2026-10-18: BLOCKED (BD-1015)
 
 Label: **STUDIO EVIDENCE, very small; no PASS or FAIL.** Appended; no history edited. Playtest build from `origin/main` `b14a52e4`, built, verified (`verify_release` passes, 40 keys), opened as `playtest-build3.rbxlx`; game viewport **1156 x 793**. The Studio mouse, keyboard and console tools and a server-side change of the secret chance were refused by the permission classifier and not retried, so the re-check of BD-1000 to BD-1003, the seven secret dinos and the 5-minute pace run (BD-575) were NOT done. Details, the refused calls and an unexplained pre-existing 55-egg run in the Play session: [evidence](evidence/2026-10-18-studio-acceptance-r3/README.md). New row: BD-1015.
+
+## Studio acceptance round 3b, 2026-10-18 (BD-575, BD-1000 to BD-1003, BD-1015): the tools work now
+
+Label: **STUDIO EVIDENCE, desktop Studio, one player, unpublished copy, viewport 1156 x 793 for 85 minutes and then 296 x 304.** Appended; no history edited. Playtest build from `origin/main` `84001c99`, `verify_release --profile playtest` passed (40 keys). Round 3's refusals did not come back: the mouse, keyboard, console, `execute_luau`, `start_stop_play`, `character_navigation` and `screen_capture` tools all ran; no rule, flag or chance was changed. Full table, numbers, telemetry lines and pictures 175 to 194: [evidence/2026-10-18-studio-acceptance-r3b/README.md](evidence/2026-10-18-studio-acceptance-r3b/README.md).
+
+| Item | Result | Observation |
+| --- | --- | --- |
+| BD-1000 plain Compy equip, toast whole | PASS | all five Compy cards equip exactly (Plain gives `EquippedGenesJson` null), "Already equipped" is a calm toast, words whole |
+| BD-1001 Skip the rest and cracked eggs | PASS for cracked eggs; "one tap" NOT met | 13 eggs: "6 / ... 3 eggs did not hatch" after one tap; 150 eggs: "132 / ... 57 eggs did not hatch"; the splat still plays one by one; but about 20 stops on Rainbow, Astra and BIG eggs (BD-1056) |
+| BD-1002 Golden Drumstick toast | PASS | "Golden Drumstick!" and "A giant tasty snack!", nothing for berries |
+| BD-1003 fusion roll marker | PASS by numbers | two 14 x 9 px notches on the strip's top and bottom edge, labels centred; picture at 1156 x 793 missing |
+| X, tap outside, Escape | FAIL on the hatch reveal (BD-1054) | X moves to the next egg or does nothing; works on Go home, Dino Index, Settings, Eggs, summary |
+| Run Complete "OPEN EGGS" | FAIL (BD-1055) | only "Follow the glow"; the card stays open |
+| Pace run (BD-575, a script at about 60 percent speed, not a person) | 322 s, 570 food, 13 eggs, 61 s Rain, +31 crystals, +1 nest | 81 to 95 percent of the docs/119 target; telemetry `run_end` carries `food_raw`, `eggs_food`, `weather_s`; a x9.5 run stopped at the 150-egg cap |
+| Nine secret dinos | NOT TESTED | none hatched in 163 eggs, nothing forced; by source a skipped batch would open a secret silently (BD-1057) |
+| Tools and window | note (BD-1058) | a loop without a wait froze Studio; after 85 minutes the window shrank, ran at 15 frames and ignored clicks |
+
+Go / no-go: BD-1000 and BD-1002 can close; BD-1001 and BD-1003 stay in Review / test (see their rows); the hatch X and the Run Complete OPEN EGGS button are the two things a friend would hit first (P1). New rows: BD-1054 to BD-1058.
