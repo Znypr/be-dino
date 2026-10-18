@@ -14,6 +14,7 @@ local Rules = require(Shared:WaitForChild("HubTravelClientRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
 local Copy = require(Shared:WaitForChild("HubSignCopy"))
+local ModalClose = require(script.Parent:WaitForChild("ModalClose")) -- BD-1083: which control is on top of a tap
 local Guide = require(script.Parent:WaitForChild("HubGuideClient")) -- BD-289: moss trail for "Teleport to shops" OFF (no-op while the flag is off)
 local WalkUp = require(script.Parent:WaitForChild("HubWalkUpClient")) -- BD-289: sign prompts + pad dwell (no-op while the flag is off)
 local GateBar = require(script.Parent:WaitForChild("HubGateClient")) -- BD-290: "Leaving..." bar at the Island Gate (no-op while the flag is off)
@@ -167,7 +168,11 @@ local function routeTap(input: InputObject)
     end
     local c = chip
     if c and c.Visible then table.insert(targets, {kind = "chip", x = c.AbsolutePosition.X, y = c.AbsolutePosition.Y, w = c.AbsoluteSize.X, h = c.AbsoluteSize.Y}) end
-    local hit = Rules.routeScrimTap(true, true, px, py, targets)
+    -- BD-1083: only a tap on the bare dark backdrop is routed. A tap on a button of the menu (an Index tab at 500 px lies over the EGGS rail button)
+    -- is that button's own; this runs from a raw input event and used to route by position alone.
+    local playerGui = (ctx.gui :: any).Parent
+    local onBackdrop = playerGui ~= nil and ModalClose.onBackdrop(playerGui, px, py)
+    local hit = Rules.routeScrimTap(true, true, px, py, targets, onBackdrop)
     if hit == nil then return end
     task.delay(Rules.SettleSeconds, function()
         if busy then return end

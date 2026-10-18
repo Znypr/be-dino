@@ -129,16 +129,20 @@ local T={
  {kind="rail",destination="auras",x=14,y=224,w=172,h=54,enabled=false},
  {kind="chip",x=400,y=700,w=240,h=48},
 }
-local hit=R.routeScrimTap(true,true,50,120,T)
+local hit=R.routeScrimTap(true,true,50,120,T,true)
 assert(hit and hit.kind=="rail" and hit.destination=="fusion","tap on FUSION routes to fusion")
-hit=R.routeScrimTap(true,true,50,180,T) assert(hit and hit.destination=="eggs")
-hit=R.routeScrimTap(true,true,500,720,T) assert(hit and hit.kind=="chip","tap on the chip routes to the heart")
-assert(R.routeScrimTap(true,true,50,240,T)==nil,"a dimmed (in a run) rail button is not routed")
-assert(R.routeScrimTap(true,true,600,300,T)==nil,"a tap on the panel / empty scrim stays the scrim's")
-assert(R.routeScrimTap(true,true,14,100,T)~=nil and R.routeScrimTap(true,true,186,100,T)==nil and R.routeScrimTap(true,true,100,154,T)==nil,"rect edges: left/top inclusive, right/bottom exclusive")
-assert(R.routeScrimTap(true,false,50,120,T)==nil,"no scrim: the button handles its own tap, never routed twice")
-assert(R.routeScrimTap(false,true,50,120,T)==nil and R.routeScrimTap(nil,true,50,120,T)==nil,"flag off: never routed")
-assert(R.routeScrimTap(true,true,"x",120,T)==nil and R.routeScrimTap(true,true,50,120,nil)==nil and R.routeScrimTap(true,true,50,120,{5,"a"})==nil,"junk answers nil")
+hit=R.routeScrimTap(true,true,50,180,T,true) assert(hit and hit.destination=="eggs")
+hit=R.routeScrimTap(true,true,500,720,T,true) assert(hit and hit.kind=="chip","tap on the chip routes to the heart")
+assert(R.routeScrimTap(true,true,50,240,T,true)==nil,"a dimmed (in a run) rail button is not routed")
+assert(R.routeScrimTap(true,true,600,300,T,true)==nil,"a tap on the panel / empty scrim stays the scrim's")
+assert(R.routeScrimTap(true,true,14,100,T,true)~=nil and R.routeScrimTap(true,true,186,100,T,true)==nil and R.routeScrimTap(true,true,100,154,T,true)==nil,"rect edges: left/top inclusive, right/bottom exclusive")
+assert(R.routeScrimTap(true,false,50,120,T,true)==nil,"no scrim: the button handles its own tap, never routed twice")
+assert(R.routeScrimTap(false,true,50,120,T,true)==nil and R.routeScrimTap(nil,true,50,120,T,true)==nil,"flag off: never routed")
+assert(R.routeScrimTap(true,true,"x",120,T,true)==nil and R.routeScrimTap(true,true,50,120,nil,true)==nil and R.routeScrimTap(true,true,50,120,{5,"a"},true)==nil,"junk answers nil")
+-- BD-1083: only a tap on the bare dark backdrop is routed. A tap on a button of the menu (an Index tab over the EGGS rail button) is that button's own.
+assert(R.routeScrimTap(true,true,50,120,T,false)==nil,"BD-1083: a tap on a menu button above a rail button is not routed")
+assert(R.routeScrimTap(true,true,50,120,T,nil)==nil and R.routeScrimTap(true,true,50,120,T)==nil and R.routeScrimTap(true,true,50,120,T,"yes")==nil,"BD-1083: no answer = not routed")
+assert(R.routeScrimTap(true,true,500,720,T,false)==nil,"BD-1083: the chip is not routed under a menu button either")
 assert(R.SettleSeconds>0 and R.SettleSeconds<0.18,"settle wait is short")
 print("hub travel client: mapping, flag-off identity, dimming, toggle, copy, fade, chip, setting, scrim routing ok")
 '''
@@ -164,6 +168,7 @@ def static_checks():
         assert banned not in rules, 'HubTravelClientRules stays pure: ' + banned
     client = (ROOT / 'src/client/HubTravelClient.luau').read_text()
     assert 'UserInputService.InputEnded:Connect(routeTap)' in client and 'Rules.routeScrimTap(' in client, 'BD-382 scrim tap routing wired'
+    assert 'ModalClose.onBackdrop(' in client and 'Rules.routeScrimTap(true, true, px, py, targets, onBackdrop)' in client, 'BD-1083: the routing asks what is on top of the tap'
     assert 'BeDinoFusionUI' in client and 'ModalScrim' in client and 'FusionMenu' in client, 'BD-382 covers ModalScrim and the Fusion ScreenGui'
     attach = client[client.index('function Client.attach'):]
     assert 'Config.CaveHub ~= true' in attach.splitlines()[1], 'attach is a no-op with the flag off'

@@ -112,6 +112,15 @@ function M.topAt(root: Instance, x: number, y: number): GuiObject?
     return best
 end
 
+-- BD-1083: is the topmost thing that takes a tap at (x, y) the dark backdrop of a menu (Bootstrap's ModalScrim or the Fusion menu's FusionScrim)
+-- and nothing of the menu itself (a tab, X, a card, a button)? HubTravelClient asks this before it turns a raw tap into "close the menu and travel":
+-- the raw input event does not know that the Index tab sits on top of the rail button underneath it (owner QA 2026-10-18, picture 350).
+M.BackdropNames = {ModalScrim = true, FusionScrim = true}
+function M.onBackdrop(root: Instance, x: number, y: number): boolean
+    local top = M.topAt(root, x, y)
+    return top ~= nil and M.BackdropNames[top.Name] == true
+end
+
 -- Who covers the centre of `target`? nil = the target itself (or something inside it) gets the tap, i.e. it is reachable.
 function M.coverOf(root: Instance, target: GuiObject): GuiObject?
     local r = rectOf(target)
