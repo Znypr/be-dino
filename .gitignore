@@ -40,3 +40,9 @@ build/pipeline-test/
 
 # tools/build_catalog.py --public writes the player-safe catalogue here (BD-1052); docs/catalog is the committed team copy.
 build/catalog-public/
+
+# Third-party reference screenshots are LOCAL ONLY (docs/202): the repo is public. Folder lives outside the repo; these patterns catch a stray copy.
+be-dino-reference-shots/
+**/be-dino-reference-shots/
+docs/reference/third-party/
+Screenshot 20*.png

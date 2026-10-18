@@ -30,7 +30,7 @@ Implemented means coded and packaged; every row still requires a Roblox Studio i
 
 ## Component and asset checklist
 
-Original reusable PNG icons: dinosaur collection, prehistoric egg, amber crystals, sanctuary hut, footprint trophy, Gold fusion, safety shield. Original component exports: dark panel, coloured header bars, action buttons, rarity cards, close control, progress frame, radial reward burst. Screenshots are archived separately under `resources/references/steal-an-egg`, never packaged into the place.
+Original reusable PNG icons: dinosaur collection, prehistoric egg, amber crystals, sanctuary hut, footprint trophy, Gold fusion, safety shield. Original component exports: dark panel, coloured header bars, action buttons, rarity cards, close control, progress frame, radial reward burst. Third-party reference screenshots are kept on the owner's PC only (docs/202), never in the repository and never packaged into the place.
 
 Runtime UI uses native GUI borders, gradients, patterned layers, FredokaOne outlined text, responsive scales, hover/press tweens, spring entrance, blur and real ViewportFrames. PNG icon art is compiled into a small merged 32px GUI tile representation for permission-free local preview. Full-resolution PNGs are provided for production Roblox image uploads; set logical `UITheme.ImageIds` to use crisp uploaded artwork instead of tiles.
 
