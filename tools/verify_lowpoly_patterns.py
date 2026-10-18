@@ -186,8 +186,9 @@ def check_key():
         assert 'LowPoly.applyTier' in (ROOT / path).read_text(encoding='utf-8'), f"{path} must use the shared tier path"
     config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
     assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
-    genetics = (ROOT / 'src/shared/EggGenetics.luau').read_text(encoding='utf-8')
-    ids = re.findall(r'"(\d\d_\w+)"', re.search(r'Genetics\.Patterns=\{([^}]*)\}', genetics).group(1))
+    config_text = (ROOT / 'src/shared/ProgressionConfig.luau').read_text(encoding='utf-8')
+    ids = re.findall(r'id="(\d\d_\w+)"', re.search(r'EggPatterns=\{(.*?)\n    \},', config_text, re.S).group(1))  # BD-1033: one table
+    assert len(ids) == 8, ids
     pattern = (ROOT / 'src/shared/LowPolyPattern.luau').read_text(encoding='utf-8')
     for pid in ids:
         assert pid in pattern, f"LowPolyPattern misses gene pattern {pid}"

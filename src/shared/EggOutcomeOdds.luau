@@ -40,6 +40,11 @@ end
 function Odds.patterns()
     return Genetics.Patterns or {"legacy"}
 end
+-- BD-1033: chance of one pattern id (weighted table); uniform 1/N when the table has no entry (legacy / mocked Genetics).
+function Odds.patternChance(id: string): number
+    local chance=if Genetics.patternChance then Genetics.patternChance(id) else nil
+    return chance or 1/#Odds.patterns()
+end
 function Odds.catalog(level: number,filters)
     filters=filters or {}
     local tier=math.clamp(level,0,#Progression.ConditionWeights-1)
@@ -92,7 +97,7 @@ function Odds.catalog(level: number,filters)
         local condition=conditions[take(#conditions)]
         local probability=condition.probability*sp.weight/speciesTotal*quantity.weight/copiesTotal
             *pair.a.weight/colorTotal*pair.b.weight/colorTotal
-            *Odds.shareProbability(pair.a.id,pair.b.id,share)/#Odds.patterns()
+            *Odds.shareProbability(pair.a.id,pair.b.id,share)*Odds.patternChance(pattern)
             *(if big then Config.BigChance else 1-Config.BigChance)
         return {failed=false,probability=probability,speciesId=sp.speciesId,count=quantity.count,
             conditionId=condition.row.id,conditionName=condition.row.name,stats=condition.row.stats,
