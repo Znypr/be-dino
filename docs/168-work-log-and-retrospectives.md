@@ -150,6 +150,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1088 slim Bootstrap.client.luau: shop screens to ShopScreens.luau, toast stack to Toasts.luau, ceilings lowered | worker | #528 | 150.0 | 110 | - | good | - | other: first code comments cited a guessed row number (BD-1020) before the real BD-1088 was reserved; fixed in PR 2 | reserve the BD id before writing comments that cite it |
 | 2026-10-18 | Studio round 5: verify the merges of 2026-10-18 (hatch polish, goals, food, gene boost) | worker | - | 75.0 | 190 | - | ok | - | other: mouse tool wants GUI coordinates, first clicks hit the backdrop and I chased a false bug for about 15 min | mouse tool coordinates are AbsolutePosition space, not screenshot pixels (brief: docs/197-studio-round5-verification.md) |
 | 2026-10-18 | BD-1096 settle guard (Ending stuck after telemetry script timeout) | worker | - | 60.0 | - | - | good | - | - | Post-commit hooks must never run unguarded on the settle thread |
+| 2026-10-18 | Studio round 6: shop, potion shop, toasts check (BD-1089) | worker | #536 | 45.0 | 110 | - | ok | - | studio-window | mouse tool takes GUI coordinates; rail buttons need the character within 10 studs of the station; wrap-up cut the small-window part |
 <!-- retro-table:end -->
 
 ## 6. Open items
