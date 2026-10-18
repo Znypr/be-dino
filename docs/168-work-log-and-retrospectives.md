@@ -107,6 +107,19 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | Lead: ran verify_kanban_merge before committing | lead | - | - | - | - | rework | 1 | other: verifier run before committing | Commit first, then run verify_kanban_merge. (brief: docs/160 section 3 (numbers and the kanban)) |
 | 2026-10-18 | Lead: doc-number collisions between parallel agents | lead | - | - | - | - | rework | 1 | doc-number-collision: two agents took the same docs number | Get numbers from the tool, never by eye. (tool: tools/next_bd_id.py --doc) |
 | 2026-10-18 | merge-train tool | lead | - | - | - | - | good | - | ci-red: serial merges restart CI for every waiting PR | serial merges restart CI N times; batch with one CI run (tool: tools/merge_train.py) |
+| 2026-10-18 | Telemetry gaps (BD-649..653) | worker | #474 | 45.7 | 166 | 291.0 | good | - | conflict: BD-617 removed the handler 474 edited | PRs touching the same function conflict even without kanban; merge train caught it (tool: tools/merge_train.py) |
+| 2026-10-18 | Remove old fusion screen (BD-617) | worker | #473 | 30.9 | 83 | 215.0 | ok | - | stacked-pr: based on 466, merged into its branch | stack only with the lead's ok (brief: docs/160) |
+| 2026-10-18 | Owner answers: T-Rex size, phone weather, V3 Compy | worker | #475 | 26.4 | 86 | 273.0 | good | - | stacked-pr: stacked under 471 | closing the stacked PR needed by hand |
+| 2026-10-18 | Studio acceptance round 1 (BD-663) | worker | #472 | 29.6 | 241 | 325.0 | good | 1 | studio-window: could not open a place; lead launched Studio with the file as argument, tool-missing: viewport 296x304 | launch Studio with the .rbxlx as an argument; owner maximises the window (brief: docs/160) |
+| 2026-10-18 | Cockatoo pipeline run (BD-659/621) | worker | #470 | 12.9 | 77 | 214.0 | good | - | - | rig and animation do not survive the API upload; use parts + joints + Luau animation (tool: tools/blender_export_roblox.py) |
+| 2026-10-18 | Cockatoo generation rounds (BD-621) | worker | #477 | 21.5 | 132 | 195.0 | ok | - | - | generated meshes plateau around 6/10 for legs: budget the generations (11) and decide early |
+| 2026-10-18 | Decisions dashboard (BD-661) | worker | #469 | 6.4 | 50 | 228.0 | good | - | - | pictures plus one-click answers beat chat questions |
+| 2026-10-18 | Merge train tool (BD-993) | worker | #478 | 9.0 | 28 | 128.0 | good | - | - |  (tool: tools/merge_train.py) |
+| 2026-10-18 | Calmer sounds (BD-166) | worker | #479 | 8.0 | 43 | 160.0 | good | - | - | audio tool lets the lead judge loudness/harshness without ears (tool: tools/audio_report.py) |
+| 2026-10-18 | Kid-friendly text (BD-998) | worker | #480 | 28.6 | 120 | 275.0 | ok | 1 | conflict: Bootstrap edits vs the removal in the train | hold auto-merge on PRs that touch the same big file as a train |
+| 2026-10-18 | Lead: misread GitHub UTC times as 90 min without merges | lead | - | - | - | - | ok | - | unverified-claim: time zones | convert GitHub times (UTC) before saying how long |
+| 2026-10-18 | Lead: committed leftover conflict markers | lead | - | 5.0 | - | - | rework | 1 | unverified-claim: assumed the regex worked | check for markers before every commit; CI check being built (tool: tools/verify_no_conflict_markers.py) |
+| 2026-10-18 | Lead: both-sides-edited kanban row lost main notes | lead | - | 15.0 | - | - | rework | 1 | conflict: BD-621 row edited on main and in the train | merge helpers must merge both texts, not keep one (tool: tools/kanban_merge_lib.py) |
 <!-- retro-table:end -->
 
 ## 6. Open items

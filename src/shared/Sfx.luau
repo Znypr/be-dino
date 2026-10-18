@@ -9,7 +9,8 @@ Sfx.Sounds = {
     hatch_crack = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .12},
     hatch_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
     hatch_rare = {id = "rbxassetid://100769608611671", volume = .7, rate = 1, gap = .2},
-    hatch_legendary = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
+    -- BD-166 (docs/161): loud outlier in the audio report (+5.7 LU over the pack median); .85 -> .7. The reveal ladder below is unchanged.
+    hatch_legendary = {id = "rbxassetid://109331854464968", volume = .7, rate = 1, gap = .2},
     -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound. BD-437 ladder: the five reveal stings step up in pitch
     -- (rate .92 .. 1.12) and volume (.5 .. .9); Common/Uncommon and Epic/Legendary share an asset, so pitch + volume + layers
     -- (SfxRules.RevealLayers) carry the ladder until real stings exist (docs/120).
@@ -21,7 +22,9 @@ Sfx.Sounds = {
     hatch_reveal_rare = {id = "rbxassetid://100769608611671", volume = .72, rate = 1.04, gap = .2},
     hatch_reveal_epic = {id = "rbxassetid://109331854464968", volume = .82, rate = 1.06, gap = .2},
     hatch_reveal_legendary = {id = "rbxassetid://109331854464968", volume = .9, rate = 1.12, gap = .2},
-    shiny_bang = {id = "rbxassetid://124365194004947", volume = .8, rate = 1, gap = .3},
+    -- BD-166 (docs/161): the harshest file in the pack (harshness 98, all energy above 2 kHz). Volume .8 -> .5 as a stopgap; the real fix is the
+    -- re-rendered shiny_bang_soft.wav (docs/evidence/2026-10-18-audio-fix), which the owner uploads after listening (kanban BD-997).
+    shiny_bang = {id = "rbxassetid://124365194004947", volume = .5, rate = 1, gap = .3},
     big_thud = {id = "rbxassetid://88666885925372", volume = .8, rate = 1, gap = .3},
     pickup = {id = "rbxassetid://97315544055472", volume = .35, rate = 1, gap = .06},
     pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
@@ -29,10 +32,13 @@ Sfx.Sounds = {
     run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
     -- BD-166: run end reuses the short soft run_start chime, lower and slightly slower; the sharp 1.1 s 3-note run_end sound is retired from play.
     run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5, len = .6},
-    shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
+    -- BD-166 (docs/161): the sharpest, loudest file (harshness 60). Rate .75 = about 5 semitones lower and a bit slower. The cut above 5 kHz and the
+    -- 10 ms fade-in need a re-rendered file (shop_buy_soft.wav, kanban BD-997; Sfx has no fade or EQ). When that file is uploaded, set rate back to 1.
+    shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = .75, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
     weather_start = {id = "rbxassetid://120619985059497", volume = .2, rate = 1, gap = 1},
-    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5, len = 1.5},
+    -- BD-166 (docs/161): was the loudest automatic cue at run end (7 LU above run_end); .4 -> .3 is about 2.5 LU quieter, back to the pack median.
+    level_up = {id = "rbxassetid://135894580270926", volume = .3, rate = .95, gap = .5, len = 1.5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
     rare_hatch_fanfare = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
