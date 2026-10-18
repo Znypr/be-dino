@@ -1,8 +1,8 @@
 --!strict
 -- BD-1110 / docs/160 s10: the Dino Index screen ("collection") and the dino details screen ("detail", the DinoIndexPanels version and the
 -- older fallback) were inline in Bootstrap's render function. They live here now, code unchanged. Bootstrap calls attach once with its
--- screen helpers, then render(name) for every name in DinoIndexScreens.names. The tab bar is IndexTabs, the details panels are DinoIndexPanels
--- (they stay separate modules); this module only draws the cards, the progress bar and the fallback details. The selected species
+-- screen helpers, then render(name) for every name in DinoIndexScreens.names. The Patterns and Colours tabs and the details panels
+-- (DinoIndexPanels) stay separate modules; this module only draws the cards, the progress bar and the fallback details. The selected species
 -- (which dino the details show) is kept here, nobody else in Bootstrap reads it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
