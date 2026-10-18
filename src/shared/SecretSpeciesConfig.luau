@@ -35,12 +35,12 @@ Secret.EligibleOrigins = table.freeze({ run = true, nest = true })
 -- ScaleLadder entries (verify_secret_species checks the two agree).
 Secret.Order = table.freeze({ "chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus" })
 Secret.Species = {
-    chickosaurus = { id = "chickosaurus", name = "Chickosaurus", secret = true, class = "Ground", weight = 20, assetId = 0 },
-    pigeon = { id = "pigeon", name = "Pigeon", secret = true, class = "Ground", weight = 20, assetId = 0 },
-    dodo = { id = "dodo", name = "Dodo", secret = true, class = "Ground", weight = 14, assetId = 0 },
-    duck = { id = "duck", name = "Duck", secret = true, class = "Ground", weight = 18, assetId = 0 },
-    penguin = { id = "penguin", name = "Penguin", secret = true, class = "Water", weight = 12, assetId = 0 },
-    budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 0 },
+    chickosaurus = { id = "chickosaurus", name = "Chickosaurus", secret = true, class = "Ground", weight = 20, assetId = 108391746824463 },
+    pigeon = { id = "pigeon", name = "Pigeon", secret = true, class = "Ground", weight = 20, assetId = 83982208995212 },
+    dodo = { id = "dodo", name = "Dodo", secret = true, class = "Ground", weight = 14, assetId = 128146035116312 },
+    duck = { id = "duck", name = "Duck", secret = true, class = "Ground", weight = 18, assetId = 129901658996389 },
+    penguin = { id = "penguin", name = "Penguin", secret = true, class = "Water", weight = 12, assetId = 120950430829492 },
+    budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 107910518074360 },
     foxosaurus = { id = "foxosaurus", name = "Foxosaurus", secret = true, class = "Ground", weight = 6, assetId = 112996440434481 },
 }
 
