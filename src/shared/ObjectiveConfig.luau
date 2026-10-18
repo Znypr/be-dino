@@ -5,10 +5,17 @@
 -- never random items, never eggs, nests or species. The whole feature is behind Config.ObjectivesEnabled (false in every
 -- committed build, pinned by tools/release_profiles.py). Verified by tools/verify_objectives.py.
 local Catalogue = {
-    -- Tutorial: ordered, one-time, one shown at a time (UI shows the first unclaimed). Total 160 Crystals (docs/66).
+    -- Tutorial: ordered, one-time, one shown at a time (UI shows the first unclaimed). Total 210 Crystals (docs/66; 160 + the BD-1041 goals).
     {id = "T1", group = "tutorial", name = "Eat 10 food", event = "food_eaten", goal = 10, reward = {crystals = 10}},
     {id = "T2", group = "tutorial", name = "Finish your first run", event = "run_end", goal = 1, reward = {crystals = 20}},
     {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}, note = "Cracked eggs count too"}, -- OB3 (docs/115): a failed Cracked egg counts as opened
+    -- BD-1041 (docs/186 s7): the starter goals of the collection hunt. A `total = true` row listens for an event whose value is the player's
+    -- running total (the server counts the finds, ObjectiveService.syncFinds); progress is the highest total seen, never a sum.
+    -- PROVISIONAL rewards (docs/115), the same size as the neighbours: 15 / 15 / 20 = 50 Crystals. The last goal's number is the count of
+    -- Common rows in ProgressionConfig.EggPatterns (tools/verify_objectives.py fails if the two ever differ).
+    {id = "T10", group = "tutorial", name = "Find 3 patterns", event = "patterns_found", total = true, goal = 3, reward = {crystals = 15}},
+    {id = "T11", group = "tutorial", name = "Find 3 colours", event = "colours_found", total = true, goal = 3, reward = {crystals = 15}},
+    {id = "T12", group = "tutorial", name = "Find all Common patterns", event = "common_patterns_found", total = true, goal = 3, reward = {crystals = 20}},
     {id = "T4", group = "tutorial", name = "Equip a dino", event = "dino_equipped", goal = 1, reward = {crystals = 10}},
     {id = "T5", group = "tutorial", name = "Use leap once", event = "leap_used", goal = 1, reward = {crystals = 10}},
     {id = "T6", group = "tutorial", name = "Buy a potion", event = "potion_bought", goal = 1, reward = {crystals = 25}},
@@ -41,7 +48,7 @@ return table.freeze({
     EventKinds = table.freeze({
         food_eaten = true, run_end = true, egg_hatched = true, dino_equipped = true, leap_used = true, potion_bought = true,
         level_reached = true, species_new = true, fusion_menu_opened = true, event_egg_caught = true, fusion_step_added = true,
-        rare_hatched = true,
+        rare_hatched = true, patterns_found = true, colours_found = true, common_patterns_found = true, -- BD-1041
     }),
     -- Windows come from the SERVER clock (os.time(), unix seconds, UTC): window = floor(now / seconds).
     Windows = table.freeze({

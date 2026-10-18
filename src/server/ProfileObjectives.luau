@@ -68,6 +68,14 @@ function ProfileRepository.objectiveSeen(player: Player, seenId: any): (boolean,
     return true, "seen"
 end
 
+-- BD-1041: {patterns, colours, commonPatterns} found by this player, counted from the server's own profile (the discovery log plus the
+-- dinos owned; ProgressionRules.findCounts). Read-only, nil while the flag is off or the profile is not loaded. ObjectiveService turns a
+-- grown count into the starter-goal events; the client never sends a number.
+function ProfileRepository.objectiveFinds(player: Player): any
+    if Config.ObjectivesEnabled ~= true or not ProfileRepository.isLoaded(player) then return nil end
+    return ProgressionRules.findCounts(profiles[player])
+end
+
 -- Read-only (never writes, never rolls a window into the stored profile): the stored state plus the unflushed queue at os.time().
 function ProfileRepository.objectiveView(player: Player): (any, string)
     if Config.ObjectivesEnabled ~= true then return nil, "disabled" end
