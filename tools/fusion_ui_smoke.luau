@@ -406,14 +406,14 @@ press(byName(screen, "FuseNow"))
 runFor(6)
 assert(#fuseTokens == 2 and fuseTokens[1] == fuseTokens[2], "lost response retried with the SAME token")
 -- Reveal: pattern card first, then skip to the committed final card.
-assert(has(screen, "Pattern: Wavy Stripes") or has(screen, "Colour 1"), "reveal running")
+assert(has(screen, "Pattern: Waves") or has(screen, "Colour 1"), "reveal running")
 press(byName(screen, "Skip")) runFor(.1)
-assert(has(screen, "NEW WAVY STRIPES COMPY!") and has(screen, "Gold stage: guaranteed") and has(screen, "Shiny!") and not has(screen, "Condition"), "final card shows no condition")
+assert(has(screen, "NEW WAVES COMPY!") and has(screen, "Gold stage: guaranteed") and has(screen, "Shiny!") and not has(screen, "Condition"), "final card shows no condition")
 local preview = byName(screen, "DinosaurPreview")
 assert(preview:GetAttribute("Stage") == "gold" and preview:GetAttribute("Shiny") == true, "gold preview with committed traits")
 -- BD-062 details of the new Gold.
 press(byName(screen, "ResultDetails")) runFor(1)
-assert(has(screen, "Gold Wavy Stripes Compy") and has(screen, "PRESTIGE: Crafted Gold (earned)") and has(screen, "Fused from 1 dinos"), "fused details")
+assert(has(screen, "Gold Waves Compy") and has(screen, "PRESTIGE: Crafted Gold (earned)") and has(screen, "Fused from 1 dinos"), "fused details")
 press(byText(screen, "BACK")) runFor(2)
 assert(#cards(screen) == 58, "donors consumed and list refreshed: " .. #cards(screen))
 -- Hatched dino details from a card info button.
@@ -447,7 +447,7 @@ press(byName(screen, "CheckResult")) runFor(3)
 local token = fuseTokens[before + 1]
 for i = before + 1, #fuseTokens do assert(fuseTokens[i] == token, "resume reused the same token") end
 press(byName(screen, "Skip")) runFor(.1)
-assert(has(screen, "NEW WAVY STRIPES COMPY"), "result shown after resume")
+assert(has(screen, "NEW WAVES COMPY"), "result shown after resume")
 Menu.close()
 
 -- 4) Phone landscape safe area (740x340): same three columns, smaller cards, and a 44 px

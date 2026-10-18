@@ -155,6 +155,7 @@ jobs:
           python tools/verify_classes.py --runner /tmp/luau/luau
           python tools/verify_colour_bonus.py --runner /tmp/luau/luau
           python tools/verify_rarity.py --runner /tmp/luau/luau
+          python tools/verify_patterns.py --runner /tmp/luau/luau
           python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py
@@ -185,6 +186,7 @@ jobs:
           python tools/verify_shop_tiles.py --runner /tmp/luau/luau
           python tools/verify_paid_random_gate.py --runner /tmp/luau/luau
           python tools/verify_secret_species.py --runner /tmp/luau/luau
+          python tools/verify_catalog.py --runner /tmp/luau/luau
           python tools/verify_fx.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau

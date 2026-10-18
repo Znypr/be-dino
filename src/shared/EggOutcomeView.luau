@@ -5,9 +5,12 @@ local Progression=require(script.Parent.ProgressionConfig)
 local Odds=require(script.Parent.EggOutcomeOdds)
 local C=Theme.Colors
 local View={}
-local patternNames={legacy="Legacy",["01_blank"]="Blank",["02_emerald_islands"]="Islands",
-    ["03_round_spots"]="Round spots",["04_bold_patches"]="Bold patches",["05_horizontal_bands"]="Bands",
-    ["06_wavy_stripes"]="Wavy stripes",["07_diamond_scales"]="Diamond scales",["08_freckles"]="Freckles"}
+local Genetics=require(script.Parent.EggGenetics)
+-- BD-1033: kid names come from the ONE pattern table (ProgressionConfig.EggPatterns) through EggGenetics.
+local function patternName(id: string): string
+    local info=Genetics.patternInfo(id)
+    return if info then info.name elseif id=="legacy" then "Legacy" else id
+end
 local function text(parent,value,x,y,w,h,size,color)
     local t=Instance.new("TextLabel")
     t.BackgroundTransparency,t.Position,t.Size=1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
@@ -55,7 +58,7 @@ function View.add(body,state,level,height,onChange,onBack)
     local species={} for _,s in Config.ChestSpeciesWeights do table.insert(species,{id=s.speciesId,name=Config.SpeciesDisplayNames[s.speciesId]}) end
     local conditions={} for _,c in Progression.Conditions do table.insert(conditions,{id=c.id,name=c.name}) end
     local colors={} for _,c in Progression.EggColors do table.insert(colors,{id=c.id,name=c.name}) end
-    local patterns={} for _,p in Odds.patterns() do table.insert(patterns,{id=p,name=patternNames[p] or p}) end
+    local patterns={} for _,p in Odds.patterns() do table.insert(patterns,{id=p,name=patternName(p)}) end
     menu("Species","species",species,0,0,200)
     menu("Condition","condition",conditions,208,0,200)
     menu("Primary","primary",colors,416,0,200)
@@ -85,7 +88,7 @@ function View.add(body,state,level,height,onChange,onBack)
         else
             description=Config.SpeciesDisplayNames[outcome.speciesId].." x"..outcome.count.." | "..outcome.conditionName.." | "..(if outcome.big then "BIG" else "Normal size")
                 .."\n"..outcome.primaryName.." "..outcome.share.."% / "..outcome.secondaryName.." "..(100-outcome.share).."%"
-                .." | "..(patternNames[outcome.patternId] or outcome.patternId)
+                .." | "..patternName(outcome.patternId)
         end
         text(body,description,4,top,560,rowHeight-4,18)
         text(body,Odds.percent(outcome.probability),574,top,246,rowHeight-4,19,C.gold)
