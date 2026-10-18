@@ -67,7 +67,7 @@ for _,c in {"Ground","Fly","Water","Armored"} do
   assert(fight(team(3,c,S1),team(1,c,S2),true)=="A" and fight(team(3,c,S1),team(1,c,S3),true)=="A",c..": three small beat s=2 and s=3")
 end
 local w6,t6,al6=fight(team(6,"Ground",S1),team(1,"Ground",S4),true)
-assert(t6>=20 and t6<=35,"6 small vs s=4 takes 20-35 s, got "..t6)
+assert(t6>=13 and t6<=25,"6 small vs s=4 takes 13-25 s (cooldown 0.6, BD-1025), got "..t6)
 print(string.format("sim: 6 small vs s=4 big -> %s at %.1fs, survivors %d; 3 small lose; lone small loses after %d hits (%.1fs)",w6,t6,al6,hits,T1))
 -- no reward leakage: this module only returns integer bonus amounts and never touches eggs or score
 print("Combat team-up passed: assister threshold, split sums exactly (3000 fuzz), pair 1/0.5/0 then reset, crowd cap x0.9, 6 small beat 1 big, 1 small loses")

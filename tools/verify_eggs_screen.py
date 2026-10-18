@@ -224,6 +224,12 @@ def static_checks():
     nest = boot[boot.index('"LastNestClaimAt"'):boot.index('"LastRewardText"')]
     assert 'hatchNext' not in nest, 'opening a nest must not auto-hatch'
     assert 'ProcessReceipt' not in boot and 'PromptGamePassPurchase' not in boot, 'no Robux purchase code'
+    # BD-1019 (docs/181): the Eggs screen and the hatch it starts stay closable. The nest cards, the Next egg card and its OPEN button live in the
+    # menu body below X, so nothing in EggsScreen may be a full-screen or Active cover; closing (X, tap outside, Escape, gamepad B) leaves the queue alone.
+    eggs_ui = (ROOT / 'src/client/EggsScreen.luau').read_text(encoding='utf-8')
+    assert 'fromScale(1, 1)' not in eggs_ui and 'Active = true' not in eggs_ui, 'EggsScreen must not cover the menu header (X)'
+    assert 'openEgg=function()' in boot and 'if hatchPending then return end' in boot, 'OPEN starts one claim at a time; closing never re-sends it'
+    assert 'onAbort=function() skipAllReveals=false' in boot, 'closing a hatch party mid-way resets Skip-the-rest (the next party must not start skipping)'
     # BD-208 / BD-094: the Eggs page reads the official stage + condition eggs, with the code-drawn visuals as the exact fallback
     screen = (ROOT / 'src/client/EggsScreen.luau').read_text(encoding='utf-8')
     assert 'ConditionStage.hero(card' in screen and 'StageRules.conditionKey(' in screen and 'StageRules.heroSide(' in screen, 'Eggs card reads the stage'

@@ -36,7 +36,7 @@ All values live in `Config.Combat`; the server reads them, the client only displ
 ## 4. Attack input and cooldown (PROPOSAL)
 - One big **Bite** button (bottom-right thumb zone on touch; E or left click on desktop). Tap to attack; no aiming or holding.
 - The server auto-targets the nearest valid enemy in a front cone (range `2.5 + 1.0*s` studs, 70 degrees). A soft ring marks the target so the child sees who is hit.
-- Cooldown **0.9 s**, shown as a filling ring on the button (no number). Server enforces; the client only predicts the animation.
+- Cooldown ~~**0.9 s**~~ **0.6 s** (SUPERSEDED 2026-10-18, owner: fights too slow, [183](183-faster-fights.md); wild predators also have 40% HP), shown as a filling ring on the button (no number). Server enforces; the client only predicts the animation.
 - **Leap**: forward lunge, 3 s cooldown, bites for 1.6x plus a small push if it lands. WATER: the jump button is the dash (forward boost, no hit); the leap is the same dash but longer with a bite snap (1.5x damage, bigger splash). One remote with a `kind` field.
 - Knockback is a short soft push (about 4 studs, less for big targets), clamped to safe ground by the server, never off the map.
 - Regen: after 6 s without hitting or being hit, HP refills 4% of max per second. A food pickup heals 5% of max, so eating stays a reward.

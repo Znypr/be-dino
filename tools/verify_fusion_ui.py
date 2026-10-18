@@ -451,6 +451,7 @@ UI_MODULES = {
     'RarityCurve': 'src/shared/RarityCurve.luau',
     'ColourBonus': 'src/shared/ColourBonus.luau',
     'EggGenetics': 'src/shared/EggGenetics.luau',
+    'ModalCloseRules': 'src/shared/ModalCloseRules.luau',
     'FusionSelection': 'src/shared/FusionSelection.luau',
     'FusionWidgets': 'src/client/FusionWidgets.luau',
     'DinoDetails': 'src/client/DinoDetails.luau',

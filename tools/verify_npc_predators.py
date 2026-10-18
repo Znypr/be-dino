@@ -25,6 +25,22 @@ local function P(k,x,z,extra) local p={key=k,x=x,y=Layout.height(x,z),z=z,alive=
   if extra then for a,b in extra do p[a]=b end end return p end
 local function terrain() return Npc.newTerrain({half=416,seed=1404}) end
 
+-- BD-1025: a wild predator ignores players more than WildMaxSizeRatio times smaller or bigger (size unit z = 1 + growth / 50)
+do
+  local w0=Npc.newWorld(true,5,terrain())
+  local npc={score=155,x=0,z=200,y=0,ignore={}}
+  local lim=M.CombatConfig.WildMaxSizeRatio
+  assert(lim>1 and lim<6,"threshold is inside what wild dinos can reach (R up to 6)")
+  assert(Npc.sizeOk(npc,{key="a"}) and Npc.sizeOk(npc,{key="a",score=155}),"no score = not filtered; same size is fine")
+  assert(not Npc.sizeOk(npc,{key="a",score=0}),"a fresh player is too small for a size-4 wild dino: ratio "..Stats.sizeRatio(155,0))
+  assert(Npc.sizeOk({score=60},{key="a",score=0}),"a small wild dino (R 2.2) may still go for a fresh player")
+  assert(not Npc.sizeOk({score=60},{key="a",score=750}),"a small wild dino ignores a capped player (too big)")
+  local p1={key="a",x=0,y=0,z=205,alive=true,active=true,protectedUntil=0,score=0}
+  local p2={key="b",x=0,y=0,z=206,alive=true,active=true,protectedUntil=0,score=155}
+  local got=Npc.pickTarget(w0,npc,{p1,p2},0,30)
+  assert(got and got.key=="b","pickTarget skips the too-small player and takes the next one")
+  assert(Npc.pickTarget(w0,npc,{p1},0,30)==nil,"nobody else: no target")
+end
 -- 1. flag-off identity: inert world, nothing created, RNG untouched
 local off=Npc.newWorld(false,42,terrain())
 local st0=off.rng.state
@@ -92,7 +108,10 @@ local function setup(seed)
   n.idleUntil=0; n.noAggroUntil=0
   local cw=R.new(true); cw.defeatCount=0; cw.bonuses={}
   cw.onDefeat=function(v,a,bo) cw.defeatCount+=1; cw.bonuses[v.key]=bo end
-  Npc.joinCombat(w,cw,n,0)
+  local jd=Npc.joinCombat(w,cw,n,0)
+  -- BD-1025: a wild predator has Cfg.WildHpX of the normal HP for its size; a player of the same size keeps the full HP
+  assert(math.abs(jd.state.maxHp-Stats.maxHp(n.class,n.s)*M.CombatConfig.WildHpX)<1e-6,"wild predator HP = normal HP x WildHpX")
+  assert(M.CombatConfig.WildHpX<1 and R.join(R.new(true),{userId=9,runId="p",class=n.class,score=n.score,now=0}).state.maxHp==Stats.maxHp(n.class,n.s),"players keep full HP")
   return w,cw,n
 end
 local function joinP(cw,u,r,score) return R.join(cw,{userId=u,runId=r,class="Ground",score=score or 0,now=0}) end
