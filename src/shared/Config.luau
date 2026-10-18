@@ -97,6 +97,11 @@ return table.freeze({
     -- (+0.5% a point, at most +7%), computed on the server (GeneBoost.luau, formula version bd1038-geneboost-v1). PROVISIONAL numbers.
     -- false = unchanged (the BD-172 colour bonus stays as it was). Pinned off in the default profile, ON in the playtest profile (docs/157).
     GeneBoostEnabled = false,
+    -- BD-1039 (docs/186 s7): the Pattern and Colour Index. Two more tabs (Patterns, Colours) on the Index screen, grey until the first dino with that
+    -- pattern or colour is found, "New pattern!" / "New colour!" ribbons on the hatch, a dot on the Dinos button, and the boost pips wording on the hatch
+    -- card (with GeneBoostEnabled). The server also records a dino's ACCENT colour in the discovery log. false = the Index and the hatch are exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157).
+    PatternColourIndexEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

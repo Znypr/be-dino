@@ -185,7 +185,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             committed = result
             if status == "duplicate" then duplicate = true return profileValue end
             if type(result) == "table" and type(result.traits) == "table" then -- BD-436: the fused result is a discovery too
-                ProgressionRules.discover(nextProfile, result.traits.genes, result.traits.mutationId)
+                ProgressionRules.discover(nextProfile, result.traits.genes, result.traits.mutationId, Config.PatternColourIndexEnabled == true)
             end
             nextProfile.revision += 1
             nextProfile.session.expiresAt = now + Config.ProfileLeaseSeconds

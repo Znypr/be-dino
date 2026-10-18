@@ -79,8 +79,8 @@ def script():
 
 def static_checks():
     repo = profile_sources.repository_text()
-    assert 'ProgressionRules.backfillDiscovered(profileValue)' in repo, 'backfill on load'
-    assert 'ProgressionRules.discover(profileValue,chest.genes,mutationId)' in repo, 'hatch records discovery'
+    assert 'ProgressionRules.backfillDiscovered(profileValue, Config.PatternColourIndexEnabled == true)' in repo, 'backfill on load'
+    assert 'ProgressionRules.discover(profileValue,chest.genes,mutationId,Config.PatternColourIndexEnabled==true)' in repo, 'hatch records discovery'
     assert 'ProgressionRules.discover(nextProfile' in repo, 'fusion result records discovery'
     assert '"DiscoveryJson"' in repo and '"LastChestNewJson"' in repo
     core = (ROOT / 'src/shared/PrivateStateCore.luau').read_text(encoding='utf-8')

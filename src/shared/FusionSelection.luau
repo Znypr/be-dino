@@ -802,7 +802,10 @@ function Sel.details(d, catalog)
     }
     -- BD-172: optional hook set by the client (catalog.colourBonus(genes) -> "Colour bonus +3% growth" | nil); server stays authoritative.
     local bonusText = if type(catalog.colourBonus) == "function" then catalog.colourBonus(g) else nil
-    if bonusText then table.insert(view.traits, 5, {label = "Colour bonus", value = (string.gsub(bonusText, "^Colour bonus ", ""))}) end
+    if bonusText then -- BD-1039: with the gene boost on the text is "Boost 3 of 5" (label "Boost"); otherwise the BD-172 "Colour bonus +3% growth"
+        local boostValue = string.match(bonusText, "^Boost (.+)$")
+        table.insert(view.traits, 5, {label = if boostValue then "Boost" else "Colour bonus", value = boostValue or (string.gsub(bonusText, "^Colour bonus ", ""))})
+    end
     local origin = type(d.origin) == "table" and d.origin or {}
     local lineage = d.lineage
     if origin.kind == "fusion" or type(lineage) == "table" then

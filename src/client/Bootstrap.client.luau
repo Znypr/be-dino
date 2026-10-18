@@ -64,7 +64,7 @@ local seenTutorial = false
 local lastGrowth = 0
 local lastEggCount = 0
 local PrivateState=require(script.Parent.PrivateState) -- BD-360: owner-only values arrive by remote, public ones stay attributes
-local num,str=PrivateState.num,PrivateState.str -- same call shape as before; private names read the cache, public ones the attribute
+local num,str=PrivateState.num,PrivateState.str
 local jsonCache = {}
 local function decoded(attribute: string, fallback: string)
     local raw=str(attribute,fallback)
@@ -851,6 +851,7 @@ render=function(name: string)
         button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
     elseif name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
+        if require(script.Parent.IndexTabs).mount(open) then return end
         local unlocked=0
         -- BD-269: at most 24 cards are built per page, so a long Index stays light on phones (pager shows only if >1 page).
         local IndexProgress=require(Shared.IndexProgress)

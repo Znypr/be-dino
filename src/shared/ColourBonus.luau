@@ -43,8 +43,21 @@ function Bonus.rarity(colors: any, genes: any): string
     return Curve.rarer(primary, if genes.secondaryColorId == nil then primary else tierName(genes.secondaryColorId))
 end
 
+-- BD-1039 / BD-1038: with Config.GeneBoostEnabled the old colour bonus no longer applies (the gene boost REPLACES it on the server), so the
+-- line shows the boost pips wording ("Boost 3 of 5", GeneBoost.dinoText) instead of a percent that would be untrue. Modules are required
+-- lazily so this file stays pure for the offline checks that inline it; a failed require just means "flag off".
+local function lazy(name: string): any
+    local ok, module = pcall(function() return require((script.Parent :: any)[name]) end)
+    return if ok and typeof(module) == "table" then module else nil
+end
+
 -- Kid-short text, nil when there is no bonus.
 function Bonus.text(colors: any, genes: any): string?
+    local config = lazy("Config")
+    if config ~= nil and config.GeneBoostEnabled == true then
+        local boost, progression = lazy("GeneBoost"), lazy("ProgressionConfig")
+        if boost ~= nil and typeof(boost.dinoText) == "function" and progression ~= nil then return boost.dinoText(progression.EggPatterns, colors, genes) end
+    end
     local percent = Bonus.percent(colors, genes)
     if percent <= 0 then return nil end
     return string.format("Colour bonus +%d%% growth", percent)
