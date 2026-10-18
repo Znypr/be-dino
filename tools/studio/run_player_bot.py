@@ -7,6 +7,8 @@ tools/studio/player_bot.luau (BD-1048, docs/194). Like render_insert_snippet.py 
   python tools/studio/run_player_bot.py start --stop-food 500        # or stop at about 500 food points
   python tools/studio/run_player_bot.py start --max-distance 60 --think 0.4   # a player who sees only what is on screen and looks around
   python tools/studio/run_player_bot.py start --no-start-run         # you start the run by hand; --no-end-run: you end it by hand
+  python tools/studio/run_player_bot.py start --casual --max-distance 90   # the slow, casual walker (about 60 percent of full speed, no value seeking)
+  python tools/studio/run_player_bot.py summary                      # points by kind, amber + drumstick share, points from repeat eats
   python tools/studio/run_player_bot.py status                       # one line: phase, seconds, food, eggs, last event
   python tools/studio/run_player_bot.py report [--lines 400]         # totals, a table per 30 s, every event except single eats
   python tools/studio/run_player_bot.py log --from 1 --to 80         # raw log lines (one line per event, eats included)
@@ -46,6 +48,8 @@ def options_table(args):
         value = getattr(args, cli, None)
         if value is not None:
             parts.append("%s = %s" % (lua, lua_number(value)))
+    if getattr(args, "casual", False):
+        parts.append("casual = true")
     if getattr(args, "no_start_run", False):
         parts.append("autoStartRun = false")
     if getattr(args, "no_end_run", False):
@@ -61,6 +65,8 @@ def render(action, args=None):
         return guard + "return Bot.start(%s)\n" % options_table(args)
     if action == "status":
         return guard + "return Bot.status()\n"
+    if action == "summary":
+        return guard + "return Bot.summary()\n"
     if action == "report":
         return guard + "return Bot.report(%d)\n" % int(args.lines)
     if action == "log":
@@ -82,9 +88,11 @@ def parser():
     st.add_argument("--avoid", type=float, help="skip food and flee within this many studs of a predator (default 34)")
     st.add_argument("--max-distance", dest="max_distance", type=float, help="only look at food this close (default 170)")
     st.add_argument("--think", type=float, help="stand still this many seconds before choosing each next food (default 0)")
+    st.add_argument("--casual", action="store_true", help="the casual walker of the round-3b pace run (nearest-six, short walks, pauses); use with --max-distance 90")
     st.add_argument("--no-start-run", action="store_true")
     st.add_argument("--no-end-run", action="store_true")
     sub.add_parser("status")
+    sub.add_parser("summary")
     rp = sub.add_parser("report")
     rp.add_argument("--lines", type=int, default=400)
     lg = sub.add_parser("log")
