@@ -1,0 +1,9 @@
+Pattern tile sheets, ChatGPT image generation, 2026-10-18 (BD-1034). Prompts as sent (owner's ChatGPT account).
+
+SHEET A (docs/reference/pattern-tiles-chatgpt-v1-a.png):
+Generate an image: one square sheet showing a 4 by 4 grid (16 tiles) of pure black and white SEAMLESSLY TILEABLE pattern tiles, for a cute low-poly cartoon dinosaur skin. Each tile is a perfect square, separated by thin even gaps, same size. Strictly two flat colours only: pure black and pure white, no grey, no gradients, no shading, no outlines other than the shapes, no text, no numbers. Matte, bold, chunky shapes that stay readable when shrunk to a tiny size; each tile repeats edge to edge with no visible seam. One clear idea per tile and all 16 tiles must look clearly DIFFERENT in shape family: round dots, big polka dots, thin stripes, wide bands, wavy stripes, camouflage patches, fish scales, diamonds, five-point stars, swirls, checkerboard, zig-zag, leopard rosettes, feather chevrons, fine speckles, hexagon honeycomb.
+
+SHEET B (docs/reference/pattern-tiles-chatgpt-v1-b.png), same chat, second message:
+Great. Now a SECOND sheet, same format (4 by 4 grid of 16 square seamlessly tileable tiles, pure flat black and white only, no grey, no text, thin even gaps, bold matte shapes, readable when tiny), but 16 DIFFERENT ideas, none repeating the first sheet: paw prints, small hearts, plus signs / crosses, triangles in rows, rings / concentric circles, brick or stone wall, maze or labyrinth lines, tiger stripes with jagged tapering ends, giraffe patches (irregular polygons with thin gaps), snake diamond-back, tribal arrowheads, raindrops / teardrops, crescent moons, leaves, tiny crosshatch weave, bubbles of mixed sizes.
+
+Result: although asked for "seamlessly tileable", 30 of the 32 tiles show a seam when repeated (tools/tile_seam_check.py).
