@@ -10,7 +10,7 @@ import rehearsal_env
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath",RunLifecycle="RunLifecycle",ObjectiveService="ObjectiveService",TelemetryService="TelemetryService",CooldownMemory="CooldownMemory"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\nlocal CooldownMemoryMod='+wrapped('src/server/CooldownMemory.luau')+'\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath",RunLifecycle="RunLifecycle",ObjectiveService="ObjectiveService",TelemetryService="TelemetryService",CooldownMemory="CooldownMemory"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal ScaleLadder='+wrapped('src/shared/ScaleLadder.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\nlocal MouthReach=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return Config end return '+wrapped('src/shared/MouthReach.luau')+' end)()'+'\nlocal CooldownMemoryMod='+wrapped('src/server/CooldownMemory.luau')+'\nlocal WorldLayerMod='+wrapped('src/shared/WorldLayer.luau')+'\nlocal FoodLayerDataMod='+wrapped('src/shared/FoodLayerData.luau')+'\nlocal FoodLayerMod=(function() local require=function(m)return m end local script={Parent={WorldLayer=WorldLayerMod,FoodLayerData=FoodLayerDataMod}} return '+wrapped('src/shared/FoodLayer.luau')+' end)()\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==12 and carry<1e-8)
 local accumulated,total=0,0
@@ -49,6 +49,7 @@ function Workspace:GetAttribute(k)return self.attrs[k]end
 local pickupRays=false -- BD-074: pickup rays (mouth to food) are not placement rays
 local rays=0
 local missingTerrain=false
+local obstacleBox=nil
 local artFailure=false
 function Workspace:Raycast(origin,direction,params)
  rays+=1
@@ -59,11 +60,12 @@ function Workspace:Raycast(origin,direction,params)
   return {Instance=self.Terrain,Position=vector(origin.X,0,origin.Z),Normal=vector(0,1,0),Material="Grass"}
  end
  assert(params.FilterDescendantsInstances[2]==nil,"placement obstacle rays must exclude terrain")
+ if obstacleBox and origin.X>=obstacleBox[1] and origin.X<=obstacleBox[2] and origin.Z>=obstacleBox[3] and origin.Z<=obstacleBox[4] then return {Instance=self.BeDinoArena,Position=origin,Normal=vector(0,1,0),Material="Grass"} end -- BD-1047: a rock patch for the food-map relocation test
  return nil
 end
 local workspace=Workspace
 local AdminMutationScale='''+wrapped('src/shared/AdminMutationScale.luau')+'''
-local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",MovementWindow="MovementWindow",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",MouthReach="MouthReach",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig",RunEggTags="RunEggTags"}}
+local Storage={Shared={AdminMutationScale="AdminMutationScale",Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",MovementWindow="MovementWindow",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",MouthReach="MouthReach",FoodLayer="FoodLayer",ScaleLadder="ScaleLadder",ProgressionConfig="ProgressionConfig",RunEggTags="RunEggTags"}}
 function Storage:FindFirstChild(name)return if name=="BeDinoRemotes" then Remotes else nil end
 local guid=0
 local Http={GenerateGUID=function()guid+=1 return tostring(guid)end}
@@ -71,7 +73,7 @@ local game={GetService=function(self,name)return ({Players=Players,ReplicatedSto
 local FoodConfig=table.clone(Config) -- BD-074: the tick test flips ObjectivesEnabled on this copy (Config itself may be frozen)
 local ObjectiveSpy={calls={},loads=0}
 local TelemetrySpy={calls={},loads=0} -- BD-575: the real FoodService reports raw food to TelemetryService, only while Config.RunTelemetryEnabled
-local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="TelemetryService" then TelemetrySpy.loads+=1 return {noteFood=function(player,runId,raw,gained)table.insert(TelemetrySpy.calls,{player=player,runId=runId,raw=raw,gained=gained}) end} elseif id=="CooldownMemory" then return CooldownMemoryMod elseif id=="RunLifecycle" then return {noteNestWeather=function()end} elseif id=="RunEggTags" then return {nextScore=function(before,whole,maxScore,runCap)return math.min(maxScore,runCap,before+whole)end,apply=function(events)return events,0 end} elseif id=="ObjectiveService" then ObjectiveSpy.loads+=1 return {record=function(player,kind,amount)table.insert(ObjectiveSpy.calls,{player=player,kind=kind,amount=amount}) return true end} elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="MovementWindow" then return {new=function()return {} end,push=function()return true end,reset=function()end} elseif id=="Config" then return FoodConfig elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
+local require=function(id)if id=="AdminMutationScale" then return AdminMutationScale elseif id=="TelemetryService" then TelemetrySpy.loads+=1 return {noteFood=function(player,runId,raw,gained)table.insert(TelemetrySpy.calls,{player=player,runId=runId,raw=raw,gained=gained}) end} elseif id=="CooldownMemory" then return CooldownMemoryMod elseif id=="RunLifecycle" then return {noteNestWeather=function()end} elseif id=="RunEggTags" then return {nextScore=function(before,whole,maxScore,runCap)return math.min(maxScore,runCap,before+whole)end,apply=function(events)return events,0 end} elseif id=="ObjectiveService" then ObjectiveSpy.loads+=1 return {record=function(player,kind,amount)table.insert(ObjectiveSpy.calls,{player=player,kind=kind,amount=amount}) return true end} elseif id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="MovementWindow" then return {new=function()return {} end,push=function()return true end,reset=function()end} elseif id=="Config" then return FoodConfig elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="MouthReach" then return MouthReach elseif id=="FoodLayer" then return FoodLayerMod elseif id=="ScaleLadder" then return ScaleLadder elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
 local created={}
 local Instance={new=function(kind)
  local o={attrs={},Name="",kind=kind,OnServerEvent={Connect=function(self,fn)self.callback=fn end}}
@@ -114,6 +116,46 @@ Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"a Kit food mesh whose clone raises must not remove food")
 FoodConfig.FoodArtMode=Config.FoodArtMode artFailure=false
 print("Food startup passed: terrain-only placement, 12 nearby starter pickups, missing-ray fallback and broken-art survival")
+-- BD-1047 (docs/187 B): Config.FoodLayerEnabled = true places the foods from the designed map (same Food folder, attributes, points and counts),
+-- keeps the ground/obstacle safety net (an item on a blocked spot is moved or dropped and counted) and the flag off keeps the old placement.
+do
+ local function tally(from)
+  local kinds,starters,sectors,total={berry=0,fruit=0,egg=0,amber=0},0,{},0
+  for i=from+1,#created do
+   local item=created[i]
+   if item.kind=="Part" and item.attrs.Points and item.Position then
+    total+=1 kinds[item.Name]+=1 if item.attrs.StarterFood then starters+=1 end sectors[item.attrs.Sector]=true
+   end
+  end
+  return kinds,starters,sectors,total
+ end
+ FoodConfig.FoodLayerEnabled=true
+ local mark=#created
+ Food.start({})
+ local kinds,starters,sectors,total=tally(mark)
+ assert(Workspace.attrs.FoodLayerPlanned==3600 and Workspace.attrs.FoodLayerRelocated==0 and Workspace.attrs.FoodLayerDropped==0,"a clear map places every planned food")
+ assert(Workspace.attrs.FoodCount==3600 and total==3600,"same total as today's 3,600")
+ assert(kinds.berry==2519 and kinds.fruit==722 and kinds.egg==251 and kinds.amber==108,"kind counts of the map")
+ assert(starters==18,"both starter patches are marked")
+ assert(Workspace.attrs.FoodSpawnStatus=="Ready")
+ local sectorCount=0 for _ in sectors do sectorCount+=1 end
+ assert(sectorCount>=380,"foods are spread over the sectors")
+ -- the ground checks stay a safety net: a rock patch makes items move or vanish, and both are counted
+ obstacleBox={100,140,100,140}
+ mark=#created
+ Food.start({})
+ local _,_,_,blockedTotal=tally(mark)
+ assert(Workspace.attrs.FoodLayerPlanned==3600 and blockedTotal==Workspace.attrs.FoodCount,"count attribute matches the pickups")
+ assert(Workspace.attrs.FoodLayerRelocated>0 and Workspace.attrs.FoodLayerDropped>0,"blocked foods are relocated or dropped and counted")
+ assert(blockedTotal+Workspace.attrs.FoodLayerDropped==3600,"every planned food is placed or counted as dropped")
+ obstacleBox=nil
+ -- flag off again: the old placement, none of the map attributes
+ FoodConfig.FoodLayerEnabled=false
+ Workspace.attrs.FoodLayerPlanned=nil
+ Food.start({})
+ assert(Workspace.attrs.FoodLayerPlanned==nil and Workspace.attrs.FoodCount>1400 and Workspace.attrs.FoodCount<=3600)
+ print("Food map passed: 3,600 planned foods placed (2519 berry, 722 fruit, 251 egg, 108 amber, 18 starter), blocked spots relocated or dropped and counted, flag off keeps the old placement")
+end
 -- BD-074 (docs/66 s18): the pickup tick reports food eaten ONCE per player per tick (summed), only while Config.ObjectivesEnabled.
 do
  local growth=0
