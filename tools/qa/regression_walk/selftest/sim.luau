@@ -333,7 +333,7 @@ local function box(class, name, parent, x, y, w, h, props)
     return o
 end
 box("TextLabel", "BuildBadge", ui, 515, 36, 250, 24, {Text = "BUILD " .. Config.Build})
-local home = box("TextButton", "HomeButton", ui, 518, 606, 244, 60, {Text = "EXPLORE ISLAND"})
+local home = box("TextButton", "HomeButton", ui, 518, 606, 244, 60, {Text = "Explore"})
 local rail = box("Frame", "Rail", ui, 14, 151, 186, 382)
 local railButtons = {}
 for i, d in {"collection", "eggs", "fusion", "auras", "potions", "settings"} do
@@ -350,7 +350,7 @@ local sizeBar = box("Frame", "SizeBar", ui, 515, 64, 250, 34, {Visible = false})
 box("TextLabel", "SizeWord", sizeBar, 527, 64, 60, 34, {Text = "SIZE"})
 local timers = box("Frame", "Timers", ui, 974, 364, 286, 220)
 local leapBtn = box("TextButton", "LeapButton", timers, 974, 364, 286, 60, {ZIndex = 2})
-local leapText = box("TextLabel", "LeapText", leapBtn, 1030, 364, 225, 60, {Text = "LEAP [E] \xE2\x80\xA2 READY"})
+local leapText = box("TextLabel", "LeapText", leapBtn, 1030, 364, 225, 60, {Text = "LEAP [E] ready"})
 local weatherText = box("TextLabel", "WeatherText", timers, 1030, 436, 226, 62, {Text = "Weather in 10:00"})
 local buffsText = box("TextLabel", "BuffsText", timers, 974, 510, 286, 68, {Text = ""})
 local toasts = box("Frame", "Toasts", ui, 420, 80, 440, 186)
@@ -405,10 +405,10 @@ function open(name)
     player:SetAttribute("MenuOpen", true)
     if name == "tutorial" then
         mtext("Welcome to Be Dino!", 220, 90, 700, 60)
-        mbtn("LET'S PLAY", 420, 400, 400, 62, "B", function() open("home") end)
+        mbtn("Let's play", 420, 400, 400, 62, "B", function() open("home") end)
     elseif name == "home" then
         mtext("Sanctuary", 220, 90, 700, 60)
-        mbtn("EXPLORE ISLAND", 420, 400, 400, 62, "B", function() closeModal() SIM.startRun() end)
+        mbtn("Explore", 420, 400, 400, 62, "B", function() closeModal() SIM.startRun() end)
     elseif name == "exit" then
         mtext("Go home?", 220, 90, 700, 60)
         mbtn("GO HOME", 500, 420, 244, 68, "B", function() closeModal() Remotes.RequestEndRun.onFire() end)
@@ -417,7 +417,7 @@ function open(name)
         mtext("Run Complete!", 220, 90, 700, 60)
         mtext("EGGS  " .. string.format("%d", player:GetAttribute("LastRunCatchScore") or 0), 500, 150, 400, 60)
         mtext("+3 Crystals", 500, 220, 400, 60)
-        mbtn("BACK TO SANCTUARY", 240, 430, 370, 48, "B", function() open("home") end)
+        mbtn("Back home", 240, 430, 370, 48, "B", function() open("home") end)
         if eggs > 0 then mbtn("OPEN EGGS", 640, 430, 370, 48, "B", function() SIM.travel("eggs") end) end
     elseif name == "eggs" then
         mtext("Eggs", 220, 90, 700, 60)
@@ -450,7 +450,7 @@ function open(name)
             mbtn(if Model.calm() then "ON" else "OFF", 650, 220, 160, 48, "Toggle_Calm motion", function() Model.set("calm", not Model.calm()) open("settings") end)
         elseif menuTab == "controls" then mtext("Camera", 230, 220, 250, 48)
         else
-            mbtn("HOW TO PLAY", 230, 220, 400, 76, "B", function() end)
+            mbtn("How to play", 230, 220, 400, 76, "B", function() end)
             local chosen = RevealSkip.set(dec(priv.RevealSkipJson))
             for i, n in RevealSkip.Names do
                 mbtn(n .. "\n" .. (if chosen[i] then "AUTO" else "SHOW"), 230 + (i - 1) * 170, 380, 158, 76, "B", function()
@@ -504,7 +504,7 @@ function SIM.endRun()
         priv.LastRunEggCount = math.min(score, 150)
         priv.LastSettledRunId = "settled-" .. math.floor(now * 10)
         spawnChar()
-        home.Text = "EXPLORE ISLAND" sizeBar.Visible = false
+        home.Text = "Explore" sizeBar.Visible = false
         task.delay(0.2, function() open("results") end)
     end)
 end
@@ -667,7 +667,7 @@ local function tick(dt)
         end
     end
     local left = (player:GetAttribute("LeapReadyAt") or 0) - workspace:GetServerTimeNow()
-    leapText.Text = if left > 0 then string.format("LEAP 0:%02d", left) else "LEAP [E] \xE2\x80\xA2 READY"
+    leapText.Text = if left > 0 then string.format("LEAP 0:%02d", left) else "LEAP [E] ready"
     if workspace:GetAttribute("WeatherId") ~= "clear" then weatherText.Text = string.format("Rain %d:%02d", 1, 20) else weatherText.Text = "Weather in 10:00" end
     local lines = {}
     for kind, b in pot.buffs do if b.expiresAt > workspace:GetServerTimeNow() then table.insert(lines, string.upper(string.sub(kind, 1, 1)) .. string.sub(kind, 2) .. " potion 4:59") end end

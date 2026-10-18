@@ -18,6 +18,18 @@
       "rule": "TECH_PUNCT",
       "text": "LEAP [E]",
       "reason": "The letter in brackets shows which key to press. Kids read it as a key picture; the owner has not asked for a change."
+    },
+    {
+      "file": "src/client/Bootstrap.client.luau",
+      "rule": "TECH_PUNCT",
+      "text": "LEAP [E] ready",
+      "reason": "Same key picture as the LEAP [E] button; it only adds the word ready when the leap can be used again."
+    },
+    {
+      "file": "src/shared/GiftUiModel.luau",
+      "rule": "LONG_TEXT",
+      "text": "You got a gift from",
+      "reason": "Only the first half of one title. The game adds the sender's name and a ! after it, so the whole title is short."
     }
   ]
 }

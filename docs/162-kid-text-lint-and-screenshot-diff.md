@@ -46,6 +46,8 @@ Files players never see (admin, QA, demo, sound lab) are skipped; the list and t
 
 **First run.** 387 files scanned, 94 old problems in 15 files. Worst files: `Bootstrap.client.luau` (30), `FusionSelection.luau` (21), `ShopOdds.luau` (12), `FusionMenu.luau` (8). The list is in [the evidence report](evidence/2026-10-18-kid-text/report.md). No "5m 0s" times were found.
 
+**After the rewrite (BD-998, same day).** The 94 texts were rewritten in plain words (wording only; every odds number unchanged). 5 old problems are left on purpose (a wide Food guide line, the fusion "check result" reassurance, the owner-reviewed secret-dino sentence, and two cheerful cries); 2 more texts are allowed with a reason (`LEAP [E] ready`, the first half of the gift title). The baseline file now holds those 5. Before and after numbers, 8 example rewrites and the reason for each leftover are in the evidence report. Offline evidence only: the new texts have not been looked at in Studio at real sizes or on a phone yet.
+
 ## 2. Screenshot diff: `tools/compare_screenshots.py` (BD-656)
 
 **What it does.** Takes two pictures (or two folders of same-named PNGs) and says what changed. It counts the changed pixels, gives the changed area as a percent, draws a box around each changed spot, and saves one picture: **before | after | changed** (changed pixels red). Then one plain sentence, for example "TOO MUCH CHANGE: 12.50% of the picture changed in 1 spot (allowed 0.5%). Biggest spot: 60x50 at (100,50)." Uses Pillow only (the tools folder already uses it); nothing new to install.

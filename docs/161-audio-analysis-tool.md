@@ -1,6 +1,6 @@
 # 161 - Audio analysis tool (BD-637)
 
-Status 2026-10-18: tool, tests and a first report on the real SFX pack are done (Review / test). Nothing about the game audio was changed: no file, no volume constant, no asset id. Read with [87](87-vision-and-feel-guide.md) (calm sounds), [110](110-sound-audit.md) (cue table) and [63](63-sfx-pack.md) (the pack).
+Status 2026-10-18: tool, tests and a first report on the real SFX pack are done (Review / test). **Follow-up the same day (BD-166 / BD-637 / BD-997):** the safe suggestions of the report were applied as numbers in `src/shared/Sfx.luau` (no file, no asset id changed), soft re-renders of the two worst files were made locally with ffmpeg (not uploaded), and a test now keeps the cue volumes quiet. See section "Fixes applied" below. Read with [87](87-vision-and-feel-guide.md) (calm sounds), [110](110-sound-audit.md) (cue table) and [63](63-sfx-pack.md) (the pack).
 
 ## Why
 
@@ -58,7 +58,24 @@ All numbers that turn a measurement into a verdict live in ONE table, `THRESHOLD
 
 `tests/test_audio_report.py` generates its own sounds (sine, clipped sine, silence, click, padded, shrill, loud, whisper, stereo, a shaped envelope) and checks peak, crest factor, loudness (against the BS.1770 value for a sine and against ffmpeg's ebur128), dominant frequency, band shares, clipping, silence, attack, decay, verdict words, outlier detection, the cue-to-file mapping and the picture output. First real run: [evidence/2026-10-18-audio-report/report.md](evidence/2026-10-18-audio-report/report.md) (17 files, pictures, culprit analysis for BD-166).
 
+## Fixes applied (2026-10-18, BD-166 / BD-637 follow-up)
+
+Numbers only, from the report's own suggestions. **Nobody listened; the owner must.** Full before/after table, pictures and the owner's upload steps: [evidence/2026-10-18-audio-fix](evidence/2026-10-18-audio-fix/README.md).
+
+| Change | Where | Result by the numbers |
+|---|---|---|
+| `level_up` volume .4 to .3 | `Sfx.luau` | about 2.5 LU quieter, now at the pack median (-23.9 LUFS player level) |
+| `shop_buy` rate 1 to .75 | `Sfx.luau` | lower and slower; harshness stays 60 until the new file is uploaded (rate alone does not fix it) |
+| `shiny_bang` volume .8 to .5 | `Sfx.luau` | about 4 LU quieter; still scored harsh (98) until the new file is uploaded |
+| `hatch_legendary` volume .85 to .7 | `Sfx.luau` | the optional quieting of a legendary payoff; the BD-437 reveal ladder is unchanged |
+| `shop_buy_soft.wav` (rate .75, low-pass 4 kHz, 10 ms fade-in) | evidence folder, NOT uploaded | harshness 60 to 27 (ok); above 8 kHz 34% to 0% |
+| `shiny_bang_soft.wav` (rate .70, 2x low-pass 3.5 kHz, 10 ms fade-in) | evidence folder, NOT uploaded | harshness 98 to 31 (calm); above 8 kHz 34% to 0% |
+
+The Sfx module has no fade-in or EQ, so those parts live only in the new files. Re-render with `python tools/render_soft_sfx.py [--out DIR] [--check]` (needs ffmpeg; prints a note and exits 0 without it). When the owner uploads the new files, set the `shop_buy` rate back to 1 (the new file is already slowed) and register the ids in [77](77-asset-registry.md).
+
+**Level checks** (`tests/test_sfx_levels.py`, part of `python -m unittest discover -s tests`, so CI runs it; it reads only the committed WAVs and `Sfx.luau`, and needs no ffmpeg except one re-render test that is skipped when ffmpeg is missing): every cue volume is in 0..0.9 and every everyday cue is at most .6; `level_up` at most .3, `run_end` at most .25; no cue is more than 4 LU above the median player level, except the rare payoff cues, which have their own caps (they step up on purpose, see [87](87-vision-and-feel-guide.md); holding them to 4 LU would flatten the reveal ladder; today they sit +5.5 to +7.8 LU over the median); only `shop_buy` and `shiny_bang` may still score harsh, and only while their asset id is the old one; the soft candidates must measure ok or calm. `tools/verify_audio.py` also checks the new volume numbers in the cue table.
+
 ## Suggested next steps (not done)
 
-- Owner (or a later agent with Blender/ffmpeg) re-renders the sounds named in the report, listens, and re-runs the tool to see the numbers move.
+- Owner listens to the two soft candidates and uploads them if they are good (kanban BD-997); then the lead swaps the ids and sets `shop_buy` rate back to 1.
 - Add `audio_report.py --check` to CI only after the owner approves thresholds (today it would fail on the existing pack by design: it reports problems).
