@@ -85,6 +85,7 @@ local function validate(request: any): string?
 end
 
 local function handleAction(player: any, request: any)
+    if request.action ~= "seen" then ObjectiveService.syncFinds(player) end -- BD-1041: the starter goals read what the server counts as found
     if request.action == "view" then
         local view, status = repository.objectiveView(player)
         if not view then return fail(status or "disabled") end
@@ -133,6 +134,31 @@ function ObjectiveService.record(player: any, kind: string, amount: number?, eve
     return repository.objectiveRecord(player, {kind = kind, amount = amount, id = eventId, value = value})
 end
 
+-- BD-1041 (docs/186 s7): the starter goals "Find 3 patterns", "Find 3 colours" and "Find all Common patterns". The server counts what the
+-- player has found (ProfileRepository.objectiveFinds: the discovery log plus the dinos owned, the same sets the Index shows) and, when a
+-- count has GROWN since this server last looked, queues one event per kind whose value is the new running total. The catalogue rows are
+-- "total" rows (progress = the highest total seen), so a repeat or a late report can never double count. Memory only (weak keys): after a
+-- rejoin the first call re-sends the totals, which is the backfill for dinos owned before the goals existed. Flag off = return at once.
+local FindKinds = {
+    {kind = "patterns_found", key = "patterns"},
+    {kind = "colours_found", key = "colours"},
+    {kind = "common_patterns_found", key = "commonPatterns"},
+}
+local lastFinds: {[any]: {[string]: number}} = setmetatable({}, {__mode = "k"}) :: any
+function ObjectiveService.syncFinds(player: any)
+    if Config.ObjectivesEnabled ~= true or not repository or type(repository.objectiveFinds) ~= "function" then return end
+    local counts = repository.objectiveFinds(player)
+    if type(counts) ~= "table" then return end
+    local last = lastFinds[player]
+    if last == nil then last = {} lastFinds[player] = last end
+    for _, find in FindKinds do
+        local count = counts[find.key]
+        if type(count) == "number" and count == count and count >= 1 and count < 1e6 and count > (last[find.key] or 0) then
+            if ObjectiveService.record(player, find.kind, 1, nil, count) then last[find.key] = count end
+        end
+    end
+end
+
 -- Derived recorders for the facts that carry several objective events at once. Same rule as record(): flag off = return at once.
 -- Called only AFTER the transaction that committed the fact (ProfileRepository), never from client input.
 
@@ -178,6 +204,7 @@ function ObjectiveService.recordHatched(player: any, outcomes: {any}, freshSpeci
     if opened > 0 then ObjectiveService.record(player, "egg_hatched", opened) end
     if rare > 0 then ObjectiveService.record(player, "rare_hatched", rare) end
     if fresh > 0 then ObjectiveService.record(player, "species_new", fresh) end
+    ObjectiveService.syncFinds(player) -- BD-1041: this claim may have found a new pattern or colour
 end
 
 -- A committed fusion (ProfileFusion.fuseDinosaurs, after the transaction). D5 "Add a dino toward a fusion step" counts on this only
@@ -186,6 +213,7 @@ end
 function ObjectiveService.recordFusionUse(player: any)
     if Config.ObjectivesEnabled ~= true then return end
     ObjectiveService.record(player, "fusion_step_added", 1)
+    ObjectiveService.syncFinds(player) -- BD-1041: a fused dino rolls fresh colours and pattern
 end
 
 -- BD-616: the server answered this menu's own request for the player (FusionService "list" -> "fusion_menu"). No-op while the flag is off.

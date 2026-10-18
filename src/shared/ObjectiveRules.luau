@@ -231,6 +231,11 @@ local function build(cfg: any)
     end
 
     local function bump(entry: any, current: number, amount: number, value: any): number
+        -- BD-1041: a `total` row takes the event's value as the running total (the highest wins). Nothing adds up, so a replay is harmless.
+        if entry.total == true then
+            if type(value) ~= "number" or value ~= value or value < 0 then return current end
+            return math.max(current, math.min(cap(entry), math.floor(value)))
+        end
         if entry.minValue ~= nil and (type(value) ~= "number" or value < entry.minValue) then return current end
         return math.min(cap(entry), current + amount)
     end

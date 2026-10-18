@@ -1,7 +1,7 @@
 """BD-074 objective event hooks (docs/66 section 20): offline verifier.
 
 Static (source scan):
-  * each of the 20 docs/66 objectives maps to at least one hook; the table is printed
+  * each of the 23 objectives (docs/66 plus the BD-1041 starter goals) maps to at least one hook; the table is printed
   * every hook sits AFTER the authoritative commit of its fact (retry/UpdateAsync -> adopt, or the server-side accept/claim),
     inside the same function, and behind the one-boolean flag guard
   * no hook exists anywhere else (no client file, no undeclared call), the module is only required lazily
@@ -106,7 +106,7 @@ def block_end(lines: list[str], start: int) -> int:
 def catalogue() -> list[tuple[str, str, str]]:
     """(id, name, event) from the real ObjectiveConfig source."""
     text = (ROOT / 'src/shared/ObjectiveConfig.luau').read_text(encoding='utf-8')
-    return re.findall(r'\{id = "([TSD]\d)", group = "[a-z]+", name = "([^"]+)", event = "([a-z_]+)"', text)
+    return re.findall(r'\{id = "([TSD]\d+)", group = "[a-z]+", name = "([^"]+)", event = "([a-z_]+)"', text)
 
 
 def event_kinds() -> set[str]:
@@ -214,6 +214,27 @@ def static_report() -> tuple[list[str], list[str]]:
         errors.append('BD-616: FusionService must call noteMenuUse(player, "fusion_menu") exactly once, behind the flag guard')
     if 'not (menusUsed[player] and menusUsed[player][request.id])' not in service_text or '"not_opened"' not in service_text:
         errors.append('BD-616: the "seen" branch must refuse with not_opened until the menu was used (menusUsed check missing)')
+    # BD-1041: T10-T12 are produced by ObjectiveService.syncFinds (the server counts the finds from its own profile; the client sends nothing).
+    # The chain must exist: the three kinds, the repository count, and a call after a hatch claim, after a committed fusion and on view / claim.
+    sync_start, sync_end = function_range(read_lines(SERVICE), r'^function ObjectiveService\.syncFinds\(')
+    sync_body = '\n'.join(read_lines(SERVICE)[sync_start:sync_end])
+    for needle in ('repository.objectiveFinds(player)', 'count > (last[find.key] or 0)', 'ObjectiveService.record(player, find.kind, 1, nil, count)'):
+        if needle not in sync_body:
+            errors.append(f'syncFinds: missing {needle!r}')
+    find_kinds = re.findall(r'\{kind = "([a-z_]+)", key = "[A-Za-z]+"\}', service_text)
+    if find_kinds != ['patterns_found', 'colours_found', 'common_patterns_found']:
+        errors.append(f'syncFinds: the find kinds changed: {find_kinds}')
+    for name in ('recordHatched', 'recordFusionUse'):
+        fn_start, fn_end = function_range(read_lines(SERVICE), rf'^function ObjectiveService\.{name}\(')
+        if 'ObjectiveService.syncFinds(player)' not in '\n'.join(read_lines(SERVICE)[fn_start:fn_end]):
+            errors.append(f'{name} must call ObjectiveService.syncFinds(player) (a hatch or a fusion can find a pattern or colour)')
+    if 'if request.action ~= "seen" then ObjectiveService.syncFinds(player) end' not in service_text:
+        errors.append('ObjectiveService.handleAction must sync the finds before a view or a claim')
+    objective_part = (ROOT / OBJECTIVES_PART).read_text(encoding='utf-8')
+    if 'ProgressionRules.findCounts(profiles[player])' not in objective_part or 'Config.ObjectivesEnabled ~= true or not ProfileRepository.isLoaded(player)' not in objective_part:
+        errors.append('ProfileRepository.objectiveFinds must count from the server profile, behind the flag')
+    for kind in find_kinds:
+        produced.setdefault(kind, []).append('ObjectiveService.syncFinds (server count of the discovery log + owned dinos; after a hatch, a fusion, on view and claim)')
     produced.setdefault('fusion_menu_opened', []).append('ProfileRepository.objectiveSeen (client {action="seen", id="fusion_menu"}, server-validated)')
 
     # No stray hooks: every .record( / recordX( call in the server tree is declared above.
@@ -261,8 +282,8 @@ def static_report() -> tuple[list[str], list[str]]:
 
     # Objective -> hook table
     rows = catalogue()
-    if len(rows) != 20:
-        errors.append(f'catalogue parse found {len(rows)} objectives, expected 20')
+    if len(rows) != 23:
+        errors.append(f'catalogue parse found {len(rows)} objectives, expected 23')
     for oid, name, event in rows:
         hooks = produced.get(event, [])
         table.append(f'| {oid} | {name} | `{event}` | ' + ('; '.join(hooks) if hooks else 'NONE') + ' |')
@@ -355,6 +376,10 @@ local function seedEggs(u,eggs,crystalsAmount,xp)
  assert(Repository.load(u))
 end
 local function legacyEgg(id,speciesId) return {eggId=id,kind="alpha_chest",readyAt=0,eventId="clear",mutationId="",reward={speciesId=speciesId,count=1}} end
+local function geneEgg(id,speciesId,patternId,primary,secondary) -- BD-1041: a normal egg that carries a pattern and two colours
+ return {eggId=id,kind="alpha_chest",readyAt=0,eventId="clear",mutationId="",reward={speciesId=speciesId,count=1},
+  genes={conditionId="normal",hatchSuccess=true,primaryColorId=primary,secondaryColorId=secondary,blend=100,patternId=patternId}}
+end
 local function crackedEgg(id,speciesId)
  return {eggId=id,kind="alpha_chest",readyAt=0,eventId="clear",mutationId="",reward={speciesId=speciesId,count=1},
   genes={conditionId="cracked",hatchSuccess=false,primaryColorId="white",secondaryColorId="white",blend=100,patternId="01_blank"}}
@@ -501,7 +526,7 @@ end
 do
  local z=user(7410)
  assert(Repository.load(z))
- seedEggs(z,{legacyEgg("z-1","compy"),legacyEgg("z-2","compy"),legacyEgg("z-3","triceratops")},1000,4*perLevel-40)
+ seedEggs(z,{geneEgg("z-1","compy","01_blank","white","blue"),geneEgg("z-2","compy","03_round_spots","green","green"),geneEgg("z-3","triceratops","08_freckles","white","white")},1000,4*perLevel-40)
  take()
  ObjectiveServiceM.record(z,"food_eaten",10)                                   -- T1 (the Food site: verify_gameplay)
  assert(Repository.commitRunSettlement(z,"z-run",12,nil,200))                  -- T2 + T7 (level 3 after this run's XP)
@@ -535,8 +560,8 @@ do
   local aOk,aStatus=Repository.objectiveClaim(z,row.id,token.."-again") assert(not aOk and aStatus=="already_claimed")
   assert(crystals(z)==before+granted,"every claim paid once: "..crystals(z).." vs "..(before+granted))
  end
- assert(table.concat(order,",")=="T1,T2,T3,T4,T5,T6,T7,T8,T9" and granted==160,"the whole tutorial (160 Crystals) was claimed once each: "..table.concat(order,","))
- for _,eventKind in {"food_eaten","run_end","level_reached","egg_hatched","rare_hatched","species_new","dino_equipped","leap_used","potion_bought"} do
+ assert(table.concat(order,",")=="T1,T2,T3,T10,T11,T12,T4,T5,T6,T7,T8,T9" and granted==210,"the whole tutorial (210 Crystals) was claimed once each: "..table.concat(order,","))
+ for _,eventKind in {"food_eaten","run_end","level_reached","egg_hatched","rare_hatched","species_new","dino_equipped","leap_used","potion_bought","patterns_found","colours_found","common_patterns_found"} do
   assert(kinds[eventKind],eventKind.." was recorded during the session")
  end
  -- the Short + Daily rows of this window: drive them with their own event kinds, claim each once
@@ -560,7 +585,65 @@ do
   end
  end
  assert(crystals(z)==wallet+rewards and rewards>0,"window rows paid once")
- print("Flag-on passed: settlement/event eggs/level, batched hatches (page = one event), species_new inside the transaction, Cracked counts as opened, equip, potion, fusion use; replays count once; tutorial T1-T9 (160 Crystals) and the window rows claim exactly once")
+ print("Flag-on passed: settlement/event eggs/level, batched hatches (page = one event), species_new inside the transaction, Cracked counts as opened, equip, potion, fusion use; replays count once; tutorial T1-T12 (210 Crystals) and the window rows claim exactly once")
+end
+
+------------------------------------------------------------------ E. BD-1041 starter goals: the SERVER counts the finds (discovery log + owned dinos)
+do
+ local u=user(7430)
+ assert(Repository.load(u))
+ seedEggs(u,{geneEgg("f-1","compy","03_round_spots","blue","red"),geneEgg("f-2","compy","03_round_spots","blue","red"),
+  geneEgg("f-3","raptor","07_diamond_scales","white","white"),legacyEgg("f-4","compy")})
+ take()
+ local function find(list,kind) local last=nil for _,c in list do if c.kind==kind then last=c end end return last end
+ assert(Repository.claimChest(u,"f-1"))
+ local list=take()
+ assert(find(list,"patterns_found").value==1 and find(list,"colours_found").value==2 and find(list,"common_patterns_found").value==1,
+  "first egg: 1 pattern, 2 colours (main + accent both count), 1 Common pattern")
+ assert(find(list,"patterns_found").id==nil and find(list,"patterns_found").amount==1,"a find event is id-less (merged by kind) and carries the total as value")
+ assert(Repository.claimChest(u,"f-2"))
+ list=take()
+ assert(find(list,"patterns_found")==nil and find(list,"colours_found")==nil and find(list,"common_patterns_found")==nil,"the same pattern and colours again report no find")
+ assert(Repository.claimChest(u,"f-3"))
+ list=take()
+ assert(find(list,"patterns_found").value==2 and find(list,"colours_found").value==3 and find(list,"common_patterns_found")==nil,
+  "a Legendary pattern is a pattern but not a Common one: 2 patterns, 3 colours, Common stays 1 and sends nothing")
+ assert(Repository.claimChest(u,"f-4"))
+ assert(find(take(),"patterns_found")==nil,"a dino with no genes finds nothing")
+ assert(select(2,Repository.objectiveFlush(u))=="flushed")
+ local s=stored(u).tutorial.progress
+ assert(s.T10==2 and s.T11==3 and s.T12==1,"stored progress is the running total, not a sum: "..tostring(s.T10)..","..tostring(s.T11)..","..tostring(s.T12))
+ -- a rejoin on a NEW player object: the first view re-sends the totals (the backfill for dinos owned before the goals existed), no profile rewrite
+ Repository.release(u)
+ local u2=user(7430)
+ assert(Repository.load(u2))
+ take()
+ local before=stored(u2).tutorial.progress.T10
+ local view=objectiveRemote.OnServerInvoke(u2,{action="view"})
+ assert(view.ok==true,"view")
+ list=take()
+ assert(find(list,"patterns_found").value==2 and find(list,"colours_found").value==3 and find(list,"common_patterns_found").value==1,"the first view after a rejoin re-sends the totals")
+ view=objectiveRemote.OnServerInvoke(u2,{action="view"})
+ assert(#take()==0,"a second view sends nothing: the counts have not grown")
+ assert(before==2,"the stored progress survived the rejoin")
+ -- the client cannot report a find or a total: only view / claim / seen shapes exist
+ clockNow+=20
+ for _,forged in {{action="record",kind="patterns_found",value=8},{action="view",value=8},{action="claim",id="T10",token="t",value=8},{action="find",id="01_blank"}} do
+  local answer=objectiveRemote.OnServerInvoke(u2,forged)
+  assert(answer.ok==false and answer.reason=="bad_request","forged find refused: "..tostring(forged.action))
+ end
+ -- claim: T10 needs 3 patterns (only 2 are found), T11 needs 3 colours (3 found, main and accent counted), T12 needs all 3 Common patterns (1 found)
+ local wallet=crystals(u2)
+ clockNow+=20
+ local short=objectiveRemote.OnServerInvoke(u2,{action="claim",id="T10",token="e-claim-10"})
+ assert(short.ok==false and short.reason=="not_done" and crystals(u2)==wallet,"T10 is not done with 2 of 3 patterns")
+ local notYet=objectiveRemote.OnServerInvoke(u2,{action="claim",id="T12",token="e-claim-12"})
+ assert(notYet.ok==false and notYet.reason=="not_done","T12 is not done with ONE Common pattern")
+ local colours=objectiveRemote.OnServerInvoke(u2,{action="claim",id="T11",token="e-claim-11"})
+ assert(colours.ok==true and colours.status=="claimed" and colours.grant.crystals==15 and crystals(u2)==wallet+15,"T11 pays its 15 Crystals: "..tostring(colours.reason))
+ local again=objectiveRemote.OnServerInvoke(u2,{action="claim",id="T11",token="e-claim-11b"})
+ assert(again.ok==false and again.reason=="already_claimed" and crystals(u2)==wallet+15,"T11 pays once")
+ print("Starter goals passed: the server counts patterns and colours (main and accent) from the discovery log and the dinos owned, sends a find only when a total grows, the first view after a rejoin re-sends the totals, progress is the running total, a forged find is refused, claims pay once")
 end
 
 ------------------------------------------------------------------ D. OB1: only a run that ate food AND lasted RunMinSeconds counts for T2 / S3 / D2
@@ -737,7 +820,7 @@ def main(argv=None) -> int:
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         print(result.stderr, end='')
-        if result.returncode == 0 and 'Flag-on passed' in result.stdout:
+        if result.returncode == 0 and 'Flag-on passed' in result.stdout and 'Starter goals passed' in result.stdout:
             print('Objective hooks verification passed (BD-074).')
             return 0
         return result.returncode or 1

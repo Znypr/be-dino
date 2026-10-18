@@ -202,6 +202,44 @@ function Rules.discoveryIds(profile)
     end
     return out
 end
+-- BD-1041 (docs/186 s7): how many patterns and colours the player has found, for the starter goals "Find 3 patterns / colours" and "Find
+-- all Common patterns". Counted on the SERVER the same way the Index counts on the client (shared/PatternColourIndex.foundSets): the
+-- permanent discovery log (progression.discovered) merged with the dinos owned right now (collection variants), so an old save is
+-- backfilled with no rewrite and a dino fused away never un-finds anything. A main AND an accent colour both count. Only ids that are
+-- rows of ProgressionConfig.EggPatterns / EggColors count. Read-only; returns {patterns, colours, commonPatterns} (whole numbers).
+function Rules.findCounts(profile)
+    local patterns,colours={}, {}
+    local function add(set,id) if typeof(id)=="string" and id~="" then set[id]=true end end
+    local p=if typeof(profile)=="table" then profile.progression else nil
+    local log=if typeof(p)=="table" and typeof(p.discovered)=="table" then p.discovered else {}
+    if typeof(log.patterns)=="table" then for id in log.patterns do add(patterns,id) end end
+    if typeof(log.colours)=="table" then for id in log.colours do add(colours,id) end end
+    local collection=if typeof(profile)=="table" then profile.collection else nil
+    if typeof(collection)=="table" then
+        for _,entry in collection do
+            if typeof(entry)=="table" and typeof(entry.variants)=="table" then
+                for _,v in entry.variants do
+                    if typeof(v)=="table" and typeof(v.count)=="number" and v.count>0 and typeof(v.genes)=="table" then
+                        add(patterns,v.genes.patternId)
+                        add(colours,v.genes.primaryColorId)
+                        add(colours,v.genes.secondaryColorId)
+                    end
+                end
+            end
+        end
+    end
+    local out={patterns=0,colours=0,commonPatterns=0}
+    for _,row in Config.EggPatterns do
+        if patterns[row.id] then
+            out.patterns+=1
+            if row.rarity=="Common" then out.commonPatterns+=1 end
+        end
+    end
+    for _,row in Config.EggColors do
+        if colours[row.id] then out.colours+=1 end
+    end
+    return out
+end
 function Rules.valid(p): boolean
     if p==nil then return true end -- historical profiles are migrated on load
     if typeof(p)~="table" or not finite(p.crystals) or p.crystals<0 or p.crystals>Config.MaxCrystals or p.crystals%1~=0 then return false end

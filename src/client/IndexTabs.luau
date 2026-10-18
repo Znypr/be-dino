@@ -9,7 +9,10 @@
 --   * A marker frame sits in the body. Bootstrap clears the body when ANY screen opens, which destroys the marker; that removes the tab bar
 --     and shows the title again, so no other screen has to know the tabs exist.
 --   * The dot: shown on the Dinos button while more patterns and colours are found than the last time the Patterns or Colours tab was
---     looked at. The first reading in a session is the baseline (what you already had is not "new"); it is kept in memory only.
+--     looked at. Looking at a tab saves the total in the player's settings (SettingsModel.indexSeen, BD-1065: an additive field, written only after a
+--     look), so the dot survives a rejoin. With nothing saved the first reading in a session is the baseline (what you already had is not "new").
+--   * BD-1065: a tap on a card opens its small detail (PatternColourDetail): name, tier, boost pips, the whole "Found on" list; the colour detail
+--     adds "The accent colour counts more".
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -22,12 +25,15 @@ local Secret = require(Shared:WaitForChild("SecretSpeciesConfig"))
 local PrivateState = require(script.Parent.PrivateState)
 local Compact = require(script.Parent.ModalCompact)
 local Cards = require(script.Parent.PatternColourCards)
+local Detail = require(script.Parent.PatternColourDetail)
+local Settings = require(Shared:WaitForChild("SettingsModel"))
 
 local Tabs = {}
 local C = Theme.Colors
 
 local lastTab = "dinos"
-local seenTotal: number? = nil
+local viewedTotal: number? = nil -- the total when a Patterns / Colours tab was last looked at in this session
+local firstTotal: number? = nil -- the first reading of this session (the baseline when nothing is saved)
 local dot: Frame? = nil
 
 local function decode(name: string): any
@@ -56,12 +62,14 @@ function Tabs.lastTab(): string return lastTab end
 local function refreshDot()
     if dot == nil or not PrivateState.isReady() then return end
     local total = Index.foundTotal(Tabs.found(), ProgressionConfig.EggPatterns, ProgressionConfig.EggColors)
-    if seenTotal == nil then seenTotal = total end -- the first reading is the baseline
-    dot.Visible = Index.dotVisible(total, seenTotal)
+    if firstTotal == nil then firstTotal = total end -- the first reading is the baseline when nothing was saved
+    dot.Visible = Index.dotVisible(total, Index.seenBaseline(viewedTotal, Settings.indexSeen(), firstTotal))
 end
 
 local function markSeen()
-    seenTotal = Index.foundTotal(Tabs.found(), ProgressionConfig.EggPatterns, ProgressionConfig.EggColors)
+    local total = Index.foundTotal(Tabs.found(), ProgressionConfig.EggPatterns, ProgressionConfig.EggColors)
+    viewedTotal = total
+    Settings.set("indexSeen", total) -- BD-1065: saved with the other settings (SettingsSync sends it, debounced); no change = no send
     refreshDot()
 end
 
@@ -83,7 +91,8 @@ function Tabs.attachDot(buttons: {any})
         end
     end
     if dot == nil then return end
-    for _, name in {"CollectionJson", "DiscoveryJson"} do PrivateState.onChanged(name, refreshDot) end
+    for _, name in {"CollectionJson", "DiscoveryJson", "SettingsJson"} do PrivateState.onChanged(name, refreshDot) end -- SettingsJson: the saved total can arrive after the first reading
+    Settings.onChange(function() refreshDot() end)
     refreshDot()
 end
 
@@ -138,10 +147,13 @@ local function renderTab(parts: any, tab: string, mark: Frame?)
         if child ~= mark then child:Destroy() end
     end
     local rows = if tab == "colours" then ProgressionConfig.EggColors else ProgressionConfig.EggPatterns
-    local cards = Index.cards(tab, rows, Tabs.found(), speciesName)
+    local found = Tabs.found()
+    local cards = Index.cards(tab, rows, found, speciesName)
     local header = Index.header(tab, cards)
     local height = math.max(180, math.min(402, Compact.bodyHeight()) - 46)
-    Cards.build(body, tab, cards, header.text, "Hatch eggs to find more!", height)
+    Cards.build(body, tab, cards, header.text, "Hatch eggs to find more!", height, function(card)
+        Detail.open(body, tab, card, found, speciesName) -- BD-1065: the card's small detail
+    end)
     markSeen()
 end
 
