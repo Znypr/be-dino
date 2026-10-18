@@ -44,6 +44,19 @@ local CombatConfig = {
     SizeDamperRatio = 0.5, -- attacker s below this fraction of target s ...
     SizeDamperX = 0.9, -- ... deals this multiple
 
+    -- BD-1025 / docs/183 (owner 2026-10-18): the SIZE DIFFERENCE decides how long a fight takes. Size unit z = 1 + growth/50 (the square of the
+    -- drawn scale s = sqrt(1 + growth/50), cap s = 4, so z = 1..16). R = bigger z / smaller z. Similar sizes = a long fight (about 9 bites);
+    -- a big R = very few bites; R >= OneShotRatio = ONE bite. A small dino hitting a big one deals less and less (never 0). PROVISIONAL.
+    SizeUnitDivisor = 50,
+    SizeUnitMax = 16, -- growth cap 750 -> z = 16
+    OneShotRatio = 16, -- R at (and above) which the bigger dino wins in one bite (fresh dino against a capped one)
+    BigHitCurvePower = 1.37, -- bites = 1 + (even bites - 1) x (1 - x^power), x = ln R / ln OneShotRatio: gentle first, then steeper
+    SmallHitFloorX = 0.1, -- a small dino's bite is multiplied by this at R = OneShotRatio (smoothly from 1); never below MinHit
+    SmallHitPower = 1.5,
+    -- Wild predators (NpcPredatorRules) do not start a fight with a player more than this many times smaller (no reward, hard to see)
+    -- or bigger (hopeless). Players may still choose to. Wild dinos reach R = 6 at most against a fresh player, so 6 would never trigger.
+    WildMaxSizeRatio = 4,
+
     RegenDelaySeconds = 6,
     RegenFractionPerSecond = 0.04,
     FoodHealFraction = 0.05,

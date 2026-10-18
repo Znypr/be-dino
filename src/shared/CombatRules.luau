@@ -84,7 +84,7 @@ function Rules.join(world: any, opts: any): any
     local now = num(opts.now, 0)
     local hpX = math.clamp(num(opts.hpX, 1), 0.05, 4) -- BD-1025: wild predators pass Cfg.WildHpX; players nothing
     local dino = {
-        key = key, userId = opts.userId, runId = opts.runId, class = class, score = score, s = s, hpX = hpX,
+        key = key, userId = opts.userId, runId = opts.runId, class = class, score = score, s = s, hpX = hpX, wild = opts.wild == true,
         state = State.new(Stats.maxHp(class, s, hpX)),
         protectedUntil = num(opts.protectedUntil, 0) + Rules.shieldSeconds(world, opts.userId, now),
         lastBiteAt = -1e9, ledger = TeamUp.newLedger(), defeatedBy = nil,
@@ -203,7 +203,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
     a.lastBiteAt = n
     State.touch(a.state, n)
     local extra = TeamUp.crowdMultiplier(best.ledger, n) * (if leaping then Cfg.LeapBiteX else 1)
-    local damage = Stats.hit(a.class, a.s, best.class, best.s, 0, extra)
+    local damage = Stats.hitScored(a.class, a.score, best.class, best.score, 0, extra, {wildAttacker = a.wild, targetHpX = best.hpX}) -- BD-1025: the size difference decides the bites
     local applied, defeated = State.damage(best.state, damage, n)
     TeamUp.record(best.ledger, a.key, applied, n)
     local push = Cfg.KnockbackStuds / math.max(1, best.s / Cfg.KnockbackBigScaleDivisor)
