@@ -1,0 +1,37 @@
+Model check: WorldKitV3_Plants.blend (blend, 117.0 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 2 warn, 17 pass)
+
+  WARN  face direction                           neighbouring faces disagree about which side is out on plant_flowers_daisy_v3 (3 edges): some faces are flipped and will vanish from one side
+  WARN  doubled vertices                         vertices doubled in place on plant_flowers_daisy_v3 (126), plant_flowers_red_v3 (90), plant_flowers_yellow_v3 (90)
+  PASS  triangles per part                       biggest part plant_flowers_daisy_v3 has 258 of 21,844 allowed
+  PASS  triangles in total                       1,332 triangles in 8 part(s), 1,253 vertices
+  PASS  size in studs                            all 8 parts together: width 59.43, height 3.49, length 4.94 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.53x the Compy's height, 0.64x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (8 bottom centre); whole model box z runs 0.00 to 3.49
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               8 of 8 part(s) are open shells (fine for leaves and wings, not for solid bodies): plant_fern_arch_v3, plant_flowers_daisy_v3, plant_flowers_red_v3 and 5 more
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on plant_fern_arch_v3, plant_flowers_daisy_v3, plant_flowers_red_v3, plant_flowers_yellow_v3 and 4 more, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 8 of 8 part(s) (Col)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.11 MB
+  PASS  part names                               8 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part                     triangles  W x H x L (studs)   origin         material slots  UV  flags      
+  -----------------------  ---------  ------------------  -------------  --------------  --  -----------
+  plant_flowers_daisy_v3   258        2.29 x 2.40 x 2.43  bottom centre  1               no  mixed faces
+  plant_flowers_red_v3     201        2.64 x 2.54 x 2.28  bottom centre  1               no  -          
+  plant_flowers_yellow_v3  201        2.33 x 2.31 x 2.08  bottom centre  1               no  -          
+  plant_fern_arch_v3       189        4.87 x 2.08 x 4.94  bottom centre  1               no  -          
+  plant_jungle_leaf_v3     168        4.14 x 3.49 x 4.24  bottom centre  1               no  -          
+  plant_grass_broad_v3     120        2.00 x 2.24 x 2.30  bottom centre  1               no  -          
+  plant_grass_arch_v3      105        2.42 x 2.08 x 2.26  bottom centre  1               no  -          
+  plant_grass_low_v3       90         2.43 x 1.22 x 2.33  bottom centre  1               no  -          
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

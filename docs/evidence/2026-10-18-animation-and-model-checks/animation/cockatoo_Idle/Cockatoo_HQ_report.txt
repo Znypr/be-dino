@@ -1,0 +1,59 @@
+Action "Idle" in Cockatoo_HQ.blend (Blender 5.1.2)
+Contact sheet: Blender Workbench renders, side view, 8 frames
+Picture: docs\evidence\2026-10-18-animation-and-model-checks\animation\cockatoo_Idle\Cockatoo_HQ_strip.png
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  frame rate              OK     24.00 frames per second
+  duration                OK     90 frames = 3.75 s per loop (frames 1 to 91)
+  loop continuity         CHECK  last frame repeats the first (seam step is 0.00x what its neighbours give): looping plays that pose twice
+  joint angle range       OK     biggest turn 30 degrees (FootR)
+  joint speed             OK     fastest 22 degrees per second (Crest)
+  jerkiness               OK     no sudden acceleration spikes
+  foot sliding            N/A    the feet hardly move (0.7% of body height): a standing clip
+  ground penetration      OK     lowest mesh point sinks 1.2% of body height below the ground (frame 1)
+  floating                OK     the lowest point is 0.0% of body height above the ground at its closest
+  left/right foot timing  N/A    not a walk or run cycle
+  left/right swing size   OK     paired bones swing within 15% of each other
+  easing                  OK     eased (starts and stops softly): peak speed is 1.57x the average inside a move; key interpolation: bezier 100%
+
+Joint angles (degrees away from the rest pose; speed in degrees per second), biggest movers first
+  bone   min  max  range  peak speed  average speed
+  Head   0    10   10     15          9            
+  Crest  0    8    8      22          8            
+  ArmL   0    4    4      7           4            
+  ArmR   0    4    4      7           4            
+  Tail   2    5    3      9           6            
+  Body   0    1    1      4           1            
+
+Feet (bones named like a foot): share of the cycle planted, lowest point above ground
+  foot   planted  lowest
+  FootR  0%       12.3% 
+  FootL  100%     6.3%  
+
+Left / right pairs (how far the bone tip travels, as a share of body height; foot timing offset as a share of the cycle)
+  pair           left / right  ratio
+  ArmL / ArmR    2% / 2%       1.00 
+  LegL / LegR    1% / 1%       1.00 
+  FootL / FootR  1% / 1%       1.00 
+
+Notes
+  - Body height 7.339 units (from the standing mesh box); ground at z = -0.075.
+  - Typical frame-to-frame pose change 0.0006 body heights.
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  frame rate              common frame rates; others get resampled on export
+  duration                seconds: shorter than 0.2 is a blink, longer than 5 is probably the wrong range selected
+  loop continuity         seam step between 10% and 2x of its neighbours, no joint jumping
+  joint angle range       under 170 degrees
+  joint speed             under 1200 degrees per second
+  jerkiness               spike over 8x average and over 2% of body height
+  foot sliding            walk and run cycles only
+  ground penetration      under 2% of body height
+  floating                under 3% (flyers and swimmers can ignore this)
+  left/right foot timing  walk and run cycles only
+  left/right swing size   ratio 0.85 to 1.15
+  easing                  between 1.15 and 2.2 (linear is 1.0, a sine is 1.57)
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.
