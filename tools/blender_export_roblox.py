@@ -220,7 +220,9 @@ def inner_main(argv):
     kw = dict(
         filepath=args.out, use_selection=True,
         object_types={"MESH", "ARMATURE"} if use_rig else {"MESH"},
-        apply_unit_scale=True, axis_forward="-Z", axis_up="Y",
+        # global_scale 0.01: Blender writes metres as centimetres (x100) and Roblox reads FBX units as studs, so without it a
+        # 4-unit cube arrived as 400 studs (measured 2026-10-18 with the acceptance cube, asset 98358657150463).
+        apply_unit_scale=True, global_scale=0.01, axis_forward="-Z", axis_up="Y",
         colors_type="SRGB", mesh_smooth_type="OFF", add_leaf_bones=False, bake_anim=bool(args.anim and use_rig),
     )
     if use_rig:

@@ -110,6 +110,14 @@ Uses a 4-stud cube. It proves each step once; delete the result afterwards.
 
 If step 4 fails: HTTP 401 = key wrong or expired; 403 = key lacks Assets Write, or wrong creator id, or an experience/IP restriction; 400 = Roblox rejected the file (try the Studio Importer once by hand to see its error text); "still not done" = wait and check My Packages.
 
+### Acceptance run, 2026-10-18 (lead, owner-created key, scratch copy of Place1, nothing in the owner's Place1)
+
+- Export -> upload -> approval -> `InsertService:LoadAsset` in Studio through the Studio MCP all WORKED with the real key (key present in the lead process, never printed).
+- First cube upload (asset 98358657150463) came into Studio as **400 x 400 x 400 studs**: Blender writes metres as centimetres and Roblox reads FBX units as studs (x100). Fix in `tools/blender_export_roblox.py`: `global_scale=0.01`. Second upload (asset 118790017458239): **4 x 4 x 4 studs**, one MeshPart, no script inside. Pass.
+- The upload returned approved within seconds; Open Cloud made a Model with one MeshPart (name kept).
+- Still UNVERIFIED: vertex colours (needs a rendered Studio frame; the scratch Studio is minimised), multi-part names, pivots, Motor6D/rig and animations (the cockatoo run answers this), cost per upload (none seen), whether `LoadAsset` also works from a Studio signed in as a different account.
+- Both test assets are the owner's account models named AcceptanceCube / AcceptanceCube2 (delete in Creator Hub > Inventory when no longer needed; deleting is the owner's choice).
+
 ## 6. NOT verified (be honest)
 
 - **Nothing was uploaded to Roblox.** No key exists yet. The upload tool is tested only with a fake network (32 offline tests). Request field names come from the docs; a real run may need a small fix.
