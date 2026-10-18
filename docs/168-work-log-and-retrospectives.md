@@ -135,6 +135,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1055 OPEN EGGS, BD-1054 check, BD-1057 skip rule | worker | - | 30.0 | 55 | - | good | - | conflict: kanban rows 1054-1057 were only on the unmerged PR #503, waited for its merge | rows from an open PR: do code first, edit rows after it merges |
 | 2026-10-18 | BD-1036 colour ladder retune: equal split, rarer-of-two, colour timing tool (helper, 2nd of 3 PRs) | worker | #513 | 45.0 | 50 | 250.0 | good | 1 | ci-red: verify_eggs hard-coded Black weight 512 (caught by the full local run) | run the whole verify suite before pushing, one-number asserts hide in old verifiers |
 | 2026-10-18 | BD-1038 pattern and colour boost behind GeneBoostEnabled (helper, 3rd of 3 PRs) | worker | #516 | 50.0 | 55 | 250.0 | good | - | conflict: merge of main into docs/115 and kanban (solved with tools/merge_main_into_pr.py) | open the PR first, then let the merge helper do main merges |
+| 2026-10-18 | BD-1039 Pattern Index and Colour Index (tabs, cards, ribbons, dot, flag, tests) | worker | - | 150.0 | 140 | 600.0 | good | 1 | conflict: Bootstrap alias broke verify_hud and verify_phone_scale (no new top-level locals for ModalCompact) | Bootstrap is guarded by string-level tests: read the verifiers before shortening code; reverted the alias and trimmed a comment instead |
 <!-- retro-table:end -->
 
 ## 6. Open items
