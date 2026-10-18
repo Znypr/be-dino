@@ -11,6 +11,7 @@ local MovementWindow=require(ReplicatedStorage.Shared.MovementWindow)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
 local ClassMovement=require(ReplicatedStorage.Shared.ClassMovement)
 local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
+local GeneBoost=require(ReplicatedStorage.Shared.GeneBoost)
 local Service={}
 local PrivateState = require(script.Parent.PrivateState)
 -- BD-172: colour growth bonus from the SERVER-held equipped genes (never client data); decoded once per distinct string.
@@ -24,6 +25,22 @@ local function colourGrowth(genesJson:any): (number,number)
         colourCache.multiplier=1+colourCache.percent/100
     end
     return colourCache.percent,colourCache.multiplier
+end
+-- BD-1038 (docs/186 s6): the pattern + colour boost, computed on the SERVER from the equipped dino's genes (never a client number), only while
+-- Config.GeneBoostEnabled is true. Off = (1, 1, 0) before any genes are even read. Decoded once per distinct genes string.
+local boostCache={}
+local boostCacheSize=0
+local function geneBoost(genesJson:any): (number,number,number)
+    if GameConfig.GeneBoostEnabled~=true or typeof(genesJson)~="string" then return 1,1,0 end
+    local hit=boostCache[genesJson]
+    if hit==nil then
+        local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+        local growth,walk,points=GeneBoost.multipliers(true,Config.EggPatterns,Config.EggColors,if ok then genes else nil)
+        hit={growth,walk,points}
+        if boostCacheSize>=64 then boostCache={} boostCacheSize=0 end
+        boostCache[genesJson]=hit boostCacheSize+=1
+    end
+    return hit[1],hit[2],hit[3]
 end
 local random=Random.new()
 local WeatherClock=require(ReplicatedStorage.Shared.WeatherClock)
@@ -210,7 +227,10 @@ function Service.start(repository)
                     local adminGrowth,adminSpeed=adminMultipliers()
                     growth*=adminGrowth speed*=adminSpeed
                     local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
-                    growth*=colourMultiplier -- BD-172: applied after the GrowthCap, so it is always an extra <= +10% on gained growth
+                    local boostGrowth,boostWalk,boostPoints=geneBoost(player:GetAttribute("EquippedGenesJson"))
+                    -- BD-1038: with GeneBoostEnabled the gene boost REPLACES the BD-172 colour bonus (the +15% cap is a total per dino, so they must not stack).
+                    growth*=if GameConfig.GeneBoostEnabled==true then boostGrowth else colourMultiplier -- BD-172: applied after the GrowthCap, so it is always an extra <= +10% on gained growth
+                    if GameConfig.GeneBoostEnabled==true then c:SetAttribute("GeneBoostPoints",boostPoints) end
                     c:SetAttribute("ColourGrowthPercent",colourPercent) PrivateState.set(player, "ColourGrowthPercent",colourPercent)
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
@@ -218,7 +238,7 @@ function Service.start(repository)
                     local h=c:FindFirstChildOfClass("Humanoid")
                     if h then
                         local classX=if GameConfig.ClassMovementEnabled then ClassMovement.walkSpeed(ClassMovement.classForSpecies(player:GetAttribute("EquippedSpeciesId")))/GameConfig.WalkSpeed else 1 -- BD-246, flag off = 1
-                        h.WalkSpeed=GameConfig.WalkSpeed*classX*(if c:GetAttribute("RunState")=="Active" then speed else 1)
+                        h.WalkSpeed=GameConfig.WalkSpeed*classX*boostWalk*(if c:GetAttribute("RunState")=="Active" then speed else 1) -- BD-1038: boostWalk is exactly 1 with the flag off
                     end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)
                     c:SetAttribute("EquippedTrailId",p.equippedTrail or "")

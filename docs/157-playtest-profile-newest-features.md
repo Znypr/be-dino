@@ -83,3 +83,5 @@ Label: **CURRENT BUILD BEHAVIOR** of the playtest profile; the default profile o
 - **Check.** `python tools/playtest_freshness.py build/BeDino-Build020-playtest.rbxlx` prints "up to date" or "N commits behind origin/main" and lists the newest merged feature rows (git log subjects that name a BD- row). Exit 0 up to date, 1 behind, 2 cannot tell; `--warn-only` always exits 0, `--fetch` runs `git fetch origin` first. It reads the manifest next to the file, or the stamp inside the `.rbxlx`.
 - **Build time warning.** `tools/build.py --profile playtest` prints a warning when the checkout is behind the local `origin/main` ref. Rule: build a playtest from a fresh `origin/main` (`git fetch origin` first).
 - **Tests.** `tests/test_playtest_freshness.py`.
+
+* **Update 2026-10-18 (BD-1038, [115](115-decisions-log.md)):** `GeneBoostEnabled` (the pattern and colour boost to growth and walking, [186](186-pattern-colour-indexes-and-slower-species.md) s6) joins the "on" list: the playtest profile sets it, the default profile requires it false, `PlaytestOnFlagTests.ON` lists it. PROVISIONAL numbers, free eggs only, no Robux; offline evidence only.
