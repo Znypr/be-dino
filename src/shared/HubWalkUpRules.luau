@@ -52,4 +52,19 @@ function HubWalkUpRules.trigger(state: any, station: any, canOpen: boolean, now:
     return true
 end
 
+-- BD-1074: what a prompt press does ("open", "close" or "none"). openName = the rail destination whose screen is on show now ("" for none).
+-- The key of the station whose OWN screen is open closes that screen; the gap still stops a held or hammered key from opening then closing at once.
+-- Stations still open only on their key or prompt (docs/114 6.2): a press never opens a screen the station does not own.
+function HubWalkUpRules.press(state: any, station: any, canOpen: boolean, openName: any, now: number): string
+    local destination = HubWalkUpRules.destination(station)
+    if destination == nil or now - state.lastOpen < HubWalkUpRules.TriggerGap then return "none" end
+    if typeof(openName) == "string" and openName == destination then
+        state.lastOpen = now
+        return "close"
+    end
+    if not canOpen then return "none" end
+    state.lastOpen = now
+    return "open"
+end
+
 return HubWalkUpRules
