@@ -9,11 +9,11 @@ Written 2026-10-18 (BD-634). Owner request: "use more project notes so make sure
 3. [114 Handbook](114-handbook.md): vision words, design language, palette, lighting, sound, quality bars, economy cheat sheet, section 13 PR checklist. Read only the sections your task touches, but always section 0 (the vibe words) and section 12 (process).
 4. [115 Decisions log](115-decisions-log.md): dated owner decisions. The newest owner decision wins.
 5. [116 Conflicts](116-handbook-conflicts.md): known mismatches and open owner questions.
-6. Your row in [07-kanban.md](07-kanban.md), then the document it links.
+6. Your row on the board (one file per task in `docs/kanban/rows/`, entry page [07-kanban.md](07-kanban.md)), then the document it links.
 
 ```
 git fetch origin && git merge origin/main      # before you read anything: the tree moves all day
-grep -n "BD-NNN" docs/07-kanban.md             # your row
+python tools/kanban.py show BD-NNN             # your row (the file is docs/kanban/rows/BD-NNNN.md)
 ```
 
 **Mismatches become questions.** If two sources disagree (doc vs code, doc vs doc, handbook vs the task text), do not pick silently. Write the mismatch down in your PR body and your report, add an OWNER QUESTION row to docs/116 if it is new, and continue with the safest reading (usually: the newest owner statement; the flag stays off).
@@ -36,16 +36,19 @@ grep -n "BD-NNN" docs/07-kanban.md             # your row
 - **Many PRs waiting? Use the merge train** instead of merging them one by one (every squash-merge restarts CI for all the others): `python tools/merge_train.py <PR numbers> [--push]` or `--auto-select --hold <active agents' PRs>`, see [172](172-merge-train.md).
 - Do not leave `git stash` entries (the stash is shared between worktrees); use a WIP commit.
 
-**Numbers and the kanban** (one board only: [07-kanban.md](07-kanban.md); status lives only there; never mark Done without recorded evidence):
+**Numbers and the kanban** (one board only: one file per task in `docs/kanban/rows/`, entry page [07-kanban.md](07-kanban.md), details [191](191-kanban-rows.md); status lives only there; never mark Done without recorded evidence):
 
 ```
 python tools/next_bd_id.py              # next free BD id (reserved 48 h); --reserve 3 for several; --peek just looks
 python tools/next_bd_id.py --doc        # next free docs/NN number
 python tools/board_summary.py           # counts (the kanban stores no counts; nobody commits them)
+python tools/kanban.py list --status "Review / test" --priority P1   # look at rows; also: show BD-N, board, render
+python tools/kanban.py set-status BD-N "Review / test" --note "outcome sentence"   # edits only that row's file
+python tools/kanban.py add --title "..." --priority P1                # new row (takes the next free number)
 ```
 
-- **Conflict rule for docs/07-kanban.md, per row:** keep YOUR version of a row only if you changed it versus the merge base; otherwise take main's. Keep row titles unchanged and append outcomes to the end of the row. Never put back an older copy of a row. **A script does this for you:** `python tools/merge_main_into_pr.py <PR number or branch>` (dry run; `--push` to push, never forced), see [166](166-merge-helper.md).
-- Run the board check **only after committing** (it reads commits, not your working copy): `python tools/verify_kanban_merge.py --base origin/main --head HEAD` (`--fix` rewrites stale rows from main).
+- **Rows are files (BD-1061, [191](191-kanban-rows.md)).** Never edit a task row inside docs/07-kanban.md (it holds no rows); change `docs/kanban/rows/BD-NNNN.md` or use `tools/kanban.py`. Git merges different rows by itself; if you and main both edited the SAME row, `python tools/merge_main_into_pr.py <PR number or branch>` (dry run; `--push` to push, never forced, see [166](166-merge-helper.md)) merges both edits. Keep row titles unchanged and append outcomes to the end of the row. **A branch made before the cutover** (its row changes are in the old table of 07): run the same command, or `python tools/kanban_migrate_pr.py <PR>`; it moves your row changes into row files.
+- Run the board check **only after committing** (it reads commits, not your working copy): `python tools/verify_kanban_merge.py --base origin/main --head HEAD`; `python tools/verify_kanban_rows.py` checks the row files in your working copy.
 - Also before pushing: `python tools/verify_doc_ids.py` (unique doc numbers and BD ids) and `python tools/verify_handbook.py` (UI floors, sound cap, palette, PR template).
 
 **Verifiers.** CI (`.github/workflows/build-generated-place.yml`) runs about 150 `python tools/verify_*.py` checks plus the bind checks. Run the ones your change touches (`ls tools | grep verify_`), and always for profile, save or flag work: `verify_rollback.py`, `verify_profile_golden.py`, `verify_switch_on.py`, `verify_robux_line.py --selftest`. Luau checks need the pinned runner on this PC:
