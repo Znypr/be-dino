@@ -488,3 +488,10 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **Options not picked:** B (speech bubble with 2 or 3 choice buttons: an extra tap for stalls that have one window; use later where a stall has two real choices) and C (window opens when you walk up: breaks the 2026-10-16 owner rule that a stall never opens by walking near it).
 - **To overturn:** tell the lead; nothing is built yet, so only [180](180-shop-and-npc-interaction-design.md) and the BD-1016 to BD-1018 rows change.
 - **Not seen:** the other games' prompts (only Grow a Garden pictures exist), phone, Studio. Research is from pages and a few paused frames.
+
+## LEAD decision (owner delegated 2026-10-16, 2026-10-18): new species much rarer (BD-1032, [186](186-pattern-colour-indexes-and-slower-species.md) section 3)
+
+- **Decision:** species base weights per egg are Common 91 / Uncommon 8.5 / Rare 0.42 / Epic 0.07 / Legendary 0.01 (PROVISIONAL, was 72 / 24 / 3.2 / 0.7 / 0.1); Compy is 40% of the Common tier. The run boost starts above 15 eggs and doubles Rare, Epic and Legendary at 120 eggs (and for a nest). At 3 eggs a minute: first Uncommon about 3 min, first Rare or better about 46 min (median; 90th percentile about 2.5 hours), Rare or better in the first 4 minutes about 6%.
+- **Options not picked:** keep the old odds (rares at about 8 minutes, what the owner saw); keep the old gentle boost (it would lift a normal run); a flat boost from egg 1 (a 15-egg run would be lifted about 12%).
+- **To overturn:** change `ChestSpeciesWeights`, `SpeciesRunBoost`, `EggRarityBoostFreeEggs` in `src/shared/Config.luau`, then `python tools/generate_drop_odds.py` and the numbers in `tools/verify_rewards.py`. Saved eggs are not affected either way.
+- **Not seen:** no Studio or phone check; the minutes assume 3 eggs a minute (BD-1043 measures the real rate). The Legendary median is about 38 hours of play: owner may want it faster.

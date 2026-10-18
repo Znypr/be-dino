@@ -106,10 +106,12 @@ local function weightedChoice(rows, rng: Random)
 end
 
 -- Run-size species boost per rarity tier (BD-044): a batch of N eggs scales tier t by
--- 1 + s * (SpeciesRunBoost[t] - 1), s = (clamp(N, 1, max) - 1) / (max - 1). One egg = base odds.
+-- 1 + s * (SpeciesRunBoost[t] - 1), s = clamp((N - free) / (max - free), 0, 1) (BD-1032): a run of up to EggRarityBoostFreeEggs
+-- (a normal 15-egg run) and a single shop egg get base odds; the boost is full at EggRarityBoostMaxEggs.
 function RewardMath.speciesWeights(eggCount: number?)
     local maxEggs = Config.EggRarityBoostMaxEggs
-    local s = (math.clamp(eggCount or 1, 1, maxEggs) - 1) / math.max(1, maxEggs - 1)
+    local free = Config.EggRarityBoostFreeEggs or 1
+    local s = math.clamp(((eggCount or 1) - free) / math.max(1, maxEggs - free), 0, 1)
     local rows = {}
     for _, row in Config.ChestSpeciesWeights do
         local gain = Config.SpeciesRunBoost[Config.SpeciesRarities[row.speciesId]] or 1
