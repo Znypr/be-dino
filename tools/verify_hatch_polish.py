@@ -190,7 +190,7 @@ MUTANTS = {
         'HatchSequence': [('if traitBadge and traitBadge:IsA("GuiObject") then traitBadge.Visible = false end', '')],
     },
     'Skip stops without saying why (BD-1073)': {
-        'HatchSequence': [('            if why then\n                local tagRect', '            if false then\n                local tagRect')],
+        'HatchSequence': [('            if why then\n                local fill', '            if false then\n                local fill')],
     },
 }
 

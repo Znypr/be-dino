@@ -1,5 +1,5 @@
 --!strict
--- BD-1107 (docs/202): where the ribbons and the "why Skip stops" tag of the hatch reveal card go, and how big their words are. Pure numbers (no Instances).
+-- BD-1107 (docs/203): where the ribbons and the "why Skip stops" tag of the hatch reveal card go, and how big their words are. Pure numbers (no Instances).
 -- Studio round 7 (docs/200, picture 416, a 498 x 463 window, a Rainbow egg): the "Rainbow egg!" tag was cut at the left edge of the card and the chips lay over
 -- each other. The old code put every ribbon at a fixed spot and let the words shrink to fit a box, and a shrinking word cannot go under its minimum size.
 -- Now every item is MEASURED first (TagFit, at the 14 px floor of the window it will be drawn in), gets the size its words need, and the items of one side

@@ -1,5 +1,5 @@
 --!strict
--- BD-1107 / BD-1103 (docs/202): the ONE text-fit helper for tags, ribbons and tab names. Pure numbers, no Instances, no services.
+-- BD-1107 / BD-1103 (docs/203): the ONE text-fit helper for tags, ribbons and tab names. Pure numbers, no Instances, no services.
 -- Why it exists: a label that shrinks to fit (TextScaled) cannot go under its minimum size, so a long word in a short tag simply runs out of the tag and is cut
 -- (Studio round 6 and 7: "EMERA / DIAMO" on the Fusion tabs, "Rainbow egg!" cut at the left edge of the hatch card). A caller that uses this helper
 -- measures the words with the estimate below BEFORE it draws: the text size is the biggest size that fits the box, never under the floor (14 px on screen),

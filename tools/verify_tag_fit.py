@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""BD-1107 / BD-1103 (docs/202): words in tags, ribbons and tab names are measured BEFORE they are drawn (src/shared/TagFit.luau, HatchTagLayout.luau).
+"""BD-1107 / BD-1103 (docs/203): words in tags, ribbons and tab names are measured BEFORE they are drawn (src/shared/TagFit.luau, HatchTagLayout.luau).
 
 Studio round 6 and 7 (500 px wide windows): the Fusion tabs read "EMERA" and "DIAMO", and on a Rainbow egg the "Rainbow egg!" tag was cut at the left edge of
 the hatch card with its chips over each other. A shrink-to-fit label cannot go under its minimum size (14 px), so a long word in a short tag runs out of it.
