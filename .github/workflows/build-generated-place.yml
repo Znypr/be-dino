@@ -161,6 +161,7 @@ jobs:
           python tools/verify_rarity.py --runner /tmp/luau/luau
           python tools/verify_patterns.py --runner /tmp/luau/luau
           python tools/verify_gene_boost.py --runner /tmp/luau/luau
+          python tools/verify_pattern_colour_index.py --runner /tmp/luau/luau
           python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py

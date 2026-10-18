@@ -42,6 +42,9 @@ GROUPS = [
     ('mutation badges', 'resources/ui/v2/icons', r'mutation-([a-z]+)-v1\.png', lambda m: 'mutation_' + m.group(1), True),
     ('shop icons and tiles', 'resources/ui/v2/icons', r'shop-(tab|tile)-([a-z]+)-v1\.png', lambda m: f'shop_{m.group(1)}_{m.group(2)}', True),
     ('green-spotted egg', 'resources/ui/v2/icons', r'egg-green-spotted-v1\.png', lambda m: 'egg_green_spotted', True),
+    # BD-1039: the Pattern Index icons (black pattern on white, opaque) and the Patterns / Colours tab icons
+    ('pattern icons', 'resources/ui/v2/patterns', r'(\d\d_[a-z_]+)-v1\.png', lambda m: 'pattern_' + m.group(1), False),
+    ('index tab icons', 'resources/ui/v2/icons', r'index-tab-([a-z]+)-v1\.png', lambda m: 'index_tab_' + m.group(1), True),
     ('FX textures', 'resources/effects/fx-v2', r'([A-Za-z]+)(?:-([a-z]+))?\.png',
      lambda m: m.group(1) + (m.group(2).capitalize() if m.group(2) else ''), True),
     ('meadow grass maps', 'resources/materials/meadow-grass-v2', r'meadow-grass-v2-([a-z]+)\.png',

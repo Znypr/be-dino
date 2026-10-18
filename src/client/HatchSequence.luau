@@ -26,6 +26,9 @@ local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + p
 local ModalClose = require(script.Parent.ModalClose) -- BD-1019: the tap catcher that never covers X, the end buttons or the backdrop
 local CloseRules = require(Shared.ModalCloseRules)
 local Chip = require(Shared.ChipStyle) -- BD-1070: the one chip style of the whole game (chunky tag: rounded rectangle, 3 px outline, palette fill)
+local NewFinds = require(Shared.PatternColourIndex) -- BD-1039: "New pattern!" / "New colour!" ribbons (flag Config.PatternColourIndexEnabled)
+local PrivateState = require(script.Parent.PrivateState)
+local HttpService = game:GetService("HttpService")
 
 local Seq = {}
 local batch = Timeline.session -- BD-444: where we are in the hatch party ("Egg 3 of 15")
@@ -929,7 +932,12 @@ function Seq.play(args: Args): Handle
         end
         if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
-        if r.newFind and not failed then addRibbon("NEW!", Theme.Colors.gold, 724, if r.big then 108 else 52, 130, 5) end -- BD-436: a first-time colour, pattern or mutation
+        if r.newFind and not failed then -- BD-436: a first-time colour, pattern or mutation. BD-1039 (flag): "New pattern!" and "New colour!" instead of one "NEW!"
+            local ok, fresh = pcall(function() return HttpService:JSONDecode(PrivateState.str("LastChestNewJson", "{}")) end)
+            local words = NewFinds.ribbons(if ok then fresh else nil, Config.PatternColourIndexEnabled)
+            if #words == 0 then words = {"NEW!"} end
+            for k, word in words do addRibbon(word, Theme.Colors.gold, if #word > 5 then 708 else 724, (if r.big then 108 else 52) + (k - 1) * 56, if #word > 5 then 200 else 130, 5) end
+        end
         if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)

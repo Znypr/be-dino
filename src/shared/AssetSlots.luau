@@ -82,6 +82,16 @@ Slots.Images = {
     shop_tile_eggs = "rbxassetid://138952777704690",
     shop_tile_conditions = "rbxassetid://130901808508825",
     shop_tile_crystals = "rbxassetid://94423396531378",
+    pattern_01_blank = "",
+    pattern_02_emerald_islands = "",
+    pattern_03_round_spots = "",
+    pattern_04_bold_patches = "",
+    pattern_05_horizontal_bands = "",
+    pattern_06_wavy_stripes = "",
+    pattern_07_diamond_scales = "",
+    pattern_08_freckles = "",
+    index_tab_patterns = "",
+    index_tab_colours = "",
     -- bind:end Images
 }
 Slots.Meshes = {

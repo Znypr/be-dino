@@ -186,6 +186,7 @@ local Services = {
     ReplicatedStorage = Replicated,
     RunService = {Heartbeat = heartbeat, IsStudio = function() return false end},
     UserInputService = {InputBegan = inputBegan},
+    HttpService = {JSONDecode = function() return {} end}, -- BD-1039: HatchSequence decodes LastChestNewJson for the ribbon words
     TweenService = {Create = function(_, target, _, goals) return {Play = function() for k, v in goals do target[k] = v end end, Cancel = function() end, Completed = signal()} end},
 }
 game = {GetService = function(_, name) return assert(Services[name], "service " .. name) end, GameId = 1}
@@ -207,9 +208,11 @@ stubs.ClassBadge = {create = function(parent) return inst("Frame", "ClassBadge",
 stubs.InspectView = {attach = function(_, options) stubs.InspectView.last = options return {destroy = function() end, wasDrag = function() return false end} end}
 stubs.HatchFx = {ensure = function() return {} end, begin = function() return {} end, update = function() end, hide = function() end, style = function() end, rainbow = function() end,
     splash = function() end, paintStyle = function() end}
+stubs.PatternColourIndex = {ribbons = function() return {"NEW!"} end} -- BD-1039: the real rules are proved by verify_pattern_colour_index.py
+stubs.PrivateState = {str = function(_, fallback) return fallback or "" end}
 stubs.MutationReveal = {begin = function() return {} end, update = function() end, hide = function() end}
 stubs.HatchEggV2 = {create = function() return nil end, stop = function() end}
-local clientNames = {ModalClose = true, HatchSequence = true, InspectView = true, HatchFx = true, MutationReveal = true, HatchEggV2 = true}
+local clientNames = {ModalClose = true, HatchSequence = true, InspectView = true, HatchFx = true, MutationReveal = true, HatchEggV2 = true, PrivateState = true}
 local function register(name)
     local m = Instance.new("ModuleScript") m.Name = name
     m.Parent = if clientNames[name] then ClientFolder else SharedFolder

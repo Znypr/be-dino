@@ -173,6 +173,11 @@ function M.attach(context: Ctx)
     M.layout()
 end
 
+-- BD-1039: the pieces of the Bootstrap modal for a screen that decorates its header (the Index tabs). nil before attach().
+function M.parts(): Ctx?
+    return ctx
+end
+
 -- Scroll the compact body back to the top when a new screen opens.
 function M.reset()
     local s = scroller

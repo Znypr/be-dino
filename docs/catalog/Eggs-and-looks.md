@@ -145,14 +145,14 @@ id: `black`
 
 | Pattern | Icon | Asset id | Mask | Odds from |
 |---|---|---|---|---|
-| [Plain](#pattern-01-blank) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Dots](#pattern-03-round-spots) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Freckles](#pattern-08-freckles) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Patches](#pattern-04-bold-patches) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Bands](#pattern-05-horizontal-bands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Waves](#pattern-06-wavy-stripes) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Islands](#pattern-02-emerald-islands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
-| [Diamonds](#pattern-07-diamond-scales) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Plain](#pattern-01-blank) | MISSING | slot `pattern_01_blank` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Dots](#pattern-03-round-spots) | MISSING | slot `pattern_03_round_spots` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Freckles](#pattern-08-freckles) | MISSING | slot `pattern_08_freckles` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Patches](#pattern-04-bold-patches) | MISSING | slot `pattern_04_bold_patches` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Bands](#pattern-05-horizontal-bands) | MISSING | slot `pattern_05_horizontal_bands` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Waves](#pattern-06-wavy-stripes) | MISSING | slot `pattern_06_wavy_stripes` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Islands](#pattern-02-emerald-islands) | MISSING | slot `pattern_02_emerald_islands` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Diamonds](#pattern-07-diamond-scales) | MISSING | slot `pattern_07_diamond_scales` ready, not bound | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
 
 <a id="pattern-01-blank"></a>
 ### Plain

@@ -67,4 +67,31 @@ function Boost.multipliers(enabled: any, patterns: any, colours: any, genes: any
     return Boost.growthMultiplier(points), Boost.walkMultiplier(points), points
 end
 
+-- BD-1039 (docs/186 s7): boost PIPS for the Index and the hatch card. Kids see 0 to 5 small pips and the words "Boost 3 of 5", never a percent.
+-- One pattern or colour: the pips are its rank among the distinct non-zero tier point levels (0, 1, 2, 4, 6, 10 -> 0, 1, 2, 3, 4, 5 pips), so
+-- they follow Boost.TierPoints and cannot drift from the real boost. A Common one has 0 pips ("No boost").
+Boost.MaxPips = 5
+function Boost.itemPips(points: any): number
+    if type(points) ~= "number" or points ~= points or points <= 0 then return 0 end
+    local levels, seen = {}, {}
+    for _, p in Boost.TierPoints do
+        if p > 0 and not seen[p] then seen[p] = true table.insert(levels, p) end
+    end
+    local n = 0
+    for _, p in levels do if p <= points then n += 1 end end
+    return math.min(Boost.MaxPips, n)
+end
+-- A whole dino: the pips fill evenly up to the growth cap (points for +15% = 5 pips), so 15 or more points = 5 pips.
+function Boost.dinoPips(points: any): number
+    if type(points) ~= "number" or points ~= points or points <= 0 then return 0 end
+    local perPip = (Boost.GrowthCap / Boost.GrowthPerPoint) / Boost.MaxPips
+    return math.clamp(math.ceil(points / perPip - 1e-9), 0, Boost.MaxPips)
+end
+-- The hatch card line for a dino ("Boost 3 of 5"); nil when it has no boost (a plain Common dino shows nothing).
+function Boost.dinoText(patterns: any, colours: any, genes: any): string?
+    local pips = Boost.dinoPips(Boost.points(patterns, colours, genes))
+    if pips <= 0 then return nil end
+    return string.format("Boost %d of %d", pips, Boost.MaxPips)
+end
+
 return table.freeze(Boost)
