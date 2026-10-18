@@ -152,6 +152,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1096 settle guard (Ending stuck after telemetry script timeout) | worker | - | 60.0 | - | - | good | - | - | Post-commit hooks must never run unguarded on the settle thread |
 | 2026-10-18 | Studio round 6: shop, potion shop, toasts check (BD-1089) | worker | #536 | 45.0 | 110 | - | ok | - | studio-window | mouse tool takes GUI coordinates; rail buttons need the character within 10 studs of the station; wrap-up cut the small-window part |
 | 2026-10-18 | Art batch 1: ChatGPT sheets for food, paint bucket, tier icons; cut, contact sheet, doc 196 | worker | #531 | 55.0 | 75 | 180.0 | good | 1 | other: first click in ChatGPT hit a suggestion chip and started a stray chat, other: equal-grid cut clipped objects, rewrote to find objects where drawn | ChatGPT grids are not exactly equal: find objects, do not cut equal parts; always screenshot the chat page before clicking, chips sit under the composer (tool: tools/cut_icon_sheet.py) |
+| 2026-10-18 | Studio round 7: monitor4 --maximize (BD-995), Studio re-checks of BD-1083/1095/1096/1089/1085/1027 at real sizes | worker | - | 75.0 | 150 | - | good | - | studio-window: the Studio window changed screen and size by itself twice, tool-missing: execute_luau cannot read files or use HTTP, so the bot file could not be loaded; wrote a small bot | launch helper must skip the Studio splash window; a bot that must be pasted should be small (tool: tools/monitor4.py) |
 <!-- retro-table:end -->
 
 ## 6. Open items
