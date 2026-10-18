@@ -45,22 +45,35 @@ end
 
 function Look.color(rgb: {number}): Color3 return Color3.fromRGB(rgb[1], rgb[2], rgb[3]) end
 
--- Pure maths: pull a base colour (0-255 triple) toward the mutation tint. amount defaults to the entry's own.
-function Look.blend(base: {number}, id: string, amount: number?): {number}
-    local entry = Look.get(id)
-    if not entry then return {base[1], base[2], base[3]} end
-    local a = math.clamp(amount or entry.amount, 0, Look.MaxAmount)
-    return {base[1] + (entry.tint[1] - base[1]) * a, base[2] + (entry.tint[2] - base[2]) * a, base[3] + (entry.tint[3] - base[3]) * a}
-end
+-- BD-1066: a very dark body colour (Black gene, shaded facets) used to stay nearly black under the gentle pull, so a mutated dino read as
+-- a black cut-out in the dim cave (Studio round 4, picture 227). A mutated body is therefore never darker than MinLuma (0..1, luma of the
+-- result): below it the colour is lifted toward the mutation tint just far enough to reach it. Colours already above it are untouched.
+Look.MinLuma = 0.3
+local function luma(r: number, g: number, b: number): number return 0.299 * r + 0.587 * g + 0.114 * b end
 
--- Pure, per pixel (0..1 floats): the same pull as Look.blend, for the low-poly bake. MeshPart.Color does NOT tint a part whose
--- texture is a bake (TextureContent), so on low-poly dinos the tint has to live in the texture itself (BD-518, LowPolyTexture.paint).
+-- Pure, per pixel (0..1 floats): pull a base colour gently toward the tint (amount), then lift it to MinLuma if it is still darker.
+-- MeshPart.Color does NOT tint a part whose texture is a bake (TextureContent), so on low-poly dinos the tint has to live in the texture
+-- itself (BD-518, LowPolyTexture.paint); Look.blend below is the same maths in 0-255 for Part.Color.
 function Look.pull(r: number, g: number, b: number, id: any, amount: number?): (number, number, number)
     local entry = Look.get(id)
     if not entry then return r, g, b end
     local a = math.clamp(amount or entry.amount, 0, Look.MaxAmount)
     local t = entry.tint
-    return r + (t[1] / 255 - r) * a, g + (t[2] / 255 - g) * a, b + (t[3] / 255 - b) * a
+    local tr, tg, tb = t[1] / 255, t[2] / 255, t[3] / 255
+    local pr, pg, pb = r + (tr - r) * a, g + (tg - g) * a, b + (tb - b) * a
+    local l, tl = luma(pr, pg, pb), luma(tr, tg, tb)
+    if l < Look.MinLuma and tl > l then
+        local k = math.clamp((Look.MinLuma - l) / (tl - l), 0, 1)
+        pr, pg, pb = pr + (tr - pr) * k, pg + (tg - pg) * k, pb + (tb - pb) * k
+    end
+    return pr, pg, pb
+end
+
+-- Pure maths in 0-255: the same pull (and floor) for Part.Color. amount defaults to the entry's own.
+function Look.blend(base: {number}, id: string, amount: number?): {number}
+    if not Look.get(id) then return {base[1], base[2], base[3]} end
+    local r, g, b = Look.pull(base[1] / 255, base[2] / 255, base[3] / 255, id, amount)
+    return {r * 255, g * 255, b * 255}
 end
 
 -- Tints every BasePart under a model/viewport once and idempotently. The part remembers its own colour (MutBase)

@@ -104,7 +104,7 @@ end
 local function partBake(container: Instance, species: string, part: MeshPart, textureId: string, role: string, spec: Texture.Spec, key: string)
     part:SetAttribute("LPLod", "baking")
     local geom = LowPoly.geometry(species, part.Name)
-    local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role))
+    local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role), function() return part.Parent ~= nil and container:GetAttribute("LPLookKey") == key end)
     if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
     else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end

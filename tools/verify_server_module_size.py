@@ -33,7 +33,7 @@ GENERATED_MAX_LINES = 5
 GENERATED_NAMES = {"IconRaster.luau", "ResourceGeometry.luau", "IconTiles.luau"}
 GENERATED_DIRS = ("CreatureGenes/Chunks/", "CreatureData/Chunks/")
 # path under src/ -> ceiling in bytes (LF). Already over LIMIT_BYTES on 2026-10-18 (126,160; 123,864 after BD-617); may not grow beyond the ceiling.
-KNOWN_OVER = {"client/Bootstrap.client.luau": 123_700}  # was 127,000, then 123,900 (BD-617); BD-1019 added the close-path hooks and trimmed comments to pay for them: 123,605
+KNOWN_OVER = {"client/Bootstrap.client.luau": 123_680}  # was 127,000, then 123,900 (BD-617); BD-1019 added the close-path hooks and trimmed comments to pay for them: 123,605
 
 
 def size_of(path: Path) -> int:
