@@ -273,7 +273,7 @@ def check_wiring():
     assert 'Badge.Height = 22' in read('src/client/MutationBadge.luau'), 'MyDinos.Card.chipH matches the mutation badge height'
     assert 'fromOffset(7, y)' not in panels, 'BD-507: no pill sits at a fixed spot over the thumbnail'
     assert 'Instance.new("ViewportFrame")' not in panels, 'previews come from DinosaurPreview (patient loading)'
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/DinoIndexScreens.luau')  # BD-1110: the Index and details screens moved
     assert 'DinoIndexPanels.supported()' in boot and 'equip:FireServer(speciesId,Http:GenerateGUID(false),variantKey)' in boot
     # Server: the optional variant key is validated twice (event handler shape, repository ownership).
     service = read('src/server/CollectionService.luau')

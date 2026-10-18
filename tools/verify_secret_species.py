@@ -1060,7 +1060,7 @@ def static():
         need(banned not in module_text, 'SecretSpeciesConfig stays pure: ' + banned)
 
     # Client Index wiring: the 22-species number and meter are untouched; secrets are counted apart and only behind the flag.
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/DinoIndexScreens.luau')  # BD-1110: the Index screen moved
     for needle in (
         'local order=Secret.indexOrder(Config.SpeciesOrder,Config.SecretSpeciesEnabled)',
         'IndexProgress.page(#order,24,IndexProgress.state.page)',
