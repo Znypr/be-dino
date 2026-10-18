@@ -66,6 +66,24 @@ return table.freeze({
         {id="red",name="Red",rarity="Mythic",weight=1280,rgb={237,44,33}},
         {id="black",name="Black",rarity="Mythic",weight=1280,rgb={29,34,41}},
     },
+    -- BD-1033 (docs/186 s4, LEAD decision in docs/115): the 8 patterns get a tier and unequal weights. ONE table, ids in the
+    -- order of the old list (seeded rolls stay deterministic, every stored patternId stays valid). Five tiers of the shared
+    -- ladder (RarityCurve.weights(5), r = 1/5: 80.02 / 16.00 / 3.20 / 0.64 / 0.13) split EQUALLY inside a tier: 3 Common
+    -- (26.675% each), 2 Uncommon (8.003% each), 1 Rare, 1 Epic, 1 Legendary. Integer weights out of PatternWeightScale
+    -- (10,000,000 = 100%). `name` is the short kid name shown to players (docs/72); ids are never shown. Fusion (docs/90)
+    -- keys on the id only and is unchanged. Checked by tools/verify_rarity.py; odds doc is generated (docs/85).
+    PatternOddsVersion="bd1033-patterns-v1",
+    PatternWeightScale=10000000,
+    EggPatterns={
+        {id="01_blank",name="Plain",rarity="Common",weight=2667520},
+        {id="02_emerald_islands",name="Islands",rarity="Epic",weight=64020},
+        {id="03_round_spots",name="Dots",rarity="Common",weight=2667520},
+        {id="04_bold_patches",name="Patches",rarity="Uncommon",weight=800257},
+        {id="05_horizontal_bands",name="Bands",rarity="Uncommon",weight=800257},
+        {id="06_wavy_stripes",name="Waves",rarity="Rare",weight=320102},
+        {id="07_diamond_scales",name="Diamonds",rarity="Legendary",weight=12804},
+        {id="08_freckles",name="Freckles",rarity="Common",weight=2667520},
+    },
     RarityFactors={compy=1,triceratops=1.35,tyrannosaurus=1.75,raptor=1,stegosaurus=1.35,ankylosaurus=1.75,archaeopteryx=1,baryonyx=1.35,brachiosaurus=1.35,dimorphodon=1,elasmosaurus=1.75,gallimimus=1,ichthyosaurus=1.35,microraptor=1,mosasaurus=1.75,pachycephalosaurus=1.35,parasaurolophus=1.35,plesiosaurus=1.35,pteranodon=1.35,quetzalcoatlus=1.75,spinosaurus=1.75,therizinosaurus=1.75},
     Auras={
         {id="meadow",name="Meadow Glow",rarity="Common",price=60,growth=1.15,color={98,236,112}},
