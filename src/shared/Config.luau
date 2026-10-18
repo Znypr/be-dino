@@ -290,7 +290,7 @@ return table.freeze({
     -- BD-059 phases 1-2 (docs/121): per-dino aura/trail ownership. On: buy/equip via ProgressionAction bind to the equipped dino; off: Build 020 account-wide behaviour.
     PerDinoCosmeticsEnabled = false,
     -- BD-072/073 (docs/66): mini objectives (daily/short/tutorial goals paid in Crystals/XP). false = the profile is never read or written for it,
-    -- no remote exists. Pinned OFF in the default AND playtest release profiles (tools/release_profiles.py); no UI until BD-075.
+    -- no remote exists. Pinned OFF in the default release profile and turned ON by the playtest profile (docs/157, tools/release_profiles.py).
     ObjectivesEnabled = false,
     -- BD-604 / BD-228 (docs/149, docs/115 SS1..SS6): secret silly creatures (Chickosaurus, Pigeon, Dodo, Duck, Penguin, Budgiesaurus, Foxosaurus). false = no secret
     -- roll, no extra egg field, no lazy collection entry, no Index secret cards: eggs, profiles and the Index are byte-for-byte as before. Pinned OFF in the
@@ -353,8 +353,8 @@ return table.freeze({
     -- counts in an unpublished place (RunService:IsStudio() and game.GameId == 0, see HatchV2Assets.enabled). Never commit true.
     HatchV2Preview = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
-    -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
-    -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.
+    -- instant "bigger eats smaller" predation stays exactly as shipped. ON = PredationService's
+    -- instant eat stops and CombatService runs. Source stays false; the default profile pins it false and the playtest profile turns it ON (docs/157); the BD-252 phone test is still open.
     CombatEnabled = false,
     -- BD-423 (docs/101 s2, docs/115): class feel (Fly glide, Water dash, class walk speed) in its OWN flag so it can ship
     -- without combat. OFF = every dino moves as shipped. Pinned off in the default profile, on in the playtest profile.

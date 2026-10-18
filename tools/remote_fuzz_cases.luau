@@ -447,6 +447,10 @@ local function stormScenario(hostileCount, label)
         local stormEnds = now + STORM
         local hostileWritesStart = {}
         for _, p in hostile do hostileWritesStart[p] = M.byKeyWrites[keyOf(p.UserId)] or 0 end
+        -- docs/157: with fusion on, the old 50-copy MutateSpecies the storm fires is refused, so it no longer burns ~7,000 points of copies;
+        -- the fixed bound below was only loose because of that burn. A hostile account must also end at or under what it had when the storm began.
+        local pointsAtStart = {}
+        for _, p in hostile do pointsAtStart[p] = wealthPoints(server, p.UserId) end
         for _, p in hostile do
             task.spawn(function()
                 local names = {"ClaimChest", "ClaimNest", "EquipSpecies", "MutateSpecies", "ProgressionAction", "SetSettings", "SetRevealSkip", "FusionAction", "PrivateState", "HubTravel", "PlaytestFeedback", "RequestLeap", "ClassDash", "ClassGlide", "RequestEndRun", "RequestStartRun"}
@@ -513,7 +517,7 @@ local function stormScenario(hostileCount, label)
         local bound = hostileCount * (server.Config.WriteBurst + (STORM + 10) * server.Config.WriteRefillPerSecond + (STORM + 10) / 30 + 8)
         check(label .. ": hostile accounts got at most burst + refill writes through (bound " .. math.floor(bound) .. ")", hostileWrites <= bound, tostring(hostileWrites))
         for _, p in hostile do
-            check(label .. ": hostile " .. p.UserId .. " did not gain value", wealthPoints(server, p.UserId) <= 20000 + 150 * 60 + 150 * 90 + 3000, tostring(wealthPoints(server, p.UserId)))
+            check(label .. ": hostile " .. p.UserId .. " did not gain value", wealthPoints(server, p.UserId) <= math.max(20000 + 150 * 60 + 150 * 90 + 3000, pointsAtStart[p]), tostring(wealthPoints(server, p.UserId)) .. " (at storm start " .. pointsAtStart[p] .. ")")
         end
         stats.label = label
         server.stormStats = stats

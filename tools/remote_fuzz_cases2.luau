@@ -18,14 +18,23 @@ runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)
     for _, n in names do if not expected[n] then table.insert(extra, n) end end
     for _, n in EXPECTED do if not seen[n] then table.insert(missing, n) end end
     check("published-pins: the remotes of a playtest server are exactly the reviewed inventory", #extra == 0 and #missing == 0, "unreviewed: " .. table.concat(extra, ",") .. " missing: " .. table.concat(missing, ","))
-    for _, n in {"DemoTrigger", "QaMark", "PreviewDinosaurArt", "CombatBite", "ObjectiveAction", "GiftAction", "AdminGiftAction", "SkinAction", "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"} do
+    for _, n in {"DemoTrigger", "QaMark", "PreviewDinosaurArt", "GiftAction", "AdminGiftAction", "SkinAction", "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"} do
         check("published-pins: " .. n .. " does not exist on a published server", server.remotes[n] == nil, "")
     end
+    check("published-pins: CombatBite and ObjectiveAction exist because the playtest turns CombatEnabled and ObjectivesEnabled on (docs/157)",
+        server.remotes["CombatBite"] ~= nil and server.remotes["ObjectiveAction"] ~= nil and server.Config.CombatEnabled == true and server.Config.ObjectivesEnabled == true, "")
     local p = connect(server, 1001)
     check("published-pins: the test-grant, mutation-setup and security-harness flags are false in the playtest Config",
         server.Config.ChestTestGrantEnabled == false and server.Config.CollectionTestGrantEnabled == false and server.Config.MutationTestSetupEnabled == false
-        and server.Config.SecurityTestHarnessEnabled == false and server.Config.ArtTestHarnessEnabled == false and server.Config.QaOverlayEnabled == false and server.Config.CombatEnabled == false,
+        and server.Config.SecurityTestHarnessEnabled == false and server.Config.ArtTestHarnessEnabled == false and server.Config.QaOverlayEnabled == false,
         "")
+    -- docs/155 s6 / docs/157: with the identity fusion path on (the playtest), the Build 020 50-copy shortcut is closed on the server
+    local miner = seeded(server, 1005, function(profile) profile.collection.compy.base = 80 end)
+    sleep(1)
+    local minerBefore = wealth(1005)
+    fireNow(server, "MutateSpecies", miner, "compy", "gold", tok("moved"))
+    check("published-pins: the old 50-copy MutateSpecies is refused (fusion_moved) while fusion is on and spends nothing",
+        miner:GetAttribute("LastMutationStatus") == "fusion_moved" and wealth(1005) == minerBefore, tostring(miner:GetAttribute("LastMutationStatus")))
     -- AdminAction exists for everybody; only the experience creator (userId 1 here) is an admin
     local stranger = connect(server, 1002)
     sleep(1)

@@ -1,6 +1,7 @@
 # 152 Switch-on rehearsal: every built-but-off flag ON at once, offline (BD-624, BD-625, BD-626)
 
 Label: **CURRENT BUILD BEHAVIOR** check, offline only (written 2026-10-18 on main `72cfde77` plus this PR). Nothing here ran in Studio, on a phone, on a published server or against a real DataStore, and no game flag changed: `src/shared/Config.luau` is untouched and every shipped profile (`default`, `playtest`) still pins all of these flags off. The features were each tested alone before; this is the first time the offline suites ran against all of them together. Sources: [145](145-session1-readiness-2026-10-17.md) s3, [115](115-decisions-log.md), [111](111-multiplayer-audit.md), `tools/release_profiles.py`, `tools/run_rehearsal.py`, `tools/measure_switch_on_cost.py`, `tools/verify_switch_on.py`.
+> **Update 2026-10-18 (BD-657, [157](157-playtest-profile-newest-features.md)):** the `playtest` profile now sets five of the flags below ON itself (`ObjectivesEnabled`, `CombatEnabled`, `SpecialFoodsEnabled`, `PerDinoCosmeticsEnabled`, `FastTravelPerk`). The rehearsal profiles are still the playtest plus the rest; the statements below that the shipped profiles "pin all of these flags off" are true of the `default` profile only.
 
 ## 1. What was built
 

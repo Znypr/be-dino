@@ -79,7 +79,7 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertIs(values["IdentityPersistentEnabled"], True)
         self.assertIs(values["IdentityFusionPreviewEnabled"], True)
         changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
-        self.assertEqual(len(changed), 12)  # +RunTelemetryEnabled (BD-426), +ClassMovementEnabled (BD-423), +CaveHub (owner 2026-10-16), +PlaytestFeedbackEnabled (docs/128)
+        self.assertEqual(len(changed), 17)  # +RunTelemetryEnabled (BD-426), +ClassMovementEnabled (BD-423), +CaveHub (owner 2026-10-16), +PlaytestFeedbackEnabled (docs/128), +5 docs/157: Objectives, Combat, SpecialFoods, PerDinoCosmetics, FastTravelPerk
         self.assertIs(values["LowPolyDinos"], True)
         self.assertEqual((values["WorldArtMode"], values["FoodArtMode"], values["WorldArtDensity"]), ("BiomeKit", "Kit", 1.25))
         self.assertEqual(profiles.verify_source(CONFIG, "default").errors, [])
@@ -170,19 +170,55 @@ class LowPolyProfileTests(unittest.TestCase):
         self.assertTrue(any("LowPolyDinos" in e for e in report.errors))
 
 
-class PlaytestOffFlagTests(unittest.TestCase):
-    """docs/145 s7: the playtest profile itself requires the off-by-design flags, not only the default build."""
+class PlaytestOnFlagTests(unittest.TestCase):
+    """docs/157 (owner directive 2026-10-18): the playtest turns the built player-facing features on; the default build (Build 020 mirror) keeps them off."""
 
-    OFF = ("CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk")
+    ON = ("ObjectivesEnabled", "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk",
+          "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled", "CaveHub", "ClassMovementEnabled", "LowPolyDinos")
 
-    def test_playtest_requires_each_flag_false(self):
+    def test_playtest_sets_each_feature_true_and_default_requires_it_false(self):
+        playtest = {r.key: r for r in profiles.rules_for("playtest")}
+        default = {r.key: r for r in profiles.rules_for("default")}
+        for key in self.ON:
+            self.assertEqual((playtest[key].mode, playtest[key].value), ("set", True), key)
+            self.assertEqual((default[key].mode, default[key].value), ("require", False), key)
+
+    def test_the_playtest_build_writes_them_and_the_committed_source_is_untouched(self):
+        rewritten, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
+        self.assertEqual(report.errors, [])
+        values = {k: v[-1][1] for k, v in profiles.config_entries(rewritten).items()}
+        committed = {k: v[-1][1] for k, v in profiles.config_entries(CONFIG).items()}
+        for key in self.ON:
+            self.assertIs(values[key], True, key)
+            self.assertIs(committed[key], False, key)  # src/ is never modified: the default build and Build 020 behaviour are unchanged
+
+    def test_the_default_profile_refuses_each_of_them(self):
+        for key in self.ON:
+            report = profiles.verify_source(with_value(with_ids(CONFIG), key, "true"), "default")
+            self.assertTrue(any(e.startswith(key) for e in report.errors), key)
+
+
+class PlaytestStayOffTests(unittest.TestCase):
+    """docs/157: the flags the playtest keeps off are REQUIRED false (a local edit before a playtest build fails the build), each with a reason."""
+
+    OFF = ("GiftClaimEnabled", "GiftingEnabled", "AdminGiftsEnabled", "FoodPickupAtMouth", "PredationAtMouth", "HatchV2", "HatchV2Preview",
+           "SecretSpeciesEnabled", "DinoSkinsEnabled", "PaidRandomItemsEnabled", "CrystalPacksEnabled", "ChestTestGrantEnabled",
+           "CollectionTestGrantEnabled", "MutationTestSetupEnabled", "SecurityTestHarnessEnabled", "ArtTestHarnessEnabled",
+           "QaOverlayEnabled", "DemoDirectorEnabled", "DuplicateSettlementProbe", "AutoOpenRequiresPass")
+
+    def test_playtest_requires_each_flag_false_with_a_reason(self):
         rules = {r.key: r for r in profiles.rules_for("playtest")}
         for key in self.OFF:
             self.assertEqual((rules[key].mode, rules[key].value), ("require", False), key)
+            self.assertTrue(rules[key].reason.strip(), key)
+
+    def test_the_movement_guard_window_is_not_a_release_rule(self):
+        for name in ("default", "playtest", "all-on-rehearsal"):
+            self.assertFalse([r for r in profiles.rules_for(name) if r.key == "MovementGuardWindowEnabled"], name)
 
     def test_committed_source_passes_playtest_off_flags(self):
         report = profiles.verify_source(with_ids(CONFIG), "playtest")
-        self.assertFalse([e for e in report.errors if any(k in e for k in self.OFF)], report.errors)
+        self.assertFalse([e for e in report.errors if any(e.startswith(k) for k in self.OFF)], report.errors)
 
     def test_flipping_any_off_flag_fails_playtest(self):
         for key in self.OFF:
@@ -193,6 +229,26 @@ class PlaytestOffFlagTests(unittest.TestCase):
         for key in self.OFF:
             _, report = profiles.apply_profile(with_value(with_ids(CONFIG), key, "true"), "playtest")
             self.assertTrue(any(key in e for e in report.errors), key)
+
+    def test_every_false_boolean_is_decided(self):
+        """A new false flag must be a playtest ON rule, a playtest required-false rule, or be listed here with the reason it is neither."""
+        decided = {r.key for r in profiles.rules_for("playtest")}
+        neither: dict = {}  # nothing is exempt: every false boolean is a playtest rule
+        for key, found in profiles.config_entries(CONFIG).items():
+            if found[-1][1] is False:
+                self.assertTrue(key in decided or key in neither, f"{key} is false in Config and has no playtest rule (docs/157)")
+
+
+class OldMutatePathClosedTests(unittest.TestCase):
+    """docs/155 s6 item 1 / docs/157: the 50-copy MutateSpecies shortcut is refused on the server while the identity fusion path is on."""
+
+    def test_the_handler_returns_before_it_reads_anything_when_fusion_is_on(self):
+        text = (ROOT / "src/server/MutationService.luau").read_text(encoding="utf-8")
+        handler = text.index("mutate.OnServerEvent:Connect")
+        guard = text.index("Config.IdentityFusionPreviewEnabled == true", handler)
+        self.assertIn('"fusion_moved"', text[guard:guard + 200])
+        self.assertLess(guard, text.index("invalid_species", handler))
+        self.assertLess(guard, text.index("profileRepository.mutateSpecies", handler))
 
 
 class StreamingProfileTests(unittest.TestCase):

@@ -38,6 +38,13 @@ function MutationService.start(profileRepository, dinosaur)
 
     mutate.OnServerEvent:Connect(function(player: Player, speciesId, targetMutation, requestToken, ...)
         if select("#", ...) ~= 0 then return end
+        -- docs/155 s6 item 1 / docs/157: once the identity fusion path (6 Base -> Gold, 3 Gold -> Emerald, 2 Emerald -> Diamond,
+        -- FusionAction) is on, the Build 020 50-copy shortcut (no Emerald, no odds, no consent, no lineage) is closed on the server.
+        -- The client page for it is already unreachable in the playtest profile (FusionSelection.navTarget); this stops a hand-fired remote.
+        if Config.IdentityFusionPreviewEnabled == true then
+            player:SetAttribute("LastMutationStatus", "fusion_moved")
+            return
+        end
         if typeof(speciesId) ~= "string" or #speciesId < 1 or #speciesId > 32 then
             player:SetAttribute("LastMutationStatus", "invalid_species")
             return
