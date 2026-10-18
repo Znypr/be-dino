@@ -96,6 +96,7 @@ You cannot see a clip or hear a sound, so measure it, and say plainly what you c
 ## 8. Reporting to the owner
 
 The owner reads simple words. Keep it short. No jargon, no ids without a plain sentence beside them, no questions buried in the text (an owner decision is a separate, one-line ask). Say three things: **what exists**, **what is unverified** (Studio, phone, hearing), and **where the pictures are** (paths). Link the PR in three lines or fewer. If you found a mismatch, name the two sources.
+Owner questions live in the Decisions dashboard (artifact https://claude.ai/artifact/2pgxwiaVoxvcxZkFp9KgSu, BD-661, source copy in `docs/evidence/2026-10-18-decision-dashboard/`); read the answers with `ArtifactData` (action list, collection `answers`, one document per question) and record each in [115](115-decisions-log.md). Add a new open question as a card there instead of asking in a message. The owner reads simple words. Keep it short. No jargon, no ids without a plain sentence beside them, no questions buried in the text (an owner decision is a separate, one-line ask). Say three things: **what exists**, **what is unverified** (Studio, phone, hearing), and **where the pictures are** (paths). Link the PR in three lines or fewer. If you found a mismatch, name the two sources.
 
 ## 9. Learned rules (from the work log, [168](168-work-log-and-retrospectives.md))
 
