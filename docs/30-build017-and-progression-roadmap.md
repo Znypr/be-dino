@@ -32,7 +32,7 @@ Recorded 2026-10-04 from Znypr's playtest feedback and feature requests. Status 
 
 ## BD-029: aura shop
 
-Adapt the [Trail Shop reference](../resources/references/steal-an-egg/reference-212804.png) with original aura art and dinosaur logic.
+Adapt the Trail Shop reference (local reference only, file reference-212804) with original aura art and dinosaur logic.
 
 - [ ] Aura product grid: rarity border, large preview, name, eating-growth multiplier, crystal price, Locked/Buy/Owned/Equipped states and close control.
 - [ ] Purchase confirmation, success feedback, insufficient-crystal feedback and direct equip/unequip.
@@ -87,7 +87,7 @@ Adapt the [Trail Shop reference](../resources/references/steal-an-egg/reference-
 | Active boosts | Potion timers and effective bonuses, compact responsive layout |
 | Shared feedback | Purchase success/error, insufficient currency, locked/owned/equipped states |
 
-Inspect the existing [gameplay HUD](../resources/references/steal-an-egg/reference-212704.png) and timer/queue references before layout work. The gallery identifies a Trail Shop screenshot, but does not yet establish exact leap/weather timer visuals; do not invent observed reference details. Keep timer tiles clear of Roblox controls and mobile jump buttons.
+Inspect the existing gameplay HUD (local reference only, file reference-212704) and timer/queue references before layout work. The gallery identifies a Trail Shop screenshot, but does not yet establish exact leap/weather timer visuals; do not invent observed reference details. Keep timer tiles clear of Roblox controls and mobile jump buttons.
 
 ## BD-033: matching icon and effect backlog
 

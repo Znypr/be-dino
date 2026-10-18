@@ -28,7 +28,8 @@ class DeliveryTests(unittest.TestCase):
   for icon in icons:
    im=Image.open(icon);self.assertEqual(im.mode,'RGBA')
    self.assertEqual(im.getchannel('A').getextrema(),(0,255))
-  self.assertEqual(len(list((ROOT/'resources/references/steal-an-egg').glob('*.png'))),13)
+  # docs/202: the third-party reference screenshots are local only now (not in the public repo)
+  self.assertEqual(len(list((ROOT/'resources/references/steal-an-egg').glob('*.png'))),0)
   project=(ROOT/'default.project.json').read_text();self.assertNotIn('references',project)
  def test_scalable_icons_have_individual_sharp_exports(self):
   icons=list((ROOT/'resources/ui/v2/scalable').glob('*.png'))
