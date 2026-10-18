@@ -92,7 +92,10 @@ local function setup(seed)
   n.idleUntil=0; n.noAggroUntil=0
   local cw=R.new(true); cw.defeatCount=0; cw.bonuses={}
   cw.onDefeat=function(v,a,bo) cw.defeatCount+=1; cw.bonuses[v.key]=bo end
-  Npc.joinCombat(w,cw,n,0)
+  local jd=Npc.joinCombat(w,cw,n,0)
+  -- BD-1025: a wild predator has Cfg.WildHpX of the normal HP for its size; a player of the same size keeps the full HP
+  assert(math.abs(jd.state.maxHp-Stats.maxHp(n.class,n.s)*M.CombatConfig.WildHpX)<1e-6,"wild predator HP = normal HP x WildHpX")
+  assert(M.CombatConfig.WildHpX<1 and R.join(R.new(true),{userId=9,runId="p",class=n.class,score=n.score,now=0}).state.maxHp==Stats.maxHp(n.class,n.s),"players keep full HP")
   return w,cw,n
 end
 local function joinP(cw,u,r,score) return R.join(cw,{userId=u,runId=r,class="Ground",score=score or 0,now=0}) end

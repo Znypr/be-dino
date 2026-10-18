@@ -25,8 +25,10 @@ local function clampS(s: any): number
     return math.clamp(num(s, 1), Cfg.MinScale, Cfg.MaxScale)
 end
 
-function Stats.maxHp(className: any, s: any): number
-    return Cfg.BaseHp * Stats.classOf(className).hpX * clampS(s) ^ Cfg.HpSizeExponent
+-- hpX is optional (BD-1025): a multiplier for wild predators (Cfg.WildHpX). Players pass nothing and keep the full HP.
+function Stats.maxHp(className: any, s: any, hpX: any): number
+    local x = math.clamp(num(hpX, 1), 0.05, 4)
+    return Cfg.BaseHp * Stats.classOf(className).hpX * clampS(s) ^ Cfg.HpSizeExponent * x
 end
 
 -- Raw hit before armor and damper. attackTier is an extension hook (0 for now).

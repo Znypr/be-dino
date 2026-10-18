@@ -49,7 +49,8 @@ local CombatConfig = {
     FoodHealFraction = 0.05,
 
     -- BD-243 / docs/101 s4, s7, s13 (server rules in CombatRules, glue in CombatService). ALL PROVISIONAL.
-    BiteCooldownSeconds = 0.9,
+    BiteCooldownSeconds = 0.6, -- BD-1025 (owner 2026-10-18: fights too slow): was 0.9; the rate limit below (2 per second) still allows it
+    WildHpX = 0.4, -- BD-1025: wild predators (NpcPredatorRules) have this share of the normal HP for their size; players are unchanged
     BiteRangeBase = 2.5, -- reach = BiteRangeBase + BiteRangePerScale * s studs, measured from the attacker's BODY SURFACE (BD-311)
     BiteRangePerScale = 1.0,
     BiteRangeSlack = 1.5, -- extra studs for latency: the client aims, the server measures a moment later

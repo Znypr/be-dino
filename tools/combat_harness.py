@@ -5,9 +5,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULES = ['CombatConfig', 'CombatStats', 'CombatState', 'CombatTeamUp']
 
 SIM = r"""
--- Offline fight sim: 0.1 s steps, 0.9 s cooldown, each fighter hits the first living enemy. a/b = lists of {c=class,s=scale}.
+-- Offline fight sim: 0.1 s steps, cooldown = Cfg.BiteCooldownSeconds, each fighter hits the first living enemy. a/b = lists of {c=class,s=scale}.
 local function fight(a,b,crowd)
-  local function mk(l) local o={} for i,f in l do o[i]={c=f.c,s=f.s,st=State.new(Stats.maxHp(f.c,f.s)),cd=0.1*i%0.9,id=tostring(i)} end return o end
+  local function mk(l) local o={} for i,f in l do o[i]={c=f.c,s=f.s,st=State.new(Stats.maxHp(f.c,f.s)),cd=0.1*i%Cfg.BiteCooldownSeconds,id=tostring(i)} end return o end
   local A,B=mk(a),mk(b); local LA,LB=TeamUp.newLedger(),TeamUp.newLedger()
   local t,firstDown=0,nil
   local function alive(l) local n=0 for _,f in l do if f.st.phase=="Alive" then n+=1 end end return n end
@@ -20,7 +20,7 @@ local function fight(a,b,crowd)
         f.cd-=0.1
         local tg=first(def)
         if f.st.phase=="Alive" and f.cd<=0 and tg then
-          f.cd=0.9
+          f.cd=Cfg.BiteCooldownSeconds
           local x=if crowd then TeamUp.crowdMultiplier(led,t) else 1
           local _,down=State.damage(tg.st,Stats.hit(f.c,f.s,tg.c,tg.s,0,x),t)
           TeamUp.record(led,side..f.id,Stats.hit(f.c,f.s,tg.c,tg.s,0,x),t)

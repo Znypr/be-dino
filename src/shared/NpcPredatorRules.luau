@@ -555,7 +555,7 @@ end
 -- Join the NPC into the shared combat world: same class table, HP, damage and regen as a player (CombatStats via CombatRules).
 function Npc.joinCombat(world: any, combatWorld: any, npc: any, now: number): any
     if not world.enabled then return nil end
-    return CombatRules.join(combatWorld, {userId = npc.userId, runId = npc.runId, class = npc.class, score = npc.score, now = now})
+    return CombatRules.join(combatWorld, {userId = npc.userId, runId = npc.runId, class = npc.class, score = npc.score, now = now, hpX = CombatConfig.WildHpX})
 end
 
 -- Resolve one bite event through CombatRules.attack (range, cone, cooldown, spawn protection all re-checked there).

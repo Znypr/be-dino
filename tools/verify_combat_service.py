@@ -52,7 +52,7 @@ assert(hit.ok and hit.targetKey==B.key and not hit.defeated)
 assert(math.abs(hit.damage-Stats.hit("Ground",1,"Ground",4,0,1))<1e-9,"module damage formula, never client damage")
 assert(math.abs(B.state.hp-(B.state.maxHp-hit.damage))<1e-9)
 assert(math.sqrt(hit.knockX^2+hit.knockZ^2)<=Cfg.KnockbackStuds+1e-9 and hit.knockZ<0,"knockback bounded, away from attacker")
-assert(R.attack(w,A.key,4.5,P(0,0,0),FWD,cand).reason=="cooldown","0.9 s cooldown")
+assert(R.attack(w,A.key,4.5,P(0,0,0),FWD,cand).reason=="cooldown","bite cooldown (Cfg.BiteCooldownSeconds)")
 -- rate limit: a third request inside one second is refused even after the cooldown
 local w2=world(); local a2=R.join(w2,{userId=1,runId="x",class="Ground",score=0,now=0}); local b2=R.join(w2,{userId=2,runId="y",class="Ground",score=BIG,now=0})
 local c2={{key=b2.key,pos=P(0,0,-4)}}

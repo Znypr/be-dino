@@ -82,9 +82,10 @@ function Rules.join(world: any, opts: any): any
     local score = math.max(0, num(opts.score, 0))
     local s = Stats.scale(score)
     local now = num(opts.now, 0)
+    local hpX = math.clamp(num(opts.hpX, 1), 0.05, 4) -- BD-1025: wild predators pass Cfg.WildHpX; players nothing
     local dino = {
-        key = key, userId = opts.userId, runId = opts.runId, class = class, score = score, s = s,
-        state = State.new(Stats.maxHp(class, s)),
+        key = key, userId = opts.userId, runId = opts.runId, class = class, score = score, s = s, hpX = hpX,
+        state = State.new(Stats.maxHp(class, s, hpX)),
         protectedUntil = num(opts.protectedUntil, 0) + Rules.shieldSeconds(world, opts.userId, now),
         lastBiteAt = -1e9, ledger = TeamUp.newLedger(), defeatedBy = nil,
         hpSentByte = -1, hpSentAt = -1e9,
@@ -109,7 +110,7 @@ function Rules.setScore(world: any, key: any, score: any): any
     if not d then return nil end
     d.score = math.max(0, num(score, d.score))
     d.s = Stats.scale(d.score)
-    State.setMaxHp(d.state, Stats.maxHp(d.class, d.s))
+    State.setMaxHp(d.state, Stats.maxHp(d.class, d.s, d.hpX))
     return d
 end
 

@@ -85,6 +85,22 @@ assert(Stats.classOf("Nope")==Cfg.Classes.Ground)
 -- growth keeps ratio
 assert(math.abs(Stats.rescaleHp(50,100,200)-100)<1e-9,"50% stays 50%")
 assert(Stats.rescaleHp(500,100,200)<=200 and Stats.rescaleHp(-5,100,200)==0,"rescale clamps")
+-- BD-1025 (owner 2026-10-18: fights take too long): an even fight against a wild predator is short.
+-- Wild score 60..250 (NpcPredatorRules.Config); the player has the same size. Ground: 6..10 bites and at most 8 s; every class: at most 8 s.
+assert(Cfg.BiteCooldownSeconds<=0.6 and Cfg.BiteCooldownSeconds*Cfg.BiteRequestsPerSecond>=1,"faster bites, still inside the rate limit")
+assert(Cfg.WildHpX>0 and Cfg.WildHpX<=0.5,"wild HP clearly lower")
+assert(Stats.maxHp("Ground",2,nil)==Stats.maxHp("Ground",2) and math.abs(Stats.maxHp("Ground",2,0.4)-0.4*Stats.maxHp("Ground",2))<1e-9,"hpX is optional and multiplies")
+for _,sc in {60,155,250} do
+  local ws=Stats.scale(sc)
+  for _,pc in names do
+    local bites=math.ceil(Stats.maxHp("Ground",ws,Cfg.WildHpX)/Stats.hit(pc,ws,"Ground",ws,0,1))
+    local secs=(bites-1)*Cfg.BiteCooldownSeconds
+    assert(secs<=8,pc.." even fight vs wild at score "..sc.." takes "..secs.." s")
+    if pc=="Ground" then assert(bites>=6 and bites<=10,"Ground even fight is 6..10 bites, got "..bites) end
+  end
+end
+-- the strongest class order is unchanged (T-Rex stays the biggest hitter through size, class table untouched)
+assert(Stats.maxHp("Ground",4)>Stats.maxHp("Ground",1) and Stats.damage("Ground",4,0)>Stats.damage("Ground",1,0),"size still wins")
 print("Combat stats passed: 4 classes, baseline 1.0, HP 100..606, damage 6..7.9, armor floor 1, finite on junk, ratio kept on growth")
 '''
 run(BODY, 'stats')
