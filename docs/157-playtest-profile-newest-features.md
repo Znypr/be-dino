@@ -73,3 +73,13 @@ All on Windows with the pinned Luau runner, on main `11e2eacf` plus this change.
 
 Delete or edit that one `Rule(...)` line in the playtest list in `tools/release_profiles.py` (change `"set", True` to `_flag_off(...)`). `tests/test_release.py` names the lists (`PlaytestOnFlagTests.ON`, `PlaytestStayOffTests.OFF`); move the flag between them in the same change. Nothing else needs editing; the rehearsal profiles are derived from the playtest.
 * **Update 2026-10-18 (BD-606, [115](115-decisions-log.md) SS10 to SS12, [173](173-secret-roster-bind.md)):** `SecretSpeciesEnabled` moved from the "stay off" list to the "on" list. The playtest profile sets it (the default profile still requires it off); `PlaytestOnFlagTests.ON` lists it and `PlaytestStayOffTests.OFF` no longer does. Reason: the owner directive plus one real, bound model; the other six secrets wait for their model ids and boxes.
+
+## 6. Build stamp and freshness check (BD-1043, 2026-10-18)
+
+Label: **CURRENT BUILD BEHAVIOR** of the playtest profile; the default profile output is unchanged (byte for byte). Offline evidence only: not seen in Studio or on a phone.
+
+- **On-screen stamp.** The game already shows a small label at the top middle ("BUILD redesign-020", 15 px, blue, `BuildBadge`). In the **playtest** build `tools/build.py --profile playtest` adds the short id of the commit the file was built from, so it reads "BUILD redesign-020 1b5576fd". A trailing `*` means the build had uncommitted changes. No new UI was added, so nothing new can cover anything; `src/client/Bootstrap.client.luau` is untouched. The id is written into `Config.Build` at build time only; the committed `Config.luau` and the default build still say "redesign-020". Without git the id is empty and the label is the old one.
+- **Manifest.** The playtest manifest records `git_commit`, `git_dirty` and the exact `build_label`.
+- **Check.** `python tools/playtest_freshness.py build/BeDino-Build020-playtest.rbxlx` prints "up to date" or "N commits behind origin/main" and lists the newest merged feature rows (git log subjects that name a BD- row). Exit 0 up to date, 1 behind, 2 cannot tell; `--warn-only` always exits 0, `--fetch` runs `git fetch origin` first. It reads the manifest next to the file, or the stamp inside the `.rbxlx`.
+- **Build time warning.** `tools/build.py --profile playtest` prints a warning when the checkout is behind the local `origin/main` ref. Rule: build a playtest from a fresh `origin/main` (`git fetch origin` first).
+- **Tests.** `tests/test_playtest_freshness.py`.
