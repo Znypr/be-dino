@@ -1,11 +1,11 @@
 # 167 Reference sheet tool and playtest report tool (BD-647, BD-648)
 
-Written 2026-10-18 (owner request, tools 7 and 8 of 8). Status: **Review / test. Offline only.** Two small helper tools and one playbook. Nothing in `src/` changed, no Studio and no Blender were used, and the default build is unchanged. Read [160 Agent brief](160-agent-brief.md) first.
+Written 2026-10-18 (owner request, tools 7 and 8 of 8). Status: **Review / test. Offline only.** Two small helper tools and one playbook. No Studio and no Blender were used, and the default build is unchanged. **Update (BD-649 to BD-653, same day):** the telemetry gaps in section 5 are closed in `src/` (server only, behind the existing `RunTelemetryEnabled` flag, on in the playtest profile only); section 5b lists the new lines and what a playtest now gives. Read [160 Agent brief](160-agent-brief.md) first.
 
 - **Tool A, `tools/reference_sheet.py`** (BD-647): before a helper models a creature or draws an art piece, it collects a SMALL set of real pictures, and this tool turns the folder into one labelled picture and a notes file.
 - **Tool B, `tools/playtest_report.py`** (BD-648): after a friends playtest, turns the game's own numbers into a one-page report with traffic lights.
 
-Pictures: the sheet the tool makes is in [evidence/2026-10-18-reference-tools/contact-sheet-example.png](evidence/2026-10-18-reference-tools/contact-sheet-example.png) (copy: [review-2026-10-17/34-reference-sheet-tool-example.png](evidence/review-2026-10-17/34-reference-sheet-tool-example.png); an example from existing budgie pictures, not new art). A sample report is [evidence/2026-10-18-reference-tools/playtest-report-sample.md](evidence/2026-10-18-reference-tools/playtest-report-sample.md). Both were made offline from fixtures and existing files; **not Studio, not phone, not tested with a real playtest.**
+Pictures: the sheet the tool makes is in [evidence/2026-10-18-reference-tools/contact-sheet-example.png](evidence/2026-10-18-reference-tools/contact-sheet-example.png) (copy: [review-2026-10-17/34-reference-sheet-tool-example.png](evidence/review-2026-10-17/34-reference-sheet-tool-example.png); an example from existing budgie pictures, not new art). A sample report is [evidence/2026-10-18-reference-tools/playtest-report-sample.md](evidence/2026-10-18-reference-tools/playtest-report-sample.md); the same report made from a log in the format the game writes since BD-649 to BD-653 is [playtest-report-sample-game-lines.md](evidence/2026-10-18-reference-tools/playtest-report-sample-game-lines.md) (hand-written lines in the real format, not a real playtest). Both were made offline from fixtures and existing files; **not Studio, not phone, not tested with a real playtest.**
 
 ---
 
@@ -84,16 +84,34 @@ A turnaround sheet shows one creature from the front, the side and the back in t
 | Each visit ending (player leaves): total seconds, runs finished, hub seconds, run seconds | same | Yes | Yes (funnel, runs per visit, hub share) |
 | "Tell us!" feedback: fun, difficulty, looks (1 to 3), run count, hub or run, species, filtered text | `src/server/FeedbackService.luau`; [128](128-playtest-feedback.md) | Yes: `[BD-FEEDBACK] {json}` | Yes |
 | Phone numbers (fps, memory, ping, step label) | `QaService.luau`, [127](127-phone-qa-kit.md) | Yes: `[BD-QA] {json}`, owner-only, tools/qa/phone_report.py | No (not a friends number) |
-| Movement set-backs | `MovementGuard.luau`: player attribute `MovementRejectCount` only | **No** | Gap BD-649 |
-| "rate_limited" answers | many services return the word or set a `Last...Status` attribute | **No counter** | Gap BD-650 |
-| Script errors, crashes | no listener in the game | **No** | Gap BD-651 |
-| Shop opened or bought, eggs hatched, fusions | nothing | **No** | Gap BD-652 |
-| First food, first egg, first hatch, tutorial steps; time stamps; server id | nothing (events carry no time) | **No** | Gap BD-653 |
+| Movement set-backs | `MovementGuard.luau`: player attribute `MovementRejectCount`; `TelemetryService` counts every change of it | **Yes (BD-649):** `count` line `movement_rejects` | Yes |
+| "rate_limited" answers | 12 services answer the word or set a `Last...Status` attribute; one call at each site, plus one in the write budget (`ProfileRepository.admit`) | **Yes (BD-650):** `count` lines `rate_limited` with a `service` label | Yes (per service) |
+| Script errors | `ScriptContext.Error` listener on the server | **Yes (BD-651):** `count` `script_errors` and one `script_error` line per DISTINCT scrubbed text (12 per server) | Yes (text list) |
+| Crashes, players kicked | nothing the server can see | No (Creator Hub list) | By hand (`crashes`) |
+| Shop things bought, eggs hatched, fusions | `ProgressionService` (buy actions), `ChestService` (egg claimed, nest opened), `FusionService` (fusion committed) | **Yes (BD-652):** `count` lines `shop_purchases` (label = action), `hatches` (label Egg or Nest), `fusions` | Yes |
+| Shop opened | no server event exists (the menu is client only; adding a remote was out of scope) | No | By hand (`shop_opens`) |
+| Visit at join, first food, first run, first egg, first hatch, first purchase, time stamp, server id | `TelemetryService` | **Yes (BD-653):** `visit` line at join; `first_*_s`, `server`, `at` in `session_end` | Yes (funnel steps, medians) |
 
 Both flags are off in the default build and on in the playtest profile (`RunTelemetryEnabled`, `PlaytestFeedbackEnabled`, `tools/release_profiles.py`). Privacy by design: no UserId, no name, no session id in any line, so **the game cannot say how many different people played**. Put the number of testers in a `meta` line by hand.
 
+## 5b. What the game records now (BD-649 to BD-653)
+All of it is server side, gated by `Config.RunTelemetryEnabled` (off in the default profile: one boolean test per call site, `TelemetryService` is never even required), memory only, no profile field, no remote, no attribute, **no user id, no name, no engine server id**. Code: `src/shared/RunTelemetry.luau` (pure, tested), `src/server/TelemetryService.luau`, one-line hooks through `src/server/TelemetryHook.luau`.
+
+| Line | When | Fields |
+| --- | --- | --- |
+| `visit` | a player joins | `server` (8 hex digits, random per server start, NOT the engine server id), `at` (unix seconds) |
+| `session_end` | a player leaves | the old fields plus `first_run_s`, `first_food_s`, `first_egg_s`, `first_hatch_s`, `first_shop_s` (whole seconds since joining, absent until reached), `server`, `at` |
+| `count` | roll-up every 5 minutes, when a player leaves, at server close | `name` (`movement_rejects`, `rate_limited`, `script_errors`, `shop_purchases`, `hatches`, `fusions`), `value` (the change since the last roll-up, so the report adds lines up), optional `service` (letters and digits, at most 20; for `rate_limited`: Chest, Nest, Equip, Mutation, Gift, GiftPrompt, Objective, Skin, Fusion, ProfileEggs, ProfileCollection, ProfileFusion, ProfileObjectives, ProfileShop, ProfileSkins) |
+| `script_error` | the first time a text is seen on a server | `script` (script name), `text` (first line, at most 100 characters, only letters, digits and a few signs, long numbers replaced by `#`, the names of players on that server replaced by `<p>`) |
+
+**Reading a log:** a log with a `visit` line comes from this version, so a missing `count` name means zero (the report prints a green light instead of grey). A visit has no leave line when the server closed first; the report says how many. `first_egg_s` is when the run's eggs were SETTLED (end of the first run that earned eggs), not when the first egg was caught.
+
+**Log volume budget.** No log-volume verifier existed in `tools/` (`verify_local_budget.py` is about Luau registers, not logs), so the numbers are checked in `tools/verify_telemetry.py`. Run, session and visit lines keep the old limits (30 a minute per server, 200 per player). Count and error lines have their own bucket: 20 a minute and **300 lines in total per server**. Counters are rolled up (one line per name and service per roll-up, never one per event), at most 40 distinct name and service pairs wait for a roll-up (the rest fold into `Other`), and at most 12 distinct error texts are logged per server (more are only counted). `verify_telemetry.py` simulates six hours with 24 services spamming and asserts the cap holds. Roblox's own log retention was not measured; the Developer Console shows recent lines only, so copy the log before the server closes (section 6). Not verified in a real server.
+
+**Privacy.** `verify_telemetry.py` asserts the key whitelist of every new line, that a bad label, id or text never reaches a line, and that a player name is replaced in error text; `verify_session1_smoke.py` checks every line of a 5-player session for user ids. The server id is random per server start and cannot be linked to a person.
+
 ## 6. What a person can export
-- **Server log** (best): while the test server is running, the place owner opens the in-game Developer Console (F9), tab "Server Logs", and copies the lines (or in Studio, copies the Output window). Only the lines starting `[BD-TELEMETRY]` and `[BD-FEEDBACK]` matter; the tool ignores everything else. **Copy before the server closes: the log is gone afterwards.** A visit is logged only when the player LEAVES, so tell testers to leave through the normal exit before you copy.
+- **Server log** (best): while the test server is running, the place owner opens the in-game Developer Console (F9), tab "Server Logs", and copies the lines (or in Studio, copies the Output window). Only the lines starting `[BD-TELEMETRY]` and `[BD-FEEDBACK]` matter; the tool ignores everything else. **Copy before the server closes: the log is gone afterwards.** A visit is logged at JOIN since BD-653, but the run and time numbers of a visit arrive only when the player LEAVES (`session_end`), so tell testers to leave through the normal exit before you copy.
 - **Creator Hub dashboards** (Analytics, Performance): the game also sends each event to `AnalyticsService:LogCustomEvent` (inside a `pcall`), and Roblox shows crash and error numbers there. If a dashboard gives a CSV, copy the few numbers you want into a counts file (below). Not verified in this task: no real dashboard was opened.
 - **The in-game form** ("Tell us!", bottom-left): its lines are in the server log as above.
 
@@ -103,13 +121,15 @@ Any mix of files in one command; one line per event. A line can be a raw log lin
 | `event` | Fields | Source |
 | --- | --- | --- |
 | `run_end` | `duration_s`, `reason`, `eggs`, `nests`, `crystals`, `food`, `food_raw`, `eggs_food`, `weather_s` | the game |
-| `session_end` | `total_s`, `runs`, `hub_s`, `run_s` | the game |
+| `session_end` | `total_s`, `runs`, `hub_s`, `run_s`, optional `first_run_s`, `first_food_s`, `first_egg_s`, `first_hatch_s`, `first_shop_s`, `server`, `at` | the game |
 | `feedback` | `fun`, `level`, `looks`, `runs`, `location`, `species`, `text` | the game |
-| `count` | `name`, `value`, optional `note`; names: `movement_rejects`, `rate_limited`, `script_errors`, `crashes`, `shop_opens`, `shop_purchases`, `hatches` | by hand (the game cannot count these yet) |
+| `visit` | `server`, `at` | the game (BD-653) |
+| `script_error` | `script`, `text` | the game (BD-651) |
+| `count` | `name`, `value`, optional `service`, optional `note`; names: `movement_rejects`, `rate_limited`, `script_errors`, `shop_purchases`, `hatches`, `fusions` (the game); `crashes`, `shop_opens` (by hand only) | the game (BD-649/650/652) and by hand |
 | `funnel` | `step`, `players` (steps are added after the built-in ones, in the order written) | by hand |
 | `meta` | any of `build`, `date`, `testers` | by hand |
 
-A `.csv` file with the header `name,value,note` is read as `count` lines. Sample files: [tests/fixtures/playtest_sample.jsonl](../tests/fixtures/playtest_sample.jsonl) (a log with noise and one broken line) and [tests/fixtures/playtest_counts.csv](../tests/fixtures/playtest_counts.csv).
+A `.csv` file with the header `name,value,note` is read as `count` lines. Sample files: [tests/fixtures/playtest_sample.jsonl](../tests/fixtures/playtest_sample.jsonl) (an older log with noise and one broken line), [tests/fixtures/playtest_counts.csv](../tests/fixtures/playtest_counts.csv) (hand counts) and [tests/fixtures/playtest_game_v2.jsonl](../tests/fixtures/playtest_game_v2.jsonl) (a log in the format the game writes since BD-649 to BD-653: visits, counts, script errors, funnel seconds, two servers).
 
 ```
 python tools/playtest_report.py server.log counts.csv --out report.md      # prints and writes the report
@@ -137,18 +157,21 @@ Kept in one table, `LIMITS`, at the top of `tools/playtest_report.py`. Plain wor
 | Script errors | 0 | 1 to 3 | more; any crash is RED |
 | Fun and looks (1 to 3) | 2.4 or more | 1.8 to 2.4 | under 1.8 |
 | Difficulty (2 is just right) | 1.7 to 2.3 | 1.4 to 2.6 | outside |
-| Shop opened, hatching | at least once | never (is it easy to find?) | none |
+| Shop use (things bought, or opens counted by hand), hatching | at least once | never (is it easy to find?) | none |
+| Time to first food (median seconds from joining, BD-653) | 60 or less | 61 to 120 | more |
+| Time to first run (median seconds from joining) | 90 or less | 91 to 180 | more |
 
-Fewer than 3 feedback answers is GREY. Fewer than 4 visits prints "treat every light as a hint, not a result". The drop-off funnel is: came in, finished 1 run, 2 runs, 3 runs (all from the visit lines), then any `funnel` lines written by hand; the report names the biggest loss. Owner target for pace comes from [114](114-handbook.md) s1.1 (runs of about 5 minutes, several runs per visit, [122](122-session-telemetry.md)).
+Fewer than 3 feedback answers is GREY. Fewer than 4 visits prints "treat every light as a hint, not a result". The drop-off funnel is: came in, (started a run, ate food), finished 1 run, (earned an egg, hatched an egg), 2 runs, 3 runs (from the leave lines; the steps in brackets only when the log has `first_*_s` fields), then any `funnel` lines written by hand; the report names the biggest loss and prints the median seconds to each step. Owner target for pace comes from [114](114-handbook.md) s1.1 (runs of about 5 minutes, several runs per visit, [122](122-session-telemetry.md)).
 
-## 10. Gaps (a kanban row each; `src/` was not changed)
-- **BD-649** movement set-backs only in a player attribute.
-- **BD-650** "rate_limited" is not counted anywhere.
-- **BD-651** no script-error listener; crashes only on the Creator Hub dashboard.
-- **BD-652** no shop, hatch or fusion counters.
-- **BD-653** no funnel steps before the first run, no time stamp, no server id, and the server log vanishes when the server closes.
+## 10. Gaps (a kanban row each)
+Found by the first version of this tool, **closed in code by BD-649 to BD-653** (Review / test, offline proof only, section 5b):
+- **BD-649** movement set-backs: `count` `movement_rejects`.
+- **BD-650** "rate_limited": `count` `rate_limited` per service.
+- **BD-651** script errors: `count` `script_errors` plus the `script_error` text lines. **Still open: crashes** (nothing on a server can see a client crash; read the Creator Hub list and add a `crashes` count line).
+- **BD-652** shop purchases, hatches, fusions. **Still open: shop OPENED** (no server event; a hand `shop_opens` count, or a later client-reported event with a remote and its own rate limit).
+- **BD-653** visit at join, first food / run / egg / hatch / purchase seconds, time stamp (`at`), random server id. **Still open:** the server log still vanishes when the server closes (copy it first, section 6), and the game cannot say how many different people played (by design).
 
-Until they exist, fill the numbers by hand with `count` lines (section 7); the report marks every missing number GREY with its row id.
+A log from an older game (no `visit` line) keeps the old behaviour: every missing number is GREY with its row id, and the numbers are filled by hand with `count` lines (section 7).
 
 ## 11. Not covered
-No real playtest was run; no real Creator Hub export was opened; Studio and phone were not used. Only the fixture lines and the existing budgie pictures were used for the examples. The lights are a first guess and need one real playtest to settle.
+No real playtest was run, and the new server code ran only in the offline Luau harnesses (mocked Players; no real `ScriptContext`, `BindToClose` or server log); no real Creator Hub export was opened; Studio and phone were not used. Only the fixture lines and the existing budgie pictures were used for the examples. The lights are a first guess and need one real playtest to settle.

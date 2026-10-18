@@ -648,16 +648,24 @@ runScenario(function(env, server)
     check("no private name or egg id is a public Player attribute", leakedPrivate == 0, leakedPrivate)
 
     -- telemetry (BD-426): one run_end per settled run, session_end per leaver, anonymous, whitelisted
-    local runEnds, sessionEnds, badLine = 0, 0, 0
-    local eventLines = {}
+    local runEnds, sessionEnds, badLine, visits = 0, 0, 0, 0
+    local eventLines, serverIds = {}, {}
     for _, line in captured do
         if string.sub(line, 1, 15) == "[BD-TELEMETRY] " then
             table.insert(eventLines, line)
             if string.find(line, '"event":"run_end"', 1, true) then runEnds += 1 end
             if string.find(line, '"event":"session_end"', 1, true) then sessionEnds += 1 end
-            if string.find(line, "300%d") or string.find(line, "P300") or string.find(line, "Friend") or string.find(line, "run:") then badLine += 1 end
+            -- BD-653: the unix time and the random 8-hex server id are numbers that can contain "300" by chance, so they are masked first
+            local scan = string.gsub(string.gsub(line, '"at":%d+', '"at":0'), '"server":"%w+"', '"server":"x"')
+            if string.find(scan, "300%d") or string.find(scan, "P300") or string.find(scan, "Friend") or string.find(scan, "run:") then badLine += 1 end
+            if string.find(line, '"event":"visit"', 1, true) then visits += 1 end
+            local id = string.match(line, '"server":"(%w+)"')
+            if id then serverIds[id] = true end
         end
     end
+    local serverCount = 0
+    for _ in serverIds do serverCount += 1 end
+    check("telemetry (BD-653): a visit line at every join (4 + the rejoin), one random server id on all of them", visits == 5 and serverCount == 1, visits .. " visits, " .. serverCount .. " server ids")
     check("telemetry: one run_end per settled run", runEnds == #runIds, runEnds .. " vs " .. #runIds)
     check("telemetry: a session_end for every leaver (4 + the rejoin)", sessionEnds == 5, sessionEnds)
     check("telemetry: no user id, name or egg id in any line", badLine == 0, badLine)

@@ -81,6 +81,7 @@ python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> 
 - **Blender to Roblox without the owner** ([169](169-blender-to-roblox-pipeline.md), BD-659): `tools/blender_export_roblox.py` (headless Blender, does not use the Blender MCP), `tools/roblox_asset_upload.py` (Open Cloud upload; key only from the environment variable `ROBLOX_OPEN_CLOUD_KEY`, dry run by default, never print or paste the key; works only after the owner has created it), `tools/studio/insert_uploaded_model.luau` (paste into `execute_luau`). Backlog until the owner creates the key.
 - **Roblox Studio MCP:** one agent per Studio window. The owner's `Place1.rbxl` window is the owner's: never minimise, move, make topmost or close it, and work done in it is UNSAVED until the owner presses Ctrl+S. A denied window-placement call is never retried or worked around. The owner said to ignore window-placement problems and do other work.
 - **Opening a built place in Studio (BD-663, 2026-10-18):** the MCP tools cannot open a file (`user_keyboard_input` and `user_mouse_input` only reach the running game's Client datamodel). The lead launches Studio with the `.rbxlx` as a command-line argument; it registers as a new studio id in `list_roblox_studios`. Agents use only that id and never open, move or close windows.
+- **Is a tool up?** `python tools/dev_env_check.py` (read-only, 2 s: Blender and its port, Studio windows and minimised state, browsers, PATH tools, power plan; [165](165-dev-env-check.md)). `--launch blender|chrome|edge` can start those three; nothing starts Studio.
 - **No OS-level screenshots, never `SetForegroundWindow`.** Use the Studio MCP capture or the Browser pane.
 
 ## 7. Judging motion and sound without watching or listening
@@ -94,3 +95,22 @@ You cannot see a clip or hear a sound, so measure it, and say plainly what you c
 ## 8. Reporting to the owner
 
 The owner reads simple words. Keep it short. No jargon, no ids without a plain sentence beside them, no questions buried in the text (an owner decision is a separate, one-line ask). Say three things: **what exists**, **what is unverified** (Studio, phone, hearing), and **where the pictures are** (paths). Link the PR in three lines or fewer. If you found a mismatch, name the two sources.
+
+## 9. Learned rules (from the work log, [168](168-work-log-and-retrospectives.md))
+
+Each rule exists because it cost time on 2026-10-17/18. The evidence is the log in [168](168-work-log-and-retrospectives.md) (section 4 for the summary, section 5 for every entry). Add a rule here only after the same problem happened twice, and name the log entry that shows it.
+
+1. **Merge `origin/main` early and again before you open the PR.** Long tasks meet a moving main (remote audit BD-608: 3 merge rounds). [168 section 4, row 3]
+2. **Do not stack a PR on an unmerged branch.** Base on `origin/main`; if you need the other change, wait for its merge (BD-625 and the fusion docs fix both got hurt). [168 section 4, row 4]
+3. **Keep existing kanban row titles unchanged; append the outcome to the end of the row.** `verify_kanban_merge` reads a renamed title as an id collision. [168 section 4, row 4]
+4. **Commit first, then run `verify_kanban_merge`.** It reads committed state, not your working copy. [168 section 4, "also fixed"]
+5. **Get doc and BD numbers from `python tools/next_bd_id.py --doc` (or without `--doc`), never by eye.** Parallel agents took the same number. [168 section 4, "also fixed"]
+6. **Read AGENTS.md from your worktree, not from the text injected at session start.** An injected copy said 15/4/2; the repo says 6/3/2 (log entry "Fusion audit"). [168 section 4, row 5]
+7. **Probe a tool before saying it is missing** (run it, or `--version`). A browser was called unavailable without a probe. [168 section 4, row 5]
+8. **Never wait on a denied window or tool call: park the work and report it.** The first cockatoo run produced nothing while it waited (log entry "Cockatoo special bird"). [168 section 4, row 1]
+9. **Check auto-merge with `gh pr view N --repo Znypr/be-dino --json autoMergeRequest,mergeStateStatus`**, not by trusting the words "auto-merge enabled".
+10. **Message agents by their exact id, never by guess.** Two messages for another agent went to the wrong one (log entry "Equip-next-run and objective rewards").
+11. **A setting that weakens a limit (the movement window) does not ship ON without measured margins**, and nothing is committed with a conflict marker in it: search the tree for lines starting with seven `<` characters before every commit (log entry "Movement window").
+12. **Only one session writes to a branch.** Another session pushed merge commits onto the WeatherVisuals branch (log entry "WeatherVisuals split").
+
+After your task the lead logs it with `python tools/retro_log.py add ...` ([168](168-work-log-and-retrospectives.md) section 1). Put in your report what the lead needs: minutes, tool calls, what you checked, what went wrong.
