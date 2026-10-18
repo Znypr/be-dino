@@ -2,6 +2,8 @@
 
 **2026-10-14, read-only audit of main @ bbfd2a5.** No gameplay code changed. No Studio, device or Blender checks were run here. "Fact" = seen in the repo. "Guess" = inference to verify live. Owner guidance: a cohesive, polished game beats exact numbers.
 
+> **BD-617 note (2026-10-18):** "Gold: 31/50 Base" below is the Build 010 to 020 50-copy wording. The 50-copy fusion is removed; the ladder is 6 Base / 3 Gold / 2 Emerald ([90](90-fusion-ladder-v2.md)).
+
 ## (a) One-page summary
 
 | # | Question | Verdict | Reason |

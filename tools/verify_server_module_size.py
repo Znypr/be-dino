@@ -32,8 +32,8 @@ WARN_BYTES = 90_000
 GENERATED_MAX_LINES = 5
 GENERATED_NAMES = {"IconRaster.luau", "ResourceGeometry.luau", "IconTiles.luau"}
 GENERATED_DIRS = ("CreatureGenes/Chunks/", "CreatureData/Chunks/")
-# path under src/ -> ceiling in bytes (LF). Already over LIMIT_BYTES on 2026-10-18 (126,160); may not grow beyond the ceiling.
-KNOWN_OVER = {"client/Bootstrap.client.luau": 127_000}
+# path under src/ -> ceiling in bytes (LF). Already over LIMIT_BYTES on 2026-10-18 (126,160; 123,864 after BD-617); may not grow beyond the ceiling.
+KNOWN_OVER = {"client/Bootstrap.client.luau": 123_900}  # was 127,000; BD-617 removed the old 50-copy Fusion pages (-2.9 KB)
 
 
 def size_of(path: Path) -> int:

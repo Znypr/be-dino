@@ -82,6 +82,8 @@ Ordered smallest first. Items 1 to 3 touch `src/` and are for a separate PR; no 
 5. **Tool text:** rewrite the `simulate_fusion_ladder.py` docstring (:10-14) to say the 15/4/2 text belongs to `--legacy`, and rename `GOLD_DONORS` (:43) to `LEGACY_GOLD_DONORS`.
 6. **Process:** add one line to AGENTS.md "Picking numbers" or the handbook: "the AGENTS.md text injected at session start can be days old; read the file in the worktree before quoting a number" (C-47).
 
+**Outcome 2026-10-18 (BD-617, Review / test, offline evidence only).** Items 1 to 3 are done in one change: the `MutateSpecies` remote and the old Fusion pages are removed (not just refused), so the audit's section 3 table row "Legacy server" and "Legacy client panel" no longer exist; `DinosaurIdentity.reconcile` protects locked and favourited dinosaurs. The repository transaction `mutateSpecies` and the two cost numbers stay as unreachable LEGACY code so the golden session keeps its bytes ([115](115-decisions-log.md) NF4 to NF6). Items 4 and 5 were done by BD-630. Item 6 (C-47) stays in [160](160-agent-brief.md) section 1.
+
 ## 7. Owner questions (copied to [116](116-handbook-conflicts.md) section J)
 - **Q20** Confirm the ladder is still 6 Base (same species, any pattern) / 3 Gold / 2 Emerald, as AGENTS.md line 44 says. Options: (a) yes, no change; (b) change it (say the numbers).
 - **Q21** What happens to the old 50-copy `MutateSpecies`? Options: (a) remove the remote and the old panel (recommended by BD-617); (b) keep it behind a new flag that is pinned OFF, as a test tool only; (c) keep it as a separate player feature.

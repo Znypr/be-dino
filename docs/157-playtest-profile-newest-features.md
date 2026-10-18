@@ -67,7 +67,7 @@ All on Windows with the pinned Luau runner, on main `11e2eacf` plus this change.
 * A tester who finds a fusion or a cosmetic purchase wrong cannot be helped by rollback: the recovery is rotating the playtest store name (`_vN`), as in [145](145-session1-readiness-2026-10-17.md).
 * Fusion odds, objective rewards, special food points and the fast travel price are all PROVISIONAL numbers.
 * The flags that stay off each keep their own kanban row (BD-527 pace, BD-397 hatch v2, BD-604 and BD-606 secrets, BD-456 skins, BD-451 to BD-453 gifts, BD-612 packs); this change does not create new ones.
-* Still open in BD-617: the legacy Bootstrap panel code and `GoldMutationCost` / `DiamondMutationCost` remain in the default build, and `DinosaurIdentity.reconcile` still ignores locked and favourited dinosaurs.
+* **Update 2026-10-18 (BD-617, [115](115-decisions-log.md) NF4 to NF6):** the `fusion_moved` guard above was replaced by removal: `MutateSpecies` no longer exists in any profile, the old Bootstrap pages are deleted, and `DinosaurIdentity.reconcile` protects locked and favourited dinosaurs. What testers see in the playtest profile is unchanged (the new Fusion menu). The default profile now says "Fusion is coming soon" on the FUSION button instead of opening the old 50-copy page. `GoldMutationCost` / `DiamondMutationCost` and the repository function remain as unreachable legacy code.
 
 ## 5. How to undo one flag
 

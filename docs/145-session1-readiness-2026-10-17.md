@@ -58,7 +58,7 @@ Gate letters: **O** = owner, **Q** = QA / human run, **P** = phone, **S** = Stud
 | 7 | Hostile-client fairness (BD-614) | **Done offline**, Review / test | Lead | mock of 12 players only |
 | 8 | Movement window honest-lag check (BD-611) | **Open, needs Studio** | Lead (two clients) | default ON with a kill switch; Review / test, not Done |
 | 9 | Dino swap mid-run (BD-613) | **Fixed offline**: merged in #450 (`d03a062c`), Review / test | Lead | Studio look still to do |
-| 10 | Fusion for testers: old 50-copy path and odds disclosure (BD-617, BD-577; Q20 to Q22) | **NO-GO until the owner decides** | Owner, then a code PR | 6 / 3 / 2 path is correct; legacy path is live |
+| 10 | Fusion for testers: old 50-copy path and odds disclosure (BD-617, BD-577; Q20 to Q22) | **NO-GO until the owner decides** (**update 2026-10-18: LEAD decision, the old path is removed, BD-617 Review / test; the 6 / 3 / 2 Fusion menu is on in the playtest profile; odds disclosure still BD-577**) | Owner, then a code PR | 6 / 3 / 2 path is correct; legacy remote and pages removed 2026-10-18 |
 | 11 | Human 5-minute run pace (BD-575) | **Open** (economy decision, not a join blocker) | Owner or a child | evening step 7 |
 | 12 | Weather play-through after the split (BD-627) | **Open, needs Studio** | Lead | never run in Studio |
 | 13 | Phone measurement (BD-085, BD-322) | **Open**; a blocker only if phones may join | Owner (Android) | otherwise Computer only |
