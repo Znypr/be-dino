@@ -18,6 +18,7 @@ def module(path):
 def script():
     return ('local Config=' + module('src/shared/Config.luau') + '\n'
             + 'local Progression=' + module('src/shared/ProgressionConfig.luau') + '\n'
+            + 'local script={Parent={ProgressionConfig=Progression}}\nlocal function require(x) return x end\n'  # BD-1033: kid pattern names come from the config
             + 'local S=' + module('src/shared/FusionSelection.luau') + '\n' + r'''
 local Patterns={"01_blank","02_emerald_islands","03_round_spots","04_bold_patches","05_horizontal_bands","06_wavy_stripes","07_diamond_scales","08_freckles"}
 local cat=S.buildCatalog(Config,Progression,Patterns)
@@ -293,7 +294,7 @@ assert(string.find(S.failureMessage("weird_new_reason"),"weird new reason"))
 
 -- ===== Reveal sequence lands on committed values =====
 local seq=S.revealSequence(quote,committed,cat)
-assert(seq[1].kind=="pattern" and seq[1].value=="Wavy Stripes")
+assert(seq[1].kind=="pattern" and seq[1].value=="Waves")
 local order={} for _,st in seq do table.insert(order,st.trait or st.kind) end
 assert(table.concat(order,",")=="pattern,primaryColor,secondaryColor,shiny,mutation,big,final",table.concat(order,","))
 local expect={primaryColor="blue",secondaryColor="teal",shiny="yes",mutation="ember",big="no"}
@@ -319,7 +320,7 @@ do
 end
 assert(seq[3].detail=="Blend 55% / 45%")
 assert(seq[4].value=="Shiny" and seq[5].value=="Ember" and seq[6].value=="Not BIG")
-assert(seq[#seq].kind=="final" and seq[#seq].title=="NEW WAVY STRIPES COMPY" and seq[#seq].replay==false)
+assert(seq[#seq].kind=="final" and seq[#seq].title=="NEW WAVES COMPY" and seq[#seq].replay==false)
 -- Committed value outside the quoted odds: shown plainly, never animated as a guess.
 local odd=table.clone(committed) odd.traits=table.clone(committed.traits) odd.traits.genes=table.clone(committed.traits.genes)
 odd.traits.genes.primaryColorId="black"
@@ -349,7 +350,7 @@ local hatched={instanceId="u:1/d:5",speciesId="compy",stage="base",genes={patter
  originalEgg={eggId="egg-1",kind="alpha_chest",eventId="rain",genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20,conditionId="normal"}},
  cosmetics={ownedAuraIds={"meadow"},ownedTrailIds={},equippedAuraId="meadow",equippedTrailId=""}}
 local hv=S.details(hatched,cat)
-assert(hv.origin.kind=="hatched" and hv.title=="Wavy Stripes Compy")
+assert(hv.origin.kind=="hatched" and hv.title=="Waves Compy")
 assert(string.find(hv.origin.lines[1],"Event: Rain",1,true) and string.find(hv.origin.lines[1],"Run reward egg",1,true) and string.find(hv.origin.lines[1],"Green 20% / Blue 80%",1,true))
 assert(hv.prestige=="Natural hatch")
 assert(hv.cosmetics[1]=="Auras: Meadow Glow" and string.find(hv.cosmetics[4],"never count",1,true))
@@ -361,9 +362,9 @@ local fused={instanceId="u:1/d:99",speciesId="compy",stage="gold",genes=committe
  cosmetics={ownedAuraIds={},ownedTrailIds={},equippedAuraId="",equippedTrailId=""}}
 local fv=S.details(fused,cat)
 assert(fv.origin.kind=="fused" and fv.prestige=="Crafted Gold (earned)")
-assert(fv.title=="Gold Wavy Stripes Compy")
+assert(fv.title=="Gold Waves Compy")
 assert(fv.origin.lines[1]=="Fused from 2 dinos" and fv.origin.lines[2]=="Recipe r1 • Odds o1")
-assert(#fv.origin.parents==2 and string.find(fv.origin.parents[1].egg,"Run reward egg",1,true) and fv.origin.parents[1].text=="Wavy Stripes Compy • Shiny")
+assert(#fv.origin.parents==2 and string.find(fv.origin.parents[1].egg,"Run reward egg",1,true) and fv.origin.parents[1].text=="Waves Compy • Shiny")
 assert(fv.origin.parents[2].egg=="Original egg not recorded")
 -- Never a fake Gold drop percentage; no "%" anywhere in prestige/origin text for stage.
 assert(not string.find(fv.prestige,"%",1,true))
@@ -377,7 +378,7 @@ for i=1,15 do table.insert(bigParents,{instanceId="u:1/d:"..(1000+i),genes={prim
 local gv=S.details({instanceId="u:1/d:2000",speciesId="compy",stage="gold",genes={patternId="06_wavy_stripes"},origin={kind="fusion",recipeVersion="gold-same-species-6-v2",oddsVersion="o",parentStage="base",parents=bigParents},
  lineage={parentIds=bigIds,parentEggs={}},cosmetics={}},cat)
 assert(gv.origin.lines[1]=="Fused from 15 dinos" and #gv.origin.parents==S.DetailsParentLimit)
-assert(gv.origin.parents[1].text=="Wavy Stripes Compy • Shiny","compact snapshot falls back to result species/pattern")
+assert(gv.origin.parents[1].text=="Waves Compy • Shiny","compact snapshot falls back to result species/pattern")
 local showing=false for _,l in gv.origin.lines do if l=="Showing 12 of 15 parents" then showing=true end end assert(showing)
 -- Cosmetics do not change rarity/prestige output.
 local plainFused=table.clone(fused) plainFused.cosmetics={ownedAuraIds={"royal"},ownedTrailIds={"astra"},equippedAuraId="royal",equippedTrailId="astra"}
@@ -431,13 +432,13 @@ assert(S.autoFillMessage(fillA,{},{fillA[1].instanceId},"gold",idx,cat):find("ne
 local six={} for i=1,6 do table.insert(six,fillA[1].instanceId) end
 assert(S.autoFillMessage(fillA,{fillA[1].instanceId},six,"gold",idx,cat)=="Filled! Tap FUSE.")
 local msgEmerald=S.autoFillMessage(fillA,{fillA[1].instanceId},{fillA[1].instanceId},"emerald",idx,cat)
-assert(msgEmerald:find("Tap Clear") and msgEmerald:find("Wavy"),msgEmerald)
+assert(msgEmerald:find("Tap Clear") and msgEmerald:find("Waves"),msgEmerald)
 assert(S.autoFillMessage(fillA,{},{},"gold",idx,cat):find("No plain dinos"))
 assert(#S.withoutIds(fillA,{fillA[1].instanceId})==2 and S.withoutIds(fillA,{})[1]==fillA[1])
 local chipTotal=0 for _,c in chips.sections[1].chips do chipTotal+=tonumber(string.match(c.label,"([%d%.]+)%%$")) end
 assert(math.abs(chipTotal-100)<1e-9,"chip percentages sum to 100")
 assert(not S.oddsChips({shiny=.1},cat).ok and not S.oddsChips(nil,cat).ok,"malformed odds give no chips")
-assert(S.cardPattern(legacy,cat)=="Older dino" and S.cardPattern(all[1],cat)=="Wavy Stripes")
+assert(S.cardPattern(legacy,cat)=="Older dino" and S.cardPattern(all[1],cat)=="Waves")
 assert(table.concat(S.cardTraits(trail,cat),",")=="Effects" and table.concat(S.cardTraits(ember,cat),",")=="Ember" and S.cardTraits(locked,cat)[1]=="Locked" and S.cardTraits(fav,cat)[1]=="Favourite")
 for code,text in S.ReasonText do assert(#text<=24 and not string.find(text,"recipe") and not string.find(text,"species"),"plain short reason "..code) end
 

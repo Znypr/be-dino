@@ -57,6 +57,20 @@ function Curve.boost(weights: {number}, factors: {number}, maxRatio: number?): {
     return out
 end
 
+-- BD-1033: chance of each tier (0..1, index 1 = Common, always 6 entries, 0 for an empty tier) of a table of rows
+-- {rarity = "Common".., weight = n}. One helper for every weighted table that carries rarity names (patterns, colours),
+-- used by the offline verifiers and the timing simulation so nobody re-derives tier shares by hand.
+function Curve.tierTotals(rows: {any}): {number}
+    local out, total = {}, 0
+    for i = 1, #Curve.Names do out[i] = 0 end
+    for _, row in rows do
+        local k = Curve.index(row.rarity)
+        if k then out[k + 1] += row.weight total += row.weight end
+    end
+    if total > 0 then for i = 1, #out do out[i] /= total end end
+    return out
+end
+
 -- Percent text for a chance in percent: 80 -> "80%", 0.0256 -> "0.0256%".
 function Curve.percentText(percent: number): string
     return string.format("%g%%", tonumber(string.format("%.4g", percent)) :: number)
