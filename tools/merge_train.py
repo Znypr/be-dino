@@ -39,6 +39,8 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 import merge_main_into_pr as mm  # noqa: E402  (the kanban resolver is shared, not copied)
+import kanban_lib as kl  # noqa: E402
+import kanban_migrate_pr as kmp  # noqa: E402  (a PR made before the cutover: its row changes become row files)
 
 vkm = mm.vkm
 KANBAN = mm.KANBAN
@@ -114,12 +116,32 @@ def merge_one(wt, remote, info):
     if rc and not unmerged:
         mm.git(wt, "merge", "--abort", check=False)
         return "skipped", "git could not merge it: %s" % ((err or out).strip().splitlines() or ["?"])[-1][:160]
-    others = [p for p in unmerged if p != KANBAN]
+    others = [p for p in unmerged if p != KANBAN and not mm.ROW_FILE.match(p)]
     if others:
         mm.git(wt, "merge", "--abort", check=False)
         return "skipped", "needs a human, conflicting files: " + ", ".join(others)
     kb = Path(wt) / KANBAN
+    cutover = kl.ref_has_cutover(wt, "HEAD")  # the train keeps one file per kanban row (docs/191)
+    migrate = cutover and not kl.ref_has_cutover(wt, head)  # ... and this PR was made before that
     try:
+        if cutover:
+            rep = mm.KanbanReport()
+            for path in unmerged:
+                if mm.ROW_FILE.match(path):  # both edited the same row: the train's text plus the PR's new text
+                    mm.resolve_row_file(wt, path, rep, "PR #%d" % n, swap=True)
+                    mm.git(wt, "add", "--", path)
+                elif path == KANBAN and not migrate:  # text-only page now: both sides may only have added text
+                    mm.resolve_append_only_doc(kb)
+                    mm.git(wt, "add", "--", path)
+            if migrate:
+                moved = kmp.replay(wt, mb, head, "HEAD", "PR #%d" % n)
+                rep.merged.extend(moved.merged)
+                for line in kmp.describe(moved):
+                    say(line)
+            for k, mode, notes in rep.merged:
+                say(mm.merged_line(k, mode, notes))
+            return "merged", ("kanban rows: %s%d row edit(s) merged from both sides"
+                              % ("old-table changes moved into row files; " if migrate else "", len(rep.merged)))
         if unmerged:
             stages = {l.split()[2] for l in mm.git(wt, "ls-files", "-u", "--", KANBAN)[1].splitlines() if l.strip()}
             if stages != {"1", "2", "3"}:
