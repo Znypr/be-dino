@@ -26,9 +26,10 @@ local CombatConfig = {
         ankylosaurus = "Armored", sauropelta = "Armored", styracosaurus = "Armored",
         -- Secret birds and the fox (BD-604, docs/115 SS5): Penguin is Water (slow, sturdy, dash), Budgiesaurus Fly, the rest Ground. Shared/SecretSpeciesConfig must agree (verify_secret_species).
         chickosaurus = "Ground", pigeon = "Ground", duck = "Ground", dodo = "Ground", penguin = "Water", budgiesaurus = "Fly", foxosaurus = "Ground",
+        cockatoosaurus = "Fly", eaglesaurus = "Fly",
     },
     -- Silly birds are secret finds: never listed in a roster/index until found (owner, docs/115).
-    SecretSpecies = { "chickosaurus", "pigeon", "duck", "dodo", "penguin", "budgiesaurus", "foxosaurus" },
+    SecretSpecies = { "chickosaurus", "pigeon", "duck", "dodo", "penguin", "budgiesaurus", "foxosaurus", "cockatoosaurus", "eaglesaurus" },
 
     BaseHp = 100,
     HpSizeExponent = 1.3,

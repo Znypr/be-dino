@@ -47,7 +47,7 @@ def secret_slots():
 def check_registry():
     all_entries = registry()
     slots = secret_slots()
-    assert len(slots) == 7, f"expected 7 secret species in SecretSpeciesConfig, found {sorted(slots)}"
+    assert len(slots) == 9, f"expected 9 secret species in SecretSpeciesConfig, found {sorted(slots)}"
     # BD-606: a secret appears here ONLY with a filled model slot, with the very same id and class (never an invented entry); every filled slot needs its entry
     secret_entries = [e for e in all_entries if e[0] in slots]
     for name, aid, _, scale, tier, cls in secret_entries:

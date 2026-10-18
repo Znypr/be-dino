@@ -8,7 +8,7 @@ Part A (pure rules): SecretSpeciesConfig + the real RewardMath, Config, Progress
   * the chance is flat 0.5% within statistical tolerance over 200,000 run rolls and 200,000 nest rolls, and does not rise with run size
     (1 egg vs 400 eggs) or nest luck;
   * the species split follows the provisional weights, and only secrets with a filled model slot can drop;
-  * secrets are counted apart ("2 / 7 secrets found"), the hidden card never leaks the name, the 22-species number is untouched;
+  * secrets are counted apart ("2 / 9 secrets found"), the hidden card never leaks the name, the 22-species number is untouched;
   * no secret hatches while its model slot is empty; the shipped slots are EXACTLY the pinned BOUND_IDS (docs/173: only real, plain,
     positive asset ids, each with its LowPolyDinoAssets entry and a measured ladder row) and agree with the class table; every unit test
     runs on an all-empty copy of the module so the rules are proved without the shipped ids.
@@ -56,7 +56,7 @@ def module(path):
 # changing an id) fails this verifier until this table, docs/173 and the evidence line change in the same commit. Every id is a published
 # `generate_mesh` Model of the owner's account (Roblox economy details: AssetTypeId 10, creator znyprs, the same as the 22 shipped species).
 # Never invent an id: a slot that is not here stays 0.
-BOUND_IDS = {'budgiesaurus': 107910518074360, 'chickosaurus': 108391746824463, 'dodo': 128146035116312, 'duck': 129901658996389, 'foxosaurus': 112996440434481, 'penguin': 120950430829492, 'pigeon': 83982208995212}
+BOUND_IDS = {'budgiesaurus': 107910518074360, 'chickosaurus': 108391746824463, 'cockatoosaurus': 77920946493998, 'dodo': 128146035116312, 'duck': 129901658996389, 'eaglesaurus': 116840996663024, 'foxosaurus': 112996440434481, 'penguin': 120950430829492, 'pigeon': 83982208995212}
 SLOT_RE = re.compile(r'(\{ id = "(\w+)", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )(\d+)( \})')
 
 
@@ -133,8 +133,8 @@ end
 ---------------------------------------------------------------- SS1 data and rules
 local S0 = mkSecret()
 check(Config.SecretSpeciesEnabled == false, "the committed flag is OFF")
-check(#S0.Order == 7, "seven secrets")
-local want = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus"}
+check(#S0.Order == 9, "nine secrets")
+local want = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus", "cockatoosaurus", "eaglesaurus"}
 for i, id in want do check(S0.Order[i] == id, "roster order " .. id) end
 local weightSum = 0
 for _, id in S0.Order do
@@ -172,10 +172,10 @@ do
   -- flag off with the SHIPPED module: still byte-identical egg rolls (the flag decides, a bound slot alone changes nothing)
   check(goldenHash(mkRM(Config, SH), "run") == GOLDEN and goldenHash(mkRM(Config, SH), "nest") == GOLDEN, "flag off with the shipped bound slots: identical to the pre-BD-604 module")
 end
-check(#CombatConfig.SecretSpecies == 7, "CombatConfig.SecretSpecies lists the same seven")
-check(weightSum == 100, "provisional drop weights sum to 100")
+check(#CombatConfig.SecretSpecies == 9, "CombatConfig.SecretSpecies lists the same nine")
+check(weightSum == 108, "provisional drop weights sum to 108 (100 for the first seven, plus the cockatoo 5 and the eagle 3, docs/115 SS14)")
 -- SS5
-check(S0.Species.budgiesaurus.class == "Fly" and S0.Species.foxosaurus.class == "Ground" and S0.Species.penguin.class == "Water", "SS5 classes")
+check(S0.Species.budgiesaurus.class == "Fly" and S0.Species.foxosaurus.class == "Ground" and S0.Species.penguin.class == "Water" and S0.Species.cockatoosaurus.class == "Fly" and S0.Species.eaglesaurus.class == "Fly", "SS5 / SS14 classes")
 for _, id in {"chickosaurus", "pigeon", "dodo", "duck"} do check(S0.Species[id].class == "Ground", id .. " Ground") end
 -- SS1: not a sixth tier
 check(#Config.SpeciesRarityNames == 5 and Config.SpeciesRarityScale == 5 and #Config.SpeciesOrder == 22, "still five tiers and 22 normal species")
@@ -342,7 +342,7 @@ do
   check(rawequal(off, Config.SpeciesOrder) and rawequal(S.indexOrder(Config.SpeciesOrder, nil), Config.SpeciesOrder) and rawequal(S.indexOrder(Config.SpeciesOrder, "yes"), Config.SpeciesOrder),
     "flag off: the Index order is the very same table (identical Index)")
   local on = S.indexOrder(Config.SpeciesOrder, true)
-  check(#on == 29 and #Config.SpeciesOrder == 22 and on[22] == Config.SpeciesOrder[22] and on[23] == "chickosaurus" and on[29] == "foxosaurus", "flag on: 22 normal cards, then 7 secret cards")
+  check(#on == 31 and #Config.SpeciesOrder == 22 and on[22] == Config.SpeciesOrder[22] and on[23] == "chickosaurus" and on[29] == "foxosaurus" and on[30] == "cockatoosaurus" and on[31] == "eaglesaurus", "flag on: 22 normal cards, then 9 secret cards")
   for i = 1, 22 do check(on[i] == Config.SpeciesOrder[i], "normal order unchanged") end
   -- hidden card
   local hidden = S.indexCard("budgiesaurus", false)
@@ -364,8 +364,8 @@ do
   }
   check(S.countFound(collection) == 3, "base, variant and event copies count; a zero entry and normal species do not")
   local sum = S.summary(S.countFound(collection))
-  check(sum.text == "3 / 7 secrets found" and sum.found == 3 and sum.total == 7, "summary text")
-  check(S.summary(2).text == "2 / 7 secrets found" and S.summary(-4).found == 0 and S.summary(99).found == 7, "summary clamps")
+  check(sum.text == "3 / 9 secrets found" and sum.found == 3 and sum.total == 9, "summary text")
+  check(S.summary(2).text == "2 / 9 secrets found" and S.summary(-4).found == 0 and S.summary(99).found == 9, "summary clamps")
   -- the normal 22-species completion number is independent of secrets
   local function normalFound(collection)
     local n = 0
@@ -457,7 +457,7 @@ local function scanForSecret(v,path)
   end
  elseif type(v)=="string" then
   local text=v:lower()
-  for _,id in {"chickosaurus","pigeon","dodo","duck","penguin","budgiesaurus","foxosaurus","secret"} do if string.find(text,id,1,true) then return path.."="..v end end
+  for _,id in {"chickosaurus","pigeon","dodo","duck","penguin","budgiesaurus","foxosaurus","cockatoosaurus","eaglesaurus","secret"} do if string.find(text,id,1,true) then return path.."="..v end end
  end
  return nil
 end
@@ -991,7 +991,7 @@ def static():
     need(not any(r.key == 'SecretSpeciesEnabled' for r in release_profiles.COMMON_RULES), 'the flag is not in COMMON_RULES any more (it is set by the playtest)')
     # The playtest turns it on ONLY because every slot that can drop holds a real id (docs/173): the shipped slots are exactly the pinned ids.
     slots = shipped_slots()
-    need(sorted(slots) == sorted(['chickosaurus', 'pigeon', 'dodo', 'duck', 'penguin', 'budgiesaurus', 'foxosaurus']), 'seven secret rows in SecretSpeciesConfig: ' + repr(sorted(slots)))
+    need(sorted(slots) == sorted(['chickosaurus', 'pigeon', 'dodo', 'duck', 'penguin', 'budgiesaurus', 'foxosaurus', 'cockatoosaurus', 'eaglesaurus']), 'nine secret rows in SecretSpeciesConfig: ' + repr(sorted(slots)))
     need({k: v for k, v in slots.items() if v} == BOUND_IDS, f'the bound model slots {({k: v for k, v in slots.items() if v})} differ from the pinned real ids {BOUND_IDS} (docs/173): bind through tools/bind_secret_species.py and update BOUND_IDS, docs/173 and the evidence line together')
     need(len(BOUND_IDS) >= 1 and all(isinstance(v, int) and not isinstance(v, bool) and 10 ** 9 < v < 10 ** 16 for v in BOUND_IDS.values()), 'every bound id is a plain positive whole number of a real published asset (10 to 16 digits)')
     need(len(set(BOUND_IDS.values())) == len(BOUND_IDS), 'no two secrets share a model id')
@@ -1073,11 +1073,12 @@ def static():
 
     # docs
     registry = read('docs/77-asset-registry.md')
-    for name, asset in (('secret_dino_budgiesaurus', '107910518074360'), ('secret_dino_foxosaurus', '112996440434481'), ('secret_dino_chickosaurus', '108391746824463')):
+    for name, asset in (('secret_dino_budgiesaurus', '107910518074360'), ('secret_dino_foxosaurus', '112996440434481'), ('secret_dino_chickosaurus', '108391746824463'),
+                        ('secret_dino_cockatoosaurus', '77920946493998'), ('secret_dino_eaglesaurus', '116840996663024')):
         need(re.search(rf'^\| {name} \|.*{asset}', registry, re.M) is not None, f'docs/77 line for {name} ({asset})')
     need(re.search(r'^\| secret_dino_foxosaurus \|.*BOUND', registry, re.M) is not None, 'docs/77 says the Foxosaurus line is BOUND')
     decisions = read('docs/115-decisions-log.md')
-    for n in range(1, 10):
+    for n in range(1, 15):
         need(re.search(rf'^\| SS{n} \| \*\*LEAD \(owner delegated 2026-10-16', decisions, re.M) is not None, f'docs/115 row SS{n}')
     need('equippedSecret' in read('docs/111-rollback-drill.md'), 'docs/111 lists the additive equippedSecret field')
     need((ROOT / 'docs/149-secret-species.md').exists(), 'docs/149-secret-species.md exists')
@@ -1107,7 +1108,7 @@ local own = R.ownText(sec, "Chickosaurus")
 local others = R.text("Sam", sec, "Chickosaurus")
 assert(own == "Secret find! You hatched a Chickosaurus!", own)
 assert(others == "Sam found a secret dino!" and not others:find("Chickosaurus"), others)
-for _, name in {"Chickosaurus", "Pigeon", "Dodo", "Duck", "Penguin", "Budgiesaurus", "Foxosaurus"} do
+for _, name in {"Chickosaurus", "Pigeon", "Dodo", "Duck", "Penguin", "Budgiesaurus", "Foxosaurus", "Cockatoosaurus", "Eaglesaurus"} do
     for _, info in {sec, shinySecret} do
         local text = R.ownText(info, name)
         assert(#text <= 48, "short: " .. text)
@@ -1224,7 +1225,7 @@ def build_tree(dst, fill=True, measured=True, lowpoly=True):
     rows = {m.group(2): (m.group(3), m.group(4)) for m in SECRET_ROWS.finditer(ladder)}
     cfg_path = dst / 'src/shared/SecretSpeciesConfig.luau'
     classes = dict(re.findall(r'\{ id = "(\w+)", name = "[^"]+", secret = true, class = "(\w+)"', cfg_path.read_text(encoding='utf-8')))
-    assert sorted(rows) == sorted(classes) and len(rows) == 7, (sorted(rows), sorted(classes))
+    assert sorted(rows) == sorted(classes) and len(rows) == 9, (sorted(rows), sorted(classes))
     fakes = {}
     bound = dict(BOUND_IDS)
     for index, sid in enumerate(classes, 1):
@@ -1275,20 +1276,20 @@ def wiring(runner):
     for name in WIRING_TOOLS:
         code, out = run_tool(ROOT, name, runner)
         need(code == 0, f'{name} fails on the shipped tree: {out[-400:]}')
-    # 2. all seven filled (the bound real ids plus FAKE ids for the rest, with entries and measured rows): every verifier still passes
+    # 2. all nine filled (the bound real ids plus FAKE ids for the rest, with entries and measured rows): every verifier still passes
     scratch, fakes, classes, rows = fresh()
     try:
-        need(all(str(v).startswith('99900000000') for k, v in fakes.items() if k not in BOUND_IDS) and len(set(fakes.values())) == 7, 'the unbound ids are fake and distinct from each other and from the real ones')
+        need(all(str(v).startswith('99900000000') for k, v in fakes.items() if k not in BOUND_IDS) and len(set(fakes.values())) == 9, 'the unbound ids are fake and distinct from each other and from the real ones')
         code, out = run_tool(scratch, 'verify_scale_ladder.py', runner, '--write-doc')
         need(code == 0, 'scale ladder (fake ids, regenerated doc) fails: ' + out[-600:])
         for name in WIRING_TOOLS:
             code, out = run_tool(scratch, name, runner)
-            need(code == 0, f'{name} fails with all seven secret species filled (real + FAKE ids): {out[-600:]}')
+            need(code == 0, f'{name} fails with all nine secret species filled (real + FAKE ids): {out[-600:]}')
             if name == 'verify_lowpoly_dinos.py':
-                need('(7 secret slots, 7 filled)' in out, 'verify_lowpoly_dinos must see the seven filled secret entries: ' + out[-300:])
+                need('(9 secret slots, 9 filled)' in out, 'verify_lowpoly_dinos must see the nine filled secret entries: ' + out[-300:])
             if name == 'verify_hit_sizes.py':
-                need('7 secret species' in out, 'hit sizes must cover the secret species')
-        summary.append(f'7 filled secrets ({len(BOUND_IDS)} real, {7 - len(BOUND_IDS)} fake ids): scale ladder, camera framing, hit sizes, mouth reach, low-poly registry all pass')
+                need('9 secret species' in out, 'hit sizes must cover the secret species')
+        summary.append(f'9 filled secrets ({len(BOUND_IDS)} real, {9 - len(BOUND_IDS)} fake ids): scale ladder, camera framing, hit sizes, mouth reach, low-poly registry all pass')
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -1372,7 +1373,7 @@ def main():
             print('FAIL:', error)
         status = 1 if wiring_errors else 0
     if status == 0:
-        print(f'Secret species verified (offline Luau; {len(BOUND_IDS)} of 7 model slots bound to real ids: {sorted(BOUND_IDS)}; Studio check of the Index cards and the models in game pending)')
+        print(f'Secret species verified (offline Luau; {len(BOUND_IDS)} of 9 model slots bound to real ids: {sorted(BOUND_IDS)}; Studio check of the Index cards and the models in game pending)')
     raise SystemExit(status)
 
 
