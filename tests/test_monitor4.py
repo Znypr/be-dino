@@ -34,6 +34,25 @@ class Monitor4Tests(unittest.TestCase):
         x, y, w, h = m.target_rect(mon, (0, 0, 100, 100))  # tiny: made usable
         self.assertEqual((w, h), (1280, 720))
 
+    def test_maximize_only_for_studio_and_blender(self):
+        self.assertTrue(m.may_maximize("studio", "x.rbxlx - Roblox Studio"))
+        self.assertTrue(m.may_maximize("blender", "Cockatoo - Blender"))
+        self.assertFalse(m.may_maximize("edge", "Claude - Edge"))
+        self.assertFalse(m.may_maximize(None, "Notepad"))
+        self.assertFalse(m.may_maximize("studio", "C:/x/Place1.rbxl - Roblox Studio"))  # the owner's window, even if misclassified
+        # classify() already hides Place1, so it can never reach may_maximize
+        self.assertFalse(m.may_maximize(m.classify("Place1.rbxl - Roblox Studio", "RobloxStudioBeta.exe"), "Place1.rbxl"))
+
+    def test_is_maximised_on(self):
+        mon = (3840, 0, 5120, 720)
+        self.assertTrue(m.is_maximised_on(mon, (3832, -8, 5128, 712)))
+        self.assertFalse(m.is_maximised_on(mon, (4000, 100, 4500, 565)))
+
+    def test_cli_flags(self):
+        import argparse  # the parser lives in main(); check the constants used by launch
+        self.assertEqual(m.MAXIMIZE_KINDS, ("studio", "blender"))
+        self.assertEqual(m.SW_SHOWMAXIMIZED, 3)
+
 
 if __name__ == "__main__":
     unittest.main()
