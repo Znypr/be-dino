@@ -48,7 +48,7 @@ function L.card(entry: any, nextId: string?, readyAt: number, now: number, waiti
 end
 
 function L.cardCopy(card: any): (string, string)
-    if card.kind == "ready" then return "READY!", "OPEN" end
+    if card.kind == "ready" then return Copy.ReadyStatus, Copy.ReadyButton end
     if card.kind == "growing" then return "Growing...", "GROWING" end
     if card.kind == "banked" then return "Eggs are on the way", "WAIT" end
     return Copy.EmptyStatus, Copy.EmptyButton
