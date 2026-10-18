@@ -370,9 +370,9 @@ def check_wiring():
     assert 'Rule("PatternColourIndexEnabled", "set", True' in profiles, 'the playtest profile turns it on (docs/157)'
     assert '("PatternColourIndexEnabled",' in profiles, 'the rehearsal list has it'
     # Bootstrap: one hook on the collection screen, nothing else; the byte ratchet is respected by verify_server_module_size
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/DinoIndexScreens.luau')  # BD-1110: the collection branch moved to DinoIndexScreens
     assert boot.count('require(script.Parent.IndexTabs).mount(open)') == 1, 'one hook in the collection branch'
-    branch = boot[boot.index('elseif name=="collection" then'):]
+    branch = boot[boot.index('if name=="collection" then'):]
     assert branch.index('IndexTabs).mount(open)') < branch.index('local unlocked=0'), 'the hook comes before the Dino Index is built, so Patterns / Colours never pay for it'
     assert 'IndexTabs' not in boot.replace('require(script.Parent.IndexTabs).mount(open)', ''), 'Bootstrap knows nothing else about the tabs'
     assert 'child.Name~="ActiveTab" and child.Name~="IndexDot"' in boot, 'BD-1063: the rail layout loop must not stretch the Index dot over the icon (Studio found a 36 px disc)'

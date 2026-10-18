@@ -73,10 +73,10 @@ if r.returncode == 0:
         t = read(q)
         assert 'ClassMovementEnabled' in t, q
         assert 'Config.CombatEnabled' not in t.replace('GameConfig.CombatEnabled', ''), q + ' still gated on combat'
-    assert 'ClassInfo' in read('src/client/Bootstrap.client.luau'), 'picker uses ClassInfo'
+    assert 'ClassInfo' in read('src/client/Bootstrap.client.luau') + read('src/client/DinoIndexScreens.luau'), 'picker uses ClassInfo'  # BD-1110: the Index cards moved
     assert 'ClassInfo.Colors[info.class]' in read('src/shared/ClassBadge.luau'), 'badge uses class colour'
     assert 'PlaceholderFill' not in read('src/shared/ClassBadge.luau'), 'neutral fill gone'
-    assert '.Colors[' in read('src/client/Bootstrap.client.luau'), 'picker line uses class colour'
+    assert '.Colors[' in read('src/client/Bootstrap.client.luau') + read('src/client/DinoIndexScreens.luau'), 'picker line uses class colour'
     rp = read('tools/release_profiles.py')
     assert '_flag_off("ClassMovementEnabled"' in rp and 'Rule("ClassMovementEnabled", "set", True' in rp
     cb = read('src/shared/ClassBadge.luau')
