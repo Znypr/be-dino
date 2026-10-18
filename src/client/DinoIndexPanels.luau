@@ -14,6 +14,7 @@ local Config = require(Shared.Config)
 local ProgressionConfig = require(Shared.ProgressionConfig)
 local EggGenetics = require(Shared.EggGenetics)
 local Theme = require(Shared.UITheme)
+local Chip = require(Shared.ChipStyle)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local MyDinos = require(Shared.MyDinos)
@@ -85,11 +86,10 @@ local StageColors = {base = Color3.fromRGB(86, 82, 104), gold = C.gold, emerald 
 
 local function pill(parent: GuiObject, text: string, color: Color3, size: UDim2, position: UDim2, textColor: Color3?): TextLabel
     local p = Instance.new("TextLabel")
-    p.BackgroundColor3, p.BackgroundTransparency, p.BorderSizePixel = color, 0, 0
     p.Size, p.Position, p.Font, p.Text = size, position, Enum.Font.FredokaOne, text
+    Chip.apply(p, color, nil, true) -- BD-1077: the shared small chunky tag (rounded rectangle, dark outline, flat fill)
     p.TextColor3, p.TextScaled, p.ZIndex = textColor or C.text, true, parent.ZIndex + 3
-    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 6) corner.Parent = p
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 14, p -- docs/114 s4.4: pills never shrink under 14 px; callers size them to fit
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 14, 14, p -- docs/114 s4.4: tags never shrink under 14 px; callers size them to fit
     p.Parent = parent
     return p
 end

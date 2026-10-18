@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
+local Chip = require(Shared.ChipStyle)
 local Config = require(Shared.ProgressionConfig)
 local MainConfig = require(Shared.Config)
 local P = require(Shared.ShopPreview)
@@ -19,9 +20,10 @@ Cards.Width = 264
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
 
 local function chip(ui, card: GuiObject, text: string, color: Color3, x: number, y: number, w: number)
-    local c = ui.box(card, x, y, w, 26, color, card.ZIndex + 1)
+    local c = ui.box(card, x, y, w, Chip.Spec.minHeight, color, card.ZIndex + 1)
     c.Name = "Chip_" .. text
-    ui.label(c, text, 0, 0, w, 26, 18, Color3.new(1, 1, 1))
+    Chip.apply(c, color) -- BD-1077: the shared chunky tag (28 px high, 3 px outline, flat fill) like the hatch screen
+    ui.label(c, text, 0, 0, w, Chip.Spec.minHeight, 18, Color3.new(1, 1, 1))
     return c
 end
 

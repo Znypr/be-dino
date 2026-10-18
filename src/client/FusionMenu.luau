@@ -18,6 +18,7 @@ local Config = require(Shared.Config)
 local ProgressionConfig = require(Shared.ProgressionConfig)
 local EggGenetics = require(Shared.EggGenetics)
 local Theme = require(Shared.UITheme)
+local Chip = require(Shared.ChipStyle)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local Sfx = require(Shared.Sfx)
@@ -369,7 +370,7 @@ local function resultBox(parent: Frame, speciesId: string?, stageId: string, tra
     box.Name = "Result"
     local badge = W.label(box, "NEW " .. string.upper(if recipe then recipe.name else stageId), UDim2.new(.6, 0, 0, 26), UDim2.fromOffset(6, 4), 20, C.outline)
     badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
-    Theme.decorate(badge, 13)
+    Chip.apply(badge, C.text, nil, true) -- BD-1077: the shared small chunky tag (it was a round pill)
     if speciesId then
         local view = Preview.add(box, speciesId, stageId)
         view.Size, view.Position = UDim2.new(1, -8, 1, -62), UDim2.fromOffset(4, 30)
@@ -421,7 +422,7 @@ local function oddsSections(parent: Instance, odds, patternId: string?, width: n
             if (section.trait == "shiny" or section.trait == "big") and chip.id == "yes" then c.BackgroundColor3 = C.purple end
             if section.trait == "mutation" and chip.id ~= "none" then c.BackgroundColor3 = C.purple end
             if section.trait == "pattern" then c.BackgroundColor3 = C.blue end
-            Theme.decorate(c, 12)
+            Chip.apply(c, c.BackgroundColor3) -- BD-1077: the shared chunky tag (it was a near-round pill)
         end
     end
     return total
@@ -861,8 +862,8 @@ local function finalCard(root: Frame, result, stage)
     local function chip(text: string, color: Color3)
         n += 1
         local c = W.label(chips, text, UDim2.new(), UDim2.new(), 18, C.text)
-        c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = 0, color, n
-        Theme.decorate(c, 12)
+        c.LayoutOrder = n
+        Chip.apply(c, color) -- BD-1077: the shared chunky tag (it was a near-round pill)
     end
     chip(if traits.shiny then "Shiny!" else "Not shiny", if traits.shiny then C.purple else C.card)
     chip(if traits.big then "BIG!" else "Not BIG", if traits.big then C.purple else C.card)

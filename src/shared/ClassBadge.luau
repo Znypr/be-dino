@@ -5,6 +5,7 @@
 -- Missing or malformed asset id: a clean fallback, a small pill in the class colour that holds the class WORD (never a single letter).
 local ClassInfo = require(script.Parent.ClassInfo)
 local AssetSlots = require(script.Parent.AssetSlots)
+local Chip = require(script.Parent.ChipStyle)
 local ClassBadge = {}
 ClassBadge.PlaceholderRing = Color3.fromRGB(235, 238, 245)
 
@@ -46,17 +47,12 @@ function ClassBadge.create(parent: Instance, speciesId: any, size: number, withL
             word.BackgroundTransparency = 1
             word.TextStrokeColor3, word.TextStrokeTransparency = Color3.new(0, 0, 0), .35
         else
-            -- fallback: the word on a pill in the class colour (no art bound)
+            -- fallback: the word on a chunky tag in the class colour (no art bound)
             word.Size = UDim2.fromOffset(0, math.floor(size * .8))
-            word.BackgroundColor3, word.BackgroundTransparency = spec.color, 0
-            local round = Instance.new("UICorner")
-            round.CornerRadius = UDim.new(.5, 0)
-            round.Parent = word
+            Chip.apply(word, spec.color, ClassBadge.PlaceholderRing, true) -- BD-1077: the shared small chunky tag, not a round pill
             local pad = Instance.new("UIPadding")
             pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 12), UDim.new(0, 12)
             pad.Parent = word
-            local ring = Instance.new("UIStroke")
-            ring.Color, ring.Thickness, ring.Parent = ClassBadge.PlaceholderRing, 2, word
         end
         word.Parent = root
         if spec.image then

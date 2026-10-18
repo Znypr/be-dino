@@ -453,6 +453,7 @@ UI_MODULES = {
     'ColourBonus': 'src/shared/ColourBonus.luau',
     'EggGenetics': 'src/shared/EggGenetics.luau',
     'ModalCloseRules': 'src/shared/ModalCloseRules.luau',
+    'ChipStyle': 'src/shared/ChipStyle.luau',  # BD-1077: fusion tags use the shared chunky tag
     'FusionSelection': 'src/shared/FusionSelection.luau',
     'FusionWidgets': 'src/client/FusionWidgets.luau',
     'DinoDetails': 'src/client/DinoDetails.luau',
