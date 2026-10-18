@@ -23,13 +23,15 @@ jobs:
         run: python -m pip install Pillow numpy
       - name: Verify doc numbers and BD ids are unique
         run: python tools/verify_doc_ids.py
+      - name: Kanban rows are one file each, name matches the id (BD-1061, docs/191)
+        run: python tools/verify_kanban_rows.py
       - name: BD-004 release id slot is well formed (empty is allowed until the owner answers; docs/148)
         run: python tools/verify_release_ids.py
       - name: Handbook checks (docs/114 UI floors, sound cap, palette, PR template; BD-408)
         run: python tools/verify_handbook.py
       - name: Kid text lint, baseline mode (fails only on NEW hard-to-read player text; BD-655, docs/162)
         run: python tools/lint_kid_text.py --baseline
-      - name: Kanban merge safety (duplicate BD ids, stale rows put back; PRs only)
+      - name: Kanban merge safety (duplicate BD ids, rows removed by accident, old-table edits; PRs only)
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags origin "${{ github.base_ref }}"
