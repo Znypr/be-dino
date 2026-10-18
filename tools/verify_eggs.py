@@ -94,26 +94,32 @@ for i,trail in Progression.Trails do
  if i>1 then local prior=Progression.Trails[i-1] assert(trail.level>prior.level and trail.price>prior.price and trail.speed>prior.speed) end
 end
 print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, exact tiered colour intervals (Black 0.00512%), size-only BIG 1.2x and ten increasing trail tiers")
-local previousRare,previousLegend=0,0
+-- BD-1032 (docs/186 s3): species are much rarer (T-Rex 0.004% of eggs) and the run boost starts above 15 eggs, so the sweep uses 100,000 evenly spaced
+-- quantiles per run size (the rarest species needs at least a few) and "monotonic" means: never lower, lifted once the run is above the free size.
+local previousRare,previousLegend,previousCount=0,0,0
+local firstRare,firstLegend=0,0
 for count=1,121,12 do -- BD-418: max boost moved from 40 to 120 eggs
  local seen={}
  local rare,legend=0,0
- for i=0,9999 do
+ for i=0,99999 do
   local call=0
   local rng={NextNumber=function(_,low,high)
    call+=1
-   return (if call==1 then (i+.5)/10000 else .1)*(high-low)+low
+   return (if call==1 then (i+.5)/100000 else .1)*(high-low)+low
   end}
   local reward=Rewards.computeChestReward(rng,count)
   seen[reward.speciesId]=true
   local rarity=Config.SpeciesRarities[reward.speciesId]
-  rare+=if rarity>=2 then 1 else 0
-  legend+=if rarity==3 then 1 else 0
+  rare+=if rarity>=3 then 1 else 0
+  legend+=if rarity==5 then 1 else 0
  end
  for _,id in Config.SpeciesOrder do assert(seen[id],"species missing: "..id) end
- assert(rare>previousRare and legend>previousLegend,"rarity boost not monotonic")
- previousRare,previousLegend=rare,legend
+ if count==1 then firstRare,firstLegend=rare,legend end
+ assert(rare>=previousRare and legend>=previousLegend,"rarity boost went down")
+ if previousCount>=Config.EggRarityBoostFreeEggs then assert(rare>previousRare,"rarity boost not monotonic above the free size") else assert(count>Config.EggRarityBoostFreeEggs or rare==firstRare,"a normal run is not lifted") end
+ previousRare,previousLegend,previousCount=rare,legend,count
 end
+assert(previousRare>firstRare*1.9 and previousLegend>=firstLegend,"a 121-egg run lifts Rare+ about 2x")
 print("Egg rules passed: all 22 species, monotonic 1-121 egg rarity boost, exact independent 0.6% Shiny/3% BIG (BD-184) and stacked outcomes")
 '''
 
