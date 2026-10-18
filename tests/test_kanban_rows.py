@@ -681,6 +681,28 @@ class ResyncForTheCutover(unittest.TestCase):
         self.assertEqual(rc, 0, msg)
         self.assertIn("nothing to commit", msg)
 
+    def test_resync_keeps_both_sides_of_an_append_only_log(self):
+        e = self.env
+        e.write("docs/115-decisions-log.md", "# log\n\n## first\n")
+        e.write("docs/07-kanban.md", kanban_text([row(1)]))
+        e.commit("old board")
+        e.git("push", "-q", "origin", "main")
+        e.start_branch("cut")
+        kmig.apply(e.dev)
+        e.write("docs/115-decisions-log.md", "# log\n\n## first\n\n## branch entry\n")
+        e.commit("cutover and log entry")
+        e.git("checkout", "-q", "main")
+        e.write("docs/115-decisions-log.md", "# log\n\n## first\n\n## main entry\n")
+        e.commit("main log entry")
+        e.git("push", "-q", "origin", "main")
+        e.git("checkout", "-q", "cut")
+        msg, rc = kmig.resync(e.dev)
+        self.assertEqual(rc, 0, msg)
+        text = (e.dev / "docs" / "115-decisions-log.md").read_text(encoding="utf-8")
+        self.assertIn("## main entry", text)
+        self.assertIn("## branch entry", text)
+        self.assertNotIn("<<<<<<<", text)
+
     def test_resync_refuses_a_dirty_tree(self):
         self.build()
         (self.env.dev / "docs" / "07-kanban.md").write_text("changed\n", encoding="utf-8")
