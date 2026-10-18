@@ -213,6 +213,22 @@ local function buildSplat(front: Frame): Splat
     return {group = group, puddle = puddle, lobes = lobes, yolk = yolk, drips = drips, shells = shells, domes = domes, shellImages = shellImages, image = image}
 end
 
+-- BD-1067: put the two effect layers over the card. The body is at its home (anchor top-left) when a hatch starts; its screen position, taken back
+-- through the panel's own scale, is the layer position in panel units. `fit` (and the scroller's own scale) shrinks the effects with the card. Desktop: (18, 98) and 1, as before.
+local function placeLayers(fx: Layers, panel: GuiObject, body: GuiObject, fit: number)
+    local panelPx = if panel.Size.X.Offset > 0 and panel.AbsoluteSize.X > 0 then panel.AbsoluteSize.X / panel.Size.X.Offset else 1
+    local x = math.round((body.AbsolutePosition.X - panel.AbsolutePosition.X) / panelPx * 100) / 100
+    local y = math.round((body.AbsolutePosition.Y - panel.AbsolutePosition.Y) / panelPx * 100) / 100
+    if panel.AbsoluteSize.X <= 0 then x, y = BODY_HOME.X, BODY_HOME.Y end
+    -- the phone scroller has its own fit scale between the panel and the body: the layers need the same screen size per design px as the card
+    local rel = if body.Size.X.Offset > 0 and body.AbsoluteSize.X > 0 then body.AbsoluteSize.X / body.Size.X.Offset / panelPx else 1
+    for _, f in {fx.back, fx.front} do
+        f.Position = UDim2.fromOffset(x, y)
+        local s = f:FindFirstChild("HatchFit")
+        if s then (s :: UIScale).Scale = math.round(fit * rel * 10000) / 10000 end
+    end
+end
+
 local function ensureLayers(panel: GuiObject): Layers
     local existing = layers
     if existing and existing.back.Parent == panel and existing.front.Parent == panel then return existing end
@@ -221,6 +237,8 @@ local function ensureLayers(panel: GuiObject): Layers
         local f = Instance.new("Frame")
         f.Name, f.BackgroundTransparency, f.ClipsDescendants, f.Active = name, 1, true, false
         f.Position, f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(BODY_HOME.X, BODY_HOME.Y), UDim2.fromOffset(824, 402), z, panel
+        local fitScale = Instance.new("UIScale") -- BD-1067: set by placeLayers; 1 on every desktop-sized window
+        fitScale.Name, fitScale.Parent = "HatchFit", f
         return f
     end
     local back, front = layer("HatchFxBack", 22), layer("HatchFxFront", 24)
@@ -346,7 +364,25 @@ function Seq.play(args: Args): Handle
     local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
     local state = Timeline.new(motion, 1, false, a.result == nil)
+    local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
+    -- BD-1067: the card sits where Bootstrap / ModalCompact put the body: (18, 98) in the desktop panel, (4, 0) in the phone scroller, and the camera
+    -- moves (anchor in the middle) used to assume (18, 98) always, which pushed the whole card 98 px down in a small window. The body is also shrunk,
+    -- from its top-left corner, when the visible area is smaller than the card (848 x 423 shows 357 px of the 389 it needs). Desktop: fit = 1, same numbers.
+    local home = BODY_HOME
+    if bodyHomePos.X.Scale == 0 and bodyHomePos.Y.Scale == 0 and bodyHomeAnchor.X == 0 and bodyHomeAnchor.Y == 0 then home = Vector2.new(bodyHomePos.X.Offset, bodyHomePos.Y.Offset) end
+    local fit = 1
+    local oldFit = a.body:FindFirstChild("HatchBodyFit") -- a UIScale left by the egg before: measure the body at its own size
+    if oldFit then oldFit:Destroy() end
+    local holder = a.body.Parent
+    local bodyPx = a.body.AbsoluteSize
+    if holder and holder:IsA("GuiObject") and bodyPx.X > 0 and bodyPx.Y > 0 and a.body.Size.X.Offset > 0 then
+        local px = bodyPx.X / a.body.Size.X.Offset -- screen px per design px
+        fit = math.min(1, (holder.AbsoluteSize.X - home.X * px) / bodyPx.X, (holder.AbsoluteSize.Y - home.Y * px) / bodyPx.Y)
+        fit = math.clamp(fit, .5, 1)
+    end
+    local bodyCenter = home + (BODY_CENTER - BODY_HOME) * fit
     local fx = ensureLayers(a.panel)
+    placeLayers(fx, a.panel, a.body, fit) -- the effect layers sit exactly over the card (they used to assume the desktop home)
     local kit = fx.paint
     -- BD-397: the v2 3D egg (flag on AND its mesh loaded); otherwise everything below is the shipped v1 look.
     local v2 = if V2Assets.enabled(Config, RunService:IsStudio() and game.GameId == 0) then EggV2.create(fx.back, fx.front, motion) else nil
@@ -365,7 +401,6 @@ function Seq.play(args: Args): Handle
     local cues: {{t: number, name: string}} = {}
     local cueIndex = 1
     local punchStart = 1 + esc.punch
-    local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     local connections: {RBXScriptConnection} = {}
     local finished = false
     local inspect: InspectView.Handle? = nil -- BD-149: drag to turn the revealed dino (never eats the continue tap)
@@ -375,9 +410,9 @@ function Seq.play(args: Args): Handle
     if v2 then a.eggView.Visible = false end -- the 2D egg only comes back for its shell fragments at the burst
     local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
     local dinoScale: UIScale? = nil
-    local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
+    local bodyScale = Instance.new("UIScale") bodyScale.Name, bodyScale.Scale, bodyScale.Parent = "HatchBodyFit", fit, a.body
     if motion then
-        a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y)
+        a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(bodyCenter.X, bodyCenter.Y)
     end
 
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
@@ -494,7 +529,7 @@ function Seq.play(args: Args): Handle
 
     local function restoreBody()
         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
-        bodyScale.Scale = 1
+        bodyScale.Scale = fit
     end
     local function hidePaint()
         for i = 1, 2 do
@@ -693,7 +728,7 @@ function Seq.play(args: Args): Handle
         hidePaint()
         a.paint.finish() -- fast-forwarded or Reduced Motion: the egg shows its final colour and pattern before it opens
         if v2 then EggV2.burst(v2) a.eggView.Visible = true end -- the 3D egg leaves; the 2D shell fragments fly from the same spot
-        if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
+        if motion then a.body.Position = UDim2.fromOffset(bodyCenter.X, bodyCenter.Y) end
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
         for _, f in fx.arcs do f.Visible = false end
@@ -1062,8 +1097,8 @@ function Seq.play(args: Args): Handle
                 a.eggView.Rotation = rot * esc.shakeScale + math.sin(vt * 3.4) * 2.8 * swayAmp
                 a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp)
                 eggZoom.Scale = Timeline.zoom(bp)
-                bodyScale.Scale = Timeline.cameraZoom(bp)
-                a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
+                bodyScale.Scale = Timeline.cameraZoom(bp) * fit
+                a.body.Position = UDim2.fromOffset(bodyCenter.X + sx, bodyCenter.Y + sy)
                 a.animateEgg(Timeline.eggClock(durs, t))
                 if v2 then EggV2.update(v2, t, vt, if state.pending then nil else Timeline.paintState(durs, t), durs,
                     {rot = rot * esc.shakeScale, dx = dx * esc.shakeScale, dy = dy * esc.shakeScale, zoom = Timeline.zoom(bp)}) end
@@ -1107,10 +1142,10 @@ function Seq.play(args: Args): Handle
                 if since < .45 then
                     if failed then
                         local bumpScale, bumpDy = Timeline.bump(since)
-                        bodyScale.Scale = bumpScale
-                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y + bumpDy)
+                        bodyScale.Scale = bumpScale * fit
+                        a.body.Position = UDim2.fromOffset(bodyCenter.X, bodyCenter.Y + bumpDy)
                     else
-                        bodyScale.Scale = 1 + (punchStart - 1) * (1 - Timeline.easeOut(since / .45))
+                        bodyScale.Scale = (1 + (punchStart - 1) * (1 - Timeline.easeOut(since / .45))) * fit
                     end
                 elseif not bodyRestored then
                     bodyRestored = true
@@ -1123,7 +1158,7 @@ function Seq.play(args: Args): Handle
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
-                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 2 * k, BODY_CENTER.Y + math.cos(since * 100) * 1.5 * k)
+                        a.body.Position = UDim2.fromOffset(bodyCenter.X + math.sin(since * 120) * 2 * k, bodyCenter.Y + math.cos(since * 100) * 1.5 * k)
                     elseif a.big and since >= impactAt + .25 and bodyRestored then
                         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
                     end
