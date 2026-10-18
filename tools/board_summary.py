@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Print the board counts (task totals by status and priority) from docs/07-kanban.md.
+"""Print the board counts (task totals by status and priority) from the kanban rows (docs/kanban/rows/, BD-1061; before
+the cutover: the table in docs/07-kanban.md).
 
 The counts are NOT stored in the kanban any more: a generated table inside a file that every PR edits
 conflicted on almost every merge, and the bot that refreshed it could not push to the protected main.
@@ -12,8 +13,11 @@ import re
 import sys
 from pathlib import Path
 
-KANBAN = Path(__file__).resolve().parent.parent / "docs" / "07-kanban.md"
-CRLF, LF = chr(13) + chr(10), chr(10)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kanban_lib  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
+LF = chr(10)
 # "Review / test" must be tried before the bare legacy "Review".
 STATUSES = ["Backlog", "Ready", "In progress", "In review", "Review / test", "Review", "Blocked", "Done",
             "Superseded", "Parked", "Spike"]
@@ -29,9 +33,10 @@ def normalise(raw):
     return "Other"
 
 
-def count(text):
+def count(lines):
+    """lines: row lines (a str is split into lines first). -> (number of tasks, {(status, priority): n})."""
     seen, table = set(), {}
-    for line in text.splitlines():
+    for line in (lines.splitlines() if isinstance(lines, str) else lines):
         m = ROW.match(line)
         if not m or m[1] in seen:
             continue
@@ -41,10 +46,10 @@ def count(text):
     return len(seen), table
 
 
-def block(text):
-    total, table = count(text)
+def block(lines):
+    total, table = count(lines)
     order = [s for s in STATUSES if s != "Review"] + ["Other"]
-    out = ["**Board summary (docs/07-kanban.md, counts only):** %d tasks." % total, "",
+    out = ["**Board summary (kanban rows, counts only):** %d tasks." % total, "",
            "| Status | " + " | ".join(PRIOS) + " | Total |", "|---|" + "---:|" * (len(PRIOS) + 1)]
     for st in order:
         cells = [table.get((st, p), 0) for p in PRIOS]
@@ -56,8 +61,7 @@ def block(text):
 
 
 def main():
-    text = KANBAN.read_bytes().decode("utf-8").replace(CRLF, LF)
-    print(block(text))
+    print(block(list(kanban_lib.read_rows(ROOT).values())))
     return 0
 
 

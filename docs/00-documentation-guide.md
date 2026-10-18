@@ -15,7 +15,7 @@
 | Overall player experience and long-term goals | [README](../README.md), [game design](03-game-design.md), [reward target](09-reward-economy.md) | Latest owner intent, **not** proof of implementation |
 | Feel, tone, sound, look and motion rules | [87-vision-and-feel-guide.md](87-vision-and-feel-guide.md) | Owner vision: calm, bubbly, friendly; applies to everything players see/hear |
 | AI/contributor behavior | [AGENTS.md](../AGENTS.md) | Read before planning or editing |
-| Tasks, priorities, dependencies and **status** | **[07-kanban.md](07-kanban.md)** | The **single live task board**; never maintain a competing board |
+| Tasks, priorities, dependencies and **status** | **[07-kanban.md](07-kanban.md)** (entry page) and the row files in **`docs/kanban/rows/`** (one per task, [191](191-kanban-rows.md)) | The **single live task board**; read it with `python tools/kanban.py`; never maintain a competing board |
 | Detailed owner feedback: UI, shops, 3D assets, movement, weather | [45-owner-feedback-shop-hud-world-weather-tasks.md](45-owner-feedback-shop-hud-world-weather-tasks.md) | Acceptance details for **BD-045–056**; do not mirror status here |
 | Food/catch -> egg rewards | [09-reward-economy.md](09-reward-economy.md), **BD-044** in Kanban, [50-bd044-reward-loop.md](50-bd044-reward-loop.md) | Egg-per-catch + BD-045 odds implemented on the BD-044 branch (Review / test, Studio pending); not in Build 020 main |
 | Implementation and release verification | [44-main-integration-checklist.md](44-main-integration-checklist.md) | **Build 020** bounded test evidence and remaining gates; does not supersede Kanban statuses |
