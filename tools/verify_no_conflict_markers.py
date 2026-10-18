@@ -19,6 +19,7 @@ Exit code 0 = clean, 1 = at least one marker found, 2 = could not list the files
 """
 import argparse
 import re
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,7 +37,16 @@ SIZE_LIMIT = 32 * 1024 * 1024
 def tracked_files(root):
     p = subprocess.run(["git", "-C", str(root), "-c", "core.quotepath=off", "ls-files", "-z"], capture_output=True)
     if p.returncode:
-        raise RuntimeError("git ls-files failed: " + p.stderr.decode("utf-8", "replace").strip())
+        # Not a git checkout (the rehearsal runs the verifiers in a scratch COPY of the tree): walk the folder instead.
+        if not os.path.isdir(root):
+            raise RuntimeError("not a folder: " + str(root))
+        skip = {".git", "build", "node_modules", "__pycache__"}
+        found = []
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in skip]
+            for name in filenames:
+                found.append(os.path.relpath(os.path.join(dirpath, name), root).replace(os.sep, "/"))
+        return found
     return [n for n in p.stdout.decode("utf-8", "replace").split("\0") if n]
 
 
