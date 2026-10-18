@@ -18,6 +18,10 @@
   },
   "starter": {"centres": [[-15, 24], [15, 24]], "radius": 14.0, "foods_each": 9, "fruit_each": 3},
   "lone_ambers": {"count": 4, "clear_radius": 18.0},
+  "obstacles": {
+    "about": "BD-1098 (docs/187 G): no food closer than margin studs to a solid world prop (rock, trunk, log, landmark, arch pillar, boundary boulder; tools/world_colliders.py). FoodService rejects a spot when a 1.25 stud ray hits a collider and the Studio check counted a food inside a box when its part touched it (up to 0.87 stud from the middle), so 1.5 clears both.",
+    "margin": 1.5
+  },
   "amber_clusters_with_egg_and_fruit_min_share": 0.9,
   "pace": {
     "about": "Rough 5-minute walker model (tools/food_pace.py) on the map divided by the same model on today's placement (mean of 6 layouts, tools/dump_food_layout.py). The handbook says food pace stays about the same; the 'just runs around' walker matches the 600 to 700 food of a real 5-minute run, the two seeking walkers are far above it (idealised).",
