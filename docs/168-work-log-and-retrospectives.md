@@ -135,6 +135,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1055 OPEN EGGS, BD-1054 check, BD-1057 skip rule | worker | - | 30.0 | 55 | - | good | - | conflict: kanban rows 1054-1057 were only on the unmerged PR #503, waited for its merge | rows from an open PR: do code first, edit rows after it merges |
 | 2026-10-18 | BD-1036 colour ladder retune: equal split, rarer-of-two, colour timing tool (helper, 2nd of 3 PRs) | worker | #513 | 45.0 | 50 | 250.0 | good | 1 | ci-red: verify_eggs hard-coded Black weight 512 (caught by the full local run) | run the whole verify suite before pushing, one-number asserts hide in old verifiers |
 | 2026-10-18 | BD-1038 pattern and colour boost behind GeneBoostEnabled (helper, 3rd of 3 PRs) | worker | #516 | 50.0 | 55 | 250.0 | good | - | conflict: merge of main into docs/115 and kanban (solved with tools/merge_main_into_pr.py) | open the PR first, then let the merge helper do main merges |
+| 2026-10-18 | BD-1047 designed food map (generator, FoodLayer, FoodService flag, verify, evidence) | worker | #518 | 95.0 | 110 | 400.0 | good | 1 | other: bash heredocs swallowed backslashes twice (a Luau string and a python marker); kid-text lint flagged a data key called Text | use the file-writing tools for code with backslashes; name data keys so the kid-text lint does not read them as player text |
 <!-- retro-table:end -->
 
 ## 6. Open items
