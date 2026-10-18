@@ -64,6 +64,11 @@ def classify(title: str, exe: str, edge_title: str = "Claude") -> str | None:
     return None
 
 
+def is_splash(title: str) -> bool:
+    """Studio first shows a small splash window titled just "RobloxStudio"; the real window comes later (BD-995)."""
+    return title.strip().lower() == "robloxstudio"
+
+
 def may_maximize(kind: str | None, title: str) -> bool:
     """Pure, tested: only studio/blender windows, never the owner's Place1."""
     return kind in MAXIMIZE_KINDS and not is_protected(title)
@@ -170,6 +175,8 @@ def place(args) -> int:
     maximised = 0
     want_max = getattr(args, "maximize", False)
     for w in top_windows(args.edge_title):
+        if is_splash(w["title"]):
+            continue  # the Studio splash window goes away by itself
         cx, cy = (w["rect"][0] + w["rect"][2]) // 2, (w["rect"][1] + w["rect"][3]) // 2
         on_virtual = contains(virt["rect"], cx, cy)
         do_max = want_max and may_maximize(w["kind"], w["title"]) and not (on_virtual and w["maximised"])
@@ -248,8 +255,9 @@ def launch(args) -> int:
         args.maximize = True  # BD-995: a maximised Studio gives a real 1280 x 720 style viewport instead of 500 x 465
     for _ in range(40):  # wait up to ~2 minutes for the window
         time.sleep(3)
-        if any(w["kind"] == args.what for w in top_windows(args.edge_title)):
+        if any(w["kind"] == args.what and not (args.what == "studio" and is_splash(w["title"])) for w in top_windows(args.edge_title)):
             break
+    time.sleep(2)  # let the real window settle (Studio resizes itself while it loads)
     return place(args)
 
 

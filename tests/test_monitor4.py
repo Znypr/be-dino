@@ -43,6 +43,10 @@ class Monitor4Tests(unittest.TestCase):
         # classify() already hides Place1, so it can never reach may_maximize
         self.assertFalse(m.may_maximize(m.classify("Place1.rbxl - Roblox Studio", "RobloxStudioBeta.exe"), "Place1.rbxl"))
 
+    def test_splash(self):
+        self.assertTrue(m.is_splash("RobloxStudio"))
+        self.assertFalse(m.is_splash("x.rbxlx - Roblox Studio"))
+
     def test_is_maximised_on(self):
         mon = (3840, 0, 5120, 720)
         self.assertTrue(m.is_maximised_on(mon, (3832, -8, 5128, 712)))
