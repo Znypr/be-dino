@@ -580,7 +580,7 @@ print("Gift UI verified: "..ui.." checks")
 
 def script() -> str:
     prefix = verify_rewards.HARNESS.split('local function user(id)')[0]
-    base = verify_gifts.fill(prefix + '\n' + verify_gifts.PURE + '\n' + verify_gifts.REPO + '\n' + verify_gifts.SERVICE)
+    base = verify_gifts.rehearsal_pins(verify_gifts.fill(prefix + '\n' + verify_gifts.PURE + '\n' + verify_gifts.REPO + '\n' + verify_gifts.SERVICE))
     ui = (UI.replace('@@GIFT_UI_MODEL@@', module(MODEL))
           .replace('@@PHONE_SCALE@@', module('src/shared/PhoneScale.luau'))
           .replace('@@TOUCH_LAYOUT@@', module(LAYOUT))

@@ -6,6 +6,7 @@ from pathlib import Path
 import argparse, re, subprocess, sys, tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_profiles
+import rehearsal_env
 ROOT = Path(__file__).resolve().parents[1]
 BIOME_COLOURS = {'meadow': (150, 205, 90), 'fern': (45, 120, 70), 'conifer': (80, 100, 62), 'marsh': (60, 130, 140), 'badlands': (205, 150, 95), 'volcanic': (80, 62, 72)}
 def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
@@ -258,8 +259,12 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); p.add_argument('--map'); args = p.parse_args()
     static_checks()
     keep = lambda out: chr(10).join(l for l in out.splitlines() if l[:2] not in ('P ', 'L ', 'W ', 'M '))
-    print(keep(run(args.runner, None, False)))
-    rewritten, _ = release_profiles.apply_profile((ROOT / 'src/shared/Config.luau').read_text(), 'playtest')
+    # docs/152 BD-626: in the all-on rehearsal tree the Config file returns the all-on values. The DEFAULT look is checked against the
+    # committed Config (rehearsal_env.committed_config, a no-op everywhere else); the PLAYTEST look then runs against the rehearsal Config
+    # itself, i.e. the playtest values together with every other flag on, instead of a rewritten copy of the committed text.
+    source = (ROOT / 'src/shared/Config.luau').read_text()
+    print(keep(run(args.runner, rehearsal_env.committed_config(source) if rehearsal_env.ACTIVE else None, False)))
+    rewritten = None if rehearsal_env.ACTIVE else release_profiles.apply_profile(source, 'playtest')[0]
     out = run(args.runner, rewritten, bool(args.map), True)
     print(keep(out))
     world, food, per = legacy_parts()

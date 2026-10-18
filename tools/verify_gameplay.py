@@ -4,6 +4,9 @@ Does not substitute for Studio raycasting/physics/replication testing.
 """
 from pathlib import Path
 import argparse,subprocess,tempfile
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import rehearsal_env
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
@@ -451,6 +454,13 @@ do
 end
 print("Nest weather passed: nests keep the weather active when each was found (rain, clear) while settling in blizzard; unrecorded nests fall back to settlement weather; short runs and disconnects covered")
 '''
+def harness():
+ text=script().replace('@SPAWN@',wrapped('src/shared/SpawnGeometry.luau'))
+ # docs/152 BD-626: under the all-on rehearsal Config the "special foods are off by default" line is run against a private flag-off copy of
+ # the Config and a SpecialFoods module bound to it (the shared Config is frozen), so the off-state rule is still proved and the file goes on
+ # to the predation egg and nest weather tests with the flag on.
+ off='do local offConfig=table.clone(Config) offConfig.SpecialFoodsEnabled=false local OffSpecialFoods=(function() local script={Parent={Config="Config",ScaleLadder="ScaleLadder"}} local require=function(id)if id=="ScaleLadder" then return ScaleLadder end return offConfig end return '+wrapped('src/shared/SpecialFoods.luau')+' end)() assert(offConfig.SpecialFoodsEnabled==false and not OffSpecialFoods.rolls(0) and Config.FoodCatchRate==12/500,"special foods off") end'
+ return rehearsal_env.pin(text,'assert(Config.SpecialFoodsEnabled==false and not SpecialFoods.rolls(0) and Config.FoodCatchRate==12/500,"special foods off")',off,label='gameplay special foods pin')
 if __name__=='__main__':
  src=(ROOT/'src/server/FoodService.luau').read_text(encoding='utf-8')
  psrc=(ROOT/'src/server/PredationService.luau').read_text(encoding='utf-8')
@@ -458,4 +468,4 @@ if __name__=='__main__':
  assert 'dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)' in src and 'FoodCatchRules.award(candidate.gained,' in src, 'growth halved but catches use raw food'
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
  with tempfile.TemporaryDirectory() as temp:
-  path=Path(temp)/'verify.luau';path.write_text(script().replace('@SPAWN@',wrapped('src/shared/SpawnGeometry.luau')));subprocess.run([args.runner,str(path)],check=True)
+  path=Path(temp)/'verify.luau';path.write_text(harness());subprocess.run([args.runner,str(path)],check=True)

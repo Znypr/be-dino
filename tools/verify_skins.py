@@ -28,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import release_profiles  # noqa: E402
+import rehearsal_env  # noqa: E402
 import verify_gifts  # noqa: E402  (the shared token filler, GiftRules binding and Build 020 fixture paths)
 import verify_rewards  # noqa: E402  (the mocked DataStore prefix)
 import profile_sources  # noqa: E402
@@ -700,7 +701,12 @@ def fill(text: str) -> str:
 
 def script() -> str:
     prefix = verify_rewards.HARNESS.split('local function user(id)')[0]
-    return fill(prefix + '\n' + HEAD + CATALOG + SERVICE + PICKER + FUSION + OLD)
+    text = fill(prefix + '\n' + HEAD + CATALOG + SERVICE + PICKER + FUSION + OLD)
+    # docs/152 BD-626: under the all-on rehearsal Config the flag-off section runs with DinoSkinsEnabled forced off in both Config copies of
+    # the harness; the sections after it turn it on through Cfg as always.
+    return rehearsal_env.pin(
+        text, 'check(GameConfig.DinoSkinsEnabled==false and Cfg.DinoSkinsEnabled==false,"the committed Config has DinoSkinsEnabled off")',
+        'GameConfig.DinoSkinsEnabled=false Cfg.DinoSkinsEnabled=false', label='skins flag-off pin')
 
 
 def main(argv=None) -> int:
