@@ -175,6 +175,61 @@ function Index.dotVisible(total: number, seen: number?): boolean
     return seen ~= nil and total > seen
 end
 
+-- BD-1065: which total the dot compares with. viewed = the total when the player last looked at a Patterns / Colours tab in THIS session (nil =
+-- not yet), saved = the total kept in the settings (SettingsModel.indexSeen; 0 or nil = never saved), first = the first reading of this session.
+-- A tab looked at beats the saved total; the saved total beats the first reading (so a find made before a rejoin still shows its dot);
+-- with nothing saved the first reading is the baseline (what you already had is not "new").
+function Index.seenBaseline(viewed: any, saved: any, first: any): number?
+    if type(viewed) == "number" then return viewed end
+    if type(saved) == "number" and saved == saved and saved > 0 then return saved end
+    if type(first) == "number" then return first end
+    return nil
+end
+
+-- BD-1065: the small detail of one card (a tap on a card). kind = "patterns" | "colours"; card = one entry of Index.cards; found = Index.foundSets(...);
+-- nameOf(speciesId) -> kid name. Returns {title, tier, pips, boostText, found, lines, hint}: `lines` is the "Found on" list, two names to a line
+-- ("Compy, Raptor"), every dino the game has (the popup scrolls), at most MaxDetailLines lines, then one "+N more" line; `hint` is the colour-only sentence about the accent colour.
+Index.MaxDetailLines = 12 -- 24 dinos: more than the game has; the list scrolls in the popup
+Index.NamesPerLine = 2
+Index.AccentHint = "The accent colour counts more" -- colour detail only (owner 2026-10-18; GeneBoost.AccentColourWeight 1.0 against MainColourWeight 0.7)
+Index.NotFoundHint = "Hatch eggs to find it!"
+function Index.detail(kind: string, card: any, found: any, nameOf: any)
+    local isColour = kind == "colours"
+    local out: any = {title = "???", tier = "", pips = 0, boostText = Index.NoBoostLine, found = false, lines = {}, hint = if isColour then Index.AccentHint else nil}
+    if type(card) ~= "table" then return out end
+    out.tier = if type(card.rarity) == "string" then card.rarity else ""
+    out.pips = if type(card.pips) == "number" then card.pips else 0
+    out.boostText = if type(card.boostText) == "string" then card.boostText else Index.boostText(out.pips)
+    out.found = card.found == true
+    if not out.found then
+        out.lines = {Index.NotFoundLine, Index.NotFoundHint}
+        return out
+    end
+    out.title = if type(card.name) == "string" and card.name ~= "" then card.name else Index.displayName(kind, nil)
+    local map = if type(found) == "table" then (if isColour then found.colourSpecies else found.patternSpecies) else nil
+    local ids = if type(map) == "table" and type(card.id) == "string" then map[card.id] else nil
+    if type(ids) ~= "table" or #ids == 0 then
+        out.lines = {Index.FoundBeforeLine}
+        return out
+    end
+    local names = {}
+    for _, id in ids do
+        local name = if type(nameOf) == "function" then nameOf(id) else nil
+        table.insert(names, if type(name) == "string" and name ~= "" then name else tostring(id))
+    end
+    local lines = {}
+    local perLine, maxLines = Index.NamesPerLine, Index.MaxDetailLines
+    local shown = math.min(#names, perLine * maxLines)
+    for i = 1, shown, perLine do
+        local chunk = {}
+        for j = i, math.min(i + perLine - 1, shown) do table.insert(chunk, names[j]) end
+        table.insert(lines, table.concat(chunk, ", "))
+    end
+    if #names > shown then table.insert(lines, string.format("+%d more", #names - shown)) end
+    out.lines = lines
+    return out
+end
+
 -- Ribbons on the hatch reveal. fresh = the decoded LastChestNewJson ({colour = true, pattern = true, mutation = true}, first-time finds only).
 -- enabled false = the old single "NEW!" ribbon. enabled true = "New pattern!" and "New colour!" (one each); a mutation-only find keeps "NEW!".
 function Index.ribbons(fresh: any, enabled: any): {string}

@@ -23,7 +23,7 @@ local DARK = Color3.fromRGB(46, 46, 58) -- a card not found yet
 local GREY = Color3.fromRGB(86, 88, 100) -- its tile
 local PIP_OFF = Color3.fromRGB(70, 70, 84)
 
-local function label(parent: GuiObject, text: string, x: number, y: number, w: number, h: number, size: number, color: Color3?, align: Enum.TextXAlignment?): TextLabel
+function Cards.label(parent: GuiObject, text: string, x: number, y: number, w: number, h: number, size: number, color: Color3?, align: Enum.TextXAlignment?): TextLabel
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency, t.Position, t.Size = 1, UDim2.fromOffset(x, y), UDim2.fromOffset(w, h)
     t.Font, t.TextSize, t.Text, t.TextColor3 = Enum.Font.FredokaOne, size, text, color or C.text
@@ -31,6 +31,7 @@ local function label(parent: GuiObject, text: string, x: number, y: number, w: n
     Theme.TextStyle.apply(t)
     return t
 end
+local label = Cards.label
 
 local function rgb3(c: Color3): {number} return {c.R, c.G, c.B} end
 local function fromRgb3(t: {number}): Color3 return Color3.new(t[1], t[2], t[3]) end
@@ -42,9 +43,11 @@ function Cards.borderColor(card: any): Color3
     return fromRgb3(Index.dim(rgb3(base), rgb3(DARK)))
 end
 
-local function tile(parent: GuiObject, kind: string, card: any): Frame
+-- size (design px) defaults to the card's 84; the detail popup (PatternColourDetail) draws the same tile bigger.
+function Cards.tile(parent: GuiObject, kind: string, card: any, size: number?, x: number?, y: number?): Frame
+    local px = size or 84
     local t = Instance.new("Frame")
-    t.Name, t.Position, t.Size, t.ZIndex, t.Parent = "Tile", UDim2.fromOffset(10, 46), UDim2.fromOffset(84, 84), parent.ZIndex + 1, parent
+    t.Name, t.Position, t.Size, t.ZIndex, t.Parent = "Tile", UDim2.fromOffset(x or 10, y or 46), UDim2.fromOffset(px, px), parent.ZIndex + 1, parent
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(if kind == "colours" then 0.5 else 0.18, 0)
     corner.Parent = t
@@ -52,7 +55,7 @@ local function tile(parent: GuiObject, kind: string, card: any): Frame
     edge.Color, edge.Thickness, edge.Parent = C.outline, 3, t
     if not card.found then
         t.BackgroundColor3 = GREY
-        local q = label(t, "?", 0, 0, 84, 84, 48, Color3.fromRGB(205, 208, 220), Enum.TextXAlignment.Center)
+        local q = label(t, "?", 0, 0, px, px, math.floor(px * 48 / 84), Color3.fromRGB(205, 208, 220), Enum.TextXAlignment.Center)
         q.Name = "Question"
         -- a pattern picture, when bound, shows as a dark silhouette on the grey tile
         local id = if kind == "patterns" then AssetSlots.image("pattern_" .. card.id) else nil
@@ -82,7 +85,7 @@ local function tile(parent: GuiObject, kind: string, card: any): Frame
     return t
 end
 
-local function pips(parent: GuiObject, card: any, x: number, y: number)
+function Cards.pips(parent: GuiObject, card: any, x: number, y: number)
     local row = Instance.new("Frame")
     row.Name, row.BackgroundTransparency, row.Position, row.Size, row.ZIndex, row.Parent = "Pips", 1, UDim2.fromOffset(x, y), UDim2.fromOffset(148, 20), parent.ZIndex + 1, parent
     for i = 1, Cards.Pips do
@@ -99,7 +102,7 @@ local function pips(parent: GuiObject, card: any, x: number, y: number)
 end
 
 -- One card at grid position (x, y) inside `parent`.
-function Cards.card(parent: GuiObject, kind: string, card: any, x: number, y: number): Frame
+function Cards.card(parent: GuiObject, kind: string, card: any, x: number, y: number, onPick: ((any) -> ())?): Frame
     local f = Instance.new("Frame")
     f.Name, f.Position, f.Size, f.ZIndex, f.Parent = "Card_" .. card.id, UDim2.fromOffset(x, y), UDim2.fromOffset(Cards.CardW, Cards.CardH), parent.ZIndex + 1, parent
     f.BackgroundColor3 = if card.found then C.card else DARK
@@ -109,19 +112,28 @@ function Cards.card(parent: GuiObject, kind: string, card: any, x: number, y: nu
     f:SetAttribute("Found", card.found)
     f:SetAttribute("Tier", card.rarity)
     label(f, if card.found then card.name else "???", 10, 8, 244, 34, 26, nil, Enum.TextXAlignment.Left).Name = "Name"
-    tile(f, kind, card)
+    Cards.tile(f, kind, card)
     local tierColor = if card.found then Cards.borderColor(card) else Cards.borderColor(card):Lerp(C.text, 0.25)
     local tier = label(f, card.rarity, 104, 46, 150, 26, 22, tierColor)
     tier.Name = "Tier"
-    pips(f, card, 106, 78)
+    Cards.pips(f, card, 106, 78)
     label(f, card.boostText, 104, 102, 152, 24, 18, if card.found then C.text else Color3.fromRGB(190, 192, 205)).Name = "Boost"
     label(f, card.line, 10, 134, 244, 38, 18, if card.found then C.text else Color3.fromRGB(190, 192, 205)).Name = "Line"
+    if onPick then
+        -- BD-1065: a tap on the card opens its small detail (PatternColourDetail). This button covers ONE card, never the screen, the header or X;
+        -- a drag on the grid still scrolls it (Activated fires on a tap only).
+        local hit = Instance.new("TextButton")
+        hit.Name, hit.Text, hit.AutoButtonColor, hit.BackgroundTransparency = "CardHit", "", false, 1
+        hit.Size, hit.ZIndex, hit.Parent = UDim2.fromScale(1, 1), f.ZIndex + 8, f
+        hit.Activated:Connect(function() onPick(card) end)
+    end
     return f
 end
 
 -- Fills `parent` (the tab body) with the header line and the scrolling grid. kind = "patterns" | "colours"; cards = Index.cards(...);
 -- headerText = Index.header(...).text; hint = one short line on the right; height = the room under the header line (design px).
-function Cards.build(parent: GuiObject, kind: string, cards: {any}, headerText: string, hint: string, height: number): ScrollingFrame
+-- onPick (optional, BD-1065) = called with the card when it is tapped.
+function Cards.build(parent: GuiObject, kind: string, cards: {any}, headerText: string, hint: string, height: number, onPick: ((any) -> ())?): ScrollingFrame
     local top = label(parent, headerText, 0, 0, 380, 40, 30, C.text, Enum.TextXAlignment.Left)
     top.Name = "IndexHeader"
     local sub = label(parent, hint, 392, 6, 432, 30, 20, C.gold, Enum.TextXAlignment.Right)
@@ -134,7 +146,7 @@ function Cards.build(parent: GuiObject, kind: string, cards: {any}, headerText: 
     grid.CanvasSize = UDim2.fromOffset(0, rows * (Cards.CardH + Cards.Gap))
     for i, card in cards do
         local col, row = (i - 1) % Cards.Columns, math.floor((i - 1) / Cards.Columns)
-        Cards.card(grid, kind, card, col * (Cards.CardW + Cards.Gap), row * (Cards.CardH + Cards.Gap))
+        Cards.card(grid, kind, card, col * (Cards.CardW + Cards.Gap), row * (Cards.CardH + Cards.Gap), onPick)
     end
     return grid
 end

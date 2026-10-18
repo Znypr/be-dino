@@ -143,6 +143,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1066/1068/1074 round 4 fixes: class icon image ids, mutant dino floor, key toggle | worker | - | 190.0 | - | - | good | - | studio-window: window sizes and camera relock cost time, unverified-claim: black dino root cause not reproduced | execute_luau require() can give a second module instance, so cache stats from it are not the game's |
 | 2026-10-18 | Hatch polish BD-1069..1073 (bucket colour, chip style, egg size, rainbow, card layout) | worker | #520 | 150.0 | 230 | - | good | 1 | studio-window: Studio window shrank to 500x465, test grant eggs had no genes | calibrate pixel constants from a measurement in the same window, not from an older QA picture (zoom 1.65 was 16 percent too big) |
 | 2026-10-18 | BD-1077 one chunky tag style everywhere (inventory, conversion, CI check) | worker | - | 60.0 | 80 | - | good | - | - | Mocks in other verifiers stub required modules: adding a require to a client file needs the stub added in the same change. (tool: tools/verify_chip_style.py) |
+| 2026-10-18 | BD-1041 starter goals + BD-1065 follow-ups (card detail, saved Index dot) | worker | #522 | 150.0 | 190 | - | good | 1 | other: the full local CI loop has a slow world verifier (22 s to 7 min); skipped world and cave ones | an accent-colour mutant is invisible when the all-on rehearsal logs accent colours, so aim a mutant at the pure rule, not only the end-to-end test |
 <!-- retro-table:end -->
 
 ## 6. Open items

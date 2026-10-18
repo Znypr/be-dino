@@ -10,7 +10,7 @@ Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 bu
 ## 4. Where on screen (Proposal)
 Collapsed pill under the goal line (top-right): trophy icon + "2/3". Tap opens a panel about 300x220 on the right, below crystals, clear of thumbstick and jump zones; max 40% width on phones; auto-collapses 5 s after a run starts. Completion triggers a doc 65 card (key `objective`). Claim is a manual button (min 44 px) for a small reward moment.
 
-## 5. Catalogue (20; rewards in Crystals, PROVISIONAL)
+## 5. Catalogue (23 since BD-1041, 20 before; rewards in Crystals, PROVISIONAL)
 Scale (Seen in `ProgressionConfig`): a 40-egg run gives 30 Crystals, common potions cost 20-25, a random egg 150, first condition upgrade 100.
 
 | # | Group | Objective | Goal | Reward |
@@ -18,6 +18,9 @@ Scale (Seen in `ProgressionConfig`): a 40-egg run gives 30 Crystals, common poti
 | T1 | Tutorial | Eat 10 food | 10 | 10 |
 | T2 | Tutorial | Finish your first run (go Home) | 1 | 20 |
 | T3 | Tutorial | Hatch 3 eggs | 3 | 15 |
+| T10 | Tutorial | Find 3 patterns (BD-1041, after T3) | 3 | 15 |
+| T11 | Tutorial | Find 3 colours (BD-1041) | 3 | 15 |
+| T12 | Tutorial | Find all Common patterns (BD-1041) | 3 | 20 |
 | T4 | Tutorial | Equip a dino in the Index | 1 | 10 |
 | T5 | Tutorial | Use leap once | 1 | 10 |
 | T6 | Tutorial | Buy a potion | 1 | 25 |
@@ -36,7 +39,7 @@ Scale (Seen in `ProgressionConfig`): a 40-egg run gives 30 Crystals, common poti
 | D5 | Daily | Add a dino toward a fusion step | 1 | 40 |
 | D6 | Daily | Hatch a Rare or better | 1 | 50 |
 
-Tutorial total 160 Crystals (about 5 runs, one random egg): a gentle gift.
+Tutorial total 160 Crystals before BD-1041 (about 5 runs, one random egg): a gentle gift. **BD-1041 (2026-10-18) adds three collection goals right after T3 (50 Crystals, so 210 in all), see section 21.**
 
 ## 6. Cadence and flow (Proposal)
 - Tutorial: 1 shown at a time, ordered, one-time. Short: 3 active, reset every 30 min. Daily: 3 active, reset at UTC midnight. After the tutorial at most 6 rows visible.
@@ -194,3 +197,21 @@ Full 3 x 3 table (objective none / unfinished / claimable against fusion none / 
 **OB1-OB3 evidence.** `verify_objectives` (pure `runCounts`, `seenEntry`, `seenDone`, the `seen` request shapes, the T3 note), `verify_objective_hooks` (three instant runs do not finish D2 or T2; exactly 30 s + 1 food counts; three real runs finish D2 and pay 40 once; T9 completes on one "seen" request and only once, also after a reconnect and after the claim; forged ids and shapes refused; no dino refused; rate limit; a fusion use alone no longer completes T9; flag off the server ignores it), `verify_objectives_panel` (the real `ObjectiveSeen.luau`: flag off sends nothing and looks nothing up, one shape, once per session). Offline only: no Studio.
 
 **Evidence.** `python tools/verify_objective_hooks.py --runner <luau>` (CI step added) prints this table from the real sources and fails if an objective has no hook; a hook is not after its commit anchor, behind its guard and in the same function; a hook exists outside the declared sites or in client code; or a require is not lazy. It runs the real `ProfileRepository` and `ObjectiveService`. Flag off: zero requires, zero calls and zero objective writes over a session of settlement, hatches, equip, potion and replays. Flag on: the right counters (run, event eggs, level, batched hatches, new species, rare, equip, potion, fusion use), replays counted once, tutorial T1-T9 (160 Crystals) and the window rows claimed exactly once. The Food tick (batching, one call per player per tick), the Leap handler and the FusionService quote and fuse sites are exercised in `verify_gameplay.py` and `verify_progression.py`; `verify_multiplayer_sim.py` proves a flag-off 12-player run writes no objective data and never loads the module. Offline only: no Studio, no real DataStore, no phone.
+
+## 21. Implementation status BD-1041: starter goals for patterns and colours (2026-10-18, offline only, behind `ObjectivesEnabled`)
+
+**What the player sees.** Three new rows in the tutorial chain, right after "Hatch 3 eggs": **Find 3 patterns** (3 / 3 bar, 15 Crystals), **Find 3 colours** (15), **Find all Common patterns** (20). Same panel, same CLAIM button, same one-row-at-a-time order; no new screen, no new HUD piece. Kid copy per [72](72-ui-copy-and-asset-standards.md): short names, no rules shown.
+
+**How it works (CURRENT BUILD).**
+- `ObjectiveConfig` rows T10 / T11 / T12 are `total = true` rows: the event carries the player's running total as `value` and progress is the highest total seen (`ObjectiveRules.bump`), so nothing adds up and a replay cannot double count. Goal 3 for T12 is the number of Common rows in `ProgressionConfig.EggPatterns`; `tools/verify_starter_goals.py` fails if a retier changes that number.
+- The SERVER counts: `ProgressionRules.findCounts(profile)` reads the discovery log (`progression.discovered`) plus the dinos owned (`collection` variants), exactly the two sources the client Index merges (`PatternColourIndex.foundSets`); a main and an accent colour both count; ids that are no row of the config do not. `ProfileRepository.objectiveFinds` returns it (flag off or profile not loaded: nil).
+- `ObjectiveService.syncFinds(player)` turns a count that GREW since this server last looked into one id-less event per kind (`patterns_found`, `colours_found`, `common_patterns_found`, value = the total). It runs after a committed hatch claim (`recordHatched`), after a committed fusion (`recordFusionUse`), and before every `view` / `claim`. The memory-only "last sent" map is empty after a rejoin, so the first view re-sends the totals: that is the backfill for dinos owned before the goals existed (no profile rewrite). The three kinds are not accepted from any client request; `ObjectiveAction` still has only `view`, `claim` and `seen`.
+- Rewards: Crystals only, 15 / 15 / 20 (PROVISIONAL, [115](115-decisions-log.md)); the tutorial total is now 210 Crystals (160 before). The per-claim cap and the daily window cap are unchanged (tutorial rows do not use the window cap).
+
+| Objective | Event | Hook |
+| --- | --- | --- |
+| T10 Find 3 patterns | `patterns_found` | `ObjectiveService.syncFinds` |
+| T11 Find 3 colours | `colours_found` | `ObjectiveService.syncFinds` |
+| T12 Find all Common patterns | `common_patterns_found` | `ObjectiveService.syncFinds` |
+
+**Evidence (offline).** `tools/verify_starter_goals.py` (catalogue order, kid copy, rewards, T12 = number of Common patterns; server count equals the Index count on 8 profiles; 7 mutants), `tools/verify_objective_hooks.py` section E (real `ProfileRepository` + `ObjectiveService`: first egg, same pattern again sends nothing, running totals, rejoin backfill, forged finds refused, claims pay once), `tools/verify_objectives.py` (catalogue 23 rows, 210 Crystals), `tools/verify_objectives_panel.py` (copy and width of every row). **Not seen in Studio or on a phone**: the Goals panel with these rows, and the claim of a real find.
