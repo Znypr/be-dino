@@ -167,15 +167,35 @@ def resync(root, remote="origin", main_branch="main"):
     kl.git(root, "fetch", remote, main_branch)
     contained = subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", ref, "HEAD"], capture_output=True).returncode == 0
     if not contained:
-        p = subprocess.run(["git", "-C", str(root), "merge", "--no-commit", "--no-ff", ref], capture_output=True)
+        p = subprocess.run(["git", "-C", str(root), "-c", "merge.conflictstyle=diff3", "merge", "--no-commit", "--no-ff", ref],
+                           capture_output=True)
         unmerged = [l for l in kl.git(root, "diff", "--name-only", "--diff-filter=U").splitlines() if l]
-        other = [u for u in unmerged if u != kl.LEGACY]
+        other = []
+        for u in unmerged:  # the page is rebuilt by apply(); the append-only logs use the merge helper's rules
+            try:
+                if u == kl.LEGACY:
+                    continue
+                import merge_main_into_pr as mm
+                if u == mm.WORKLOG_JSONL:
+                    mm.resolve_worklog_jsonl(root, Path(root) / u)
+                elif u == mm.WORKLOG_DOC:
+                    kl.git(root, "checkout", "--theirs", "--", u)
+                elif u in mm.APPEND_ONLY_DOCS:
+                    mm.resolve_append_only_doc(Path(root) / u)
+                else:
+                    raise mm.NeedsHuman("not on the allowlist")
+                kl.git(root, "add", "--", u)
+            except Exception:
+                other.append(u)
         if other or (p.returncode and not unmerged):
             subprocess.run(["git", "-C", str(root), "merge", "--abort"], capture_output=True)
             return ("the merge of %s needs a human (%s); nothing changed" % (ref, ", ".join(other) or p.stderr.decode("utf-8", "replace").strip())), 1
     msg, rc = apply(root, ref, write=True)
     if rc:
         return msg, rc
+    if (root / "tools" / "retro_log.py").exists() and (root / "docs" / "retro" / "work-log.jsonl").exists():
+        subprocess.run([sys.executable, str(root / "tools" / "retro_log.py"), "render"], cwd=str(root), capture_output=True)
+        kl.git(root, "add", "--", "docs/168-work-log-and-retrospectives.md")  # the table is generated from the log
     kl.git(root, "add", "-A", "--", kl.LEGACY, "docs/kanban")
     merging = (root / ".git").exists() and subprocess.run(
         ["git", "-C", str(root), "rev-parse", "-q", "--verify", "MERGE_HEAD"], capture_output=True).returncode == 0
