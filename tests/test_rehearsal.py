@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import build as packager  # noqa: E402
 import release_playtest as rp  # noqa: E402
+import rehearsal_env  # noqa: E402
 import release_profiles as profiles  # noqa: E402
 import run_rehearsal  # noqa: E402
 import verify_release  # noqa: E402
@@ -64,6 +65,89 @@ class RehearsalProfileTests(unittest.TestCase):
         checked = verify_release.verify_place(data, PROFILE)
         self.assertEqual(checked.errors, [])
         self.assertTrue(any("SCRATCH" in w for w in checked.warnings))
+
+
+class NoCombatVariantTests(unittest.TestCase):
+    """BD-626: everything on except CombatEnabled, so PredationAtMouth (inert while combat is on) is exercised."""
+    VARIANT = "all-on-no-combat"
+
+    def values(self, profile):
+        rewritten, report = profiles.apply_profile(CONFIG, profile)
+        self.assertEqual(report.errors, [], profile)
+        return {k: v[-1][1] for k, v in profiles.config_entries(rewritten).items()}
+
+    def test_it_differs_from_the_all_on_profile_in_combat_only(self):
+        full, variant = self.values(PROFILE), self.values(self.VARIANT)
+        self.assertEqual(sorted(k for k in full if full[k] != variant[k]), ["CombatEnabled"])
+        self.assertIs(variant["CombatEnabled"], False)
+        self.assertIs(variant["PredationAtMouth"], True)
+        self.assertIs(variant["FoodPickupAtMouth"], True)
+
+    def test_it_is_scratch_never_shipped_and_keeps_the_paid_line_closed(self):
+        self.assertTrue(profiles.streaming_for(self.VARIANT).scratch)
+        self.assertNotIn(self.VARIANT, rp.shipped_profiles())
+        values = self.values(self.VARIANT)
+        for key in ("CrystalPacksEnabled", "PaidRandomItemsEnabled"):
+            self.assertIs(values[key], False)
+            self.assertTrue(any(r.key == key and r.mode == "require" and r.value is False for r in profiles.rules_for(self.VARIANT)), key)
+        self.assertTrue(any(r.key == "CombatEnabled" and r.mode == "require" and r.value is False for r in profiles.rules_for(self.VARIANT)))
+
+    def test_default_and_playtest_still_refuse_its_values(self):
+        variant_config = profiles.apply_profile(CONFIG, self.VARIANT)[0]
+        for name in ("default", "playtest"):
+            self.assertTrue(any("ObjectivesEnabled" in e for e in profiles.verify_source(variant_config, name).errors), name)
+
+    def test_the_place_builds_and_verifies_offline(self):
+        data, _, report = packager.build_profile(self.VARIANT, ROOT / "default.project.json")
+        self.assertEqual(report.errors, [])
+        checked = verify_release.verify_place(data, self.VARIANT)
+        self.assertEqual(checked.errors, [])
+        self.assertTrue(any("SCRATCH" in w for w in checked.warnings))
+
+
+class RehearsalEnvTests(unittest.TestCase):
+    """BD-626: the escape the verifiers use to run their flag-on sections in the rehearsal tree."""
+
+    def test_pin_is_a_no_op_outside_the_rehearsal_and_replaces_inside_it(self):
+        saved = rehearsal_env.ACTIVE
+        try:
+            rehearsal_env.ACTIVE = False
+            self.assertEqual(rehearsal_env.pin("a PIN b", "PIN", "X"), "a PIN b")
+            rehearsal_env.ACTIVE = True
+            self.assertEqual(rehearsal_env.pin("a PIN b", "PIN", "X"), "a X b")
+        finally:
+            rehearsal_env.ACTIVE = saved
+
+    def test_pin_fails_when_the_target_moved_or_is_ambiguous_even_in_plain_ci(self):
+        saved = rehearsal_env.ACTIVE
+        try:
+            rehearsal_env.ACTIVE = False
+            for text in ("nothing here", "PIN and PIN"):
+                with self.assertRaises(SystemExit):
+                    rehearsal_env.pin(text, "PIN", "X")
+        finally:
+            rehearsal_env.ACTIVE = saved
+
+    def test_committed_config_is_the_exact_inverse_of_the_overlay(self):
+        text, errors, _ = run_rehearsal.overlay_config(CONFIG, PROFILE)
+        self.assertEqual(errors, [])
+        self.assertEqual(rehearsal_env.committed_config(text), CONFIG.rstrip() + chr(10))
+        self.assertEqual(rehearsal_env.committed_config(CONFIG), CONFIG)
+
+    def test_the_runner_sets_the_variable_for_a_profile_and_clears_it_for_none(self):
+        cmd = [sys.executable, "-c", "import os;print('V=[' + os.environ.get('BD_REHEARSAL', '') + ']')"]
+        old = os.environ.get("BD_REHEARSAL")
+        os.environ["BD_REHEARSAL"] = "stale"
+        try:
+            on = run_rehearsal.run_one(cmd, ROOT, 30, "all-on-rehearsal")
+            off = run_rehearsal.run_one(cmd, ROOT, 30, "none")
+        finally:
+            if old is None:
+                os.environ.pop("BD_REHEARSAL", None)
+            else:
+                os.environ["BD_REHEARSAL"] = old
+        self.assertIn("V=[all-on-rehearsal]", on["output"])
+        self.assertIn("V=[]", off["output"])
 
 
 class OverlayTests(unittest.TestCase):
@@ -153,8 +237,11 @@ class RunnerEndToEnd(unittest.TestCase):
                                "--only", "verify_mouth_reach,verify_gifts.py,verify_fusion.py,verify_rewards", "--jobs", "4"],
                               capture_output=True, text=True, cwd=ROOT)
         self.assertEqual(done.returncode, 0, done.stdout[-3000:] + done.stderr[-2000:])
-        self.assertIn("expected: verify_mouth_reach.py", done.stdout)
+        # BD-626: the former pins (mouth reach, gifts) now run their flag-on sections instead of stopping at "flag is off in the committed Config"
+        self.assertIn("[ok  ] verify_mouth_reach.py", done.stdout)
+        self.assertIn("[ok  ] verify_gifts.py", done.stdout)
         self.assertIn("[ok  ] verify_rewards.py", done.stdout)
+        self.assertNotIn("stale:", done.stdout)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
+import rehearsal_env  # noqa: E402
 import verify_rewards  # noqa: E402  (reuses the mocked DataStore prefix)
 
 FIXTURE = 'tools/fixtures/build020/'
@@ -65,6 +66,13 @@ def script():
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
         body = body.replace(token, module(path))
+    # docs/152 BD-626: the drill is about a build with the identity flags OFF reading what a flags-ON build wrote. A repository chooses its
+    # identity store wrapper from IdentityPersistentEnabled when its module is BUILT, so under the all-on rehearsal Config the two flags are
+    # turned off in the harness Config before the prefix builds the default repository; the PlaytestConfig clone that plays the flags-ON
+    # build sets them ON itself, and every other flag in this file stays at the all-on value.
+    s = rehearsal_env.pin(s, 'mutableConfig.WriteBudgetEnabled=false',
+                          'mutableConfig.IdentityPersistentEnabled=false mutableConfig.IdentityFusionPreviewEnabled=false mutableConfig.WriteBudgetEnabled=false',
+                          label='rollback identity flags pin')
     return s + '\n' + body
 
 

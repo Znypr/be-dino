@@ -1,6 +1,7 @@
 """BD-423: species picker shows class + feel hint (ClassInfo), and class movement has its own flag (ClassMovementEnabled)."""
 import argparse, subprocess, tempfile
 from pathlib import Path
+import rehearsal_env
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = ['Config', 'ProgressionConfig', 'CombatConfig', 'ClassMovement', 'ClassInfo', 'AssetSlots', 'ClassBadge']
 BODY = r'''
@@ -44,6 +45,10 @@ p.add_argument('--runner', required=True)
 a = p.parse_args()
 src = '\n'.join(['local M={}', 'local Color3={fromRGB=function(r,g,b) return {r,g,b} end,new=function() return 0 end}','local script={Parent=M}', 'local require=function(x) return x end']
                 + [f'M.{n}={module(n)}' for n in MODULES] + [BODY])
+# docs/152 BD-626: the pin is only a statement about the committed Config; nothing after it depends on the flags being off, so under the
+# all-on rehearsal Config the file just continues (the picker, the badge and the class-movement wiring checks all run).
+src = rehearsal_env.pin(src, 'assert(Cfg.ClassMovementEnabled==false and Cfg.CombatEnabled==false,"the committed Config has the class movement and combat flags off")',
+                        '-- rehearsal: the class movement and combat flags are on in this build', label='class picker flag-off pin')
 with tempfile.TemporaryDirectory() as d:
     f = Path(d) / 'cp.luau'
     f.write_text(src, encoding='utf-8')

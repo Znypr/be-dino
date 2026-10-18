@@ -43,6 +43,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import profile_sources  # noqa: E402  (BD-607: the repository is split into parts)
+import rehearsal_env  # noqa: E402
 import release_profiles  # noqa: E402
 import verify_load  # noqa: E402
 
@@ -142,7 +143,17 @@ def build_script(only: str = "", mutants: dict | None = None, storm: int = 60) -
             sources.append(f"[{verify_load.json.dumps(key)}] = {verify_load.long_string(text)}")
     head = (ROOT / "tools" / "remote_fuzz.luau").read_text(encoding="utf-8")
     cases = "\n".join((ROOT / "tools" / name).read_text(encoding="utf-8") for name in CASE_FILES)
+    # docs/152 BD-626: in the all-on rehearsal tree every scenario runs with the rehearsal Config (all flags on). The one scenario that
+    # pins the PUBLISHED PLAYTEST remote inventory runs with the rehearsal flags forced back to the playtest value (off); the pin is a
+    # statement about that profile, not about the rehearsal. Plain CI leaves the text untouched.
+    off_flags = ", ".join(f"{key} = false" for key, _why in release_profiles.REHEARSAL_ON)
+    cases = rehearsal_env.pin(cases, 'runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)',
+                              'runScenario("published-pins", {DemoDirectorEnabled = true, ' + off_flags + '}, function(server)', label="remote fuzz published-pins")
     table = lambda d: "{" + ", ".join(f"{k} = {lua_literal(v)}" for k, v in sorted(d.items())) + "}"
+    # docs/152 BD-626: "the other player's profile never changed" compares a WEALTH list that includes `objectives`. With ObjectivesEnabled on, the
+    # victim's OWN queued events are written by his own lease renew (BD-625), so that field moves while the attacker sleeps. Under the
+    # all-on rehearsal the list leaves `objectives` out; what the attacker could do to it is covered by verify_objectives / the simulation.
+    head = rehearsal_env.pin(head, '"objectives", "ownedSkins", "claimedGifts"}', '"ownedSkins", "claimedGifts"}', label="remote fuzz wealth list")
     head = head.replace("__SOURCES__", "{\n" + ",\n".join(sources) + "\n}")
     head = head.replace("__PLAYTEST__", table(playtest_overrides()))
     head = head.replace("__FLAGS_ON__", "{}")
