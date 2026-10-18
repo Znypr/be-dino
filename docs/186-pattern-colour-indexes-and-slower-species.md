@@ -51,7 +51,14 @@ LEAD decision (owner delegated 2026-10-16), PROVISIONAL: keep five tiers and the
 ### Rarity (code only, ships first)
 Give the **existing 8 patterns** a tier and unequal weights now (no new art needed), then add new patterns in batches. Shared six-tier ladder of docs/88 with r = 1/5: Common 80%, Uncommon 16%, Rare 3.2%, Epic 0.64%, Legendary 0.13%, Mythic 0.026% (about 1 in 3,900 eggs). Weight inside a tier is split evenly among its patterns.
 
-Target roster (PROVISIONAL, **24 patterns**): Common 6 (blank is one of them), Uncommon 5, Rare 4, Epic 4, Legendary 3, Mythic 2. The 8 existing patterns fill Common (4) and Uncommon (4) first; the 16 new ones are batches of art.
+**No fixed number of patterns (OWNER 2026-10-18: "not a hunt for big numbers like 24").** The goal is patterns that are *meaningfully different*: a player must see the difference between two of them on a small moving dino. The count is whatever survives the distinguishability test in BD-1034 (section 4a). The 8 existing patterns are the starting set; tiers are assigned to whatever set we end with (roughly more Commons than Epics, at least 1 Mythic only if it is truly distinct).
+
+### 4a. How we find meaningful patterns (BD-1034, owner idea 2026-10-18)
+1. Ask ChatGPT (image generation, allowed) for a **sheet of square, black-and-white, seamlessly tileable pattern tiles** (for example 4 x 4 tiles on one image, one flat shape idea per tile: dots, stripes, diamonds, stars, scales, camouflage blobs, swirls, checks, ...). Save the sheet in `docs/reference/` and list each tile in docs/77.
+2. Each tile repeats, so a single square can cover the whole dino (tile scale and angle are the only knobs). Convert tiles to the same mask format the 8 existing patterns use (white = colour 2, black = colour 1).
+3. **Distinguishability test:** put every tile on the same dino at the size a player really sees (the HUD dino, the index card, a dino across the cave), in two colour pairs. Score each tile: can a person tell it apart from every other tile, at that size? Also flag tiles that vanish on small dinos or look like noise. A tool (`tools/pattern_similarity.py`) prints a similarity table (downscale, compare) so near-duplicates are caught before the owner looks at them.
+4. Keep only tiles that pass; the survivors become the pattern set. Report: how many we have, how many are really different, the contact sheet.
+
 
 Art rule (AGENTS.md, 2026-10-14): **no code-drawn textures**. New pattern masks are Blender renders or the owner's ChatGPT images, one task and one docs/77 line each; the hatch preview, the 3D dino mask and the index card all use the same mask. Gate: `tools/verify_pattern_masks` style check that every id has a mask, a name, a tier and a boost.
 
@@ -63,7 +70,8 @@ docs/90 already makes a Gold keep the most common donor pattern, so a Mythic-pat
 
 ## 5. Proposal C: colours (BD-1036, BD-1037)
 - Keep the 9 colours; **retune weights to the same ladder** (they already carry tier names) and add ones so each tier has 2 to 4 colours: target **about 18 colours**.
-- Specials (PROVISIONAL names, check against the handbook finishes in 8.6 so none looks like the Gold / Emerald / Diamond tier finish):
+- **OWNER 2026-10-18: start with normal colours.** Glow, Chrome, Pearl and RGB Shift are **low priority**. Reasons: (a) we have never made a good glowing or shiny surface (the Royal Nova aura and the gold fusion finish both took many tries); (b) a glow or chrome colour plus a **mutation's bold effect** on the same dino could clash or hide the mutation, and nobody has looked at that yet. Do not promise glowing colours. If they come back, first a small Studio test (BD-1046): one chrome colour and one glow colour on a dino that also has a Shiny / BIG / event mutation, look at the picture, decide.
+- Specials below are kept only as **ideas for later** (PROVISIONAL names, check against the handbook finishes in 8.6 so none looks like the Gold / Emerald / Diamond tier finish):
   - **Chrome** (mirror silver, matte-friendly, Epic),
   - **Pearl** (soft white shimmer, Epic),
   - **Aurora / RGB Shift** (colour drifts slowly through the rainbow, **Mythic**). Name it "RGB Shift", **not** "Rainbow", because Rainbow is already an egg condition. It is a client-only slow tint animation, one timer for all dinos, cheap on phones.
@@ -76,6 +84,7 @@ docs/90 already makes a Gold keep the most common donor pattern, so a Mythic-pat
 Points per tier (PROVISIONAL): Common 0, Uncommon 1, Rare 2, Epic 4, Legendary 6, Mythic 10.
 `boostPoints = patternPoints + primaryColourPoints + 0.5 * secondaryColourPoints`.
 - **Growth speed:** +1% per point (food gives 1.01x size growth per point), capped at **+15%**.
+- **The caps are totals for one dino** (owner question answered 2026-10-18): all pattern and colour points of that dino together can never give more than +15% growth speed and +7% walk speed. No single pattern or colour has its own separate cap.
 - **Walk speed:** +0.5% per point, capped at **+7%**.
 - Applies to the dino the player is currently playing; a dino with a Mythic pattern and a Mythic colour is at the cap quickly, so there is nothing to farm beyond it.
 - Server computes it from the stored genes (never trusts a client number); the value is part of the versioned trait formula so old profiles can be recomputed.
@@ -108,15 +117,13 @@ Goal: easy to find, no clutter, nothing new on the HUD bar if possible.
 | 6 | BD-1038 boost (server, caps, tests) | Needed before the index can show boost. |
 | 7 | BD-1039 Pattern and Colour Index (spec, then build) | The owner's main wish; needs 4 to 6. |
 | 8 | BD-1041 starter goals | Small; after the index exists. |
-| 9 | BD-1034, BD-1037 new pattern and colour art batches | Art-bound; run in parallel with the above. |
+| 9 | BD-1034 pattern discovery (ChatGPT tile sheet + distinguishability test), BD-1037 plain new colours | Art-bound; run in parallel with the above. Specials (Chrome, Glow, RGB Shift) are low priority, BD-1046. |
 | 10 | BD-1035 pattern rarity UI details, BD-1040 fusion simulation | After the data exists. |
 
 Do not flip any release flag; the playtest profile gets the new features on, per the owner rule that test builds carry the newest built features.
 
 ## 10. Open questions for the owner (kept short, also on the dashboard)
-1. Special colour list: which of Chrome, Pearl, RGB Shift, Glow, Sunset do you want first?
-2. Patterns: 24 as the first goal, or fewer to start?
-3. Boost caps +15% growth and +7% walk speed: right size?
+ANSWERED by the owner 2026-10-18: (1) special colours are low priority, start with normal colours; (2) no fixed pattern count, find meaningful ones; (3) the caps are totals per dino (+15% growth, +7% walking), not per item. Still open: none.
 
 ## Plain summary
 Patterns and colours become collections with an Index tab, rarity steps and a small boost to growth and speed. New dinos get slower to find (first Rare in about 45 minutes, not 8). The hatch screen gets a full audit, and the playtest shows which build it is.
