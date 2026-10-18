@@ -323,6 +323,10 @@ def main(argv=None, environ=None, transport=http_request, sleep=time.sleep, out=
             entry = upload_one(f, name, args.description, creator, key, transport, sleep, POLL_SECONDS, args.timeout, out)
             results.append(entry)
             out("ASSET_ID %s  rbxassetid://%s  (moderation: %s)" % (entry["assetId"], entry["assetId"], entry["moderation"]))
+            if asset_type == "Decal":
+                # BD-1068: a Decal id is NOT an image id. An ImageLabel given it logs "Asset type does not match requested type".
+                out("  NOTE: this is a DECAL id. For an ImageLabel / ImageButton / Texture use the Decal's image id: paste "
+                    "tools/studio/decal_to_image.luau into Studio (execute_luau) with this id, then bind the id it prints.")
             if args.register:
                 register(entry, args.registry)
                 out("  registered in %s" % args.registry)

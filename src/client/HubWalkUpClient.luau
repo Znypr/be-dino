@@ -28,6 +28,11 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         local scrim = ctx.gui:FindFirstChild("ModalScrim")
         return not (scrim and scrim:IsA("GuiObject") and scrim.Visible)
     end
+    local function openName(): string -- the rail destination on screen now ("" none): the Fusion menu has its own window, every other screen is Bootstrap's
+        local fusion = require(script.Parent:WaitForChild("FusionMenu"))
+        if fusion.isOpen() then return "fusion" end
+        return if ctx.current then ctx.current() else ""
+    end
     local function openStation(station: string)
         local destination = Rules.destination(station)
         if destination == nil then return end
@@ -48,7 +53,11 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         prompt.Style = Enum.ProximityPromptStyle.Custom
         prompt:SetAttribute("HubWalkUp", true)
         prompt.Triggered:Connect(function()
-            if Rules.trigger(state, s.id, canOpen(), os.clock()) then openStation(s.id) end
+            local action = Rules.press(state, s.id, canOpen(), openName(), os.clock())
+            if action == "open" then openStation(s.id)
+            elseif action == "close" then -- BD-1074: the same key that opened the screen closes it
+                if Rules.destination(s.id) == "fusion" then require(script.Parent:WaitForChild("FusionMenu")).closeFromKey() else ctx.close() end
+            end
         end)
         prompt.Parent = anchor
         anchor.Parent = folder

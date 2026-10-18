@@ -53,11 +53,38 @@ for _, id in Look.Order do
         assert(math.abs(r * 255 - ref[1]) < 1e-6 and math.abs(g * 255 - ref[2]) < 1e-6 and math.abs(b * 255 - ref[3]) < 1e-6, id .. " pull == blend")
         assert(r >= 0 and r <= 1 and g >= 0 and g <= 1 and b >= 0 and b <= 1, id .. " pull stays a colour")
         -- the base colour must stay recognisable: no channel moves by more than MaxAmount of the distance to the tint
-        assert(math.abs(r - c[1]) <= Look.MaxAmount + 1e-9 and math.abs(g - c[2]) <= Look.MaxAmount + 1e-9 and math.abs(b - c[3]) <= Look.MaxAmount + 1e-9)
+        -- (only for bodies already above the dark floor: a near-black body is lifted on purpose, see the BD-1066 block below)
+        if 0.299 * c[1] + 0.587 * c[2] + 0.114 * c[3] >= Look.MinLuma then
+            assert(math.abs(r - c[1]) <= Look.MaxAmount + 1e-9 and math.abs(g - c[2]) <= Look.MaxAmount + 1e-9 and math.abs(b - c[3]) <= Look.MaxAmount + 1e-9)
+        end
     end
     -- a pale cream body really moves (the tint must be VISIBLE, not zero): at least 4 of 255 on some channel
     local r, g, b = Look.pull(0.9, 0.88, 0.7, id)
     assert(math.max(math.abs(r - 0.9), math.abs(g - 0.88), math.abs(b - 0.7)) * 255 >= 4, id .. " visible on cream")
+end
+-- BD-1066: a near-black body (the Black gene, shaded facets) never stays a black cut-out under a mutation: the result is at least MinLuma,
+-- leans toward the tint (never a wall of tint: it moves only as far as the floor needs), and bright colours are untouched.
+local function luma(r, g, b) return 0.299 * r + 0.587 * g + 0.114 * b end
+assert(Look.MinLuma >= 0.2 and Look.MinLuma <= 0.4, "floor is a gentle lift, not a repaint")
+for _, id in Look.Order do
+    local e = Look.get(id)
+    for _, c in {{0, 0, 0}, {0.03, 0.04, 0.05}, {0.114, 0.133, 0.16}, {0.1, 0.1, 0.1}, {0.2, 0.05, 0.05}} do
+        local r, g, b = Look.pull(c[1], c[2], c[3], id)
+        assert(luma(r, g, b) >= Look.MinLuma - 1e-9, id .. " dark body lifted to the floor")
+        assert(r >= c[1] - 1e-9 and g >= c[2] - 1e-9 and b >= c[3] - 1e-9, id .. " lift only ever brightens")
+        assert(r <= 1 and g <= 1 and b <= 1, id .. " lift stays a colour")
+        assert(luma(r, g, b) <= Look.MinLuma + 0.06 + 1e-9 or luma(c[1], c[2], c[3]) >= Look.MinLuma, id .. " lift stops near the floor")
+    end
+    local br, bg, bb = Look.pull(0.02, 0.02, 0.02, id)
+    local tr, tg, tb = e.tint[1] / 255, e.tint[2] / 255, e.tint[3] / 255
+    assert(math.abs(br - tr) < math.abs(0.02 - tr) and math.abs(bg - tg) < math.abs(0.02 - tg) and math.abs(bb - tb) < math.abs(0.02 - tb), id .. " dark body moves toward the tint")
+    -- 0-255 maths agrees (Part.Color path)
+    local blended = Look.blend({3, 3, 3}, id)
+    assert(luma(blended[1] / 255, blended[2] / 255, blended[3] / 255) >= Look.MinLuma - 1e-9, id .. " Look.blend lifts too")
+    -- a body at or above the floor keeps exactly the gentle pull (no extra lift)
+    local lr, lg, lb = Look.pull(0.5, 0.5, 0.5, id)
+    local a = e.amount
+    assert(math.abs(lr - (0.5 + (e.tint[1] / 255 - 0.5) * a)) < 1e-9, id .. " bright body unchanged by the floor")
 end
 do local r, g, b = Look.pull(0.3, 0.4, 0.5, "nope") assert(r == 0.3 and g == 0.4 and b == 0.5) end
 local same = Look.blend(base, "nope")
@@ -85,6 +112,9 @@ def scan_lowpoly_bake():
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'function LowPoly.setMutation' in dinos and 'mutation = mutationOf(container, entry)' in dinos, 'tint must pass the container mutation into the spec'
     assert '"LPMutation"' in dinos
+    # BD-1066: a bake that finishes late must not pin (pinning releases the part's current image, which is then evicted and shows black)
+    assert 'wanted: (() -> boolean)?' in tex and tex.count('if wanted and not wanted() then cache:release(entry)') == 2, 'Texture.acquire asks wanted() before pinning (cache hit and fresh bake)'
+    assert 'container:GetAttribute("LPLookKey") == key end)' in dinos, 'partBake tells acquire whether this bake is still the wanted look'
     cos = (ROOT / 'src/client/CosmeticVisuals.client.luau').read_text(encoding='utf-8')
     assert 'LowPoly.setMutation(visual,mutationId)' in cos and 'LowPoly.setMutation(state.visual,nil)' in cos, 'world dino: set and clear the baked tint'
     assert 'LowPoly.setMutation(previous,' in (ROOT / 'src/client/ResourceVisuals.client.luau').read_text(encoding='utf-8'), 'equip path sets the baked tint before the genes bake'

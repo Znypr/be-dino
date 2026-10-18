@@ -37,7 +37,9 @@
     "bytes": 118207,
     "sha256": "06955556ffaffb505f531310af0fc023d69a3f7b09d8c8de38d3e43e07093d04",
     "moderation": "Approved",
-    "uploaded": "2026-10-18T12:04:42Z"
+    "uploaded": "2026-10-18T12:04:42Z",
+    "imageId": "139133273491427",
+    "note": "Decal asset id; the image id (imageId) is the Decal Texture, found with InsertService:LoadAsset in Studio. Bind imageId, never assetId, as an ImageLabel image (BD-1068)."
   },
   {
     "assetId": "120243405242003",
@@ -47,7 +49,9 @@
     "bytes": 109372,
     "sha256": "735456f6d28834c49b078e798398e1247d8277123daa9dd92d7f744d0ffd4d3e",
     "moderation": "Approved",
-    "uploaded": "2026-10-18T12:04:48Z"
+    "uploaded": "2026-10-18T12:04:48Z",
+    "imageId": "139836620988746",
+    "note": "Decal asset id; the image id (imageId) is the Decal Texture, found with InsertService:LoadAsset in Studio. Bind imageId, never assetId, as an ImageLabel image (BD-1068)."
   },
   {
     "assetId": "83033883399492",
@@ -57,7 +61,9 @@
     "bytes": 110760,
     "sha256": "efc81b86bbd3a8e0e30bc8a0bc27aed20a2dce5b6ba66fbc794eafc25215956d",
     "moderation": "Approved",
-    "uploaded": "2026-10-18T12:04:54Z"
+    "uploaded": "2026-10-18T12:04:54Z",
+    "imageId": "75907457809763",
+    "note": "Decal asset id; the image id (imageId) is the Decal Texture, found with InsertService:LoadAsset in Studio. Bind imageId, never assetId, as an ImageLabel image (BD-1068)."
   },
   {
     "assetId": "110730963166179",
@@ -67,6 +73,8 @@
     "bytes": 124061,
     "sha256": "0769a8fb3f2c819ad4c88c21a8b1aed779c3519bdf73c88ad6db7e8a25afc15c",
     "moderation": "Approved",
-    "uploaded": "2026-10-18T12:05:00Z"
+    "uploaded": "2026-10-18T12:05:00Z",
+    "imageId": "131489313106712",
+    "note": "Decal asset id; the image id (imageId) is the Decal Texture, found with InsertService:LoadAsset in Studio. Bind imageId, never assetId, as an ImageLabel image (BD-1068)."
   }
 ]

@@ -49,4 +49,11 @@ function Rules.fusionOutsideCloses(mode: string): boolean
     return Rules.FusionOutsideCloses[mode] == true
 end
 
+-- BD-1074 (owner rule: a key that opens a screen also closes it). `openName` is the screen on show now ("" when none, e.g. the scrim is hidden),
+-- `want` the screen the key belongs to. Pressing the key of the screen that is already open closes it; any other press opens (or switches to) `want`.
+function Rules.keyAction(openName: any, want: string): string
+    if typeof(openName) == "string" and openName ~= "" and openName == want then return "close" end
+    return "open"
+end
+
 return Rules

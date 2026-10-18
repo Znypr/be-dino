@@ -219,7 +219,10 @@ local function pin(part: Instance, entry): Content
 end
 -- Content for `part` (pinned to it until release/Destroying) or nil (cache full / failed / no permission): caller keeps a fallback.
 -- size: Texture.sizeFor(role) (default 256).
-function Texture.acquire(part: Instance, textureId: string, speciesId: string, spec: Spec, geom: Geom?, size: number?): Content?
+-- wanted (BD-1066): asked again just before the result is pinned to the part. A bake that finished LATE (the genes or the mutation changed
+-- meanwhile) must not pin: pinning releases the part's CURRENT entry, which then looks unused (warm), gets evicted under cache pressure and
+-- its destroyed image leaves the part showing black. When not wanted the entry is handed back and nil is returned.
+function Texture.acquire(part: Instance, textureId: string, speciesId: string, spec: Spec, geom: Geom?, size: number?, wanted: (() -> boolean)?): Content?
     local size = size or Texture.BigSize
     local cache = cacheFor(size)
     local key = Texture.key(textureId, spec) .. "@" .. size
@@ -227,7 +230,10 @@ function Texture.acquire(part: Instance, textureId: string, speciesId: string, s
     if current and current.key == key then return Content.fromObject(current.image) end
     while pending[key] do task.wait(0.1) end
     local entry = cache:acquire(key)
-    if entry then return pin(part, entry) end
+    if entry then
+        if wanted and not wanted() then cache:release(entry) return nil end
+        return pin(part, entry)
+    end
     if cache:free() <= 0 then cache.denied += 1 publish() return nil end
     pending[key] = true
     local ok, image = pcall(function()
@@ -248,6 +254,7 @@ function Texture.acquire(part: Instance, textureId: string, speciesId: string, s
     if not ok or not image then publish() return nil end
     entry = cache:insert(key, image)
     cacheOf[entry] = cache
+    if wanted and not wanted() then cache:release(entry) publish() return nil end
     return pin(part, entry)
 end
 -- Measured body colour of a loaded texture (nil until loaded): the cheap tint fallback divides by it.
