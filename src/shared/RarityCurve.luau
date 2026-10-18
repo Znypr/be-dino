@@ -57,6 +57,13 @@ function Curve.boost(weights: {number}, factors: {number}, maxRatio: number?): {
     return out
 end
 
+-- BD-1036: the rarer of two tier names ("Common".."Mythic"). A dino has two colours; the colour rarity it shows is the rarer one.
+-- Unknown or missing names count as Common; the first argument wins a tie.
+function Curve.rarer(a: string?, b: string?): string
+    local ia, ib = Curve.index(a or "") or 0, Curve.index(b or "") or 0
+    return Curve.Names[(if ib > ia then ib else ia) + 1]
+end
+
 -- Percent text for a chance in percent: 80 -> "80%", 0.0256 -> "0.0256%".
 function Curve.percentText(percent: number): string
     return string.format("%g%%", tonumber(string.format("%.4g", percent)) :: number)

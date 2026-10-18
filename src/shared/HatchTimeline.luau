@@ -289,7 +289,9 @@ function T.colorReveal(colors: any, genes: any, which: string?)
     if not a or total <= 0 then return nil end
     local row = if which == "secondary" then (find(genes.secondaryColorId) or a) else a
     local pct = 100 * row.weight / total
-    local tier = T.tier(pct)
+    -- BD-1036: a colour row that declares its rarity shows exactly that tier (the equal-split ladder puts Pink and Teal at 1.6%, which
+    -- the percent cut-offs below would call Epic); rows without a rarity fall back to the cut-offs.
+    local tier = (if type(row.rarity) == "string" then table.find(T.TierNames, row.rarity) else nil) or T.tier(pct)
     return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -> display name. The blank pattern is "Plain" (Common).
