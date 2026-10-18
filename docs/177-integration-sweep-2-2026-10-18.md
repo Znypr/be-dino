@@ -66,6 +66,10 @@ Anything that needs the Roblox engine: the Golden Drumstick toast timing, the pl
 
 Rollback: revert the PR; nothing else depends on it.
 
+## 6. Outcome of S3 (BD-1088, which does what BD-1008 asked)
+
+`Bootstrap.client.luau` was 123,660 bytes (LF) with 142 live locals in the main chunk and 188 top-level `local` lines. Block 1 moved the shop screens (`auras` with its Eggs, Conditions and Crystals tabs, `oddsSimple`, `eggOdds`, `eggOutcomes`, `eggPurchase`, `conditionConfirm`, `auraConfirm`, `potions`, `potionConfirm`, `potionReplace`, `transact`, the `ProgressionResult` handler and the 8 s retry of a pending purchase) into `src/client/ShopScreens.luau`, code text unchanged: Bootstrap is now 94,358 bytes, 128 live locals, 174 top-level `local` lines. The ceilings were lowered to 94,500 bytes, 176 lines and 130 live locals ([160 section 10](160-agent-brief.md)). Offline proof: the whole CI command list (168 commands through `run_rehearsal.py --profile none`) and all 706 unit tests pass; nine verifiers that searched Bootstrap's text for shop wiring now read `tools/bootstrap_sources.py`. **Not proved:** Studio. Nobody opened the shop, the odds pages or the Potion Shop in a running client after the move (BD-1089).
+
 ## Handbook check
 
 No UI, copy, art, sound or flag value changed.
