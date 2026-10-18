@@ -540,6 +540,9 @@ def main(argv=None):
                 elif path in APPEND_ONLY_DOCS:
                     n = resolve_append_only_doc(full)
                     say("  %s: append-only log, both sides added text: %d hunk(s) kept from both sides (main first)" % (path, n))
+                elif path.startswith("docs/catalog/"):
+                    git(wt, "checkout", "--theirs", "--", path)  # generated team catalogue: main's copy, refreshed by the lead later
+                    say("  %s: generated catalogue, took main's copy (BD-1052)" % path)
                 elif path == WORKLOG_DOC:
                     git(wt, "checkout", "--theirs", "--", path)  # main's copy; the table is regenerated from the log below
                     say("  %s: took main's copy, the table is regenerated from the log" % path)
