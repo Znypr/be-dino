@@ -62,6 +62,16 @@ for _, outcome in notable do
     end
 end
 assert(not L.shouldAutoOpen({1}, false, false, 1, nil, false), "unknown data is never hidden")
+-- BD-1057: a secret find and a Legendary are never skipped silently under Skip the rest / Open all.
+for r = 1, 5 do
+    assert(not L.shouldAutoOpen({1, 2, 3, 4, 5}, false, false, r, {secret = true}, false), "a secret is never auto-opened")
+    assert(not L.shouldAutoOpen({}, false, false, r, {secret = true}, true), "Open all never opens a secret")
+    assert(not L.shouldAutoOpen({}, false, false, r, {secretSpeciesId = "dodo"}, true), "Open all never opens a secret (id form)")
+end
+assert(not L.shouldAutoOpen({}, false, false, 5, plain, true), "Open all stops on a Legendary")
+assert(not L.shouldAutoOpen({}, false, true, 5, plain, true), "Open all stops on a Legendary (pass owner)")
+for r = 1, 4 do assert(L.shouldAutoOpen({}, false, false, r, plain, true), "Open all still covers rarity " .. r) end
+assert(L.shouldAutoOpen({5}, false, false, 5, plain, false), "the player's own AUTO choice for Legendary is honoured")
 assert(L.shouldAutoOpen({}, false, false, 3, plain, true), "Open all covers every rarity")
 assert(L.shouldAutoOpen({1}, false, false, 1, {failed = true}, false), "cracked eggs may auto-open (counted in the summary)")
 
@@ -84,6 +94,15 @@ for _, bad in {"", "x", "compy", "1x", "1x ", "New dinosaur", "1x two words", "1
     assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, bad, RAR, {}, true)), "unreadable text is never skipped")
 end
 assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, "1x notaspecies", RAR, {}, true)), "unknown species is never skipped")
+-- BD-1057: a secret species is not in the rarity table, so Skip the rest shows it; a Legendary is shown too (its own AUTO tick still skips it).
+for _, secretId in {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus", "cockatoosaurus", "eaglesaurus"} do
+    assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, "1x " .. secretId, RAR, {}, true)), "Skip the rest shows the secret " .. secretId)
+    assert(not (L.autoOpenDecision({1, 2, 3, 4, 5}, false, false, "1x " .. secretId, RAR, {secret = true}, true)), "secret outcome " .. secretId)
+end
+for _, legendary in {"tyrannosaurus", "spinosaurus", "mosasaurus"} do
+    assert(not (L.autoOpenDecision({}, false, false, "1x " .. legendary, RAR, {}, true)), "Skip the rest shows the Legendary " .. legendary)
+    assert((L.autoOpenDecision({5}, false, false, "1x " .. legendary, RAR, {}, false)), "own AUTO tick for Legendary skips " .. legendary)
+end
 
 -- BD-525: every auto-open setting (all 32 subsets of the five rarities) x every rarity x every kind of egg: an egg is skipped
 -- exactly when its rarity is ticked and it is not Shiny, BIG, mutated, Rainbow or Astra; everything else is shown.

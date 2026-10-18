@@ -128,10 +128,10 @@ function T.skipAll(state): string
     return "ignore"
 end
 
--- Reveal skipping: the player's chosen rarities, or every rarity after "Skip all". Shiny, BIG, event
--- mutations and Rainbow/Astra are never skipped (RevealSkip.isNotable).
+-- Reveal skipping: the player's chosen rarities, or every rarity but Legendary after "Skip all" (BD-1057). Shiny, BIG, event
+-- mutations, Rainbow/Astra and secrets are never skipped (RevealSkip.isNotable).
 function T.shouldSkip(selection: any, rarity: number, outcome: any, skipAll: boolean): boolean
-    return RevealSkip.shouldSkip(if skipAll then RevealSkip.Rarities else selection, rarity, outcome)
+    return RevealSkip.shouldSkip(if skipAll then RevealSkip.OpenAllRarities else selection, rarity, outcome)
 end
 
 -- Tap hint copy. remaining = eggs still to open after this one.
