@@ -115,12 +115,12 @@ W.steps[11] = function(ctx)
     if not add(c, W.rs() == "Sanctuary", "at home (RunState " .. tostring(W.rs()) .. ")") then return name, c end
     local function fusion() local pg = player:FindFirstChild("PlayerGui") return pg and pg:FindFirstChild("BeDinoFusionUI") end
     local function up() local f = fusion() return f ~= nil and f.Enabled end
-    local function legacy() return W.modalOpen("Dinosaur Fusion") or (W.gui() ~= nil and W.hasMatch(W.gui(), "coming soon") ~= nil) end
+    local function legacy() return W.gui() ~= nil and W.hasMatch(W.gui(), "coming soon") ~= nil end -- BD-617: the old Dinosaur Fusion card is gone
     local ok, why = W.ensure(function() return up() or legacy() end, function() return W.rail("fusion") end, "FUSION", 7)
     if not add(c, if ok then true else nil, if ok then "FUSION answered" else why) then return name, c end
     if not up() then
-        add(c, nil, "FUSION opened the old Dinosaur Fusion card or said 'coming soon': the pattern Fusion Menu is switched off in this build, nothing more to check")
-        return name, c, "the old Fusion card"
+        add(c, nil, "FUSION said 'coming soon': the pattern Fusion Menu is switched off in this build, nothing more to check")
+        return name, c, "the coming-soon notice"
     end
     task.wait(0.5)
     local f = fusion()

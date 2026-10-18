@@ -34,7 +34,7 @@ Offline evidence only: the new texts have NOT been looked at in Studio at real s
 | Fusion error | `Saving failed. Nothing is lost; retrying with the same request.` | `Could not save, but nothing was lost. Trying again.` |
 | Odds line (BIG size) | `Normal size: 97%; BIG (Rare): 3% (size only, 1.2x)` | `Normal size: 97%, BIG (Rare): 3%. Size only, 20% bigger.` |
 | Potion replace button | `REPLACE & USE` | `Replace` |
-| Fusion index button | `PATTERN FUSION: 6 -> NEW GOLD` | `Pattern fusion` |
+| Index detail button | `BACK TO INDEX` | `Back` (the old Dinosaur Fusion pages were removed on main, so their rewrites are gone with them) |
 
 More: `SORT / FILTER (2)` -> `Sort/filter (2)`; `Request token invalid. Please confirm again.` -> `That did not work. Please confirm again.`;
 `Crystals • already banked` -> `Crystals, already saved`; `HOW TO PLAY` -> `How to play`; `LEAP [E] • READY` -> `LEAP [E] ready`;

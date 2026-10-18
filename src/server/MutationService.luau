@@ -7,7 +7,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MutationService = {}
 local CooldownMemory = require(script.Parent.CooldownMemory)
 local cooldowns = CooldownMemory.new(120) -- BD-363: keyed by UserId, survives a rejoin
-local lastMutation = "lastMutation"
 local lastSetup = "lastSetup"
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
@@ -32,40 +31,12 @@ function MutationService.start(profileRepository, dinosaur)
         folder.Parent = ReplicatedStorage
     end
 
-    local mutate = getRemote(folder, "MutateSpecies")
+    -- BD-617 (LEAD decision, owner directive 2026-10-18): the Build 020 "MutateSpecies" remote (50 copies -> Gold / Diamond, no Emerald, no odds,
+    -- no consent, no lineage) is REMOVED. Fusion is the FusionAction remote (6 Base -> Gold, 3 Gold -> Emerald, 2 Emerald -> Diamond).
+    -- The repository keeps its old 50-copy transaction as unreachable LEGACY code only so the recorded golden session and the
+    -- Build 020 rollback proofs keep their bytes; nothing calls it.
     -- BD-610: exists ONLY while its flag is on (pinned off in every release profile); the flag is still re-checked inside the handler.
     local setupTest = if Config.MutationTestSetupEnabled == true then getRemote(folder, "TestSetMutationCopies") else nil
-
-    mutate.OnServerEvent:Connect(function(player: Player, speciesId, targetMutation, requestToken, ...)
-        if select("#", ...) ~= 0 then return end
-        if typeof(speciesId) ~= "string" or #speciesId < 1 or #speciesId > 32 then
-            player:SetAttribute("LastMutationStatus", "invalid_species")
-            return
-        end
-        if targetMutation ~= "gold" and targetMutation ~= "diamond" then
-            player:SetAttribute("LastMutationStatus", "unknown_mutation")
-            return
-        end
-        if typeof(requestToken) ~= "string" or #requestToken < 1 or #requestToken > 80 then
-            player:SetAttribute("LastMutationStatus", "invalid_token")
-            return
-        end
-        if not allowed(lastMutation, player) then
-            player:SetAttribute("LastMutationStatus", "rate_limited")
-            if Config.RunTelemetryEnabled == true then pcall(function() require(script.Parent.TelemetryHook).count("rate_limited", "Mutation") end) end -- BD-650
-            return
-        end
-
-        local ok, _, status = profileRepository.mutateSpecies(player, speciesId, targetMutation, requestToken)
-        player:SetAttribute("LastMutationStatus", status)
-        if ok then
-            player:SetAttribute("LastMutationToken", requestToken)
-            local character = player.Character
-            if character and character:GetAttribute("DinoAttached") then
-                dinosaur.refreshForPlayer(character, player)
-            end
-        end
-    end)
 
     if setupTest then
         setupTest.OnServerEvent:Connect(function(player: Player, baseCount, ...)

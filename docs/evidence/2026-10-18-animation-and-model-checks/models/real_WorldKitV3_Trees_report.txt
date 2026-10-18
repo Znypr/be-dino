@@ -1,0 +1,32 @@
+Model check: WorldKitV3_Trees.blend (blend, 133.3 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 3 warn, 16 pass)
+
+  WARN  face direction                           neighbouring faces disagree about which side is out on world_tree_palm_v3 (26 edges), world_tree_pine_v3 (98 edges): some faces are flipped and will vanish from one side
+  WARN  doubled vertices                         vertices doubled in place on world_tree_palm_v3 (16)
+  WARN  n-gons (faces with more than 4 corners)  on world_tree_broad_v3 (1), world_tree_palm_v3 (1), world_tree_pine_v3 (1): Roblox cuts them into triangles its own way; triangulate first
+  PASS  triangles per part                       biggest part world_tree_broad_v3 has 726 of 21,844 allowed
+  PASS  triangles in total                       1,888 triangles in 3 part(s), 1,234 vertices
+  PASS  size in studs                            all 3 parts together: width 51.81, height 16.24, length 11.60 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 2.46x the Compy's height, 1.51x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (3 bottom centre); whole model box z runs 0.00 to 16.24
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  open edges                               3 of 3 part(s) are open shells (fine for leaves and wings, not for solid bodies): world_tree_broad_v3, world_tree_palm_v3, world_tree_pine_v3
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on world_tree_broad_v3, world_tree_palm_v3, world_tree_pine_v3, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 3 of 3 part(s) (Col)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.13 MB
+  PASS  part names                               3 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part                 triangles  W x H x L (studs)      origin         material slots  UV  flags               
+  -------------------  ---------  ---------------------  -------------  --------------  --  --------------------
+  world_tree_broad_v3  726        11.23 x 13.35 x 8.67   bottom centre  1               no  1 n-gon             
+  world_tree_palm_v3   700        12.39 x 12.04 x 11.60  bottom centre  1               no  1 n-gon, mixed faces
+  world_tree_pine_v3   462        10.60 x 16.24 x 8.78   bottom centre  1               no  1 n-gon, mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

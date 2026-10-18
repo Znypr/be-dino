@@ -1,0 +1,47 @@
+Model check: WorldKitV2_Food.blend (blend, 157.7 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 4 warn, 15 pass)
+
+  FAIL  face direction                           inside out (normals point in): food_mush_a (2 of 10 closed piece(s), 286 triangles), food_mush_b (2 of 2 closed piece(s), 286 triangles), food_mush_c (2 of 10 closed piece(s), 286 triangles) and 3 more. Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  face direction                           neighbouring faces disagree about which side is out on food_berry_a (6 edges), food_berry_b (6 edges), food_berry_c (6 edges) and 5 more: some faces are flipped and will vanish from one side
+  WARN  doubled vertices                         vertices doubled in place on food_berry_a (4), food_berry_b (4), food_berry_c (4), food_berry_d (4) and 3 more
+  WARN  n-gons (faces with more than 4 corners)  on food_berry_a (1), food_berry_b (1), food_berry_c (1), food_berry_d (1) and 10 more: Roblox cuts them into triangles its own way; triangulate first
+  WARN  UV map                                   no UV map (and no vertex colours) on Ground: textures and patterns cannot be put on it
+  PASS  triangles per part                       biggest part food_mush_a has 798 of 21,844 allowed
+  PASS  triangles in total                       4,572 triangles in 17 part(s), 2,523 vertices
+  PASS  size in studs                            all 17 parts together: width 60.00, height 9.08, length 60.00 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.38x the Compy's height, 7.80x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (4 other, 13 bottom centre); whole model box z runs -8.00 to 1.08
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  open edges                               11 of 17 part(s) are open shells (fine for leaves and wings, not for solid bodies): food_berry_a, food_berry_b, food_berry_c and 8 more
+  PASS  materials and textures                   2 material(s), no empty slots, no missing images
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 16 of 17 part(s) (Col)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.15 MB
+  PASS  part names                               17 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part          triangles  W x H x L (studs)     origin         material slots  UV  flags               
+  ------------  ---------  --------------------  -------------  --------------  --  --------------------
+  food_mush_a   798        1.24 x 1.09 x 1.24    bottom centre  1               no  3 n-gon, mixed faces
+  food_mush_c   798        1.24 x 1.10 x 1.24    bottom centre  1               no  3 n-gon, mixed faces
+  food_berry_d  348        1.33 x 1.09 x 0.87    bottom centre  1               no  1 n-gon, mixed faces
+  food_mush_b   286        1.24 x 1.23 x 1.24    bottom centre  1               no  3 n-gon, mixed faces
+  food_mush_d   286        1.24 x 0.90 x 1.24    bottom centre  1               no  3 n-gon, mixed faces
+  food_berry_a  268        1.17 x 1.09 x 0.83    other          1               no  1 n-gon, mixed faces
+  food_berry_b  268        1.16 x 1.09 x 0.83    other          1               no  1 n-gon, mixed faces
+  food_amber_a  216        0.89 x 0.87 x 0.84    other          1               no  -                   
+  food_nut_a    186        0.80 x 1.28 x 0.77    bottom centre  1               no  2 n-gon, mixed faces
+  food_nut_b    186        0.80 x 1.61 x 0.77    bottom centre  1               no  2 n-gon, mixed faces
+  food_berry_c  178        0.86 x 1.08 x 0.84    bottom centre  1               no  1 n-gon, mixed faces
+  food_fruit_a  160        1.40 x 1.16 x 1.34    bottom centre  1               no  1 n-gon, mixed faces
+  food_fruit_b  160        1.00 x 1.74 x 0.95    bottom centre  1               no  1 n-gon, mixed faces
+  food_fruit_d  148        1.00 x 1.64 x 0.95    bottom centre  1               no  1 n-gon, mixed faces
+  food_amber_b  144        0.60 x 0.91 x 0.86    other          1               no  -                   
+  food_fruit_c  140        1.24 x 1.32 x 1.19    bottom centre  1               no  1 n-gon, mixed faces
+  Ground        2          60.00 x 0.00 x 60.00  bottom centre  1               no  hidden              
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

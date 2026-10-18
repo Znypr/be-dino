@@ -1,0 +1,132 @@
+assets/blender/world/fbx: 41 files, 41 clean, 0 with warnings, 0 with failures
+  PASS  food_amber_a.fbx                       56 tris  
+  PASS  food_amber_b.fbx                       60 tris  
+  PASS  food_berry_a.fbx                       32 tris  
+  PASS  food_berry_b.fbx                       28 tris  
+  PASS  food_egg_a.fbx                         56 tris  
+  PASS  food_egg_b.fbx                         60 tris  
+  PASS  food_fruit_a.fbx                       32 tris  
+  PASS  food_fruit_b.fbx                       40 tris  
+  PASS  world_boulder_bare_l.fbx               60 tris  
+  PASS  world_boulder_bare_m.fbx               40 tris  
+  PASS  world_boulder_bare_s.fbx               20 tris  
+  PASS  world_boulder_mossy_l.fbx              60 tris  
+  PASS  world_boulder_mossy_m.fbx              40 tris  
+  PASS  world_boulder_mossy_s.fbx              20 tris  
+  PASS  world_bush_a.fbx                       60 tris  
+  PASS  world_bush_b.fbx                       56 tris  
+  PASS  world_fern_a.fbx                       48 tris  
+  PASS  world_fern_b.fbx                       52 tris  
+  PASS  world_flowers_a.fbx                    36 tris  
+  PASS  world_grass_a.fbx                      20 tris  
+  PASS  world_grass_b.fbx                      16 tris  
+  PASS  world_horsetail_a.fbx                  56 tris  
+  PASS  world_landmark_dino_statue.fbx        124 tris  
+  PASS  world_landmark_fossil_display.fbx     152 tris  
+  PASS  world_landmark_ruins_altar.fbx        152 tris  
+  PASS  world_landmark_stone_arch.fbx         100 tris  
+  PASS  world_mushrooms_a.fbx                  60 tris  
+  PASS  world_rocks_ledge.fbx                  68 tris  
+  PASS  world_rocks_spires.fbx                104 tris  
+  PASS  world_tree_canopy_l.fbx               112 tris  
+  PASS  world_tree_canopy_m.fbx                92 tris  
+  PASS  world_tree_canopy_s.fbx                66 tris  
+  PASS  world_tree_conifer_l.fbx               76 tris  
+  PASS  world_tree_conifer_m.fbx               58 tris  
+  PASS  world_tree_conifer_s.fbx               52 tris  
+  PASS  world_tree_cycad_l.fbx                136 tris  
+  PASS  world_tree_cycad_m.fbx                112 tris  
+  PASS  world_tree_cycad_s.fbx                 72 tris  
+  PASS  world_tree_dead_l.fbx                  68 tris  
+  PASS  world_tree_dead_m.fbx                  50 tris  
+  PASS  world_tree_dead_s.fbx                  44 tris  
+
+assets/blender/world/fbx_v2: 54 files, 4 clean, 44 with warnings, 6 with failures
+  WARN  food_amber_a.fbx                      216 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  food_amber_b.fbx                      144 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  food_berry_a.fbx                      268 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on food_berry_a (6 edges): some faces ; doubled vertices: vertices doubled in place on food_berry_a (4); n-gons (faces with more than 4 corners): on food_berry_a (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_berry_b.fbx                      268 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on food_berry_b (6 edges): some faces ; doubled vertices: vertices doubled in place on food_berry_b (4); n-gons (faces with more than 4 corners): on food_berry_b (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_berry_c.fbx                      178 tris  face direction: neighbouring faces disagree about which side is out on food_berry_c (6 edges): some faces ; doubled vertices: vertices doubled in place on food_berry_c (4); n-gons (faces with more than 4 corners): on food_berry_c (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_berry_d.fbx                      348 tris  face direction: neighbouring faces disagree about which side is out on food_berry_d (6 edges): some faces ; doubled vertices: vertices doubled in place on food_berry_d (4); n-gons (faces with more than 4 corners): on food_berry_d (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_fruit_a.fbx                      160 tris  face direction: neighbouring faces disagree about which side is out on food_fruit_a (6 edges): some faces ; doubled vertices: vertices doubled in place on food_fruit_a (1); n-gons (faces with more than 4 corners): on food_fruit_a (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_fruit_b.fbx                      160 tris  face direction: neighbouring faces disagree about which side is out on food_fruit_b (6 edges): some faces ; doubled vertices: vertices doubled in place on food_fruit_b (1); n-gons (faces with more than 4 corners): on food_fruit_b (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_fruit_c.fbx                      140 tris  face direction: neighbouring faces disagree about which side is out on food_fruit_c (6 edges): some faces ; doubled vertices: vertices doubled in place on food_fruit_c (1); n-gons (faces with more than 4 corners): on food_fruit_c (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_fruit_d.fbx                      148 tris  face direction: neighbouring faces disagree about which side is out on food_fruit_d (6 edges): some faces ; n-gons (faces with more than 4 corners): on food_fruit_d (1): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  food_mush_a.fbx                       798 tris  face direction: inside out (normals point in): food_mush_a (1 of 10 closed piece(s), 190 triangles). Roblo; n-gons (faces with more than 4 corners): on food_mush_a (3): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  food_mush_b.fbx                       286 tris  face direction: inside out (normals point in): food_mush_b (1 of 2 closed piece(s), 190 triangles). Roblox; n-gons (faces with more than 4 corners): on food_mush_b (3): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  food_mush_c.fbx                       798 tris  face direction: inside out (normals point in): food_mush_c (1 of 10 closed piece(s), 190 triangles). Roblo; n-gons (faces with more than 4 corners): on food_mush_c (3): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  food_mush_d.fbx                       286 tris  face direction: inside out (normals point in): food_mush_d (1 of 2 closed piece(s), 190 triangles). Roblox; n-gons (faces with more than 4 corners): on food_mush_d (3): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_nut_a.fbx                        186 tris  face direction: neighbouring faces disagree about which side is out on food_nut_a (16 edges): some faces a; n-gons (faces with more than 4 corners): on food_nut_a (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  food_nut_b.fbx                        186 tris  face direction: neighbouring faces disagree about which side is out on food_nut_b (16 edges): some faces a; n-gons (faces with more than 4 corners): on food_nut_b (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_basalt_a.fbx                    264 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; scale and rotation applied: not applied: world_basalt_a (turned -0, -0, 41 degrees) (Object, Apply, Rotation and Scale; face direction: neighbouring faces disagree about which side is out on world_basalt_a (72 edges): some fac; n-gons (faces with more than 4 corners): on world_basalt_a (12): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_boulder_a.fbx                    80 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_boulder_b.fbx                   320 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_boulder_mossy_a.fbx              80 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_boulder_mossy_b.fbx             320 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_bush_berry_a.fbx                608 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_bush_flower_a.fbx               608 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_bush_plain_a.fbx                384 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_clover_a.fbx                    215 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_clover_a (15 edges): some fac
+  WARN  world_crystal_a.fbx                   284 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; scale and rotation applied: not applied: world_crystal_a (turned 13, -10, 98 degrees) (Object, Apply, Rotation and Sca; face direction: neighbouring faces disagree about which side is out on world_crystal_a (36 edges): some fa; n-gons (faces with more than 4 corners): on world_crystal_a (6): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_fern_c.fbx                       42 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; scale and rotation applied: not applied: world_fern_c (turned -47, 0, -6 degrees) (Object, Apply, Rotation and Scale).; doubled vertices: vertices doubled in place on world_fern_c (6)
+  WARN  world_flower_blue.fbx                  88 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_flower_blue (4 edges): some f; doubled vertices: vertices doubled in place on world_flower_blue (5)
+  WARN  world_flower_pink.fbx                  94 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_flower_pink (4 edges): some f; doubled vertices: vertices doubled in place on world_flower_pink (6)
+  WARN  world_flower_white.fbx                106 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_flower_white (4 edges): some ; doubled vertices: vertices doubled in place on world_flower_white (8)
+  WARN  world_flower_yellow.fbx               100 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_flower_yellow (4 edges): some; doubled vertices: vertices doubled in place on world_flower_yellow (7)
+  WARN  world_grass_c.fbx                      84 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; scale and rotation applied: not applied: world_grass_c (turned -12, 0, 74 degrees) (Object, Apply, Rotation and Scale)
+  WARN  world_landmark_dino_statue_b.fbx      488 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_landmark_dino_statue_b (36 ed; n-gons (faces with more than 4 corners): on world_landmark_dino_statue_b (6): Roblox cuts them into triangles its own way; triangul
+  WARN  world_landmark_egg_monument.fbx       532 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_landmark_obelisk_a.fbx          208 tris  face direction: neighbouring faces disagree about which side is out on world_landmark_obelisk_a (8 edges):
+  WARN  world_landmark_pillars_a.fbx          442 tris  face direction: neighbouring faces disagree about which side is out on world_landmark_pillars_a (48 edges); n-gons (faces with more than 4 corners): on world_landmark_pillars_a (6): Roblox cuts them into triangles its own way; triangulate 
+  WARN  world_landmark_ribs_a.fbx             632 tris  face direction: neighbouring faces disagree about which side is out on world_landmark_ribs_a (48 edges): s; n-gons (faces with more than 4 corners): on world_landmark_ribs_a (8): Roblox cuts them into triangles its own way; triangulate fir
+  WARN  world_landmark_totem_a.fbx            710 tris  face direction: neighbouring faces disagree about which side is out on world_landmark_totem_a (6 edges): s; doubled vertices: vertices doubled in place on world_landmark_totem_a (24); zero-area faces: faces with no area on world_landmark_totem_a (18); n-gons (faces with more than 4 corners): on world_landmark_totem_a (1): Roblox cuts them into triangles its own way; triangulate fi
+  PASS  world_lava_a.fbx                       80 tris  
+  WARN  world_lava_b.fbx                      320 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_pebble_a.fbx                     80 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the 
+  WARN  world_reeds_a.fbx                     200 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_reeds_a (32 edges): some face
+  PASS  world_sandstone_a.fbx                  80 tris  
+  PASS  world_sandstone_b.fbx                 320 tris  
+  PASS  world_slab_a.fbx                       80 tris  
+  WARN  world_tree_baobab_a.fbx               877 tris  face direction: neighbouring faces disagree about which side is out on world_tree_baobab_a (43 edges): som; doubled vertices: vertices doubled in place on world_tree_baobab_a (20); n-gons (faces with more than 4 corners): on world_tree_baobab_a (7): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_birch_a.fbx                532 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_tree_birch_a (48 edges): some; n-gons (faces with more than 4 corners): on world_tree_birch_a (8): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_broad_a.fbx                478 tris  face direction: neighbouring faces disagree about which side is out on world_tree_broad_a (14 edges): some; n-gons (faces with more than 4 corners): on world_tree_broad_a (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_broad_b.fbx                542 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_tree_broad_b (14 edges): some; n-gons (faces with more than 4 corners): on world_tree_broad_b (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_burnt_a.fbx                146 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_tree_burnt_a (24 edges): some; n-gons (faces with more than 4 corners): on world_tree_burnt_a (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_palm_a.fbx                 288 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_tree_palm_a (14 edges): some ; doubled vertices: vertices doubled in place on world_tree_palm_a (8); n-gons (faces with more than 4 corners): on world_tree_palm_a (2): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  world_tree_pine_a.fbx                 356 tris  face direction: inside out (normals point in): world_tree_pine_a (5 of 6 closed piece(s), 276 triangles). ; n-gons (faces with more than 4 corners): on world_tree_pine_a (12): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  world_tree_pine_b.fbx                 304 tris  face direction: inside out (normals point in): world_tree_pine_b (4 of 5 closed piece(s), 224 triangles). ; n-gons (faces with more than 4 corners): on world_tree_pine_b (10): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_willow_a.fbx               510 tris  pivot (origin) per part: origin is somewhere inside the model box (not at the feet, not in the middle), not at the ; face direction: neighbouring faces disagree about which side is out on world_tree_willow_a (14 edges): som; n-gons (faces with more than 4 corners): on world_tree_willow_a (2): Roblox cuts them into triangles its own way; triangulate first
+
+assets/blender/world/fbx_v3: 32 files, 7 clean, 22 with warnings, 3 with failures
+  WARN  cave_gate_arch_v3.fbx                 456 tris  face direction: neighbouring faces disagree about which side is out on cave_gate_arch_v3 (5 edges): some f; n-gons (faces with more than 4 corners): on cave_gate_arch_v3 (2): Roblox cuts them into triangles its own way; triangulate first
+  FAIL  cave_rockform_buttress_v3.fbx         380 tris  face direction: inside out (normals point in): cave_rockform_buttress_v3 (1 of 8 closed piece(s), 70 trian; n-gons (faces with more than 4 corners): on cave_rockform_buttress_v3 (67): Roblox cuts them into triangles its own way; triangulat
+  WARN  cave_rockform_fins_v3.fbx             350 tris  face direction: neighbouring faces disagree about which side is out on cave_rockform_fins_v3 (31 edges): s; n-gons (faces with more than 4 corners): on cave_rockform_fins_v3 (57): Roblox cuts them into triangles its own way; triangulate fi
+  WARN  cave_rockform_ledge_v3.fbx            308 tris  face direction: neighbouring faces disagree about which side is out on cave_rockform_ledge_v3 (51 edges): ; n-gons (faces with more than 4 corners): on cave_rockform_ledge_v3 (54): Roblox cuts them into triangles its own way; triangulate f
+  FAIL  cave_rockform_slabs_v3.fbx            336 tris  face direction: inside out (normals point in): cave_rockform_slabs_v3 (1 of 8 closed piece(s), 72 triangle; n-gons (faces with more than 4 corners): on cave_rockform_slabs_v3 (55): Roblox cuts them into triangles its own way; triangulate f
+  WARN  cave_rockform_terrace_v3.fbx          362 tris  face direction: neighbouring faces disagree about which side is out on cave_rockform_terrace_v3 (63 edges); loose vertices and edges: stray geometry on cave_rockform_terrace_v3 (1); n-gons (faces with more than 4 corners): on cave_rockform_terrace_v3 (56): Roblox cuts them into triangles its own way; triangulate
+  FAIL  cave_rockform_tumble_v3.fbx           364 tris  face direction: inside out (normals point in): cave_rockform_tumble_v3 (2 of 9 closed piece(s), 114 triang; n-gons (faces with more than 4 corners): on cave_rockform_tumble_v3 (64): Roblox cuts them into triangles its own way; triangulate 
+  PASS  ground_bush_berry_v3.fbx              304 tris  
+  PASS  ground_bush_round_v3.fbx              340 tris  
+  WARN  ground_log_fallen_v3.fbx              199 tris  face direction: neighbouring faces disagree about which side is out on ground_log_fallen_v3 (17 edges): so; doubled vertices: vertices doubled in place on ground_log_fallen_v3 (16); n-gons (faces with more than 4 corners): on ground_log_fallen_v3 (1): Roblox cuts them into triangles its own way; triangulate firs
+  WARN  ground_mushrooms_v3.fbx               303 tris  face direction: neighbouring faces disagree about which side is out on ground_mushrooms_v3 (50 edges): som; n-gons (faces with more than 4 corners): on ground_mushrooms_v3 (5): Roblox cuts them into triangles its own way; triangulate first
+  WARN  ground_rock_medium_v3.fbx             278 tris  n-gons (faces with more than 4 corners): on ground_rock_medium_v3 (27): Roblox cuts them into triangles its own way; triangulate fi
+  WARN  ground_rock_mossy_v3.fbx              262 tris  n-gons (faces with more than 4 corners): on ground_rock_mossy_v3 (30): Roblox cuts them into triangles its own way; triangulate fir
+  WARN  ground_rock_small_v3.fbx               68 tris  n-gons (faces with more than 4 corners): on ground_rock_small_v3 (1): Roblox cuts them into triangles its own way; triangulate firs
+  WARN  ground_stump_roots_v3.fbx             199 tris  face direction: neighbouring faces disagree about which side is out on ground_stump_roots_v3 (5 edges): so; doubled vertices: vertices doubled in place on ground_stump_roots_v3 (9); n-gons (faces with more than 4 corners): on ground_stump_roots_v3 (4): Roblox cuts them into triangles its own way; triangulate fir
+  PASS  plant_fern_arch_v3.fbx                189 tris  
+  WARN  plant_flowers_daisy_v3.fbx            258 tris  face direction: neighbouring faces disagree about which side is out on plant_flowers_daisy_v3 (3 edges): s; doubled vertices: vertices doubled in place on plant_flowers_daisy_v3 (126)
+  WARN  plant_flowers_red_v3.fbx              201 tris  doubled vertices: vertices doubled in place on plant_flowers_red_v3 (90)
+  WARN  plant_flowers_yellow_v3.fbx           201 tris  doubled vertices: vertices doubled in place on plant_flowers_yellow_v3 (90)
+  PASS  plant_grass_arch_v3.fbx               105 tris  
+  PASS  plant_grass_broad_v3.fbx              120 tris  
+  PASS  plant_grass_low_v3.fbx                 90 tris  
+  PASS  plant_jungle_leaf_v3.fbx              168 tris  
+  WARN  world_tree_broad_v3.fbx               726 tris  n-gons (faces with more than 4 corners): on world_tree_broad_v3 (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_colossal_broad_v3.fbx     4154 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_broad_v3 (57 ed; n-gons (faces with more than 4 corners): on world_tree_colossal_broad_v3 (8): Roblox cuts them into triangles its own way; triangul
+  WARN  world_tree_colossal_broad_v3_lod1.fbx    925 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_broad_v3_lod1 (; n-gons (faces with more than 4 corners): on world_tree_colossal_broad_v3_lod1 (8): Roblox cuts them into triangles its own way; tri
+  WARN  world_tree_colossal_palm_v3.fbx      3834 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_palm_v3 (229 ed; n-gons (faces with more than 4 corners): on world_tree_colossal_palm_v3 (7): Roblox cuts them into triangles its own way; triangula
+  WARN  world_tree_colossal_palm_v3_lod1.fbx    966 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_palm_v3_lod1 (7; doubled vertices: vertices doubled in place on world_tree_colossal_palm_v3_lod1 (8); n-gons (faces with more than 4 corners): on world_tree_colossal_palm_v3_lod1 (7): Roblox cuts them into triangles its own way; tria
+  WARN  world_tree_colossal_pine_v3.fbx      4052 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_pine_v3 (18 edg; n-gons (faces with more than 4 corners): on world_tree_colossal_pine_v3 (13): Roblox cuts them into triangles its own way; triangul
+  WARN  world_tree_colossal_pine_v3_lod1.fbx    927 tris  face direction: neighbouring faces disagree about which side is out on world_tree_colossal_pine_v3_lod1 (6; loose vertices and edges: stray geometry on world_tree_colossal_pine_v3_lod1 (88); n-gons (faces with more than 4 corners): on world_tree_colossal_pine_v3_lod1 (7): Roblox cuts them into triangles its own way; tria
+  WARN  world_tree_palm_v3.fbx                700 tris  face direction: neighbouring faces disagree about which side is out on world_tree_palm_v3 (26 edges): some; doubled vertices: vertices doubled in place on world_tree_palm_v3 (16); n-gons (faces with more than 4 corners): on world_tree_palm_v3 (1): Roblox cuts them into triangles its own way; triangulate first
+  WARN  world_tree_pine_v3.fbx                462 tris  face direction: neighbouring faces disagree about which side is out on world_tree_pine_v3 (98 edges): some; n-gons (faces with more than 4 corners): on world_tree_pine_v3 (1): Roblox cuts them into triangles its own way; triangulate first

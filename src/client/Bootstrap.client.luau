@@ -45,7 +45,6 @@ local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
 local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-090 egg nests menu
-local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
 local leapRemote=remotes:WaitForChild("RequestLeap") :: RemoteEvent
@@ -87,7 +86,6 @@ end
 local function eventMutation(id: string)
     return ProgressionRules.eventMutation(decoded("CollectionJson","{}")[id])
 end
-local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
 -- BD-170: Open starts the hatch screen at once; the server answer is supplied to it later. pendingHatch = {version, supply, handle}.
@@ -381,7 +379,6 @@ openFusion=function()
     local function decide()
         local target=FusionSelection.navTarget({menuLoaded=fusionMenuOk,remote=fn~=nil,probe=fusionProbe,profile=Config.ReleaseProfile})
         if target=="menu" then showFusionMenu()
-        elseif target=="legacy" then open("fusion")
         else notify("Fusion is coming soon",C.gold) end
     end
     if fn and fusionMenuOk and fusionProbe==nil then
@@ -974,39 +971,6 @@ render=function(name: string)
             if not equipped then notify("Equipping...",C.blue) equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"Back",426,341,372,45,C.blue,function() open("collection") end)
-    elseif name=="fusion" then
-        heading.Text,header.BackgroundColor3="Dinosaur Fusion",C.purple
-        local base,gold=copies(selected)
-        local diamond=fusionTarget=="diamond"
-        local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
-        local owned=if diamond then gold else base
-        local source=if diamond then "Gold" else "Base"
-        local target=if diamond then "Diamond" else "Gold"
-        hero(body,selected,14,0,360,260,fusionTarget,true)
-        art(body,"mutation_"..fusionTarget,142,242,84)
-        button(body,"GOLD",388,0,200,44,C.gold,function() fusionTarget="gold" open("fusion") end)
-        button(body,"DIAMOND",600,0,200,44,C.blue,function() fusionTarget="diamond" open("fusion") end)
-        label(body,"MAKE IT "..string.upper(target),388,56,420,54,30,if diamond then C.blue else C.gold)
-        label(body,"Use "..cost.." "..source.." copies to make 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected))..", for looks only.",392,118,420,76,22)
-        meter(body,400,214,400,owned,cost,C.gold,string.format("%d / %d %s copies",owned,cost,source))
-        button(body,"Fuse",400,277,400,56,if owned>=cost then C.accent else C.card,function()
-            if owned<cost then notify("You need "..cost.." "..source.." copies",C.red) return end
-            open("fusionConfirm")
-        end)
-        button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
-        local patternHeight=math.min(60,math.max(47,45/viewportScale()))
-        if fusionMenuOk then button(body,"Pattern fusion",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
-    elseif name=="fusionConfirm" then
-        local diamond=fusionTarget=="diamond"
-        local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
-        local source=if diamond then "Gold" else "Base"
-        local target=if diamond then "Diamond" else "Gold"
-        heading.Text,header.BackgroundColor3="Confirm "..target.." Fusion",if diamond then C.blue else C.gold
-        art(body,"mutation_"..fusionTarget,26,35,230)
-        label(body,"Use "..cost.." "..source.." copies?",280,12,510,64,30)
-        label(body,"You get 1 "..target.." "..(Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected)).." and the "..source.." copies are used up",280,100,510,115,24)
-        button(body,"Confirm",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
-        button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
         -- Owner 2026-10-15: ONE Eggs screen = five nest slots + a single Next egg card (src/client/EggsScreen.luau).
         heading.Text,header.BackgroundColor3="Eggs",C.gold
@@ -1656,7 +1620,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
+        if table.find({"collection","detail","eggs","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -1753,7 +1717,7 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
 end)
 PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
 PrivateState.onChanged("LastRunNestCrystals", function() if active=="results" then body:ClearAllChildren() render(active) end end) -- BD-448: last private value set at settlement, so the rows show final numbers
-for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
+for _,attribute in {"LastEquipStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     PrivateState.onChanged(attribute, function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end

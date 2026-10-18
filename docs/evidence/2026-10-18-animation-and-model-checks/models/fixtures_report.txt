@@ -1,0 +1,189 @@
+Model check: good.blend (blend, 85.8 KB, Blender 5.1.2)
+RESULT: PASS   (0 fail, 0 warn, 19 pass)
+
+  PASS  triangles per part                       biggest part Body has 12 of 21,844 allowed
+  PASS  triangles in total                       12 triangles in 1 part(s), 8 vertices
+  PASS  size in studs                            width 3.50, height 6.60, length 7.70 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.00x the Compy's height, 1.00x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)   origin         material slots  UV   flags
+  ----  ---------  ------------------  -------------  --------------  ---  -----
+  Body  12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: flipped.blend (blend, 85.8 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 0 warn, 18 pass)
+
+  FAIL  face direction                           inside out (normals point in): Body (1 of 1 closed piece(s), 12 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  PASS  triangles per part                       biggest part Body has 12 of 21,844 allowed
+  PASS  triangles in total                       12 triangles in 1 part(s), 8 vertices
+  PASS  size in studs                            width 3.50, height 6.60, length 7.70 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.00x the Compy's height, 1.00x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)   origin         material slots  UV   flags
+  ----  ---------  ------------------  -------------  --------------  ---  -----
+  Body  12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: ngon.blend (blend, 85.8 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 2 warn, 17 pass)
+
+  WARN  n-gons (faces with more than 4 corners)  on Body (2): Roblox cuts them into triangles its own way; triangulate first
+  WARN  overlapping UVs                          UV faces lie on top of each other on Body (86%) (fine if the halves are mirrored on purpose)
+  PASS  triangles per part                       biggest part Body has 20 of 21,844 allowed
+  PASS  triangles in total                       20 triangles in 1 part(s), 12 vertices
+  PASS  size in studs                            width 2.60, height 3.00, length 3.00 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.39x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)   origin         material slots  UV   flags  
+  ----  ---------  ------------------  -------------  --------------  ---  -------
+  Body  20         2.60 x 3.00 x 3.00  bottom centre  1               yes  2 n-gon
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: heavy.blend (blend, 697.4 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 1 warn, 17 pass)
+
+  FAIL  triangles per part                       Body 47,600 over the 21,844 limit (split the part)
+  WARN  overlapping UVs                          UV faces lie on top of each other on Body (100%) (fine if the halves are mirrored on purpose)
+  PASS  triangles in total                       47,600 triangles in 1 part(s), 23,802 vertices
+  PASS  size in studs                            width 6.00, height 6.00, length 6.00 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.91x the Compy's height, 0.78x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.68 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)   origin         material slots  UV   flags
+  ----  ---------  ------------------  -------------  --------------  ---  -----
+  Body  47,600     6.00 x 6.00 x 6.00  bottom centre  1               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: names.blend (blend, 90.2 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 1 warn, 18 pass)
+
+  FAIL  part names                               Leg.001 (Blender renamed a duplicate; give each part its own real name), "xxxxxxxxxxxx..." (120 characters)
+  WARN  part names in scripts                    "my part" cannot be written as part.Name in a script (spaces, dots, dashes or a leading digit)
+  PASS  triangles per part                       biggest part Leg has 12 of 21,844 allowed
+  PASS  triangles in total                       48 triangles in 4 part(s), 32 vertices
+  PASS  size in studs                            all 4 parts together: width 18.50, height 6.60, length 7.70 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 1.00x the Compy's height, 1.00x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (4 bottom centre); whole model box z runs 0.00 to 6.60
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   4 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.09 MB
+
+Parts (largest first)
+  part                            triangles  W x H x L (studs)   origin         material slots  UV   flags
+  ------------------------------  ---------  ------------------  -------------  --------------  ---  -----
+  Leg                             12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+  Leg.001                         12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+  my part                         12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  12         3.50 x 6.60 x 7.70  bottom centre  1               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: scaled.blend (blend, 85.8 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 1 warn, 18 pass)
+
+  WARN  scale and rotation applied               not applied: Body (scale 2 x 2 x 2 and turned 0, 0, 30 degrees) (Object, Apply, Rotation and Scale).
+  PASS  triangles per part                       biggest part Body has 12 of 21,844 allowed
+  PASS  triangles in total                       12 triangles in 1 part(s), 8 vertices
+  PASS  size in studs                            width 13.76, height 13.20, length 16.84 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 2.00x the Compy's height, 2.19x its length.
+  PASS  pivot (origin) per part                  origin at the bottom centre, the project convention (docs/56)
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)      origin         material slots  UV   flags
+  ----  ---------  ---------------------  -------------  --------------  ---  -----
+  Body  12         13.76 x 13.20 x 16.84  bottom centre  1               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

@@ -1,0 +1,35 @@
+Video bar_ok.mp4: 24.00 fps, 24 frames, 128x96 (ffmpeg tile filter)
+Picture: docs\evidence\2026-10-18-animation-and-model-checks\video\bar_ok_strip.png
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  frame rate              OK     24.00 frames per second
+  duration                OK     24 frames = 1.00 s
+  loop continuity         OK     last to first change is 1.21x what its neighbours give (1.0 = seamless)
+  pops                    OK     no frame changes more than 5x the typical amount
+  held frames             OK     no stutter frames
+  joint angle range       N/A    needs bone data: use the .blend or .fbx
+  joint speed             N/A    needs bone data: use the .blend or .fbx
+  foot sliding            N/A    needs bone data: use the .blend or .fbx
+  ground penetration      N/A    needs bone data: use the .blend or .fbx
+  left/right foot timing  N/A    needs bone data: use the .blend or .fbx
+  easing                  N/A    needs bone data: use the .blend or .fbx
+
+Notes
+  - Pixel checks only: motion is judged from how much each frame differs from the last, not from joints.
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  frame rate              common frame rates; others get resampled on export
+  duration                seconds: shorter than 0.2 is a blink, longer than 5 is probably the wrong range selected
+  loop continuity         seam change between 10% and 2x of its neighbours
+  pops                    under 5x the typical change
+  held frames             none under 10% of the typical change
+  joint angle range       -
+  joint speed             -
+  foot sliding            -
+  ground penetration      -
+  left/right foot timing  -
+  easing                  -
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.
