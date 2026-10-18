@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
+import rehearsal_env  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_load  # noqa: E402
 
@@ -88,8 +89,50 @@ def build_harness() -> str:
     cross = (ROOT / "tools" / "multiplayer_cross_player.luau").read_text(encoding="utf-8")
     if body.count(REPORT_MARKER) != 1:
         raise SystemExit("multiplayer_sim.luau lost its report marker")
+    body, cross = rehearsal_scenarios(body, cross)
     body = body.replace(REPORT_MARKER, cross + "\n" + REPORT_MARKER)
     return "local SCENARIO_FAIL_RATE = 0\n" + head + "\n" + body
+
+
+# docs/152 BD-626: three scenario families assert the flag-OFF state. Under the all-on rehearsal Config (tools/run_rehearsal.py sets
+# BD_REHEARSAL) each one runs ITS scenario with just that flag turned off through the scenario's own Config override, so the off-state
+# rule is still proved while the other 40-odd scenarios run with every flag on. Plain CI leaves the text untouched.
+OBJECTIVE_OFF_SESSION = """
+-- docs/152 BD-626 (rehearsal only): the profile scan above ran with ObjectivesEnabled ON. The off-state proof is a session of its own:
+-- one settlement, one hatch and an equip with the flag forced off; the counters are reset first so they speak for this session only.
+do
+    OBJECTIVE_PROBE.profiles, OBJECTIVE_PROBE.withField, OBJECTIVE_PROBE.operations = 0, 0, 0
+    OBJECTIVE_LOADS = 0
+    SCENARIO_OVERRIDES = {ObjectivesEnabled = false}
+    runScenario("objective-hooks-off-session", 600, function(env, server)
+        local p = connect(env, 3401)
+        startRun(env, p, 40)
+        env.RL.tryEnd(p, p.Character, "ManualExit")
+        sleep(30)
+        local eggId = env.PS.get(p, "NextChestId")
+        sleep(10)
+        env.Repo.claimChest(p, eggId)
+        env.Repo.equipSpecies(p, "raptor")
+        sleep(20)
+        disconnect(env, p)
+        sleep(20)
+    end)
+end
+
+"""
+
+
+def rehearsal_scenarios(body: str, cross: str) -> tuple[str, str]:
+    """Pins of the three flag-off scenario families (see above). `pin()` insists each target occurs exactly once, also in plain CI."""
+    body = rehearsal_env.pin(body, '    local off = {}\n    runScenario("feature-remotes-flags-off", 300, function(env, server)',
+                             '    local off = {}\n    SCENARIO_OVERRIDES = {FastTravelPerk = false}\n    runScenario("feature-remotes-flags-off", 300, function(env, server)',
+                             label="sim feature-remotes-flags-off")
+    body = rehearsal_env.pin(body, 'do\n    currentScenario = "objective-hooks-off"\n',
+                             OBJECTIVE_OFF_SESSION + 'do\n    currentScenario = "objective-hooks-off"\n', label="sim objective-hooks-off")
+    body = rehearsal_env.pin(body, 'OBJECTIVE_PROBE.profiles >= 100', 'OBJECTIVE_PROBE.profiles >= 1', label="sim objective probe size")
+    cross = rehearsal_env.pin(cross, 'SCENARIO_OVERRIDES = if caveHub then {CaveHub = true} else nil',
+                              'SCENARIO_OVERRIDES = if caveHub then {CaveHub = true} else {CaveHub = false}', label="sim hub-scale-off")
+    return body, cross
 
 
 STATIC = [

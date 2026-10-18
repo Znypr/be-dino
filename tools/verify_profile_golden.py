@@ -28,6 +28,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
+import rehearsal_env  # noqa: E402
 import verify_load  # noqa: E402
 
 FIXTURE = ROOT / "tools" / "fixtures" / "profile_golden.json"
@@ -54,7 +55,7 @@ def patch_head(head: str) -> str:
     return head
 
 
-def harness(root: Path, dump: bool) -> str:
+def harness(root: Path, dump: bool, committed: bool = False) -> str:
     marker_at = verify_load.HARNESS.index(HEAD_MARKER)
     head = patch_head(verify_load.HARNESS[:marker_at])
     entries = []
@@ -62,16 +63,19 @@ def harness(root: Path, dump: bool) -> str:
         for path in sorted((root / folder).glob("*.luau")):
             if path.stat().st_size > EMBED_LIMIT:
                 continue
-            entries.append(f"[{json.dumps(f'{folder}/{path.stem}')}] = {verify_load.long_string(path.read_text(encoding='utf-8'))}")
+            text = path.read_text(encoding="utf-8")
+            if committed and folder == "src/shared" and path.stem == "Config":
+                text = rehearsal_env.committed_config(text)  # docs/152 BD-626: the fixture was recorded from the committed Config
+            entries.append(f"[{json.dumps(f'{folder}/{path.stem}')}] = {verify_load.long_string(text)}")
     head = head.replace("__SOURCES__", "{\n" + ",\n".join(entries) + "\n}")
     body = (ROOT / "tools" / "profile_golden.luau").read_text(encoding="utf-8").replace("__DUMP__", "true" if dump else "false")
     return "local SCENARIO_FAIL_RATE = 0\n" + head + "\n" + body
 
 
-def run(runner: str, root: Path, dump: bool = False) -> tuple[list[tuple[int, str, int, str]], dict[int, str], list[str]]:
+def run(runner: str, root: Path, dump: bool = False, committed: bool = False) -> tuple[list[tuple[int, str, int, str]], dict[int, str], list[str]]:
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "golden.luau"
-        path.write_text(harness(root, dump), encoding="utf-8")
+        path.write_text(harness(root, dump, committed), encoding="utf-8")
         done = subprocess.run([runner, str(path)], capture_output=True, text=True, encoding="utf-8", errors="replace")
     steps, texts, problems = [], {}, []
     for line in done.stdout.splitlines():
@@ -132,7 +136,10 @@ def main() -> int:
         print(f"Old and new code agree at all {len(new_steps)} steps: {total} bytes of canonical profile, results and owner state are identical.")
         return 0
 
-    steps, _, problems = run(args.runner, source)
+    # docs/152 BD-626: in the all-on rehearsal tree Config.luau returns the all-on values, which add fields to the stored profile of the
+    # scenarios that take the Config as it comes, so the byte fixture (recorded from the committed Config) is compared against the
+    # COMMITTED Config there, as in CI; the all-on session is then checked below for what it can honestly prove.
+    steps, _, problems = run(args.runner, source, committed=rehearsal_env.ACTIVE)
     if problems:
         print("\n".join(problems))
         return 1
@@ -148,6 +155,31 @@ def main() -> int:
         print("The stored profile changed. A pure refactor must not do that (docs/150). If a PR changes stored data on purpose, record the new fixture with --record and say so.")
         return 1
     print(f"Golden session passed: {len(steps)} steps, stored profile, results and owner state match the fixture byte for byte (fingerprints).")
+    if rehearsal_env.ACTIVE:
+        return all_on_session(args.runner, source, golden)
+    return 0
+
+
+def all_on_session(runner: str, source: Path, golden: list) -> int:
+    """The same scripted session with the all-on Config: it must finish, play the same steps, and give the same bytes twice.
+
+    The fingerprints legitimately differ from the committed ones (the flag-on features add fields to the stored profile), so they are not
+    compared with the fixture; what the all-on build can prove is that no step crashes, none is skipped, and nothing in it depends on the
+    clock, a table order or a random seed that is not pinned.
+    """
+    first, _, problems = run(runner, source)
+    second, _, again = run(runner, source)
+    errors = [f"all-on session: {p}" for p in problems + again]
+    if [(s[0], s[1]) for s in first] != [(g[0], g[1]) for g in golden]:
+        errors.append("all-on session: the steps (numbers or names) differ from the fixture")
+    if first != second:
+        errors.append("all-on session: two runs give different fingerprints (the session is not deterministic with every flag on)")
+    if errors:
+        print("\n".join(errors))
+        return 1
+    differing = [g[0] for g, s in zip(golden, first) if tuple(g) != s]
+    print(f"All-on session passed: {len(first)} steps, same steps as the fixture, identical twice; {len(differing)} stored-profile fingerprints "
+          f"differ from the committed-Config fixture by design (first at step {differing[0] if differing else 'none'}).")
     return 0
 
 

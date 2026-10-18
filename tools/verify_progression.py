@@ -7,6 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 import profile_sources
+import rehearsal_env
 def module(path):return profile_sources.module(path) # docs/150: ProfileRepository plus the parts it installs
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\nlocal GameConfig='+module('src/shared/Config.luau')+'\n'
@@ -968,7 +969,19 @@ h.FloorMaterial="grass" blocked=true leapNow=800 activate(user) assert(user.attr
 blocked=false storage.probe.cfg.ObjectivesEnabled=false
 print("Leap handler passed: client-owned leap (no ownership change, no server velocity), envelope distance/height/speed/lift, wall rollback, 30s penalty, cooldown and air rejection")
 """
- return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('PAID_RANDOM_GATE_MODULE',module('src/shared/PaidRandomGate.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ # docs/152 BD-626: the repository picks its store wrapper from IdentityPersistentEnabled when the module is built, and the published-Studio
+ # section builds its own copy expecting no identity sidecar: the flag is off for that one build (pinned before the module text is inserted).
+ s=rehearsal_env.pin(s,'local PublishedRepository=REPO_MODULE','mutableConfig.IdentityPersistentEnabled=false local PublishedRepository=REPO_MODULE',label='progression published-Studio identity pin')
+ text=s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('PAID_RANDOM_GATE_MODULE',module('src/shared/PaidRandomGate.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ # docs/152 BD-626: under the all-on rehearsal Config the two off-state sections run with their ONE flag (and the per-dino flag the quote
+ # section expects off) forced off in the harness Config; the sections after them turn the flags on themselves as always.
+ text=rehearsal_env.pin(text,'assert(GameConfig.IdentityFusionPreviewEnabled==false,"the committed Config has the fusion flag off")',
+  'mutableConfig.IdentityFusionPreviewEnabled=false mutableConfig.PerDinoCosmeticsEnabled=false',label='progression fusion flag-off pin')
+ text=rehearsal_env.pin(text,'mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.',
+  'mutableConfig.ObjectivesEnabled=false mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config. (rehearsal: the file expects objectives off until it turns them on around one fusion)',label='progression objectives flag-off pin')
+ text=rehearsal_env.pin(text,'assert(GameConfig.IdentityPersistentEnabled==false,"committed default must stay off")',
+  'mutableConfig.IdentityPersistentEnabled=false',label='progression identity flag-off pin')
+ return text
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

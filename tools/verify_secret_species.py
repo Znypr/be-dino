@@ -34,6 +34,7 @@ import verify_odds_copy  # noqa: E402  (the real odds modules for part C)
 import verify_rewards  # noqa: E402  (reuses the mocked-DataStore prefix)
 import verify_rollback  # noqa: E402  (the frozen Build 020 reader)
 import release_profiles  # noqa: E402
+import rehearsal_env  # noqa: E402
 import profile_sources  # noqa: E402
 
 # Hash of RewardMath.computeChestReward over seeds 1..400 x run sizes {1, 40, 120, 400} x 10 rolls, taken from the UNMODIFIED module
@@ -354,7 +355,11 @@ def part_a():
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
     ]:
         s = s.replace(token, module(path))
-    return s.replace('@@GOLDEN@@', str(GOLDEN_FLAG_OFF_HASH))
+    s = s.replace('@@GOLDEN@@', str(GOLDEN_FLAG_OFF_HASH))
+    # docs/152 BD-626: under the all-on rehearsal Config part A's flag-off section (the golden hash of the flag-off reward draws) runs on a
+    # private copy of the Config with SecretSpeciesEnabled forced off; part B has its own flag-on runs.
+    return rehearsal_env.pin(s, 'check(Config.SecretSpeciesEnabled == false, "the committed flag is OFF")',
+                             'Config = table.clone(Config) Config.SecretSpeciesEnabled = false', label='secret species flag-off pin')
 
 
 # ---------------------------------------------------------------------------------------------------------------- part B
@@ -1070,6 +1075,7 @@ def part_c():
 # C2: a secret species WITH a model, tested with FAKE ids for all seven (no real mesh id; the flag and the shipped files stay untouched).
 # The tree copy is a scratch directory; the shipped sources are only read.
 WIRING_TOOLS = ['verify_scale_ladder.py', 'verify_camera_framing.py', 'verify_hit_sizes.py', 'verify_mouth_reach.py', 'verify_lowpoly_dinos.py']
+SUPPORT_TOOLS = ['rehearsal_env.py']  # imported by the wiring tools above (BD-626); copied, never run
 FAKE_BASE = 9990000000000  # 13 digits, all fake: never a published asset
 SECRET_ROWS = re.compile(r'^(\s{12})(\w+) = \{scale = ([\d.]+), tier = (\d), basis = "(\w+)"', re.M)
 
@@ -1085,7 +1091,7 @@ def build_tree(dst, fill=True, measured=True, lowpoly=True):
     LowPolyDinoAssets entries and mark the ladder rows measured."""
     shutil.copytree(ROOT / 'src', dst / 'src')
     (dst / 'tools').mkdir()
-    for name in WIRING_TOOLS:
+    for name in WIRING_TOOLS + SUPPORT_TOOLS:
         shutil.copy(ROOT / 'tools' / name, dst / 'tools' / name)
     (dst / 'docs').mkdir()
     shutil.copy(ROOT / 'docs/114-handbook.md', dst / 'docs/114-handbook.md')

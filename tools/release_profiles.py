@@ -205,27 +205,36 @@ REHEARSAL_ON = [
 ]
 _REHEARSAL_ON_KEYS = {key for key, _ in REHEARSAL_ON}
 
+# The second scratch variant (BD-626) turns on everything the first one does EXCEPT these, which stay at the playtest value (off).
+# CombatEnabled replaces the instant bigger-eats-smaller rule, and PredationService returns at once while combat is on, so the
+# all-on build can never prove PredationAtMouth: the no-combat variant exists to run that rule (docs/152 s9).
+NO_COMBAT_OFF = {"CombatEnabled": "BD-243 HP combat replaces instant predation; with it on PredationAtMouth is inert, so this variant keeps it off to exercise the mouth rule"}
 
-def _rehearsal_rules() -> list[Rule]:
+
+def _rehearsal_rules(keep_off: dict[str, str] | None = None) -> list[Rule]:
+    keep_off = keep_off or {}
     rules: list[Rule] = []
     for rule in PROFILES["playtest"]:
         if rule.key in _REHEARSAL_ON_KEYS and rule.mode == "require":
-            continue  # the playtest pins these off; the rehearsal turns them on
+            continue  # the playtest pins these off; the rehearsal turns them on (unless the variant keeps the flag off, below)
         if rule.key in ("PlaytestUniverseId", "PlaytestPlaceId") and rule.mode == "check":
             rules.append(Rule(rule.key, "check", predicate=_id_or_zero, reason="rehearsal: BD-004 ids are not needed offline"))
             continue
         rules.append(rule)
-    rules.extend(Rule(key, "set", True, reason=f"rehearsal: {why}") for key, why in REHEARSAL_ON)
+    rules.extend(Rule(key, "set", True, reason=f"rehearsal: {why}") for key, why in REHEARSAL_ON if key not in keep_off)
+    rules.extend(Rule(key, "require", False, reason=f"rehearsal variant: {why}") for key, why in keep_off.items())
     return rules
 
 
 PROFILES["all-on-rehearsal"] = _rehearsal_rules()
+PROFILES["all-on-no-combat"] = _rehearsal_rules(NO_COMBAT_OFF)
 
 STREAMING: dict[str, Streaming] = {
     "default": Streaming(),
     "playtest": Streaming(),
     "playtest-streaming": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
     "all-on-rehearsal": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
+    "all-on-no-combat": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
 }
 
 

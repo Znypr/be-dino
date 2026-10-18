@@ -28,6 +28,8 @@ import re
 import subprocess
 import tempfile
 
+import rehearsal_env
+
 ROOT = Path(__file__).resolve().parents[1]
 
 BODY = r'''
@@ -238,7 +240,9 @@ def main():
         problems.append('expected 22 species + 7 secret species in ScaleLadder, found %d' % count)
     if capk is None or not 1.0 <= capk <= 1.10:
         problems.append('Config.FoodReachCapCompy is %s, expected a number in the parity band 1.0 to 1.10 (docs/115 MR4)' % (capk,))
-    if flags != ('false', 'false'):
+    # docs/152 BD-626: the all-on rehearsal Config has both flags on; the numeric rules above and below do not depend on them, so that
+    # build accepts true / true (the committed Config, and every other build, still has to say false / false).
+    if flags != ('false', 'false') and not (rehearsal_env.ACTIVE and flags == ('true', 'true')):
         problems.append('Config.FoodPickupAtMouth / PredationAtMouth are %s, expected false / false (docs/115 MR6: off until the BD-527 pace check)' % (flags,))
     for (species, s), (snout, head, r, dirs, legacy, ufront, urad, uhead, edge) in sorted(rows.items()):
         for d in dirs:

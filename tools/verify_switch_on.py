@@ -25,6 +25,7 @@ import release_playtest  # noqa: E402
 import release_profiles as profiles  # noqa: E402
 
 PROFILE = "all-on-rehearsal"
+VARIANT = "all-on-no-combat"  # BD-626: everything on except CombatEnabled, so PredationAtMouth (inert under combat) can be exercised
 
 # Boolean Config flags that are false in the committed Config and stay false in the rehearsal, with the reason.
 EXCLUDED = {
@@ -99,6 +100,32 @@ def check_profile() -> None:
             fail(f"EXCLUDED lists {key} but Config.luau has no such key")
         elif after[key][-1][1] is True:
             fail(f"EXCLUDED lists {key} but {PROFILE} turns it on")
+
+
+def check_variant() -> None:
+    """The no-combat variant: a scratch profile that equals the all-on one except for CombatEnabled (BD-626)."""
+    if VARIANT not in profiles.PROFILES:
+        fail(f"profile {VARIANT!r} is missing from tools/release_profiles.py")
+        return
+    source = config_source()
+    rewritten, report = profiles.apply_profile(source, VARIANT)
+    for error in report.errors:
+        fail(f"{VARIANT}: {error}")
+    after = profiles.config_entries(rewritten)
+    full = profiles.config_entries(profiles.apply_profile(source, PROFILE)[0])
+    if not profiles.streaming_for(VARIANT).scratch or VARIANT in release_playtest.shipped_profiles():
+        fail(f"{VARIANT} must be a scratch profile and must not be a shipped profile")
+    for flag in release_playtest.PAID_FLAGS:
+        if after[flag][-1][1] is not False or not any(r.key == flag and r.mode == "require" and r.value is False for r in profiles.rules_for(VARIANT)):
+            fail(f"{VARIANT} must keep {flag} = false by a require rule: the paid line stays closed")
+    differing = sorted(key for key in full if key in after and full[key][-1][1] != after[key][-1][1])
+    if differing != ["CombatEnabled"]:
+        fail(f"{VARIANT} must differ from {PROFILE} in CombatEnabled only, found {differing}")
+    elif after["CombatEnabled"][-1][1] is not False or not any(r.key == "CombatEnabled" and r.mode == "require" and r.value is False for r in profiles.rules_for(VARIANT)):
+        fail(f"{VARIANT} must require CombatEnabled = false")
+    for key in ("PredationAtMouth", "FoodPickupAtMouth"):
+        if after[key][-1][1] is not True:
+            fail(f"{VARIANT} must have {key} on: that is what it exists to exercise")
 
 
 def server_files() -> list[Path]:
@@ -200,6 +227,7 @@ def check_rules() -> None:
 
 def main() -> int:
     check_profile()
+    check_variant()
     check_remote_names()
     check_config_reads()
     check_lazy_requires()
@@ -209,7 +237,7 @@ def main() -> int:
     if errors:
         print(f"Switch-on checks FAILED: {len(errors)} problem(s).")
         return 1
-    print(f"Switch-on checks passed: {PROFILE} is a scratch profile, the paid line is closed, every off flag is rehearsed or excluded "
+    print(f"Switch-on checks passed: {PROFILE} and {VARIANT} are scratch profiles, the paid line is closed, every off flag is rehearsed or excluded "
           f"({len(EXCLUDED)} excluded), remote names are unique, every Config read exists, lazy requires resolve, flag-order rules hold.")
     return 0
 

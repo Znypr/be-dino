@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import release_profiles  # noqa: E402
+import rehearsal_env  # noqa: E402
 import verify_rewards  # noqa: E402  (reuses the mocked DataStore prefix)
 
 
@@ -759,7 +760,11 @@ def script() -> str:
     pure = PURE.replace('@@DOC_ROWS@@', doc_literal).replace('@@DOC_COUNT@@', str(len(rows)))
     # The pure part and the service part run in their own `do` scopes of the same chunk so locals do not leak into the repository run.
     body = 'do\n' + pure + '\n' + SERVICE + '\nend\n' + REPO
-    return fill(prefix + '\n' + body)
+    text = fill(prefix + '\n' + body)
+    # docs/152 BD-626: under the all-on rehearsal Config, section A (flag-off identity) runs with this ONE flag forced off in the harness
+    # copy of the Config (every other flag stays on) instead of stopping at the pin; section B then turns it on as always.
+    return rehearsal_env.pin(text, 'assert(GameConfig.ObjectivesEnabled==false,"the committed Config has the flag off")',
+                             'GameConfig.ObjectivesEnabled=false', label='objectives flag-off pin')
 
 
 def main(argv=None) -> int:

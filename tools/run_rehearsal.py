@@ -142,10 +142,14 @@ def commands(luau: str, compiler: str, only: list[str]) -> list[list[str]]:
     return out
 
 
-def run_one(cmd: list[str], cwd: Path, timeout: int) -> dict:
+def run_one(cmd: list[str], cwd: Path, timeout: int, profile: str = "none") -> dict:
     started = time.time()
+    env = dict(os.environ)
+    env.pop("BD_REHEARSAL", None)
+    if profile != "none":
+        env["BD_REHEARSAL"] = profile  # tools/rehearsal_env.py: verifiers run their flag-on sections past the "committed Config has the flag off" pins
     try:
-        done = subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=timeout)
+        done = subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=timeout, env=env)
         code = done.returncode
         output = (done.stdout + b"\n" + done.stderr).decode("utf-8", "replace")
     except subprocess.TimeoutExpired as error:
@@ -153,9 +157,9 @@ def run_one(cmd: list[str], cwd: Path, timeout: int) -> dict:
     return {"cmd": Path(cmd[1]).name, "args": cmd[2:], "code": code, "seconds": round(time.time() - started, 1), "output": output}
 
 
-def run_all(cmds: list[list[str]], cwd: Path, jobs: int, timeout: int) -> list[dict]:
+def run_all(cmds: list[list[str]], cwd: Path, jobs: int, timeout: int, profile: str = "none") -> list[dict]:
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        return list(pool.map(lambda c: run_one(c, cwd, timeout), cmds))
+        return list(pool.map(lambda c: run_one(c, cwd, timeout, profile), cmds))
 
 
 EXPECTED_PATH = Path(__file__).resolve().parent / "rehearsal_expected.json"
@@ -236,7 +240,7 @@ def main(argv=None) -> int:
         print("  off: " + ", ".join(sorted(k for k, v in flags.items() if not v)))
         print("  overridden vs committed Config: " + ", ".join(f"{k}={v}" for k, v in OVERRIDES.get(args.profile, {}).items()))
         print(f"running {len(cmds)} commands with {args.jobs} workers in {tree}")
-        results = run_all(cmds, tree, args.jobs, args.timeout)
+        results = run_all(cmds, tree, args.jobs, args.timeout, args.profile)
         failed = [r for r in results if r["code"] != 0]
         if args.profile != "none" and not args.no_baseline:
             print(f"running the failing commands again on the {args.baseline!r} tree for comparison")

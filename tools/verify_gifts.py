@@ -25,6 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import release_profiles  # noqa: E402
+import rehearsal_env  # noqa: E402
 import verify_rewards  # noqa: E402  (reuses the mocked DataStore prefix)
 
 FLAGS = ('GiftingEnabled', 'AdminGiftsEnabled', 'GiftClaimEnabled')
@@ -1453,7 +1454,22 @@ def fill(text: str) -> str:
 
 def script() -> str:
     prefix = verify_rewards.HARNESS.split('local function user(id)')[0]
-    return fill(prefix + '\n' + PURE + '\n' + REPO + '\n' + SERVICE + '\n' + ADMIN + '\n' + OLD)
+    return rehearsal_pins(fill(prefix + '\n' + PURE + '\n' + REPO + '\n' + SERVICE + '\n' + ADMIN + '\n' + OLD))
+
+
+def rehearsal_pins(text: str) -> str:
+    """docs/152 BD-626: under the all-on rehearsal Config the flag-off section runs with the three gift flags forced off in the harness Config
+    (every other flag stays on); the sections after it turn them on themselves. verify_gift_ui reuses this for its (shorter) script."""
+    text = rehearsal_env.pin(
+        text,
+        'check(GameConfig.GiftClaimEnabled==false and GameConfig.GiftingEnabled==false and GameConfig.AdminGiftsEnabled==false,"the committed Config has all three flags off")',
+        'GameConfig.GiftClaimEnabled=false GameConfig.GiftingEnabled=false GameConfig.AdminGiftsEnabled=false',
+        label='gifts flag-off pin')
+    # The Gifts store name derives from the profile store name; the rehearsal Config carries the playtest store name, not the committed one.
+    if 'W.dsNames[1]=="BeDino_PrivateTest_v1_Gifts"' not in text:
+        return text  # the shorter gift UI script has no service-store section
+    return rehearsal_env.pin(text, 'check(W.dsNames[1]=="BeDino_PrivateTest_v1_Gifts" and #W.dsNames==1,',
+                             'check(W.dsNames[1]==GameConfig.ProfileDataStoreName.."_Gifts" and #W.dsNames==1,', label='gifts store name pin')
 
 
 def main(argv=None) -> int:

@@ -30,6 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
+import rehearsal_env  # noqa: E402
 import verify_objectives  # noqa: E402
 
 REPO = 'src/server/ProfileRepository.luau'
@@ -283,7 +284,10 @@ def dynamic_script() -> str:
     ]:
         assert prefix.count(old) == 1, old
         prefix = prefix.replace(old, new)
-    return verify_objectives.fill(prefix + '\n' + BODY)
+    text = verify_objectives.fill(prefix + '\n' + BODY)
+    # docs/152 BD-626: under the all-on rehearsal Config, section A (flag-off session) runs with ObjectivesEnabled forced off in the harness Config
+    return rehearsal_env.pin(text, 'assert(GameConfig.ObjectivesEnabled==false,"the committed Config has the flag off")',
+                             'GameConfig.ObjectivesEnabled=false', label='objective hooks flag-off pin')
 
 
 SERVICE_BOOT = r'''

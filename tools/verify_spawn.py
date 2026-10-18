@@ -7,6 +7,7 @@ from pathlib import Path
 import argparse, re, subprocess, sys, tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_profiles
+import rehearsal_env
 ROOT = Path(__file__).resolve().parents[1]
 def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
 
@@ -123,6 +124,9 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()
     static_checks()
     source = (ROOT / 'src/shared/Config.luau').read_text()
-    print('Default: ' + run(args.runner, source, False))
-    rewritten, _ = release_profiles.apply_profile(source, 'playtest')
+    # docs/152 BD-626: in the all-on rehearsal tree the Config file returns the all-on values (CaveHub on). The DEFAULT variant is checked
+    # against the committed Config (rehearsal_env.committed_config, a no-op everywhere else); the PLAYTEST variant against the rehearsal
+    # Config itself, i.e. the cave hub together with every other flag on.
+    print('Default: ' + run(args.runner, rehearsal_env.committed_config(source), False))
+    rewritten = source if rehearsal_env.ACTIVE else release_profiles.apply_profile(source, 'playtest')[0]
     print('Playtest: ' + run(args.runner, rewritten, True))
