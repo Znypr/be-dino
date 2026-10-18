@@ -1,0 +1,25 @@
+17:02:11.532  Server: server started
+{"event":"meta","build":"Build 021 playtest","date":"2026-10-19","testers":6}
+17:05:40.101  [BD-TELEMETRY] {"event":"run_end","duration_s":300,"reason":"ManualExit","food":625,"food_is_estimate":true,"food_raw":640,"eggs_food":15,"weather_s":40,"eggs":15,"nests":0,"crystals":30}
+17:11:02.774  [BD-TELEMETRY] {"event":"run_end","duration_s":280,"reason":"Death","food":583,"food_is_estimate":true,"food_raw":600,"eggs_food":14,"weather_s":0,"eggs":14,"nests":0,"crystals":28}
+17:16:30.020  [BD-TELEMETRY] {"event":"run_end","duration_s":350,"reason":"ManualExit","food":708,"food_is_estimate":true,"food_raw":720,"eggs_food":17,"weather_s":90,"eggs":17,"nests":1,"crystals":34}
+17:17:00.001  [BD-TELEMETRY] {"event":"session_end","total_s":1500,"runs":3,"hub_s":500,"run_s":1000}
+[BD-TELEMETRY] {"event":"run_end","duration_s":310,"reason":"ManualExit","food":667,"food_is_estimate":true,"food_raw":660,"eggs_food":16,"weather_s":0,"eggs":16,"nests":0,"crystals":32}
+[BD-TELEMETRY] {"event":"run_end","duration_s":12,"reason":"Death","food":0,"food_is_estimate":true,"food_raw":0,"eggs_food":0,"weather_s":0,"eggs":0,"nests":0,"crystals":0}
+[BD-TELEMETRY] {"event":"session_end","total_s":1100,"runs":2,"hub_s":400,"run_s":700}
+[BD-TELEMETRY] {"event":"run_end","duration_s":240,"reason":"Disconnect","food":375,"food_is_estimate":true,"food_raw":380,"eggs_food":9,"weather_s":0,"eggs":9,"nests":0,"crystals":18}
+[BD-TELEMETRY] {"event":"session_end","total_s":600,"runs":1,"hub_s":300,"run_s":300}
+[BD-TELEMETRY] {"event":"session_end","total_s":90,"runs":0,"hub_s":90,"run_s":0}
+[BD-TELEMETRY] {"event":"session_end","total_s":150,"runs":0,"hub_s":150,"run_s":0}
+[BD-TELEMETRY] {"event":"run_end","duration_s":330,"reason":"ManualExit","food":750,"food_is_estimate":true,"food_raw":750,"eggs_food":18,"weather_s":0,"eggs":18,"nests":1,"crystals":36}
+[BD-TELEMETRY] {"event":"run_end","duration_s":290,"reason":"Predation","food":500,"food_is_estimate":true,"food_raw":520,"eggs_food":12,"weather_s":0,"eggs":12,"nests":0,"crystals":24}
+[BD-TELEMETRY] {"event":"run_end","duration_s":300,"reason":"ManualExit","food":625,"food_is_estimate":true,"food_raw":640,"eggs_food":15,"weather_s":0,"eggs":15,"nests":0,"crystals":30}
+[BD-TELEMETRY] {"event":"run_end","duration_s":260,"reason":"Death","food":542,"food_is_estimate":true,"food_raw":540,"eggs_food":13,"weather_s":0,"eggs":13,"nests":0,"crystals":26}
+[BD-TELEMETRY] {"event":"session_end","total_s":2100,"runs":4,"hub_s":600,"run_s":1500}
+17:40:00.000  Client warning: texture preload slow
+[BD-TELEMETRY] {this line is broken
+{"event":"hologram","x":1}
+[BD-FEEDBACK] {"event":"feedback","fun":3,"level":2,"looks":3,"runs":2,"location":"Run","species":"compy","text":"I like the eggs!"}
+[BD-FEEDBACK] {"event":"feedback","fun":3,"level":2,"looks":2,"runs":3,"location":"Hub","species":"compy","text":"The shop door is hard to find"}
+[BD-FEEDBACK] {"event":"feedback","fun":2,"level":3,"looks":3,"runs":1,"location":"Run","species":"compy","text":"The big dino ate me too fast"}
+[BD-FEEDBACK] {"event":"feedback","fun":3,"level":2,"looks":3,"runs":4,"location":"Hub","species":"compy","text":""}
