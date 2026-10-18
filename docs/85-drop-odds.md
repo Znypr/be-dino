@@ -78,19 +78,19 @@ BD-1033 (owner 2026-10-18, [186](186-pattern-colour-indexes-and-slower-species.m
 
 ## Colors (9, tiers of the ladder)
 
-Each egg has **two** color slots rolled independently. Tier chances come from the ladder (six tiers, renormalised) and split inside a tier by the old weights.
+Each egg has **two** color slots rolled independently. Tier chances come from the ladder (six tiers, renormalised) and split EQUALLY inside a tier (BD-1036). The colour rarity a dino shows is the **rarer of its two colours**; run `python tools/simulate_colour_timing.py` for the waiting times.
 
 | # | Color | Tier | % per slot | Both slots this color |
 |---:|---|---|---:|---:|
-| 1 | Cream | Common | 52.63% | 1 in 3.61 |
-| 2 | Blue | Common | 27.37% | 1 in 13 |
+| 1 | Cream | Common | 40% | 1 in 6.25 |
+| 2 | Blue | Common | 40% | 1 in 6.25 |
 | 3 | Green | Uncommon | 16% | 1 in 39 |
-| 4 | Teal | Rare | 1.422% | 1 in 4,943 |
-| 5 | Pink | Rare | 1.778% | 1 in 3,164 |
+| 4 | Teal | Rare | 1.6% | 1 in 3,906 |
+| 5 | Pink | Rare | 1.6% | 1 in 3,906 |
 | 6 | Amber | Epic | 0.64% | 1 in 24,411 |
 | 7 | Purple | Legendary | 0.128% | 1 in 610,256 |
-| 8 | Red | Mythic | 0.02048% | 1 in 23,841,858 |
-| 9 | Black | Mythic | 0.00512% | 1 in 381,469,727 |
+| 8 | Red | Mythic | 0.0128% | 1 in 61,035,156 |
+| 9 | Black | Mythic | 0.0128% | 1 in 61,035,156 |
 
 ## Mutations
 

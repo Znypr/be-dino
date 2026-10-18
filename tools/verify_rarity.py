@@ -51,6 +51,19 @@ local want={} local ct={} for i=1,6 do ct[i]=colorTier[i]/scale*100 end
 for i=1,6 do near(ct[i],expect[i]/.999936,5e-3) end
 local colorChances={} for i=1,6 do colorChances[i]=colorTier[i]/scale end
 ladder("EggColors tiers",colorChances)
+-- BD-1036: EQUAL split inside a tier, strictly less weight per colour in a rarer tier, tier membership as in docs/88, the shared helper agrees.
+do
+ local members={Common={"white","blue"},Uncommon={"green"},Rare={"pink","teal"},Epic={"gold"},Legendary={"violet"},Mythic={"red","black"}}
+ local weightOf={} local rarityOf={} for _,c in Progression.EggColors do weightOf[c.id]=c.weight rarityOf[c.id]=c.rarity end
+ assert(#Progression.EggColors==9,"9 colours (new colours are BD-1037)")
+ for tierName,ids in members do
+  for _,id in ids do assert(rarityOf[id]==tierName,id.." must be "..tierName) assert(weightOf[id]==weightOf[ids[1]],"equal split inside "..tierName) end
+ end
+ local order={"Common","Uncommon","Rare","Epic","Legendary","Mythic"}
+ for k=2,6 do assert(weightOf[members[order[k]][1]]<weightOf[members[order[k-1]][1]],"weight per colour must fall with the tier "..order[k]) end
+ local totals=Curve.tierTotals(Progression.EggColors)
+ for k=1,6 do near(totals[k],colorTier[k]/scale,1e-12) end
+end
 assert(Progression.EggColors[1].rarity=="Common")
 local tierOfLast=-1 for _,c in {"white","blue","green","pink","teal","gold","violet","red","black"} do
  local row for _,r in Progression.EggColors do if r.id==c then row=r end end

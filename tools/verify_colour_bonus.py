@@ -25,7 +25,20 @@ assert(Bonus.text(Progression.EggColors,g("red","white"))=="Colour bonus +5% gro
 assert(Bonus.text(Progression.EggColors,g("white","white"))==nil)
 local gained=500*Config.GrowthPerFood
 assert(gained*Bonus.multiplier(Progression.EggColors,g("black","black"))<=gained*1.1+1e-9)
-print("Colour bonus passed: Common 0 .. Mythic 5 per colour, sum of two, cap 10, max multiplier 1.10")
+-- BD-1036: the colour rarity a dino shows is the rarer of its two colours.
+local R=function(a,b) return Bonus.rarity(Progression.EggColors,g(a,b)) end
+assert(R("white","white")=="Common" and R("blue","white")=="Common" and R("green","white")=="Uncommon" and R("white","green")=="Uncommon")
+assert(R("pink","green")=="Rare" and R("teal","teal")=="Rare" and R("gold","pink")=="Epic" and R("violet","violet")=="Legendary")
+assert(R("red","white")=="Mythic" and R("white","black")=="Mythic" and R("black","red")=="Mythic","a Mythic accent OR main colour makes the dino Mythic")
+assert(Bonus.rarity(Progression.EggColors,{primaryColorId="violet"})=="Legendary","missing secondary counts as the primary")
+assert(R("nope","nope")=="Common" and R("nope","gold")=="Epic" and R("gold","nope")=="Epic","unknown ids count as Common")
+assert(Bonus.rarity(nil,g("red","red"))=="Common" and Bonus.rarity(Progression.EggColors,nil)=="Common" and Bonus.rarity({},"x")=="Common")
+assert(Curve.rarer("Rare","Epic")=="Epic" and Curve.rarer("Epic","Rare")=="Epic" and Curve.rarer("Mythic","Common")=="Mythic" and Curve.rarer(nil,nil)=="Common" and Curve.rarer("Rare","nope")=="Rare")
+for _,a in Progression.EggColors do for _,b in Progression.EggColors do -- never below either colour, symmetric, one of the two
+  local r,r2=R(a.id,b.id),R(b.id,a.id) assert(r==r2,"symmetric")
+  assert(Curve.index(r)>=Curve.index(a.rarity) and Curve.index(r)>=Curve.index(b.rarity) and (r==a.rarity or r==b.rarity))
+end end
+print("Colour bonus passed: Common 0 .. Mythic 5 per colour, sum of two, cap 10, max multiplier 1.10; displayed colour rarity = the rarer of two")
 '''
 def script():
     return ('local Curve=' + module('src/shared/RarityCurve.luau') + '\nlocal Config=' + module('src/shared/Config.luau')
