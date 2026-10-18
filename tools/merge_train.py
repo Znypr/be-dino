@@ -14,7 +14,7 @@ What it does (it never rebases, never force-pushes and never touches another wor
      the repo checkout).
   2. Per PR, in number order: `git merge --no-ff --no-commit origin/<branch>`. A docs/07-kanban.md conflict is
      fixed with the same per-row rule as tools/merge_main_into_pr.py (docs/166): a BD row takes the PR's text only
-     if the PR changed it versus the merge base, else the train's text. ANY other conflicted file: that PR is
+     if the PR changed it versus the merge base, else the train's text; if both changed it the edits are merged. ANY other conflicted file: that PR is
      skipped (merge aborted) and listed with the files. Then one merge commit per PR.
   3. verify_doc_ids and verify_handbook; then, on the committed result, verify_kanban_merge --base origin/main.
   4. Dry run (default) stops there and prints what would be pushed. `--push` pushes `train/<stamp>` (never
@@ -126,9 +126,12 @@ def merge_one(wt, remote, info):
                 raise mm.NeedsHuman("the kanban was added or deleted on one side")
             base_rows = vkm.rows_of(mm.git(wt, "show", "%s:%s" % (mb, KANBAN))[1]) if mb else {}
             main_text = mm.git(wt, "show", "HEAD:%s" % KANBAN)[1]
-            rep = mm.resolve_kanban_file(kb, base_rows, main_text, swap=True)
+            rep = mm.resolve_kanban_file(kb, base_rows, main_text, swap=True, pr_label="PR #%d" % n)
             mm.git(wt, "add", "--", KANBAN)
-            return "merged", "kanban fixed per row (kept the PR's copy of %d row(s))" % len(set(rep.kept_pr))
+            for k, mode, notes in rep.merged:
+                say(mm.merged_line(k, mode, notes))
+            return "merged", ("kanban fixed per row (kept the PR's copy of %d row(s), merged both edits of %d)"
+                              % (len(set(rep.kept_pr)), len(rep.merged)))
         if kb.exists() and mb:  # a clean git merge can still repeat a BD row
             base_rows = vkm.rows_of(mm.git(wt, "show", "%s:%s" % (mb, KANBAN))[1])
             main_text = mm.git(wt, "show", "HEAD:%s" % KANBAN)[1]
@@ -259,6 +262,9 @@ def main(argv=None, gh=real_gh):
     try:
         for info in picked:
             status, detail = merge_one(wt, a.remote, info)
+            if status == "merged" and mm.check_markers(wt):  # never commit leftover conflict markers
+                mm.git(wt, "merge", "--abort", check=False)
+                status, detail = "skipped", "conflict markers were left in the merge result (see above); fix it with merge_main_into_pr.py"
             if status == "merged":
                 commit_merge(wt, info)
                 merged.append(info)
@@ -273,6 +279,8 @@ def main(argv=None, gh=real_gh):
             return 1
         say("checks on the train:")
         failed = [n for n in ("verify_doc_ids.py", "verify_handbook.py") if mm.run_tool(wt, n)]
+        if mm.check_markers(wt):
+            failed.append("verify_no_conflict_markers.py")
         if not failed and mm.kanban_check(wt, remote_main):
             failed.append("verify_kanban_merge.py")
         if failed:

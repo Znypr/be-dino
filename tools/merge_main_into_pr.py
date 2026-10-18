@@ -10,7 +10,9 @@ What it does, in order (it never rebases, never force-pushes and never touches a
   1. `git fetch origin main <branch>`; makes a throwaway DETACHED worktree of the PR head in the temp folder.
   2. `git merge origin/main` there (no commit yet).
   3. docs/07-kanban.md conflicts are fixed row by row: a BD row keeps the PR's text ONLY if the PR changed that
-     row versus the merge base, otherwise main's text. Duplicate BD rows are dropped (the PR's edit wins, else
+     row versus the merge base, otherwise main's text. If BOTH changed it the two edits are MERGED: main's text
+     plus the PR's new outcome text (tools/kanban_merge_lib.py; prints a MERGED line, never drops either side).
+     Duplicate BD rows are dropped (the PR's edit wins, else
      the longest). Hunks with no BD row take main's side. Then `tools/board_summary.py` prints the counts.
   4. Any OTHER conflicted file: stop and show the hunks, unless the allowlist applies (below). The worktree
      stays so a human can finish: fix, `git add`, `git commit`, run the verifiers, push.
@@ -40,6 +42,8 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 import verify_kanban_merge as vkm  # noqa: E402  (row parsing and the post-commit check are shared, not copied)
+import kanban_merge_lib as kml  # noqa: E402  (merging two edits of one row, docs/166 section 3)
+import verify_no_conflict_markers as vncm  # noqa: E402  (refuse to commit leftover conflict markers)
 
 KANBAN = vkm.KANBAN
 REPO_SLUG = "Znypr/be-dino"
@@ -103,6 +107,16 @@ class KanbanReport:
         self.pr_only, self.deduped, self.dropped_text = [], [], []
         self.nonrow_hunks = 0
         self.warnings = []
+        self.merged = []  # (row id, mode, notes): both sides edited the row and the two edits were MERGED
+        self.pr_label = "the PR"
+
+
+def merge_both(out, k, base, main_line, pr_line, rep):
+    """Main AND the PR changed row k: keep main's text and add the PR's new outcome text (tools/kanban_merge_lib.py)."""
+    merged, mode, notes = kml.merge_row(base, main_line.rstrip(), pr_line.rstrip(), rep.pr_label)
+    out.append(merged)
+    rep.both_changed.append(k)
+    rep.merged.append((k, mode, notes))
 
 
 def resolve_kanban_hunk(ours, theirs, base_rows, rep):
@@ -134,17 +148,16 @@ def resolve_kanban_hunk(ours, theirs, base_rows, rep):
             if vkm.title(mine) != vkm.title(line):
                 raise NeedsHuman("%s was added on both sides with different titles: an id collision. Keep main's "
                                  "row and give the PR's row a new number (`python tools/next_bd_id.py`)." % k)
-            rep.both_changed.append(k)  # same task added twice with different tails: the PR's text is newer
-            out.append(mine)
-            rep.kept_pr.append(k)
+            merge_both(out, k, None, line, mine, rep)  # same task added twice with different tails
         elif mine == base:
             out.append(line)
             rep.took_main.append(k)
         else:
             if line.rstrip() != base:
-                rep.both_changed.append(k)
-            out.append(mine)
-            rep.kept_pr.append(k)
+                merge_both(out, k, base, line, mine, rep)
+            else:
+                out.append(mine)
+                rep.kept_pr.append(k)
     for l in ours:  # rows only on the PR's side of the hunk
         k = row_key(l)
         if not k or k in seen:
@@ -202,13 +215,14 @@ def title_differs(a, b):
     return vkm.title(a) != vkm.title(b)
 
 
-def resolve_kanban_file(path, base_rows, main_text, swap=False):
+def resolve_kanban_file(path, base_rows, main_text, swap=False, pr_label="the PR"):
     """Resolve every hunk in `path` (a conflicted docs/07-kanban.md). Returns a KanbanReport.
 
     Normally HEAD is the PR and the merged-in side is main. `swap=True` is for a merge TRAIN (tools/merge_train.py,
     docs/172): HEAD is the train (main's side of the rule) and the merged-in side is the PR."""
     text, eol = read_text(path)
     rep = KanbanReport()
+    rep.pr_label = pr_label
 
     def repl(m):
         ours, theirs = lines_of(m.group(1)), lines_of(m.group(3))
@@ -351,6 +365,30 @@ def kanban_check(wt, remote_main):
     return rc
 
 
+def merged_line(k, mode, notes):
+    what = {"appended": "main's text kept, the PR's new outcome text appended",
+            "fallback": "CHECK: main's text kept, the PR's whole text appended as '(from PR, check)'",
+            "main": "main's text kept (the PR added nothing new)",
+            "pr-only": "the PR's text taken (main left the description alone)",
+            "plain": "CHECK: could not split the row, the PR's row was kept; make sure main's edit is not lost"}[mode]
+    return "  MERGED %s: main AND the PR both edited this row; %s%s" % (k, what, ("; " + "; ".join(notes)) if notes else "")
+
+
+def check_markers(wt):
+    """Scan the tracked files of the worktree for leftover conflict markers. -> number of hits (printed)."""
+    try:
+        hits = vncm.scan(wt)
+    except RuntimeError as e:
+        say("  verify_no_conflict_markers could not run: %s" % e)
+        return 1
+    for name, number, line, hint in hits[:20]:
+        say("  %s:%d: %s   <- %s" % (name, number, line[:60], hint))
+    if len(hits) > 20:
+        say("  ... %d more" % (len(hits) - 20))
+    say("  verify_no_conflict_markers: %s" % ("ok" if not hits else "FAILED (%d marker line(s))" % len(hits)))
+    return len(hits)
+
+
 def commit_message(branch, rep):
     lines = ["Merge origin/main into %s" % branch, ""]
     if rep is not None:
@@ -358,6 +396,9 @@ def commit_message(branch, rep):
             lines.append("Kanban: kept the PR's copy of %s (the PR changed them)." % ", ".join(sorted(set(rep.kept_pr))))
         if rep.took_main:
             lines.append("Kanban: took main's copy of %s (the PR did not change them)." % ", ".join(sorted(set(rep.took_main))))
+        if rep.merged:
+            lines.append("Kanban: both sides edited %s; main's text kept and the PR's new text added."
+                         % ", ".join(sorted({m[0] for m in rep.merged})))
         if rep.deduped:
             lines.append("Kanban: dropped duplicate rows %s." % ", ".join(sorted(set(rep.deduped))))
         if rep.nonrow_hunks:
@@ -434,7 +475,7 @@ def main(argv=None):
                 if path == KANBAN:
                     base_rows = vkm.rows_of(git(wt, "show", "%s:%s" % (mb, KANBAN))[1])
                     main_text = git(wt, "show", "%s:%s" % (remote_main, KANBAN))[1]
-                    rep = resolve_kanban_file(full, base_rows, main_text)
+                    rep = resolve_kanban_file(full, base_rows, main_text, pr_label=("PR #%s" % number) if number else "the PR")
                     say("  %s: resolved per row" % path)
                 elif fnmatch.fnmatchcase(path, "docs/*.md"):
                     n = resolve_table_file(full)
@@ -476,8 +517,8 @@ def main(argv=None):
             for k, what in (("kept PR's", rep.kept_pr), ("duplicates dropped", rep.deduped)):
                 if what:
                     say("  %s: %s" % (k, ", ".join(sorted(set(what)))))
-            for k in sorted(set(rep.both_changed)):
-                say("  CHECK %s: main AND the PR both edited this row; the PR's text was kept, make sure main's edit is not lost." % k)
+            for k, mode, notes in rep.merged:
+                say(merged_line(k, mode, notes))
             for block in rep.dropped_text:
                 say("  NOTE: PR-side non-row text dropped (main's side wins): " + " / ".join(l[:80] for l in block[:3]))
             for w in rep.warnings:
@@ -491,6 +532,8 @@ def main(argv=None):
 
         say("checks before the commit:")
         failed = [n for n in ("verify_doc_ids.py", "verify_handbook.py") if run_tool(wt, n)]
+        if check_markers(wt):
+            failed.append("verify_no_conflict_markers.py")
         if failed:
             say("STOP: %s failed; nothing was committed. Fix in the worktree, then commit and push by hand." % ", ".join(failed))
             keep_note()

@@ -214,6 +214,68 @@ class KanbanMergeTests(MergeHelperBase):
         self.assertIn("Done", rows["BD-5"])
 
 
+    def build_both_edit(self, middle=False):
+        """base 1-5; main AND the PR both edit BD-3: both append (default) or the PR rewrites the middle."""
+        e = self.env
+        self.base_board()
+        e.start_branch("pr")
+        pr_text = "**Task 3.** does a different thing" if middle else "**Task 3.** does something PR outcome"
+        e.write("docs/07-kanban.md", self.kan([row(1), row(2), row(3, "Review / test", pr_text), row(4), row(5)]))
+        e.commit("pr edits BD-3")
+        e.git("checkout", "-q", "main")
+        e.write("docs/07-kanban.md", self.kan([row(1), row(2), row(3, text="**Task 3.** does something main note"),
+                                              row(4), row(5)]))
+        e.commit("main edits BD-3")
+        e.publish()
+
+    def test_row_edited_on_both_sides_is_merged_not_overwritten(self):
+        self.build_both_edit()
+        rc, out = self.env.run("pr")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("MERGED BD-3", out)
+        self.assertNotIn("the PR's text was kept", out)
+        raw, rows = self.final_rows(self.env.worktree_of(out))
+        self.assertIn("main note PR outcome", rows["BD-3"])   # both sides' text, main's first
+        self.assertIn("Review / test", rows["BD-3"])          # the PR's status (main did not change it)
+        self.assertEqual(raw.count("| BD-3 |"), 1)
+        if self.eol == "\r\n":
+            self.assertFalse(raw.replace("\r\n", "").count("\n"), "a bare LF crept into a CRLF file")
+
+    def test_row_with_a_rewritten_middle_keeps_main_and_appends_the_pr_paragraph(self):
+        self.build_both_edit(middle=True)
+        rc, out = self.env.run("pr")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("MERGED BD-3", out)
+        self.assertIn("CHECK", out)
+        raw, rows = self.final_rows(self.env.worktree_of(out))
+        self.assertIn("**Task 3.** does something main note", rows["BD-3"])
+        self.assertIn("**(from the PR, check)** **Task 3.** does a different thing", rows["BD-3"])
+        if self.eol == "\r\n":
+            self.assertFalse(raw.replace("\r\n", "").count("\n"), "a bare LF crept into a CRLF file")
+
+    def test_leftover_conflict_markers_stop_the_commit(self):
+        e = self.env
+        self.base_board()
+        e.start_branch("pr")
+        e.write("docs/07-kanban.md", self.kan([row(1, "Done", "**Task 1.** ok"), row(2), row(3), row(4), row(5)]))
+        marker_doc = self.eol.join(["# Notes", "<" * 7 + " HEAD", "left over", "=" * 7, "other", ">" * 7 + " main", ""])
+        e.write("docs/leftover.md", marker_doc)
+        e.commit("pr with a committed marker block")
+        e.git("checkout", "-q", "main")
+        e.write("docs/07-kanban.md", self.kan([row(1), row(2), row(3), row(4), row(5, "Done", "**Task 5.** ok")]))
+        e.commit("main edits BD-5")
+        e.publish()
+        before = e.git("rev-parse", "refs/heads/pr", cwd=e.origin)
+        rc, out = self.env.run("pr", "--push")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("docs/leftover.md:2:", out)
+        self.assertIn("verify_no_conflict_markers", out)
+        self.assertIn("nothing was committed", out)
+        self.assertEqual(e.git("rev-parse", "refs/heads/pr", cwd=e.origin), before, "nothing may be pushed")
+        wt = self.env.worktree_of(out)
+        self.assertEqual(e.git("rev-list", "--count", "origin/pr..HEAD", cwd=wt), "0", "no merge commit may exist")
+
+
 class CrlfTests(KanbanMergeTests):
     eol = "\r\n"
 
@@ -314,12 +376,22 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(sorted(rep.kept_pr), ["BD-1"])
         self.assertEqual(sorted(rep.took_main), ["BD-2"])
 
-    def test_both_changed_keeps_pr_and_flags_it(self):
+    def test_both_changed_merges_the_two_edits_and_flags_it(self):
+        base = {"BD-1": row(1)}
+        rep = mm.KanbanReport()
+        out = mm.resolve_kanban_hunk([row(1, "Done", "**Task 1.** does something PR outcome")],
+                                     [row(1, "Backlog", "**Task 1.** does something main note")], base, rep)
+        self.assertEqual(out, [row(1, "Done", "**Task 1.** does something main note PR outcome")])
+        self.assertEqual(rep.both_changed, ["BD-1"])
+        self.assertEqual([(k, m) for k, m, _ in rep.merged], [("BD-1", "appended")])
+
+    def test_both_changed_status_only_keeps_main_status_and_says_so(self):
         base = {"BD-1": row(1)}
         rep = mm.KanbanReport()
         out = mm.resolve_kanban_hunk([row(1, "Done")], [row(1, "Review / test")], base, rep)
-        self.assertEqual(out, [row(1, "Done")])
-        self.assertEqual(rep.both_changed, ["BD-1"])
+        self.assertEqual(out, [row(1, "Review / test")])
+        self.assertEqual(rep.merged[0][1], "main")
+        self.assertTrue(any("Done" in n for n in rep.merged[0][2]))
 
     def test_non_row_hunk_takes_main(self):
         rep = mm.KanbanReport()
