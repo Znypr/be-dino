@@ -82,26 +82,43 @@ function TelemetryService.noteFood(player: Player, runId: any, rawPoints: number
     RunTelemetry.noteFood(stats, rawPoints, gainedPoints, Config.FoodCatchRate)
 end
 
--- Called by the settlement callback in Bootstrap after the commit; outcome is the committed run outcome table (may be nil).
-function TelemetryService.runSettled(player: Player, reason: string, runSeconds: number, outcome: any, runId: any?)
-    if not enabled() then return end
+-- The body of the run_end report. Bounded work only: a few table reads, at most RunTelemetry.MaxWeatherIntervals (64) weather
+-- intervals, one print, one pcall'd Analytics call. It runs OFF the settle thread (see runSettled), never inside it.
+local function reportRunEnd(player: Player, reason: string, runSeconds: number, counts: {eggs: any, nests: any, crystals: any}, runId: any?, nowServer: number)
     local session = sessions[player]
     if session then RunTelemetry.runFinished(session) end
-    local o = if typeof(outcome) == "table" then outcome else {}
-    local eggCount = o.eggCount or o.chestCount
+    local eggCount = counts.eggs
     if session and typeof(eggCount) == "number" and eggCount > 0 then RunTelemetry.noteStep(session, "egg", os.clock()) end
     local stats = runStats[player]
     runStats[player] = nil -- one run, one accumulator
     if stats and runId ~= nil and stats.runId ~= runId then stats = nil end -- food of some other run is not this run's food
-    local nowServer = workspace:GetServerTimeNow()
     emit(player, RunTelemetry.runEnd({
         runSeconds = runSeconds, reason = reason,
-        eggs = o.eggCount or o.chestCount, nests = o.nestCount, crystals = o.crystals,
+        eggs = eggCount, nests = counts.nests, crystals = counts.crystals,
         foodCatchRate = Config.FoodCatchRate,
         foodRaw = if stats then stats.foodRaw else 0, -- no food tick for this run = it really ate nothing
         eggsFood = if stats then stats.eggsFood else 0,
         weatherSeconds = RunTelemetry.weatherSeconds(weatherLog, nowServer - (if typeof(runSeconds) == "number" then runSeconds else 0), nowServer),
     }))
+end
+
+-- Called by the settlement callback in Bootstrap after the commit; outcome is the committed run outcome table (may be nil).
+-- BD-1096: THIS CALL CANNOT BLOCK, DELAY OR BREAK A SETTLEMENT. Studio round 5 saw a run stay in "Ending" for good after a script
+-- timeout surfaced inside this function on the settle thread: the error killed the continuation that marks the run Settled. So the
+-- settle thread only copies three numbers and the clock (cannot loop, cannot yield) and hands the report to task.defer; the report
+-- runs in its own thread inside a pcall. A report that errors, yields forever or runs long costs the player nothing.
+function TelemetryService.runSettled(player: Player, reason: string, runSeconds: number, outcome: any, runId: any?)
+    local ok, err = pcall(function()
+        if not enabled() then return end
+        local o = if typeof(outcome) == "table" then outcome else {}
+        local counts = {eggs = o.eggCount or o.chestCount, nests = o.nestCount, crystals = o.crystals}
+        local nowServer = workspace:GetServerTimeNow()
+        task.defer(function()
+            local reported, reportErr = pcall(reportRunEnd, player, reason, runSeconds, counts, runId, nowServer)
+            if not reported then warn("[Be Dino] telemetry run_end failed (settlement is unaffected): " .. tostring(reportErr)) end
+        end)
+    end)
+    if not ok then warn("[Be Dino] telemetry runSettled failed (settlement is unaffected): " .. tostring(err)) end
 end
 
 -- BD-651: every uncaught server script error is counted; each DISTINCT scrubbed text (12 per server) is logged once.

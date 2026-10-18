@@ -202,6 +202,10 @@ return table.freeze({
     SettlementBaseDelaySeconds = 0.6,
     SettlementJitter = 0.1,
     SettlementRetryWindowSeconds = 26, -- leave: 26 s + the lease release stay inside BindToClose's 30 s
+    -- BD-1096: a run left in RunState "Ending" longer than this is force-settled ONCE (same run id, so the ledger pays it exactly once). A settle call
+    -- that is still running (a DataStore retry) is waited for until the hard limit. Must stay above SettlementRetryWindowSeconds' normal case.
+    EndingWatchdogSeconds = 20,
+    EndingWatchdogMaxSeconds = 60,
     ProfileMaxRecentOperations = 50,
 
     EquipRequestCooldownSeconds = 0.5,

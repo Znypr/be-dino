@@ -199,7 +199,7 @@ def static():
     prof = (ROOT / 'tools/release_profiles.py').read_text(encoding='utf-8')
     assert '_flag_off("RunTelemetryEnabled"' in prof and 'Rule("RunTelemetryEnabled", "set", True' in prof
 
-ZERO_COST = ('trackTelemetry = Config.RunTelemetryEnabled == true', 'if trackTelemetry then claim.candidate.raw', 'if trackTelemetry then telemetry().noteFood(')
+ZERO_COST = ('trackTelemetry = Config.RunTelemetryEnabled == true', 'if trackTelemetry then claim.candidate.raw', 'if trackTelemetry then pcall(function() telemetry().noteFood(')
 
 def static_bd575():
     """BD-575: telemetry off = zero cost; the food hook is batched and memory-only. The dynamic proof (TelemetryService never even
