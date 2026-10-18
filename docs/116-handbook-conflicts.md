@@ -180,3 +180,8 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | ID | Statement A | Statement B | Newer | Proposed resolution and OWNER QUESTION |
 |---|---|---|---|---|
 | C-52 | docs/114 s6.2, docs/104 s8, `HubWalkUpRules.PromptKey = "G"` and `tools/verify_cave_gate.py:124` (`PromptKey ~= "E"`): the stall key is G because E is LEAP | Owner 2026-10-18: the shop interaction should be "like E to interact"; the Heart "Show off" prompt already uses the default E | owner 2026-10-18 | **LEAD decision (115): E on PC, ButtonX on a gamepad.** At home Leap and bite do nothing (`RunState` must be "Active"), so E is free; a `ContextActionService` sink keeps Bootstrap from firing a Leap. Docs, rules and the check change in BD-1017. No new OWNER QUESTION. |
+
+## M. Station rule versus hotkeys (BD-1055, 2026-10-18)
+| ID | Statement A | Statement B | Newer | Proposed resolution and OWNER QUESTION |
+|---|---|---|---|---|
+| C-53 | docs/114 s6.2 and docs/104 s8: a station menu opens only by pressing its prompt (G) or by Fast travel | `Bootstrap.client.luau` keys B (Eggs) and C (Collection) open those screens from anywhere at home; Run Complete OPEN EGGS used the rail rule and only drew a glow trail (BD-1055) | owner 2026-10-16 (station rule) | **LEAD decision (115): OPEN EGGS opens at once; the rail buttons keep the walk rule.** OWNER QUESTION (low priority, not a blocker): should the B and C keys also follow the walk rule, or should the rail buttons open anywhere too? Today the rail walks and the keys do not. |

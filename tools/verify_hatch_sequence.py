@@ -80,8 +80,10 @@ assert(T.shouldSkip({1, 2}, 1, {}, false) and T.shouldSkip({1, 2}, 2, {}, false)
 assert(not T.shouldSkip({1, 2}, 1, {shiny = true}, false) and not T.shouldSkip({1, 2}, 1, {big = true}, false))
 assert(not T.shouldSkip({1, 2}, 1, {eventMutationId = "gold_rush"}, false))
 assert(not T.shouldSkip({}, 1, {}, false), "nothing selected, nothing skipped")
+assert(not T.shouldSkip({}, 5, {}, true), "BD-1057: Skip all stops on a Legendary")
+assert(not T.shouldSkip({}, 3, {secret = true}, true) and not T.shouldSkip({1}, 1, {secret = true}, false), "BD-1057: a secret is never skipped")
 for rarity = 1, 5 do
-    assert(T.shouldSkip({}, rarity, {}, true), "Skip all covers every rarity")
+    assert(rarity == 5 or T.shouldSkip({}, rarity, {}, true), "Skip all covers every rarity but Legendary")
     assert(not T.shouldSkip({}, rarity, {shiny = true}, true) and not T.shouldSkip({}, rarity, {big = true}, true))
     assert(not T.shouldSkip({}, rarity, {eventMutationId = "x"}, true) and not T.shouldSkip({}, rarity, {genes = {conditionId = "rainbow"}}, true))
 end
