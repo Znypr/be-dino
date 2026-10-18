@@ -4,6 +4,8 @@
 
 **Helper agents: read the [agent brief (docs/160)](docs/160-agent-brief.md) first**: read order, decisions, git/PR workflow, safety, evidence, tools and reporting in one short page.
 
+**Creating art or content (Codex too): read [docs/catalog/Home.md](docs/catalog/Home.md) first** (generated team catalogue: what exists, what is missing, the exact folder and file name to deliver; rebuild with `python tools/build_catalog.py`).
+
 Read this file before interpreting reward requests, editing game-design documents, or changing game economy code. Source of truth for **owner's intended target**: [docs/09-reward-economy.md](docs/09-reward-economy.md), **2026-10-08 Owner-approved target**, and [docs/03-game-design.md](docs/03-game-design.md). [docs/07-kanban.md](docs/07-kanban.md) is the sole task/acceptance tracker.
 
 ## Generated build files (BD-419)
