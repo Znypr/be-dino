@@ -40,8 +40,24 @@ end
 local function titleCase(text: string): string
     return (string.gsub(text, "(%a)([%w]*)", function(a, b) return string.upper(a) .. b end))
 end
+-- BD-1033: the short kid name of a pattern comes from the ONE table ProgressionConfig.EggPatterns, loaded on first use so this
+-- module stays pure (a harness without the config falls back to the id-derived title below, which players never see in game).
+local kidNames: {[string]: string}? = nil
+local function patternKidName(id: string): string?
+    if kidNames == nil then
+        local names: {[string]: string} = {}
+        local ok, cfg = pcall(function() return require((script :: any).Parent.ProgressionConfig) end)
+        if ok and type(cfg) == "table" and type(cfg.EggPatterns) == "table" then
+            for _, row in cfg.EggPatterns do names[row.id] = row.name end
+        end
+        kidNames = names
+    end
+    return (kidNames :: any)[id]
+end
 function Sel.patternName(id: string?): string
     if type(id) ~= "string" or id == "" then return "Unknown pattern" end
+    local kid = patternKidName(id)
+    if kid then return kid end
     local stripped = string.gsub(string.gsub(id, "^%d+_", ""), "_", " ")
     return titleCase(stripped)
 end
@@ -58,7 +74,7 @@ function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
         colorOrder = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
-    -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
+    -- Base odds of ONE purchased egg (no run boost): species by weight, patterns and colors per slot by weight.
     catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
     local speciesTotal = 0
     for _, row in (config and config.ChestSpeciesWeights) or {} do speciesTotal += row.weight end
@@ -67,7 +83,18 @@ function Sel.buildCatalog(config, progression, patterns)
         local tier = config.SpeciesRarities and config.SpeciesRarities[row.speciesId]
         catalog.speciesRarity[row.speciesId] = tier and config.SpeciesRarityNames and config.SpeciesRarityNames[tier] or nil
     end
-    for _, id in patterns or {} do catalog.patternPct[id] = 100 / math.max(1, #(patterns :: any)) end
+    -- BD-1033: pattern odds come from the weighted table (progression.EggPatterns); uniform only when the table is missing.
+    catalog.patternRarity = {}
+    local patternRows = progression and progression.EggPatterns
+    local patternTotal = 0
+    for _, row in patternRows or {} do patternTotal += row.weight end
+    for _, row in patternRows or {} do
+        catalog.patternPct[row.id] = if patternTotal > 0 then 100 * row.weight / patternTotal else 0
+        catalog.patternRarity[row.id] = row.rarity
+    end
+    for _, id in patterns or {} do
+        if catalog.patternPct[id] == nil then catalog.patternPct[id] = 100 / math.max(1, #(patterns :: any)) end
+    end
     local colorTotal = 0
     for _, row in (progression and progression.EggColors) or {} do colorTotal += row.weight end
     for _, row in (progression and progression.EggColors) or {} do catalog.colorPct[row.id] = if colorTotal > 0 then 100 * row.weight / colorTotal else 0 end

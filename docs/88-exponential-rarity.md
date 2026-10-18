@@ -26,7 +26,7 @@ Example for 5 tiers with r = 1/4: Common 75%, Uncommon 19%, Rare 4.7%, Epic 1.2%
 
 ## Owner decisions (2026-10-15)
 - Steepness: **r = 1/5** (each tier 5 times rarer). Owner left 4/5/6 to the lead; 5 is the vision-compatible middle.
-- **Patterns stay equally likely** for now (fusion recipes need it). Revisit later.
+- **Patterns stay equally likely** for now (fusion recipes need it). Revisit later. **HISTORICAL: replaced 2026-10-18 by the owner (BD-1033, [186](186-pattern-colour-indexes-and-slower-species.md)); fusion keys on the pattern id only, so it did not need equal odds.**
 - One **shared six-tier ladder** for every system, below.
 
 ## The tier ladder (PROPOSED, all systems use it)
@@ -48,7 +48,7 @@ A "normal" 5-egg run therefore has about a 0.6% chance of containing one Legenda
 | Dinosaur species (22) | Common 72%, Uncommon 24%, Rare 3.2%, Epic 0.7%, Legendary 0.1% (docs/85) | Already close; keep the five tier totals, check each species inside its tier. Legendary 0.1% = 3 species | OK, keep |
 | Run-size boost | Rare and above x4-4.7 at full boost; 40 eggs per 500 food | Cap so adjacent tier ratio never falls below 1/6; eggs per run 10x fewer (BD-165) | Change (BD-184) |
 | Egg colours (9) | Cream 50%, Blue 26%, Green 12%, Pink 5%, Teal 4%, Amber 2.5%, Purple 0.45%, Red 0.04%, Black 0.01% | Group: Common = Cream, Blue; Uncommon = Green; Rare = Pink, Teal; Epic = Amber; Legendary = Purple; Mythic = Red, Black. Tier chances from the ladder, split inside a tier. Colour growth bonus 1-5% rises by tier (BD-172) | Done (BD-184) |
-| Patterns (8) | 12.5% each | Stay equal (owner) | Keep |
+| Patterns (8) | 12.5% each | Superseded 2026-10-18 (owner, BD-1033): 3 Common / 2 Uncommon / 1 Rare / 1 Epic / 1 Legendary on the five-tier ladder, `ProgressionConfig.EggPatterns` | Done (BD-1033) |
 | Egg conditions (5) | Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5% (owner-approved 2026-10-08) | Keep for now (they limit dinos, owner design); Rainbow and Astra are Epic and Legendary-like top steps. Revisit with a 5-step r = 1/3.5 curve if owner wants strict exponential | Owner call later |
 | Mutations: BIG | 10% | Rare tier: about 3% (nest luck up to 6%) | Done (BD-184) |
 | Mutations: Shiny (weather only) | 5% during irregular weather | Epic tier: about 0.6% (up to 1.5% in nests/weather) | Done (BD-184) |
