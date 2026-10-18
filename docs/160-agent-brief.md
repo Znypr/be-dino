@@ -78,6 +78,7 @@ python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> 
 - **ffmpeg** at `C:/ffmpeg/bin`: cut frames from clips (section 7), audio spectrograms.
 - **Blender MCP:** there is one Blender; one agent at a time.
 - **Roblox Studio MCP:** one agent per Studio window. The owner's `Place1.rbxl` window is the owner's: never minimise, move, make topmost or close it, and work done in it is UNSAVED until the owner presses Ctrl+S. A denied window-placement call is never retried or worked around. The owner said to ignore window-placement problems and do other work.
+- **Is a tool up?** `python tools/dev_env_check.py` (read-only, 2 s: Blender and its port, Studio windows and minimised state, browsers, PATH tools, power plan; [165](165-dev-env-check.md)). `--launch blender|chrome|edge` can start those three; nothing starts Studio.
 - **No OS-level screenshots, never `SetForegroundWindow`.** Use the Studio MCP capture or the Browser pane.
 
 ## 7. Judging motion and sound without watching or listening
