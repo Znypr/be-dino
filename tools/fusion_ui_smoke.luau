@@ -168,8 +168,10 @@ game = {GetService = function(_, name) return assert(Services[name], "service " 
 local sources = MODULE_SOURCES
 local loaded = {}
 local Theme = {MotionEnabled = true, Colors = {panel = color(0, 0, 0), card = color(0, 0, 0), outline = color(0, 0, 0),
-    text = color(1, 1, 1), accent = color(0, 1, 0), gold = color(1, 1, 0), blue = color(0, 0, 1), purple = color(1, 0, 1), red = color(1, 0, 0)}}
-Theme.TextStyle = {apply = function(label) label.TextStrokeTransparency = 1 local stroke = Instance.new("UIStroke") stroke.Parent = label return stroke end} -- BD-390
+    text = color(1, 1, 1), accent = color(0, 1, 0), gold = color(1, 1, 0), blue = color(0, 0, 1), purple = color(1, 0, 1), red = color(1, 0, 0)},
+    RarityColors = {color(.5, .55, .6), color(.3, .9, .1), color(.2, .8, 1), color(.8, .3, 1), color(1, .8, .2), color(.9, .2, .2)}} -- BD-1120: RarityWord reads the palette
+Theme.TextStyle = {apply = function(label) label.TextStrokeTransparency = 1 local stroke = Instance.new("UIStroke") stroke.Parent = label return stroke end}
+Theme.TextStyle.outlined = function(label) return Theme.TextStyle.apply(label) end -- BD-1119 -- BD-390
 function Theme.decorate(object)
     Instance.new("UIStroke").Parent = object
     Instance.new("UICorner").Parent = object
@@ -200,7 +202,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules", "ChipStyle", "GeneBoost"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules", "ChipStyle", "GeneBoost", "RarityWord"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu", "ObjectiveSeen", "ClassRow"} do

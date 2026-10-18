@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Index = require(Shared:WaitForChild("PatternColourIndex"))
+local RarityWord = require(Shared:WaitForChild("RarityWord")) -- BD-1120
 local Cards = require(script.Parent.PatternColourCards)
 
 local Detail = {}
@@ -47,7 +48,9 @@ function Detail.open(host: GuiObject, kind: string, card: any, found: any, nameO
 
     Cards.tile(box, kind, card, 110, 18, 62)
     local tierColor = if info.found then Cards.borderColor(card) else Cards.borderColor(card):Lerp(C.text, 0.25)
-    Cards.label(box, info.tier, 146, 62, 400, 32, 26, tierColor).Name = "Tier"
+    local tierLabel = Cards.label(box, info.tier, 146, 62, 400, 32, 26, tierColor)
+    tierLabel.Name = "Tier"
+    if info.found then RarityWord.apply(tierLabel, info.tier) end -- BD-1120: the word and its colour from RarityWord (not found yet: dimmed)
     Cards.pips(box, card, 148, 100)
     Cards.label(box, info.boostText, 146, 126, 400, 28, 22, C.text).Name = "Boost"
     if info.hint then

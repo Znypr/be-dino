@@ -151,6 +151,47 @@ for _, scenario in EGG_SCENARIOS do
     end
 end
 
+-- ===== BD-1120: rarity words are coloured where they are shown (the REAL Toasts, EggsScreen and RarityWord) =====
+local RarityWordReal = requireModule(SharedFolder.RarityWord)
+local function hexOf(tier) return RarityWordReal.hex(tier) end
+do
+    local world = buildWorld(1156, 793, false)
+    loaded.Toasts = nil
+    local Toasts = requireModule(ClientFolder.Toasts)
+    Toasts.attach({gui = world.gui, shade = world.shade, box = uiBox, label = uiLabel, art = uiArt, motion = function() return false end})
+    Toasts.notify("Legendary hatch!", Colors.red, {key = "rw1", body = "Best: Epic Compy"})
+    Toasts.notify("Follow the glow", Colors.red, {key = "rw2", body = "Rarer potions show up less often."})
+    frames(4)
+    local seen = {}
+    for _, d in Toasts.layer:GetDescendants() do
+        if d:IsA("TextLabel") and d.Visible and d.Text ~= "" then seen[d.Text] = d end
+    end
+    local legendary = '<font color="' .. hexOf(5) .. '">Legendary</font> hatch!'
+    local epic = 'Best: <font color="' .. hexOf(4) .. '">Epic</font> Compy'
+    check(seen[legendary] ~= nil and seen[legendary].RichText == true, "a toast title that names Legendary shows the word in the Legendary colour (" .. hexOf(5) .. ")")
+    check(seen[epic] ~= nil and seen[epic].RichText == true, "a toast line that names Epic shows the word in the Epic colour (" .. hexOf(4) .. ")")
+    check(seen["Follow the glow"] ~= nil and seen["Follow the glow"].RichText ~= true, "a toast without a tier word stays plain text")
+    check(seen["Rarer potions show up less often."] ~= nil and seen["Rarer potions show up less often."].RichText ~= true, "'Rarer' is not the word Rare: the line stays plain")
+    world.gui:Destroy()
+end
+do
+    local world = buildWorld(1156, 793, false)
+    showMenu(world)
+    local scenario = {name = "tier words", entry = EGG_PLAIN, waiting = 3, active = 1, nests = nestsOf({"incubating", "queued", "queued", "queued", "queued"})}
+    local ctx = eggsCtx(world, scenario)
+    ctx.autoOpenText = function() return "Auto-open: Common, Uncommon" end
+    EggsScreen.render(ctx)
+    ModalCompact.enforce()
+    local auto = nil
+    for _, d in world.body:GetDescendants() do
+        if d:IsA("TextLabel") and string.sub(d.Text, 1, 10) == "Auto-open:" then auto = d end
+    end
+    local want = 'Auto-open: <font color="' .. hexOf(1) .. '">Common</font>, <font color="' .. hexOf(2) .. '">Uncommon</font>'
+    check(auto ~= nil and auto.RichText == true and auto.Text == want, "the Eggs screen paints the tier words of the auto-open line (" .. (if auto then auto.Text else "no label") .. ")")
+    world.gui:Destroy()
+end
+print("Rarity words ok")
+
 for i, entry in ALLOW do
     if not allowUsed[i] then print("ALLOWSTALE " .. i) end
 end

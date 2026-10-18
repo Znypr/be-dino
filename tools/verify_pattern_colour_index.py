@@ -303,6 +303,7 @@ SMOKE_MODULES = {
     'RarityCurve': 'src/shared/RarityCurve.luau',
     'GeneBoost': 'src/shared/GeneBoost.luau',
     'PatternColourIndex': 'src/shared/PatternColourIndex.luau',
+    'RarityWord': 'src/shared/RarityWord.luau',  # BD-1120: tier words come from RarityWord
     'AssetSlots': 'src/shared/AssetSlots.luau',
     'SettingsModel': 'src/shared/SettingsModel.luau',
     'PatternColourCards': 'src/client/PatternColourCards.luau',

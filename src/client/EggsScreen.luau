@@ -224,6 +224,7 @@ local function build(ctx: any, bodyH: number, bodyScale: number)
     gear.TextSize = 22
     local autoLine = label(card, ctx.autoOpenText(), infoX + 142, gearY, infoW - 142, gearH, 17, C.text)
     autoLine.TextXAlignment = Enum.TextXAlignment.Left
+    require(Shared.RarityWord).paintLabel(autoLine) -- BD-1120: "Auto-open: Common, Uncommon" shows the words in their colours
 
     local function refresh()
         if not card.Parent then return end

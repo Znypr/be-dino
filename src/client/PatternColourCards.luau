@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared:WaitForChild("UITheme"))
 local AssetSlots = require(Shared:WaitForChild("AssetSlots"))
 local Index = require(Shared:WaitForChild("PatternColourIndex"))
+local RarityWord = require(Shared:WaitForChild("RarityWord")) -- BD-1120
 
 local Cards = {}
 Cards.CardW, Cards.CardH, Cards.Gap, Cards.Columns = 264, 176, 12, 3
@@ -38,7 +39,7 @@ local function fromRgb3(t: {number}): Color3 return Color3.new(t[1], t[2], t[3])
 
 -- The tier colour of a card (Theme.RarityColors, one colour everywhere); a card not found yet gets it pulled toward the dark card.
 function Cards.borderColor(card: any): Color3
-    local base = (Theme.RarityColors :: any)[card.rarity] or (Theme.RarityColors :: any)[1]
+    local _, base = RarityWord.get(card.rarity) -- BD-1120: the tier colour from RarityWord (Theme.RarityColors; an unknown tier is Common)
     if card.found then return base end
     return fromRgb3(Index.dim(rgb3(base), rgb3(DARK)))
 end
@@ -116,6 +117,7 @@ function Cards.card(parent: GuiObject, kind: string, card: any, x: number, y: nu
     local tierColor = if card.found then Cards.borderColor(card) else Cards.borderColor(card):Lerp(C.text, 0.25)
     local tier = label(f, card.rarity, 104, 46, 150, 26, 22, tierColor)
     tier.Name = "Tier"
+    if card.found then RarityWord.apply(tier, card.rarity) end -- BD-1120: the word and its colour come from RarityWord (a card not found yet keeps its dimmed colour)
     Cards.pips(f, card, 106, 78)
     label(f, card.boostText, 104, 102, 152, 24, 18, if card.found then C.text else Color3.fromRGB(190, 192, 205)).Name = "Boost"
     label(f, card.line, 10, 134, 244, 38, 18, if card.found then C.text else Color3.fromRGB(190, 192, 205)).Name = "Line"

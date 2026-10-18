@@ -98,7 +98,8 @@ end
 function TextStyle.outlined(label: TextLabel | TextButton, kind: string, fill: Color3?): UIStroke
     label.Font = Enum.Font.FredokaOne
     label.TextSize = TextStyle.fit(kind, label.TextSize)
-    label:SetAttribute("TextKind", kind)
+    local target: Instance = label
+    target:SetAttribute("TextKind", kind)
     local stroke = TextStyle.apply(label, fill)
     if kind == "title" and stroke.Parent == label then stroke.Thickness = TextStyle.thicknessFor(kind, label.TextSize) end
     return stroke

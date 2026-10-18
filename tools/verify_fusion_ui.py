@@ -455,6 +455,7 @@ UI_MODULES = {
     'ModalCloseRules': 'src/shared/ModalCloseRules.luau',
     'ChipStyle': 'src/shared/ChipStyle.luau',  # BD-1077: fusion tags use the shared chunky tag
     'GeneBoost': 'src/shared/GeneBoost.luau',  # BD-1082: the details rows say "Boost N of 5"
+    'RarityWord': 'src/shared/RarityWord.luau',  # BD-1120: the trait lines paint the tier word
     'FusionSelection': 'src/shared/FusionSelection.luau',
     'FusionWidgets': 'src/client/FusionWidgets.luau',
     'DinoDetails': 'src/client/DinoDetails.luau',

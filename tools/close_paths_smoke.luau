@@ -198,7 +198,7 @@ local stubs = {}
 local Theme = {MotionEnabled = true, Colors = {panel = color(.2, .2, .2), card = color(.3, .3, .3), outline = color(0, 0, 0), text = color(1, 1, 1), gold = color(1, 1, 0),
     purple = color(1, 0, 1), accent = color(0, 1, 0), blue = color(0, 0, 1), red = color(1, 0, 0)},
     RarityColors = {color(.6, .6, .6), color(.3, .8, .3), color(.3, .5, 1), color(.7, .3, 1), color(1, .8, .2), color(1, .3, .3)},
-    ImageIds = {paint_bucket = "", egg_splat = "", egg_shell = ""}, TextStyle = {apply = function() return inst("UIStroke") end}}
+    ImageIds = {paint_bucket = "", egg_splat = "", egg_shell = ""}, TextStyle = {apply = function() return inst("UIStroke") end, outlined = function() return inst("UIStroke") end}}
 function Theme.decorate() end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
 stubs.UITheme = Theme

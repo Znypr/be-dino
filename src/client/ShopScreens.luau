@@ -306,7 +306,7 @@ function Shop.render(name: string)
         local lineY=0
         for _,line in lines do
             local lineHeight=if #line>95 then 88 elseif #line>60 then 66 else 44
-            label(list,line,10,lineY,790,lineHeight,21)
+            require(Shared.RarityWord).paintLabel(label(list,line,10,lineY,790,lineHeight,21)) -- BD-1120: "Rainbow (Epic): 1%" shows Epic in its colour
             lineY+=lineHeight+2
         end
         list.CanvasSize=UDim2.fromOffset(0,lineY)

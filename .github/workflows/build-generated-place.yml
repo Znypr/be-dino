@@ -149,6 +149,7 @@ jobs:
           python tools/verify_shop_crystals.py --runner /tmp/luau/luau
           python tools/verify_shop_preview.py --runner /tmp/luau/luau
           python tools/verify_text_style.py --runner /tmp/luau/luau
+          python tools/verify_rarity_words.py --runner /tmp/luau/luau
           python tools/verify_phone_scale.py --runner /tmp/luau/luau
           python tools/verify_small_window.py --runner /tmp/luau/luau
           python tools/verify_menu_layout.py --runner /tmp/luau/luau

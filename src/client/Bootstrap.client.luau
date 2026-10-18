@@ -92,7 +92,7 @@ local function label(parent: Instance,text: string,x: number,y: number,w: number
     t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
     t.Font,t.TextSize,t.Text,t.TextColor3 = Enum.Font.FredokaOne,size,text,color or C.text
     t.TextWrapped,t.ZIndex,t.Parent = true,if parent:IsA("GuiObject") then parent.ZIndex+1 else 1,parent
-    Theme.TextStyle.outlined(t,"card") -- BD-390 / BD-1119: one outlined style (light fill + dark stroke 2..3), card text is at least 16 px
+    Theme.TextStyle.outlined(t,"card") -- BD-390 / BD-1119
     return t
 end
 local function box(parent: Instance,x: number,y: number,w: number,h: number,color: Color3,z: number): Frame
@@ -128,7 +128,7 @@ local header = box(panel,4,4,852,78,C.blue,22)
 Theme.texture(header,852,78)
 local heading = label(header,"Dino Index",22,4,730,68,40)
 heading.TextXAlignment = Enum.TextXAlignment.Left
-Theme.TextStyle.outlined(heading,"title") -- BD-1119: the one outlined title style (22 px floor, outline 3); ModalCompact keeps it 22 px on screen
+Theme.TextStyle.outlined(heading,"title") -- BD-1119
 local body = Instance.new("Frame")
 body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
 local modalVersion=0
@@ -457,7 +457,7 @@ render=function(name: string)
             local displayName=Config.SpeciesDisplayNames[id] or require(Shared.SecretSpeciesConfig).name(id)
             rewardLabel.Text=if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName
             rewardLabel.TextColor3=if failed then C.gold else rarityColors[rarity]
-            oddsLabel.Text=if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(if require(Shared.SecretSpeciesConfig).isSecret(id) then require(Shared.SecretSpeciesConfig).RarityLabel else rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct)
+            require(Shared.RarityWord).set(oddsLabel,if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(if require(Shared.SecretSpeciesConfig).isSecret(id) then require(Shared.SecretSpeciesConfig).RarityLabel else rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct))
             local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
             local detailText,detailColor="",C.gold
             local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
