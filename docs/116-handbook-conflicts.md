@@ -173,3 +173,5 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | Ankylosaurus biggest? | C-40 / Q14 | T-Rex must be the biggest (OW9) | RESOLVED, build BD-992 |
 | Rain and snow on phones | C-42 / Q16 | a quarter of the drops (OW10) | RESOLVED, already built |
 | Where is the V3 Compy file | not a C row | "i dont know" (OW11); not found by search | **OPEN** (file hunt, not a blocker) |
+| C-54 | `docs/88` ladder: each step 4 to 6 times rarer; patterns stay equal | docs/186 s3-4: species Rare+ at 0.5% per egg (steeper at the top), patterns tiered | owner 2026-10-18 | **DECIDED by the owner's newer direction.** Update docs/88 and docs/82 when BD-1032 / BD-1033 land. |
+| C-55 | `docs/114` s8.5: growth pacing decided and unchanged | docs/186 s6: small per-dino growth and walk boost from pattern and colour | owner 2026-10-18 | **DECIDED**: base pacing unchanged, capped multiplier on top (BD-1038). |
