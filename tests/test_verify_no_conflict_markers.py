@@ -114,6 +114,20 @@ class RepoTests(unittest.TestCase):
             rc = vncm.main(["--root", str(self.root / "nothing-here")])
         self.assertEqual(rc, 2, buf.getvalue())
 
+    def test_plain_folder_without_git_is_scanned(self):
+        # the rehearsal runs the verifiers in a scratch COPY of the tree (no .git): scan the folder instead of failing
+        folder = self.root / "plain-copy"
+        folder.mkdir()
+        (folder / "a.md").write_text("fine\n", encoding="utf-8")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = vncm.main(["--root", str(folder)])
+        self.assertEqual(rc, 0, buf.getvalue())
+        (folder / "b.md").write_text(("<" * 7) + " HEAD\nx\n", encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = vncm.main(["--root", str(folder)])
+        self.assertEqual(rc, 1)
+
     def test_allowlist_entries_have_reasons(self):
         for name, why in vncm.ALLOWLIST.items():
             self.assertTrue(why.strip(), name)
