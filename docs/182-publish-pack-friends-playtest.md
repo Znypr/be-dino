@@ -74,7 +74,7 @@ The playtest names are different from the Build 020 name, so the playtest never 
 
 ## 3. The release ids (BD-004) and the gate
 
-`tools/release_ids.json` is still empty on purpose. The lead checked all four sources: Config.luau (PlaytestUniverseId 10769812255, PlaytestPlaceId 111259822927673), docs/42, docs/78 and the live Places page (the place card link holds 111259822927673) all agree. **No id mismatch.** What the checks say (offline, 2026-10-18, main `24d58826`):
+`tools/release_ids.json` was empty when this page was written (now filled, see DONE below). The lead checked all four sources: Config.luau (PlaytestUniverseId 10769812255, PlaytestPlaceId 111259822927673), docs/42, docs/78 and the live Places page (the place card link holds 111259822927673) all agree. **No id mismatch.** What the checks say (offline, 2026-10-18, main `24d58826`):
 
 | Check | Result |
 | --- | --- |
@@ -85,9 +85,9 @@ The playtest names are different from the Build 020 name, so the playtest never 
 | Slot filled with these ids, kind "legacy" (rehearsal in a scratch copy, not committed) | **HARD STOP**: Config.DeveloperProducts lists 6 product ids |
 | Slot filled, kind "new" | error: those ids are the "legacy" experience of docs/55 s2 |
 
-Why the slot is NOT filled in this PR: newbuild IS the experience docs/55 s2 calls "legacy" (same ids), so the tool needs `ExperienceKind` "legacy", and for "legacy" it refuses while `Config.DeveloperProducts` lists the six Robux ids. CI runs `verify_release_ids.py` on every PR, so filling the slot today would make CI red. The tool cannot see Creator Hub, so the "I took them off sale" fact does not count for it. **One decision for the lead (not made here, it loosens a guard):** pick one of (a) clear the six ids in `Config.DeveloperProducts` (also closes the receipt hole BD-612; but the "table must not be emptied" remark in BD-612 and `PaidRandomGate` need a look first), or (b) add an optional slot field such as `ProductsOffSaleConfirmedOn` that turns the hard stop into a warning, with a test. Then the one-line edit is: `tools/release_ids.json` gets `"PlaytestUniverseId": 10769812255, "PlaytestPlaceId": 111259822927673, "ExperienceKind": "legacy", "AnsweredOn": "2026-10-18"` (Config already holds both numbers, so nothing else changes). `python tools/release_playtest.py` refuses until then (exit 2).
+**DONE 2026-10-18 (BD-1030, LEAD decision in [115](115-decisions-log.md)).** The slot is now filled: `tools/release_ids.json` holds `"PlaytestUniverseId": 10769812255, "PlaytestPlaceId": 111259822927673, "ExperienceKind": "legacy", "AnsweredOn": "2026-10-18"` and the new optional pair `"ProductsConfirmedOffSale": true, "ProductsOffSaleConfirmedOn": "2026-10-18"`. Config already held both numbers, so nothing in `src/` changed, and the six product ids STAY in `Config.DeveloperProducts` (option (b) of the first draft of this section, with the field made explicit). `tools/verify_release_ids.py` accepts the products for a "legacy" experience only when the pair is present, and only while `CrystalPacksEnabled` and `PaidRandomItemsEnabled` are both false; with the pair missing or half-filled, a paid line on, kind "new", or an id/Config mismatch it still stops. Six new test cases in `tests/test_release_playtest.py` prove this. The table above is the state BEFORE this change (repo slot empty); now `verify_release_ids.py` prints "ok (filled)" with one warning that names the off-sale confirmation, and `release_playtest.py` no longer blocks on BD-004. If the owner ever puts a pack back on sale, remove the two fields first (section 7).
 
-Mismatch between docs: [55](55-playtest-release-runbook.md) s2 says the newbuild ids are NOT the Milestone 1 place; [42](42-live-multiplayer-test.md), [78](78-lead-handoff.md) and Config say they are; the owner's decision today settles it for newbuild.
+Mismatch between docs: [55](55-playtest-release-runbook.md) s2 says the newbuild ids are NOT the Milestone 1 place; [42](42-live-multiplayer-test.md), [78](78-lead-handoff.md) and Config say they are; the owner's decision today settles it for newbuild (note added to docs/55 s2).
 
 ## 4. Order on the day (about 40 minutes)
 1. Steps 1 and 2 of section 0 (ID check can take a day; if it does, publish without it and say so to the friends).
@@ -138,7 +138,7 @@ After: the lead runs `python tools/playtest_report.py server.log --out report.md
 4. **Devices: "Computer only"** (148) vs **Computer + Phone** (55, 125, owner today). Owner today wins. Setting not found in Creator Hub.
 5. **Studio access ON** vs docs/148 "OFF". Plain choice in 2c.
 6. **Audience reach "Ages 16+ and trusted friends"**: friends under 16 may be blocked; nowhere in the docs.
-7. **newbuild = the "legacy" experience** of docs/55 s2: the id tool needs kind "legacy" and then hard-stops on the six product ids, even though all six are off sale (section 3). Needs the lead's decision.
+7. **newbuild = the "legacy" experience** of docs/55 s2: the id tool needs kind "legacy" and then hard-stopped on the six product ids, even though all six are off sale (section 3). RESOLVED 2026-10-18 by a LEAD decision (BD-1030, docs/115): explicit off-sale field in the slot.
 8. **Live game is still Build 019**: "Last published Oct 8" while Version History shows saves on 13 and 14 Oct (versions 16, 17). Those saves were never published (UNVERIFIED reading of the two pages).
 9. docs/148 step 4 tells the owner to join "from the Roblox page"; docs/42 recorded an earlier "currently not available" that was solved by the content questionnaire (now Minimal, done).
 
