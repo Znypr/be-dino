@@ -19,22 +19,16 @@ For now the wiki is **for the owner and the team only**, so everyone (including 
 ## OWNER ANSWER 2 2026-10-18: a catalogue for everything, but few pages
 Cover **everything**: dinosaurs, colours, patterns, conditions, mutations, potions, auras, trails, food, weather, biomes and wind ("breeze"), statues and other landmarks. **Rule: no page per item.** Twelve potions are not a section of their own; each item is a *section inside* its category page (heading, small picture, a few lines, a table row), reachable by an anchor link.
 
-**Page layout (about 12 pages, hard cap 14):**
-| # | Page | Sections inside |
+**OWNER ANSWER 3 2026-10-18: even fewer pages.** Colours, patterns and egg conditions fit on ONE page. So the catalogue is **6 pages, hard cap 8** (the earlier 12-page table is replaced):
+| # | Page | Sections inside (one section per item, never one page per item) |
 |---:|---|---|
-| 1 | Home | what the catalogue is, links, the five biggest gaps |
+| 1 | Home | what the catalogue is, **Missing** (every gap with the file name and folder to deliver), **Odds** (every chance in the game in one table) |
 | 2 | Dinosaurs | one table (picture, name, class, rarity, odds), then one section per dino |
-| 3 | Colours | table by tier, one section per colour |
-| 4 | Patterns | table by tier, one section per pattern (after BD-1039) |
-| 5 | Eggs and conditions | conditions, nests, hatch rules |
-| 6 | Mutations and events | Shiny, BIG, event mutations, weather events |
-| 7 | Fusion | tiers, the ladder, what is kept and rolled |
-| 8 | Shop items | Potions, Auras, Trails as three sections, one row/section per item |
-| 9 | Food | normal and special foods, points, spawn rule |
-| 10 | World | weather, biomes, wind, statues, landmarks |
-| 11 | Odds | every chance in the game in one table |
-| 12 | Missing | every gap with the file name and folder to deliver |
-If one category passes about 40 items, it stays ONE page with a contents list and tier headings; it is not split into per-item pages. A test fails if the tool writes more than 14 pages or a page for a single item.
+| 3 | Eggs and looks | Colours, Patterns and Egg conditions (with nests and hatch rules) as three sections, each with a tier table and one small block per item |
+| 4 | Mutations and fusion | Shiny, BIG, event mutations and weather events; fusion tiers and the ladder |
+| 5 | Shop items | Potions, Auras and Trails as three sections |
+| 6 | World and food | Normal and special food, weather, biomes, wind, statues, landmarks |
+Each page starts with a contents list of anchors, so a category with 40 items is still one page. A test fails if the tool writes more than 8 pages or a page for a single item.
 
 ## Facts checked (2026-10-18)
 - The repository `Znypr/be-dino` is **public** and its GitHub wiki feature is **enabled** (empty). A GitHub wiki is its own git repository (`be-dino.wiki.git`); anything pushed there is public at once.
