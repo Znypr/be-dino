@@ -151,3 +151,10 @@ What each tool can show. "GPU frame time" means how smoothly a real phone chip d
 - **OWNER:** the cheap Android phone and its Google sign-in (BD-085, BD-322).
 - **LEAD:** run section 4 after the owner reports done; store the images in `docs/evidence/`.
 - **UNVERIFIED and to settle by test:** Studio drawing on the virtual monitor; `screen_capture` on it; the newest driver release and its signature; how many Studio windows can render at once; whether the Android Studio emulator can run Roblox.
+
+## Agent windows stay on the virtual monitor (BD-1059, owner 2026-10-18)
+Owner request: Studio, Blender and the Edge window the browser tools drive always open on the virtual monitor, so the other screens stay free for the owner's own work (video editing, Roblox).
+- Tool: `python tools/monitor4.py list | place | launch studio <file> | launch blender [file] | launch edge [url] | watch` (Windows only, `tests/test_monitor4.py`). The virtual monitor is found by its size 1280 x 720 (Windows lists it as monitor 3 in a code enumeration even though the Settings page calls it monitor 4; the tool never uses the number unless `--index` is given).
+- Rules it keeps: never touches a window titled `Place1` (the owner's own Studio window), never minimises or closes, never makes a window topmost, never takes focus, skips the window the owner has focus on, keeps a window's size if it fits.
+- Edge: the owner's own Edge windows are left alone. Only an Edge window whose title holds the marker `Claude` (or every Edge window with `--edge-title "*"`, only when the owner asks) or one started with `launch edge` is placed. On 2026-10-18 the only Edge window found was already on the virtual monitor.
+- Rule for helpers: start Studio, Blender and Edge with `tools/monitor4.py launch ...` (or run `place` right after any launch); a window that opened elsewhere is a defect to fix at once.
