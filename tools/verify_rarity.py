@@ -56,6 +56,34 @@ local tierOfLast=-1 for _,c in {"white","blue","green","pink","teal","gold","vio
  local row for _,r in Progression.EggColors do if r.id==c then row=r end end
  local t=Curve.index(row.rarity) :: number assert(t>=tierOfLast) tierOfLast=t
 end
+-- 4b. BD-1033 patterns (docs/186 s4): one table, a tier per pattern, five ladder tiers renormalised, equal split inside a tier,
+-- short kid names (docs/72: no ids, no digits), integer weights that total the scale, strictly less weight per rarer tier.
+do
+ local rows=Progression.EggPatterns assert(#rows==8,"8 existing patterns")
+ local pscale=Progression.PatternWeightScale local ptotal=0 local seenId,seenName={}, {}
+ local perTier={} local tierOfPattern={}
+ for _,p in rows do
+  assert(not seenId[p.id] and not seenName[p.name],"unique pattern id and name") seenId[p.id],seenName[p.name]=true,true
+  assert(string.match(p.id,"^%d%d_[%l_]+$"),"pattern id shape "..p.id)
+  assert(type(p.name)=="string" and #p.name>=3 and #p.name<=12 and not string.find(p.name,"[%d_]"),"kid name "..tostring(p.name))
+  assert(p.weight>0 and p.weight%1==0,"integer weight") ptotal+=p.weight
+  local t=assert(Curve.index(p.rarity),"pattern rarity "..p.id) tierOfPattern[p.id]=t
+  perTier[t+1]=perTier[t+1] or {} table.insert(perTier[t+1],p.weight)
+ end
+ assert(ptotal==pscale,"pattern weights must total the scale") assert(tierOfPattern["01_blank"]==0,"the blank pattern stays Common")
+ -- Equal split inside a tier; only the FIRST tiers are used (no gaps); a rarer tier always has strictly less weight per pattern.
+ local used=0 for k=1,6 do if perTier[k] then assert(used==k-1,"tiers must start at Common with no gap") used=k end end
+ for k=1,used do for _,w in perTier[k] do assert(w==perTier[k][1],"equal split inside tier "..k) end end
+ for k=2,used do assert(perTier[k][1]<perTier[k-1][1],"weights must strictly decrease by tier") end
+ for _,a in rows do for _,b in rows do if tierOfPattern[a.id]<tierOfPattern[b.id] then assert(a.weight>b.weight,a.id.." must be likelier than "..b.id) end end end
+ -- Tier chances = the ladder for the tiers in use, renormalised (RarityCurve.weights(used)); adjacent ratio inside the allowed band.
+ local want=Curve.weights(used) local got=Curve.tierTotals(rows)
+ for k=1,used do near(got[k],want[k],1e-3) end
+ for k=used+1,6 do assert(got[k]==0) end
+ local chances={} for k=1,used do chances[k]=got[k] end ladder("EggPatterns tiers",chances)
+ assert(Progression.PatternOddsVersion=="bd1033-patterns-v1")
+ print(string.format("Patterns passed: %d patterns, %d tiers: %s",#rows,used,table.concat((function() local o={} for k=1,used do o[k]=string.format("%s %.3f%%",Curve.Names[k],got[k]*100) end return o end)(),", ")))
+end
 -- 5. BIG (Rare tier) and Shiny (Epic tier), incl. nest luck.
 near(Config.BigChance,.03,.2) assert(Config.BigChance<w6[2] and Config.BigChance>w6[4]) -- Rare-tier scale
 near(Config.ShinyChance,.006,.2) assert(Config.ShinyChance<Config.BigChance and Config.ShinyChance/Config.BigChance>=.1 and Config.ShinyChance/Config.BigChance<=.3)

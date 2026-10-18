@@ -296,10 +296,14 @@ end
 function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -> string)
     local count = if typeof(patterns) == "table" then #patterns else 0
     if patternId == nil or patternId == "" or string.find(patternId, "blank", 1, true) then
-        return {name = "Plain", pct = 100, tier = 1, tierName = T.TierNames[1], plain = true}
+        local blank = if typeof(patterns) == "table" and typeof((patterns :: any).info) == "table" and patternId then (patterns :: any).info[patternId] else nil
+        return {name = "Plain", pct = if blank then blank.pct else 100, tier = 1, tierName = T.TierNames[1], plain = true}
     end
-    local pct = if count > 0 then 100 / count else nil
-    local tier = T.tier(pct)
+    -- BD-1033: the ordered id list may carry `.info[id] = {name, rarity, pct}` (EggGenetics.Patterns): real chance and the declared
+    -- tier. Without it (older callers, harnesses) the pattern is treated as one of `count` equally likely ones.
+    local info = if typeof(patterns) == "table" and typeof((patterns :: any).info) == "table" then (patterns :: any).info[patternId] else nil
+    local pct = if info then info.pct elseif count > 0 then 100 / count else nil
+    local tier = (if info then table.find(T.TierNames, info.rarity) else nil) or T.tier(pct)
     return {name = nameOf(patternId), pct = pct, tier = tier, tierName = T.TierNames[tier], plain = false}
 end
 function T.paintLine(reveal: any): string
