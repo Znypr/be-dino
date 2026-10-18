@@ -38,6 +38,11 @@ return table.freeze({
 
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
+    -- BD-1081 (docs/115 LEAD decision 2026-10-18, docs/194): true = a food comes back after a time that depends on its value (FoodRespawnByKind) instead of the one time above.
+    -- Why: a Studio test bot got 4,100 to 6,600 food in 5 minutes (target 600 to 700) because amber (50) and golden drumstick (60) came back after 8 s and a walker returns to the same spot.
+    -- PROVISIONAL numbers, tune with the bot. false = the old behaviour, byte for byte (pinned off in the default profile, ON in the playtest profile, docs/157). A kind that is not listed uses FoodRespawnSeconds.
+    FoodRespawnTiersEnabled = false,
+    FoodRespawnByKind = {berry = 8, fruit = 12, egg = 40, amber = 120, golden_drumstick = 150},
     FoodPickupRadius = 2.25,
     -- BD-515 (docs/115 MR1): eating happens at the MOUTH (head point + head-size radius, Shared/MouthReach) instead of the dino root. Only applies while
     -- LowPolyDinos is on (the measured sizes are the low-poly models'). false = the root rule of Build 020: 2.25 + 0.75 per growth scale from the root.

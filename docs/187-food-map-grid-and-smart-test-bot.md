@@ -12,7 +12,7 @@ In the playtest window the dino **wiggled a lot**. The owner guessed it is looki
 ## How food is placed today (`src/server/FoodService.luau`)
 - The arena is split into sectors (`Config.FoodSectorCount`). Each sector gets one cluster centre, jittered at random with a fixed seed (`Config.FoodSeed`), and `FoodClusterItems` items are scattered inside a cluster radius. 20 x 20 sectors x 9 items = **3,600 foods** in all (`Config.FoodSectorCount`, `FoodClusterItems`; the code comment about 2,400 is old).
 - Each item's kind is a weighted random roll: berry 70, fruit 20, egg 7, amber 3 (points 1 / 4 / 15 / 50). A starter patch near spawn is fixed.
-- Items avoid water, steep ground, rocks and trunks. Each item respawns after `FoodRespawnSeconds`.
+- Items avoid water, steep ground, rocks and trunks. Each item respawns after `FoodRespawnSeconds`. (BD-1081, 2026-10-18: with `FoodRespawnTiersEnabled` the time depends on the food kind, see [115](115-decisions-log.md).)
 - Weakness (owner point): one cluster per sector with random jitter gives clumps and empty gaps with no design behind them. Nothing measures the spread.
 
 ## Proposal (PROVISIONAL, LEAD decision, owner delegated 2026-10-16)
