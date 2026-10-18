@@ -166,10 +166,10 @@ MUTANTS = {
         'HatchSequence': [('if exact and not v2 then paintColors[i] = Chip.color(exact) end', '')],
     },
     'chips are full-round pills again (BD-1070)': {
-        'ChipStyle': [('corner.CornerRadius = Chip.radius()', 'corner.CornerRadius = UDim.new(1, 0)')],
+        'ChipStyle': [('corner.CornerRadius = Chip.radius(small)', 'corner.CornerRadius = UDim.new(1, 0)')],
     },
     'chip outline is thin again (BD-1070)': {
-        'ChipStyle': [('stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = Chip.Spec.outline,', 'stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = 1,')],
+        'ChipStyle': [('stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = if small then Chip.Small.outline else Chip.Spec.outline,', 'stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = 1,')],
     },
     'the Egg N of M counter lies over the dinosaur again (BD-1073)': {
         'HatchSequence': [('counter.ZIndex, counter.Parent = a.header.ZIndex + 3, a.header', 'counter.ZIndex, counter.Parent = a.body.ZIndex + 6, a.body')],
@@ -207,7 +207,7 @@ def check_source():
     assert 'PLACEHOLDER' in seq[seq.index('Paint-bucket kit'):][:600], 'the paint bucket stays marked PLACEHOLDER until the icon is bound'
     assert 'Timeline.revealRgb(reveal)' in seq and 'bucketPaints' in seq, 'swatch and bucket use the exact palette rgb'
     chipstyle = read('src/shared/ChipStyle.luau')
-    assert 'UDim.new(0, Chip.Spec.radius)' in chipstyle and 'UDim.new(1' not in chipstyle and 'UDim.new(.5' not in chipstyle, 'ChipStyle never makes a full-round corner'
+    assert 'UDim.new(0, if small then Chip.Small.radius else Chip.Spec.radius)' in chipstyle and 'UDim.new(1' not in chipstyle and 'UDim.new(.5' not in chipstyle, 'ChipStyle never makes a full-round corner'
     pres = read('src/shared/HatchPresentation.luau')
     assert 'EggSize.NativeZoom' in pres and 'EggSize.nativeOffset()' in pres and 'UDim2.fromOffset(268,268)' not in pres, 'the 3D egg is sized by HatchEggSize, not a private 268'
     fx = read('src/client/HatchFx.luau')

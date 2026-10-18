@@ -1,0 +1,222 @@
+{
+ "_about": "BD-1077 (docs/193 s5): every full-round shape in src/ that is round ON PURPOSE (button, bar, dot, circle, panel, art, effect, key). A TAG is never listed here: it uses src/shared/ChipStyle.luau. tools/verify_chip_style.py fails on a round shape that is not listed here and on a line here that matches no code. 'contains' is a piece of the source line; 'count' is how many lines it must match when more than one.",
+ "allow": [
+  {
+   "file": "src/client/AdminPanel.client.luau",
+   "contains": "Theme.decorate(knob, 16)",
+   "kind": "dot",
+   "why": "slider knob of the QA panel: a round handle (and the panel is hidden from players)"
+  },
+  {
+   "file": "src/client/Bootstrap.client.luau",
+   "contains": "Theme.decorate(plate,22)",
+   "kind": "panel",
+   "why": "a big 22 px plate corner on a large panel, not a tag (Bootstrap is not changed by this task)"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = bubble",
+   "kind": "circle",
+   "why": "the round '!' alert bubble over a dinosaur head, one glyph in a circle"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = back",
+   "kind": "bar",
+   "why": "health bar track: a bar is round on purpose"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "fillCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "bar",
+   "why": "health bar fill: a bar is round on purpose"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "pill.CornerRadius = UDim.new(0, 28)",
+   "kind": "button",
+   "why": "the CHOMP button (a true 60 px button, not a tag)"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "chipCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "key",
+   "why": "the small F key-cap on the CHOMP button: one letter in a 22 px circle, a keyboard hint and not a tag"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "ownCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "bar",
+   "why": "own health strip track: a bar"
+  },
+  {
+   "file": "src/client/CombatHud.luau",
+   "contains": "ownFillCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "bar",
+   "why": "own health strip fill: a bar"
+  },
+  {
+   "file": "src/client/ConditionStage.luau",
+   "contains": "UDim.new(0, 24)",
+   "kind": "panel",
+   "why": "the jungle stage picture frame: a big picture panel (24 px corner), not a tag"
+  },
+  {
+   "file": "src/client/ConditionStage.luau",
+   "contains": "UDim.new(0, 18)",
+   "kind": "panel",
+   "why": "the hero egg stage frame: a picture panel, not a tag"
+  },
+  {
+   "file": "src/client/DinoIndexPanels.luau",
+   "contains": "hitCorner.CornerRadius = UDim.new(.5, 0)",
+   "kind": "button",
+   "why": "the round 48 px egg icon button on a dino page: a round icon button"
+  },
+  {
+   "file": "src/client/EggPicture.luau",
+   "contains": "corner.CornerRadius = UDim.new(.5, 0) corner.Parent = fallback",
+   "kind": "art",
+   "why": "the fallback egg blob when no egg picture loads: drawn art, an oval egg"
+  },
+  {
+   "file": "src/client/EggPicture.luau",
+   "contains": "UDim.new(0, 18) corner.Parent = root",
+   "kind": "panel",
+   "why": "the egg picture stage tile: a picture panel"
+  },
+  {
+   "file": "src/client/FusionMenu.luau",
+   "contains": "Theme.decorate(tick, 15)",
+   "kind": "dot",
+   "why": "the round check mark on a chosen fusion card: a 30 px selection dot"
+  },
+  {
+   "file": "src/client/HatchEggV2.luau",
+   "contains": "c.CornerRadius = UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "a light streak in the HatchV2 egg effect (flag off): effect shape"
+  },
+  {
+   "file": "src/client/HatchFx.luau",
+   "contains": "c.CornerRadius = UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "round spark and ring pieces of the hatch effects"
+  },
+  {
+   "file": "src/client/HatchSequence.luau",
+   "contains": "c.CornerRadius = radius or UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "the hatch effects helper (rings, splashes, drops); tags use ChipStyle (checked by verify_hatch_polish.py)"
+  },
+  {
+   "file": "src/client/HatchSequence.luau",
+   "contains": "UDim.new(0, 16) corner.Parent = b",
+   "kind": "button",
+   "why": "the DONE / TRY AGAIN end buttons: true 60 px buttons"
+  },
+  {
+   "file": "src/client/HubGuideClient.luau",
+   "contains": "round.CornerRadius = UDim.new(.5, 0)",
+   "kind": "effect",
+   "why": "round glow halo behind the hub guide arrow"
+  },
+  {
+   "file": "src/client/HubWalkUpClient.luau",
+   "contains": "corner.CornerRadius = UDim.new(1, 0) corner.Parent = button",
+   "kind": "button",
+   "why": "the big round tap button of a walk-up prompt: a true round button"
+  },
+  {
+   "file": "src/client/HudV2.luau",
+   "contains": "trackCorner.CornerRadius",
+   "kind": "bar",
+   "why": "the level bar track on the HUD: a bar"
+  },
+  {
+   "file": "src/client/HudV2.luau",
+   "contains": "fillCorner.CornerRadius",
+   "kind": "bar",
+   "why": "the level bar fill on the HUD: a bar"
+  },
+  {
+   "file": "src/client/IndexTabs.luau",
+   "contains": "corner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "dot",
+   "why": "the red 18 px new-find dot and the three placeholder colour dots of the tab icon: dots",
+   "count": 2
+  },
+  {
+   "file": "src/client/MutationBadge.luau",
+   "contains": "dotCorner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "dot",
+   "why": "the tiny 9 px colour dot inside a mutation tag when no icon is bound (the tag itself is a ChipStyle tag)"
+  },
+  {
+   "file": "src/client/MutationReveal.luau",
+   "contains": "c.CornerRadius = UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "round spark and ring pieces of the mutation reveal effects"
+  },
+  {
+   "file": "src/client/PatternColourCards.luau",
+   "contains": "UDim.new(if kind == \"colours\" then 0.5 else 0.18, 0)",
+   "kind": "circle",
+   "why": "the big 84 px colour sample tile of the Colours index is a circle of the exact colour (a picture tile, not a tag); owner may want rounded squares"
+  },
+  {
+   "file": "src/client/PatternColourCards.luau",
+   "contains": "corner.CornerRadius = UDim.new(0.5, 0)",
+   "kind": "dot",
+   "why": "the 20 px progress pips on an index card: dots"
+  },
+  {
+   "file": "src/client/PreviewTraits.luau",
+   "contains": "corner.CornerRadius = UDim.new(.5, 0) corner.Parent = dot",
+   "kind": "dot",
+   "why": "the 22 px mutation colour dot on a dino preview while no mutation icon is bound"
+  },
+  {
+   "file": "src/client/RareHatchClient.client.luau",
+   "contains": "UDim.new(0, 14) corner.Parent = label",
+   "kind": "panel",
+   "why": "the rare-hatch banner: a wide 40 to 56 px banner with a 14 px corner, a rounded rectangle and not a pill"
+  },
+  {
+   "file": "src/client/VolumeSliders.luau",
+   "contains": "Theme.decorate(knob, 15)",
+   "kind": "dot",
+   "why": "slider knob: a round handle"
+  },
+  {
+   "file": "src/shared/FxUi.luau",
+   "contains": "c.CornerRadius = UDim.new(1, 0)",
+   "kind": "effect",
+   "why": "round shapes of the effect previews"
+  },
+  {
+   "file": "src/shared/HatchPresentation.luau",
+   "contains": "corner.CornerRadius=UDim.new(1,0) corner.Parent=halo",
+   "kind": "effect",
+   "why": "round glow halo behind the 3D egg"
+  },
+  {
+   "file": "src/shared/ModelPreview.luau",
+   "contains": "corner.CornerRadius=UDim.new(.5,0) corner.Parent=base",
+   "kind": "art",
+   "why": "the round floor disc under a 3D model preview"
+  },
+  {
+   "file": "src/shared/TrailArtwork.luau",
+   "contains": "UDim.new(1,0),part",
+   "kind": "art",
+   "why": "round trail dots of the trail icon art"
+  },
+  {
+   "file": "src/shared/UITheme.luau",
+   "contains": "c.CornerRadius=UDim.new(.5,0) c.Parent=f",
+   "kind": "art",
+   "why": "blobs of the code-drawn egg nest fallback icon (art, used only while the icon id is empty)"
+  }
+ ]
+}

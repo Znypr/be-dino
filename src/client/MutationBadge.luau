@@ -5,6 +5,7 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Look = require(Shared.MutationLook)
 local AssetSlots = require(Shared.AssetSlots)
+local Chip = require(Shared.ChipStyle)
 local Badge = {}
 Badge.MinTextSize = 14
 Badge.Height = 22
@@ -31,13 +32,12 @@ function Badge.chip(parent: GuiObject, mutationId: any, position: UDim2, anchor:
     if old then old:Destroy() end
     local name = string.upper(look.name)
     local chip = Instance.new("Frame")
-    chip.Name, chip.BackgroundColor3, chip.BorderSizePixel = "MutationChip", Look.color(look.badge), 0
+    chip.Name = "MutationChip"
+    Chip.apply(chip, Look.color(look.badge), Look.color(look.rim), true) -- BD-1077: the shared small chunky tag; the mutation's own rim colour is its outline
     local image = Badge.iconImage(look.id)
     chip.AnchorPoint, chip.Position, chip.Size = anchor or Vector2.zero, position, UDim2.fromOffset(Badge.width(name, image ~= nil), Badge.Height)
     chip.ZIndex = parent.ZIndex + 6
     chip:SetAttribute("MutationId", look.id)
-    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = chip
-    local rim = Instance.new("UIStroke") rim.Color, rim.Thickness, rim.Transparency = Look.color(look.rim), 2, 0.1 rim.Parent = chip
     local textX = 19
     if image then
         local icon = Instance.new("ImageLabel")

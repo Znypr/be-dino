@@ -197,7 +197,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy", "ModalCloseRules", "ChipStyle"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu", "ObjectiveSeen"} do

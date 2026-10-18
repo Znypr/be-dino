@@ -464,6 +464,7 @@ local function typeof(v) if type(v) == "table" and rawget(v, "__type") then retu
 local task_ = {spawn = function(fn, ...) table.insert(tasks, {fn, ...}) end, delay = function(_, fn) table.insert(tasks, {fn}) end}
 local os_ = {clock = function() return clockNow end}
 local Colors = {panel = "panel", card = "card", gold = "gold", accent = "accent", text = setmetatable({}, {__index = {Lerp = function() return "muted" end}}), outline = "outline", red = "red"}
+modules.ChipStyle = {apply = function(frame, fill) frame.BackgroundColor3 = fill end} -- BD-1077
 modules.UITheme = {Colors = Colors, decorate = function() end, TextStyle = {apply = function() end},
  icon = function(parent, id) local f = newInstance("Frame") f.Name = "Icon_" .. id f.Parent = parent return f end,
  animate = function(target, _, goals) for k, v in goals do target[k] = v end end}

@@ -142,6 +142,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1047 food map v2: small clusters, pace model, merge of PR 519 flags | worker | #518 | 110.0 | 90 | 300.0 | ok | 1 | other: first version spread single foods and cut a seeker's food by 41 percent; heredoc backslashes again | model the pace effect before spreading foods out; measure with several layouts and starts because one walker is noisy |
 | 2026-10-18 | BD-1066/1068/1074 round 4 fixes: class icon image ids, mutant dino floor, key toggle | worker | - | 190.0 | - | - | good | - | studio-window: window sizes and camera relock cost time, unverified-claim: black dino root cause not reproduced | execute_luau require() can give a second module instance, so cache stats from it are not the game's |
 | 2026-10-18 | Hatch polish BD-1069..1073 (bucket colour, chip style, egg size, rainbow, card layout) | worker | #520 | 150.0 | 230 | - | good | 1 | studio-window: Studio window shrank to 500x465, test grant eggs had no genes | calibrate pixel constants from a measurement in the same window, not from an older QA picture (zoom 1.65 was 16 percent too big) |
+| 2026-10-18 | BD-1077 one chunky tag style everywhere (inventory, conversion, CI check) | worker | - | 60.0 | 80 | - | good | - | - | Mocks in other verifiers stub required modules: adding a require to a client file needs the stub added in the same change. (tool: tools/verify_chip_style.py) |
 <!-- retro-table:end -->
 
 ## 6. Open items
