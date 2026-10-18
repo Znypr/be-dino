@@ -26,12 +26,12 @@ Pages: [Be Dino! team catalogue](Home.md) | [Dinosaurs](Dinosaurs.md) | [Eggs an
 
 Every pickup gives food points (growth and eggs come from them). The island has 400 clusters of 9 pickups.
 
-| Food | Food points | Share |
-|---|---|---|
-| [Berry](#food-berry) | 1 | 70% |
-| [Fruit](#food-fruit) | 4 | 20% |
-| [Egg](#food-egg) | 15 | 7% |
-| [Amber](#food-amber) | 50 | 3% |
+| Food | Food points | Share | Comes back after |
+|---|---|---|---|
+| [Berry](#food-berry) | 1 | 70% | 8 s |
+| [Fruit](#food-fruit) | 4 | 20% | 12 s |
+| [Egg](#food-egg) | 15 | 7% | 40 s |
+| [Amber](#food-amber) | 50 | 3% | 120 s |
 
 **STATUS**
 
@@ -49,6 +49,7 @@ id: `berry`
 
 - **Food points:** 1
 - **Share of food on the island:** 70%
+- **Comes back after:** 8 seconds
 - **Size:** 0.7 studs
 
 <a id="food-fruit"></a>
@@ -58,6 +59,7 @@ id: `fruit`
 
 - **Food points:** 4
 - **Share of food on the island:** 20%
+- **Comes back after:** 12 seconds
 - **Size:** 1 stud
 
 <a id="food-egg"></a>
@@ -67,6 +69,7 @@ id: `egg`
 
 - **Food points:** 15
 - **Share of food on the island:** 7%
+- **Comes back after:** 40 seconds
 - **Size:** 1.3 studs
 
 <a id="food-amber"></a>
@@ -76,6 +79,7 @@ id: `amber`
 
 - **Food points:** 50
 - **Share of food on the island:** 3%
+- **Comes back after:** 120 seconds
 - **Size:** 1.5 studs
 
 <a id="special-food"></a>
