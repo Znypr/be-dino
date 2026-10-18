@@ -251,7 +251,7 @@ def script():
 
 
 def static_checks():
-    client = (ROOT / 'src/client/Bootstrap.client.luau').read_text() + (ROOT / 'src/client/ShopScreens.luau').read_text()  # BD-1020: transact and the shop screens moved
+    client = (ROOT / 'src/client/Bootstrap.client.luau').read_text() + (ROOT / 'src/client/ShopScreens.luau').read_text()  # BD-1088: transact and the shop screens moved
     server = (ROOT / 'src/server/ProgressionService.luau').read_text()
     status = (ROOT / 'src/shared/NotifyQueue.luau').read_text()
     # transact fires the remote (unless a request is already in flight) and records the pending token.

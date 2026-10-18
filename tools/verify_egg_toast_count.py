@@ -164,6 +164,7 @@ def read(path):
 
 def check_wiring():
     boot = read('src/client/Bootstrap.client.luau')
+    toasts = read('src/client/Toasts.luau')  # BD-1088: the toast stack moved out of Bootstrap
     hud = read('src/client/HudV2.luau')
     core = read('src/shared/PrivateStateCore.luau')
     repo = profile_sources.repository_text()
@@ -187,8 +188,8 @@ def check_wiring():
     assert 'Copy.foundToast(pendingEggs, pendingMutations)' in hud, 'the toast receives the count per weather name'
     assert 'pendingMutations[mutation.name]' in hud and 'not pendingMutation' not in hud, 'every tagged egg is counted, not only the first'
     # BD-378: the toast placement comes from the pure layout rule, not a fixed y.
-    assert 'toastPlacement(' in boot and 'WalletRect' in boot, 'Bootstrap places the toast with TouchLayout.toastPlacement'
-    assert 'topY=if shade.Visible then 4 else 80' not in boot, 'the fixed y=4 / y=80 slot is gone'
+    assert 'toastPlacement(' in toasts and 'WalletRect' in toasts and 'WalletRect' in boot, 'Toasts.luau places the toast with TouchLayout.toastPlacement and Bootstrap publishes the wallet rect'
+    assert 'topY=if shade.Visible then 4 else 80' not in boot + toasts, 'the fixed y=4 / y=80 slot is gone'
 
 
 def run(runner, name, source):

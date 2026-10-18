@@ -112,7 +112,7 @@ def script():
 
 
 def static_checks():
-    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8') + (ROOT / 'src/client/ShopScreens.luau').read_text(encoding='utf-8')  # BD-1020
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8') + (ROOT / 'src/client/ShopScreens.luau').read_text(encoding='utf-8')  # BD-1088
     odds = (ROOT / 'src/shared/OddsCopy.luau').read_text(encoding='utf-8')
     repo = profile_sources.repository_text()
     # panel wiring: egg odds get the safe-eggs count, upgrade odds do not; the note is drawn at the shared >= 14 size
