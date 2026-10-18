@@ -10,7 +10,7 @@
 "Free" means higher than every BD id mentioned anywhere under docs/ on:
   * origin/main,
   * the head branch of every open PR (`gh pr list`), plus those PR titles and branch names,
-  * every other git worktree of this clone with activity in the last 3 days: its docs/07-kanban.md
+  * every other git worktree of this clone with activity in the last 3 days: its kanban rows
     read from disk, so rows an agent wrote but has not pushed are seen, and
   * ids already handed out by this tool on this machine (reservations are kept in the shared
     git dir, so every worktree of this clone sees them; they expire after 48 h).
@@ -74,7 +74,7 @@ def doc_numbers_in_ref(ref):
 def worktree_activity(path):
     """Newest mtime among the worktree's git index/HEAD and its kanban file (0 if unknown)."""
     newest = 0.0
-    cands = [path / "docs" / "07-kanban.md"]
+    cands = [path / "docs" / "07-kanban.md", path / "docs" / "kanban" / "rows"]  # a new row file changes the folder's mtime
     try:
         text = (path / ".git").read_text(encoding="utf-8").strip()
         if text.startswith("gitdir:"):
@@ -116,7 +116,7 @@ def live_worktrees():
 def scan_worktree(path, kind):
     """Numbers used by a worktree's own files, read straight from disk (so unpushed, even unsaved-to-git work counts).
 
-    BD ids: its docs/07-kanban.md (where rows are claimed).
+    BD ids: its kanban rows (docs/kanban/rows/*.md, or the table in docs/07-kanban.md before the cutover).
     Doc numbers: the docs/NN-*.md file names it has."""
     docs = path / "docs"
     try:
@@ -125,10 +125,21 @@ def scan_worktree(path, kind):
         return set()
     if kind == "doc":
         return {int(m.group(1)) for m in (re.match(r"(\d+)-", f) for f in names) if m}
+    found = set()
     try:
-        return {int(m) for m in BD.findall((docs / "07-kanban.md").read_text(encoding="utf-8", errors="replace"))}
+        found |= {int(m) for m in BD.findall((docs / "07-kanban.md").read_text(encoding="utf-8", errors="replace"))}
     except OSError:
-        return set()
+        pass
+    try:  # since the cutover (BD-1061) every row is its own file: docs/kanban/rows/BD-NNNN.md
+        for name in os.listdir(docs / "kanban" / "rows"):
+            found |= {int(m) for m in BD.findall(name)}
+            try:
+                found |= {int(m) for m in BD.findall((docs / "kanban" / "rows" / name).read_text(encoding="utf-8", errors="replace"))}
+            except OSError:
+                pass
+    except OSError:
+        pass
+    return found
 
 
 def reservation_file():

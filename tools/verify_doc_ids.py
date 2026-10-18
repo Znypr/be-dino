@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Fail on NEW duplicate docs/ numeric prefixes or NEW duplicate BD ids in docs/07-kanban.md.
+"""Fail on NEW duplicate docs/ numeric prefixes or NEW duplicate BD ids (kanban row files, or the old table).
 Existing historical duplicates are allow-listed. See AGENTS.md 'Picking numbers'."""
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kanban_lib  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_DOC_PREFIXES = {"13", "39", "43", "85", "86", "93", "111", "112"}
-ALLOWED_BD = {"BD-065"}
+ALLOWED_BD = {"BD-065"}  # compared after zero-padding to 3 digits: BD-65 and BD-065 are the same id
 
 
 def main():
@@ -22,10 +25,8 @@ def main():
         if len(v) > 1 and k not in ALLOWED_DOC_PREFIXES:
             bad.append("docs prefix %s used by: %s" % (k, ", ".join(v)))
     ids = defaultdict(int)
-    for line in (ROOT / "docs" / "07-kanban.md").read_text(encoding="utf-8").splitlines():
-        m = re.match(r"\|\s*(BD-\d+)\s*\|", line)
-        if m:
-            ids[m.group(1)] += 1
+    for n in kanban_lib.row_numbers(ROOT):  # row files: one per id by name; the old table: every row line
+        ids["BD-%03d" % n] += 1
     for k, n in ids.items():
         if n > 1 and k not in ALLOWED_BD:
             bad.append("kanban id %s has %d rows" % (k, n))
