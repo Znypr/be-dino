@@ -63,6 +63,10 @@ offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
 
 [Virtual display and phone emulator](158-virtual-display-and-phone-emulator.md): research and owner-run steps for a screen that never sleeps (software virtual monitor, dummy plug as fallback), the free power-setting fix, a 10-minute acceptance test for the lead, and what the Studio Device Simulator, an Android emulator and a cheap real phone can and cannot prove. Nothing is installed yet; install steps are owner actions.
 
+## Where git worktrees may live and how they are cleaned (BD-660)
+
+[Worktree hygiene](170-worktree-hygiene.md): worktrees only in `.claude/worktrees` (or the session scratchpad), a helper removes its own after its PR merged, the lead runs `python tools/worktree_hygiene.py clean --go` weekly. The same document lists the 13 worktrees left because of unsaved files, for the owner to decide.
+
 ## Historical documents: keep for traceability, not as active instructions
 
 Do **not** delete build snapshots or test evidence just to make them look current. Retain their specific facts and outputs, with clear historical notices. Older strings like "this is the current build", "persistence is not implemented", "GitHub main is Build 013", "three-species only" and "60-second newly earned egg timing" are scoped to their original dates/builds.

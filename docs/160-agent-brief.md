@@ -28,6 +28,7 @@ grep -n "BD-NNN" docs/07-kanban.md             # your row
 ## 3. Git and PR workflow
 
 - Work in your own **worktree** (never the owner's checkout). Do not `cd` out of it.
+- **Worktrees (docs/170): one folder only**, `<repo>/.claude/worktrees` (or the session scratchpad); never a sibling folder in Documents. **When your PR is merged, remove your own worktree:** `git -C C:/Users/znypr/Documents/be-dino worktree remove <your-worktree-path>` (no `--force`; if git refuses, something is unsaved). The lead runs `python tools/worktree_hygiene.py clean --go` weekly.
 - `git fetch origin`, base on `origin/main`. **Never rebase, never force-push.** To catch up: `git merge origin/main`.
 - Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. PR body footer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - Paste the handbook checklist ([114](114-handbook.md) section 13, same text as `.github/pull_request_template.md`) into the PR body and tick it honestly.
