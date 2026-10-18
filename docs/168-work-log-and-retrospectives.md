@@ -120,6 +120,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | Lead: misread GitHub UTC times as 90 min without merges | lead | - | - | - | - | ok | - | unverified-claim: time zones | convert GitHub times (UTC) before saying how long |
 | 2026-10-18 | Lead: committed leftover conflict markers | lead | - | 5.0 | - | - | rework | 1 | unverified-claim: assumed the regex worked | check for markers before every commit; CI check being built (tool: tools/verify_no_conflict_markers.py) |
 | 2026-10-18 | Lead: both-sides-edited kanban row lost main notes | lead | - | 15.0 | - | - | rework | 1 | conflict: BD-621 row edited on main and in the train | merge helpers must merge both texts, not keep one (tool: tools/kanban_merge_lib.py) |
+| 2026-10-18 | Lead: committed leftover conflict markers (CRLF regex); kanban rows edited on both sides lost main's notes | lead | - | - | - | - | rework | 1 | conflict: conflict markers committed in docs; both-sides-edited kanban rows dropped main's notes | a check must treat CRLF like LF, and a both-edited row must keep both sides (tool: tools/verify_no_conflict_markers.py) |
 <!-- retro-table:end -->
 
 ## 6. Open items

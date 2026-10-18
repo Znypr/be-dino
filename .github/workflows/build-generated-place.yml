@@ -14,15 +14,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # full history: the kanban merge check needs the merge base and main's row history
-      - name: Fail on merge conflict markers
-        run: |
-          if git grep -InE '^(<<<<<<< |>>>>>>> |=======$)' -- . ':!*.rbxlx'; then
-            echo "Conflict markers found in tracked files" >&2
-            exit 1
-          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Fail on leftover merge conflict markers (CRLF safe; BD-999, docs/166)
+        run: python tools/verify_no_conflict_markers.py
       - name: Install test dependencies
         run: python -m pip install Pillow numpy
       - name: Verify doc numbers and BD ids are unique
