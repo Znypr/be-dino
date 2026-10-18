@@ -404,7 +404,7 @@ function FoodService.start(dinosaur,repository)
                         RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end,FoodService.adminMutationScale(candidate.player))
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
-                    if trackTelemetry then telemetry().noteFood(candidate.player, c:GetAttribute("RunId"), candidate.raw or 0, candidate.gained) end -- BD-575: ONE call per player per tick
+                    if trackTelemetry then pcall(function() telemetry().noteFood(candidate.player, c:GetAttribute("RunId"), candidate.raw or 0, candidate.gained) end) end -- BD-575: ONE call per player per tick; BD-1096: pcall, telemetry can never skip the growth below
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
                     if trackObjectives then objectives().record(candidate.player, "food_eaten", candidate.items) end -- BD-074: after the pickups were claimed and the catch score was committed; ONE call per player per tick
                 end

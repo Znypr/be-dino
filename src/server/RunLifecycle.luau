@@ -128,6 +128,71 @@ function RunLifecycle.isProtected(character: Model, now: number?): boolean
     return endsAt > (now or workspace:GetServerTimeNow())
 end
 
+-- BD-1096: one call to the settlement callback, never able to throw into the caller. A thrown error (a script timeout, a bug in a hook)
+-- used to kill the thread that was about to mark the run Settled, leaving the player in "Ending" for good. Returns (called, ok):
+-- called = the callback ran without an error, ok = what it answered. `settling` counts calls that are running right now.
+local settling: {[string]: number} = {}
+local declined: {[string]: boolean} = {} -- runId -> the callback answered a clean "false" (save failed): the lease renew tick owns the retry, not the watchdog
+local function callSettle(player: Player, snapshot, reason: string): (boolean, boolean)
+    if not settleRun then return true, true end
+    local runId = snapshot.runId
+    settling[runId] = (settling[runId] or 0) + 1
+    local called, result = pcall(settleRun, player, runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds, snapshot.nestWeather)
+    local left = (settling[runId] or 1) - 1
+    settling[runId] = if left > 0 then left else nil
+    if not called then warn("[Be Dino] settlement callback failed (run " .. tostring(runId) .. "): " .. tostring(result)) end
+    if called and result ~= true then declined[runId] = true end
+    return called, called and result == true
+end
+
+-- Marks the run Settled and brings the dinosaur back. Both the normal path and the watchdog end here; only the first one finds
+-- the run still "Ending", so the respawn happens once.
+local function finishSettlement(player: Player, character: Model)
+    if character:GetAttribute("RunState") ~= "Ending" then return end
+    character:SetAttribute("RunState", "Settled")
+    if not player.Parent then return end
+    task.wait(Config.RespawnDelaySeconds)
+    if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+        local loaded, err = pcall(function()
+            player:LoadCharacterAsync()
+        end)
+        if not loaded then
+            warn("[Be Dino] respawn failed: " .. tostring(err))
+        end
+    end
+end
+
+-- BD-1096 watchdog: a run still "Ending" after Config.EndingWatchdogSeconds gets ONE forced settlement, with the same snapshot and
+-- the same run id (the ledger answers "duplicate" if the first call already paid, so the rewards are never doubled). A settle call
+-- that is still running is waited for, up to Config.EndingWatchdogMaxSeconds. A callback that answered a clean "false" (the store
+-- failed its whole retry window, ProfileState SaveFailed) is NOT re-run: BD-359's lease renew tick retries that one. Armed once per run
+-- by tryEnd, so it cannot loop.
+local function armEndingWatchdog(player: Player, character: Model, snapshot, reason: string)
+    local armedAt = os.clock()
+    local hardLimit = Config.EndingWatchdogMaxSeconds or 60
+    local function check()
+        if not player.Parent then return end
+        if character:GetAttribute("RunState") ~= "Ending" or character:GetAttribute("RunId") ~= snapshot.runId then return end
+        if declined[snapshot.runId] then
+            declined[snapshot.runId] = nil
+            return
+        end
+        if (settling[snapshot.runId] or 0) > 0 and os.clock() - armedAt < hardLimit then
+            task.delay(5, check)
+            return
+        end
+        warn("[Be Dino] BD-1096 watchdog: run " .. tostring(snapshot.runId) .. " was still Ending, forcing its settlement once")
+        local called, ok = callSettle(player, snapshot, reason)
+        declined[snapshot.runId] = nil
+        if called and ok then
+            finishSettlement(player, character)
+        elseif called and player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+            player:SetAttribute("ProfileState", "SaveFailed")
+        end
+    end
+    task.delay(Config.EndingWatchdogSeconds or 20, check)
+end
+
 local function settlementSnapshot(character: Model)
     local runId = character:GetAttribute("RunId")
     local catchScore = character:GetAttribute("CatchScore")
@@ -154,28 +219,15 @@ end
 
 local function respawnAfterSettlement(player: Player, character: Model, snapshot, reason: string)
     task.spawn(function()
-        local ok = true
-        if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds, snapshot.nestWeather)
-        end
-        if not ok then
+        local called, ok = callSettle(player, snapshot, reason)
+        if called and not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
                 player:SetAttribute("ProfileState", "SaveFailed")
             end
             return
         end
-
-        character:SetAttribute("RunState", "Settled")
-        if not player.Parent then return end
-        task.wait(Config.RespawnDelaySeconds)
-        if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
-            local loaded, err = pcall(function()
-                player:LoadCharacterAsync()
-            end)
-            if not loaded then
-                warn("[Be Dino] respawn failed: " .. tostring(err))
-            end
-        end
+        if not called then return end -- the callback threw: the run stays Ending and the watchdog settles it
+        finishSettlement(player, character)
     end)
 end
 
@@ -217,6 +269,7 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
         humanoid.Health = 0
     end
 
+    armEndingWatchdog(player, character, snapshot, reason)
     respawnAfterSettlement(player, character, snapshot, reason)
     return true
 end
