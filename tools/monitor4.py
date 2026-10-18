@@ -6,7 +6,9 @@ Owner request 2026-10-18: "always open Studio, Blender and Edge on monitor 4, so
   python tools/monitor4.py list                    # monitors and the windows this tool would care about (changes nothing)
   python tools/monitor4.py place                   # move matching windows that are NOT on the virtual monitor onto it
   python tools/monitor4.py place --dry-run         # say what it would move
-  python tools/monitor4.py launch studio build/BeDino-Build020-playtest.rbxlx   # start Studio, then place its new window
+  python tools/monitor4.py launch studio build/BeDino-Build020-playtest.rbxlx   # start Studio, place its new window, MAXIMISE it (default for studio)
+  python tools/monitor4.py launch studio file.rbxlx --no-maximize               # keep the window size Studio chose (a small 500 x 465 viewport)
+  python tools/monitor4.py place --maximize        # also maximise studio/blender windows already on the virtual monitor (BD-995)
   python tools/monitor4.py launch blender [file.blend]
   python tools/monitor4.py watch                   # keep placing new windows every few seconds until Ctrl+C
 
@@ -18,6 +20,9 @@ SAFETY RULES (memory: owner-place1-window, studio-focus):
   * Edge: the owner's own Edge windows are NOT moved. Only an Edge window whose title contains the marker given with
     --edge-title (default "Claude") is moved; `--edge-title "*"` moves every Edge window (use only when the owner says so),
     and a window started with `launch edge` is placed as well.
+  * --maximize (BD-995, so layouts are checked at a real viewport): only windows classified studio or blender are maximised, and only
+    after they were put on the virtual monitor (SW_SHOWNORMAL, SetWindowPos onto the monitor, then SW_MAXIMIZE). Place1 and every Edge
+    window are never maximised. No topmost, no focus steal (SW_SHOWMAXIMIZED is used where possible: it does not activate).
   * Windows only (ctypes, no extra packages). Does nothing on other systems.
 The virtual monitor is the display whose size is 1280 x 720 (override with --size 1920x1080 or --index N).
 """
@@ -36,6 +41,7 @@ SWP_NOZORDER = 0x0004
 SWP_NOACTIVATE = 0x0010
 SW_SHOWMAXIMIZED = 3
 SW_SHOWNORMAL = 1
+MAXIMIZE_KINDS = ("studio", "blender")  # never "edge" (the owner's browser), never Place1 (classify returns None for it)
 VIRTUAL_SIZE = (1280, 720)
 STUDIO_EXE_GLOB = "C:/Users/{user}/AppData/Local/Roblox/Versions"
 
@@ -56,6 +62,21 @@ def classify(title: str, exe: str, edge_title: str = "Claude") -> str | None:
     if low.startswith("msedge") and edge_title is not None and (edge_title == "*" or (edge_title and edge_title.lower() in title.lower())):
         return "edge"
     return None
+
+
+def is_splash(title: str) -> bool:
+    """Studio first shows a small splash window titled just "RobloxStudio"; the real window comes later (BD-995)."""
+    return title.strip().lower() == "robloxstudio"
+
+
+def may_maximize(kind: str | None, title: str) -> bool:
+    """Pure, tested: only studio/blender windows, never the owner's Place1."""
+    return kind in MAXIMIZE_KINDS and not is_protected(title)
+
+
+def is_maximised_on(mon: tuple, win: tuple) -> bool:
+    """A maximised window's rect covers the monitor (it may extend a few pixels past it for the frame)."""
+    return win[0] <= mon[0] + 16 and win[1] <= mon[1] + 16 and win[2] >= mon[2] - 16 and win[3] >= mon[3] - 100
 
 
 def contains(outer: tuple, x: int, y: int) -> bool:
@@ -151,22 +172,34 @@ def place(args) -> int:
         print("STOP: no %dx%d monitor found. Monitors: %s" % (args.size[0], args.size[1], [(m["index"], m["size"]) for m in mons]))
         return 2
     moved = 0
+    maximised = 0
+    want_max = getattr(args, "maximize", False)
     for w in top_windows(args.edge_title):
+        if is_splash(w["title"]):
+            continue  # the Studio splash window goes away by itself
         cx, cy = (w["rect"][0] + w["rect"][2]) // 2, (w["rect"][1] + w["rect"][3]) // 2
-        if contains(virt["rect"], cx, cy):
+        on_virtual = contains(virt["rect"], cx, cy)
+        do_max = want_max and may_maximize(w["kind"], w["title"]) and not (on_virtual and w["maximised"])
+        if on_virtual and not do_max:
             continue
         if w["foreground"] and not args.force_foreground:
             print("skip (has focus, owner may be using it): %s" % w["title"][:70])
             continue
-        x, y, ww, hh = target_rect(virt["rect"], w["rect"])
-        print("%s %s [%s] -> monitor %d at %d,%d %dx%d" % ("would move" if args.dry_run else "moving", w["kind"], w["title"][:60], virt["index"], x, y, ww, hh))
-        if args.dry_run:
-            continue
-        if w["maximised"]:
-            user32.ShowWindow(w["hwnd"], SW_SHOWNORMAL)  # a maximised window cannot be moved to another monitor
-        user32.SetWindowPos(w["hwnd"], None, x, y, ww, hh, SWP_NOZORDER | SWP_NOACTIVATE)
-        moved += 1
-    print("done: %d window(s) %s" % (moved, "would be moved" if args.dry_run else "moved"))
+        if not on_virtual:
+            x, y, ww, hh = target_rect(virt["rect"], w["rect"])
+            print("%s %s [%s] -> monitor %d at %d,%d %dx%d" % ("would move" if args.dry_run else "moving", w["kind"], w["title"][:60], virt["index"], x, y, ww, hh))
+            if not args.dry_run:
+                if w["maximised"]:
+                    user32.ShowWindow(w["hwnd"], SW_SHOWNORMAL)  # a maximised window cannot be moved to another monitor
+                user32.SetWindowPos(w["hwnd"], None, x, y, ww, hh, SWP_NOZORDER | SWP_NOACTIVATE)
+                moved += 1
+        if do_max:
+            print("%s %s [%s] on monitor %d" % ("would maximise" if args.dry_run else "maximising", w["kind"], w["title"][:60], virt["index"]))
+            if not args.dry_run:
+                user32.ShowWindow(w["hwnd"], SW_SHOWMAXIMIZED)  # SW_SHOWMAXIMIZED = maximise without activating
+                maximised += 1
+    print("done: %d window(s) %s%s" % (moved, "would be moved" if args.dry_run else "moved",
+                                      (", %d %s" % (maximised, "would be maximised" if args.dry_run else "maximised")) if want_max else ""))
     return 0
 
 
@@ -218,10 +251,13 @@ def launch(args) -> int:
     subprocess.Popen(cmd)
     if args.what == "edge":
         args.edge_title = "*"  # a window we start ourselves is ours
+    if not getattr(args, "no_maximize", False) and args.what == "studio":
+        args.maximize = True  # BD-995: a maximised Studio gives a real 1280 x 720 style viewport instead of 500 x 465
     for _ in range(40):  # wait up to ~2 minutes for the window
         time.sleep(3)
-        if any(w["kind"] == args.what for w in top_windows(args.edge_title)):
+        if any(w["kind"] == args.what and not (args.what == "studio" and is_splash(w["title"])) for w in top_windows(args.edge_title)):
             break
+    time.sleep(2)  # let the real window settle (Studio resizes itself while it loads)
     return place(args)
 
 
@@ -252,6 +288,10 @@ def main(argv=None) -> int:
         p.add_argument("--edge-title", default="Claude", help="only Edge windows whose title contains this are moved")
         p.add_argument("--dry-run", action="store_true")
         p.add_argument("--force-foreground", action="store_true")
+        if name in ("place", "launch", "watch"):
+            p.add_argument("--maximize", action="store_true", help="also maximise studio/blender windows on the virtual monitor (never Place1, never Edge)")
+        if name == "launch":
+            p.add_argument("--no-maximize", action="store_true", help="launch studio without maximising it (the default for studio is to maximise)")
         if name == "watch":
             p.add_argument("--every", type=int, default=5)
         if name == "launch":
