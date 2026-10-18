@@ -129,7 +129,7 @@ def read(path):
 
 
 def check_wiring():
-    boot = read('src/client/Bootstrap.client.luau') + read('src/client/ShopScreens.luau') + read('src/client/DinoIndexScreens.luau')  # BD-1088/BD-1110: the shop and Index screens moved
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/ShopScreens.luau') + read('src/client/DinoIndexScreens.luau') + read('src/client/SmallScreens.luau')  # BD-1088/BD-1110: the shop and Index screens moved
     eggs = read('src/client/EggsScreen.luau')
     hatch = read('src/client/HatchSequence.luau')
     hud = read('src/client/HudV2.luau')

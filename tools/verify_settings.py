@@ -83,7 +83,7 @@ print("Settings checks passed: tabs, defaults, clamps, old-profile migration, ro
 def static_checks():
     errors = []
     read = lambda p: (ROOT / p).read_text(encoding='utf-8')
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/SmallScreens.luau')  # BD-1110: the Settings screen moved
     if 'SettingsMenu' not in boot:
         errors.append('Bootstrap settings screen must use SettingsMenu')
     if re.search(r'^local (SettingsMenu|SettingsModel|Settings)\b', boot, re.M):
