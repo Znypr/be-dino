@@ -140,10 +140,11 @@ def apply(root, ref=None, write=True):
         marker_ok = (root / kl.CUTOVER).exists()
         return "nothing to move: %s has no task rows%s." % (kl.LEGACY, "" if marker_ok else " (CUTOVER marker is missing!)"), \
             0 if marker_ok else 1
-    written = 0
+    same = sum(1 for rid, line in rows.items()
+               if (root / kl.row_path(rid)).is_file() and (root / kl.row_path(rid)).read_bytes() == (line + "\n").encode("utf-8"))
     if write:
         for rid, line in rows.items():
-            written += kl.write_row_file(root, rid, line)
+            kl.write_row_file(root, rid, line)
         legacy = root / kl.LEGACY
         data = new_text.encode("utf-8")
         if not legacy.exists() or legacy.read_bytes() != data:
@@ -153,8 +154,7 @@ def apply(root, ref=None, write=True):
         if not marker.exists():
             marker.write_bytes(MARKER_TEXT.encode("utf-8"))
     return ("%s: %d task rows -> %d new/changed row file(s) in %s (%d already identical); %s lost its table; round trip ok"
-            % ("applied" if write else "dry run (nothing written)", len(rows), written if write else len(rows), kl.ROWS_DIR,
-               len(rows) - written if write else 0, kl.LEGACY)), 0
+            % ("applied" if write else "dry run (nothing written)", len(rows), len(rows) - same, kl.ROWS_DIR, same, kl.LEGACY)), 0
 
 
 def resync(root, remote="origin", main_branch="main"):
@@ -197,11 +197,14 @@ def main(argv=None):
     ap.add_argument("--resync", action="store_true", help="in the cutover branch: git fetch, merge origin/main, apply from it, commit")
     ap.add_argument("--root", default=str(ROOT), help="the checkout to work in (default: this one)")
     a = ap.parse_args(argv)
-    if a.resync:
-        msg, rc = resync(a.root)
-        print(msg)
-        return rc
-    msg, rc = apply(a.root, a.from_ref, write=a.apply and not a.verify)
+    try:
+        if a.resync:
+            msg, rc = resync(a.root)
+        else:
+            msg, rc = apply(a.root, a.from_ref, write=a.apply and not a.verify)
+    except (RuntimeError, OSError) as e:
+        print("kanban_migrate: %s" % e)
+        return 2
     print(msg)
     return rc
 

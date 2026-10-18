@@ -164,7 +164,7 @@ def has_row_files(root):
 def read_row_file(path):
     """The first non-empty line of a row file (CR/LF stripped)."""
     raw = Path(path).read_bytes().decode("utf-8")
-    for line in raw.splitlines():
+    for line in raw.split(chr(10)):  # not splitlines(): it also splits on rare characters that may sit inside a row
         if line.strip():
             return line.rstrip("\r")
     return ""
@@ -243,7 +243,7 @@ def ref_row_blobs(repo, ref):
 
 
 def first_line(raw):
-    for l in raw.decode("utf-8", "replace").splitlines():
+    for l in raw.decode("utf-8", "replace").split(chr(10)):
         if l.strip():
             return l.rstrip("\r")
     return ""

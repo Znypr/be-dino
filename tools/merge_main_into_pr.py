@@ -270,7 +270,7 @@ def resolve_row_file(wt, path, rep, pr_label="the PR", swap=False):
     if ours is None or theirs is None:
         raise NeedsHuman("one side deleted this row file and the other changed it")
     main_s, pr_s = (ours, theirs) if swap else (theirs, ours)
-    first = lambda t: next((l.rstrip("\r") for l in t.splitlines() if l.strip()), "")
+    first = lambda t: next((l.rstrip("\r") for l in t.split(chr(10)) if l.strip()), "")
     main_line, pr_line, base_line = first(main_s), first(pr_s), (first(base) if base is not None else None)
     rid = row_key(main_line) or row_key(pr_line) or path
     if base_line is None and vkm.title(main_line) != vkm.title(pr_line):
