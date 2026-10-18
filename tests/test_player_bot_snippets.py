@@ -30,6 +30,14 @@ class PlayerBotSnippets(unittest.TestCase):
         self.assertEqual(rb.render("start", a).splitlines()[-1],
                          "return Bot.start({stopSeconds = 300, maxDistance = 60, thinkSeconds = 0.4, autoEndRun = false})")
 
+    def test_casual_walker_and_summary(self):
+        a = args("start", "--casual", "--max-distance", "90")
+        self.assertEqual(rb.render("start", a).splitlines()[-1], "return Bot.start({maxDistance = 90, casual = true})")
+        self.assertIn("Bot.summary()", rb.render("summary", args("summary")))
+        text = rb.render("install")
+        self.assertIn("function Bot.summary()", text)
+        self.assertIn("if opts.casual then", text)
+
     def test_start_without_options_is_empty_table(self):
         self.assertIn("Bot.start({})", rb.render("start", args("start")))
 
