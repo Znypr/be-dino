@@ -2,6 +2,8 @@
 
 **Start with the [Handbook (docs/114)](docs/114-handbook.md)**, the single fact-check reference (vision, design language, palette, lighting, sound, quality bars, rules, PR checklist; conflicts in [docs/116](docs/116-handbook-conflicts.md)). Then **read the [current documentation guide](docs/00-documentation-guide.md)** to identify current owner goals, source implementation, test evidence and historical documents. This file covers contributor behavior, not a separate duplicate game spec.
 
+**Helper agents: read the [agent brief (docs/160)](docs/160-agent-brief.md) first**: read order, decisions, git/PR workflow, safety, evidence, tools and reporting in one short page.
+
 Read this file before interpreting reward requests, editing game-design documents, or changing game economy code. Source of truth for **owner's intended target**: [docs/09-reward-economy.md](docs/09-reward-economy.md), **2026-10-08 Owner-approved target**, and [docs/03-game-design.md](docs/03-game-design.md). [docs/07-kanban.md](docs/07-kanban.md) is the sole task/acceptance tracker.
 
 ## Generated build files (BD-419)
