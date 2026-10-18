@@ -103,12 +103,12 @@ FALL_RECOVERY_STUB = "\n".join([
     "    if root then root.Position = cf.Position root.CFrame = cf end",
     "end, check = function() return false end, start = function() end, reset = function() end}",
 ])
-CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_cases3.luau", "remote_fuzz_cases4.luau", "remote_fuzz_cases5.luau", "remote_fuzz_cases6.luau", "remote_fuzz_cases7.luau", "remote_fuzz_tail.luau"]
+CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_cases3.luau", "remote_fuzz_cases4.luau", "remote_fuzz_cases5.luau", "remote_fuzz_cases6.luau", "remote_fuzz_cases7.luau", "remote_fuzz_cases8.luau", "remote_fuzz_tail.luau"]
 # Every scenario that a full run must have produced (a deleted scenario must not pass silently).
 SCENARIOS = ["slot-fuzz", "sanity", "empty-handed", "races", "races-no-write-budget", "races-lossy-store", "storm-1-hostile-of-12",
              "storm-2-hostile-of-12", "storm-4-hostile-of-12", "published-pins", "test-grants-flag-on", "test-grants-one-flag",
              "demo-trigger-studio", "dormant-handlers", "fusion-and-isolation", "cross-player", "run-lifecycle", "equip-next-run", "findings",
-             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action", "hygiene-618", "empty-run-no-write"]
+             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action", "hygiene-618", "empty-run-no-write", "objectives-isolation"]
 
 
 def lua_literal(value) -> str:
@@ -125,8 +125,9 @@ def playtest_overrides() -> dict:
     return dict(report.applied)
 
 
-def build_script(only: str = "", mutants: dict | None = None, storm: int = 60) -> str:
-    """mutants: {"src/server/X": (old, new)} applied to the embedded source (selftest only)."""
+def build_script(only: str = "", mutants: dict | None = None, storm: int = 60, case_files: list[str] | None = None) -> str:
+    """case_files: another list of scenario files after the harness head (tools/verify_predation_tick.py, BD-632); None = the remote fuzz scenarios.
+    mutants: {"src/server/X": (old, new)} applied to the embedded source (selftest only)."""
     sources = []
     for folder in ("src/server", "src/shared"):
         for path in sorted((ROOT / folder).glob("*.luau")):
@@ -142,17 +143,18 @@ def build_script(only: str = "", mutants: dict | None = None, storm: int = 60) -
                 text = text.replace(old, new)
             sources.append(f"[{verify_load.json.dumps(key)}] = {verify_load.long_string(text)}")
     head = (ROOT / "tools" / "remote_fuzz.luau").read_text(encoding="utf-8")
-    cases = "\n".join((ROOT / "tools" / name).read_text(encoding="utf-8") for name in CASE_FILES)
+    cases = "\n".join((ROOT / "tools" / name).read_text(encoding="utf-8") for name in (case_files or CASE_FILES))
     # docs/152 BD-626: in the all-on rehearsal tree every scenario runs with the rehearsal Config (all flags on). The one scenario that
     # pins the PUBLISHED PLAYTEST remote inventory runs with the rehearsal flags forced back to the playtest value (off); the pin is a
     # statement about that profile, not about the rehearsal. Plain CI leaves the text untouched.
     off_flags = ", ".join(f"{key} = false" for key, _why in release_profiles.REHEARSAL_ON)
-    cases = rehearsal_env.pin(cases, 'runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)',
-                              'runScenario("published-pins", {DemoDirectorEnabled = true, ' + off_flags + '}, function(server)', label="remote fuzz published-pins")
+    if case_files is None:
+        cases = rehearsal_env.pin(cases, 'runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)',
+                                  'runScenario("published-pins", {DemoDirectorEnabled = true, ' + off_flags + '}, function(server)', label="remote fuzz published-pins")
     table = lambda d: "{" + ", ".join(f"{k} = {lua_literal(v)}" for k, v in sorted(d.items())) + "}"
     # docs/152 BD-626: "the other player's profile never changed" compares a WEALTH list that includes `objectives`. With ObjectivesEnabled on, the
     # victim's OWN queued events are written by his own lease renew (BD-625), so that field moves while the attacker sleeps. Under the
-    # all-on rehearsal the list leaves `objectives` out; what the attacker could do to it is covered by verify_objectives / the simulation.
+    # all-on rehearsal the list leaves `objectives` out; what an attacker could do to it is covered by the objectives-isolation scenario (BD-631, tools/remote_fuzz_cases8.luau).
     head = rehearsal_env.pin(head, '"objectives", "ownedSkins", "claimedGifts"}', '"ownedSkins", "claimedGifts"}', label="remote fuzz wealth list")
     head = head.replace("__SOURCES__", "{\n" + ",\n".join(sources) + "\n}")
     head = head.replace("__PLAYTEST__", table(playtest_overrides()))
@@ -162,10 +164,10 @@ def build_script(only: str = "", mutants: dict | None = None, storm: int = 60) -
     return head + "\n" + cases
 
 
-def run_luau(runner: str, only: str = "", mutants: dict | None = None, keep: str | None = None, storm: int = 60):
+def run_luau(runner: str, only: str = "", mutants: dict | None = None, keep: str | None = None, storm: int = 60, case_files: list[str] | None = None):
     with tempfile.TemporaryDirectory() as folder:
         script = Path(folder) / "remote_fuzz.luau"
-        script.write_text(build_script(only, mutants, storm), encoding="utf-8")
+        script.write_text(build_script(only, mutants, storm, case_files), encoding="utf-8")
         if keep:
             Path(keep).write_text(script.read_text(encoding="utf-8"), encoding="utf-8")
         completed = subprocess.run([runner, str(script)], capture_output=True, text=True)
@@ -313,6 +315,15 @@ MUTANTS = [
     ("BD-614 reverted: a full server-wide share rejects every player again", "storm-4", {
         "src/server/ProfileRepository": ("Config.WriteFairShareEnabled ~= false", "false")},
      "storm-4-hostile-of-12: honest players' routine writes answered rate_limited at most 2%"),
+    # BD-631: the victim's `objectives` field. Two ways a request could land on somebody else's profile.
+    ("an objective claim lands on another player's profile (BD-631)", "objectives-isolation", {
+        "src/server/ObjectiveService": ("local ok, status, outcome = repository.objectiveClaim(player, request.id, request.token)",
+                                        "local ok, status, outcome = repository.objectiveClaim(Players:GetPlayerByUserId(1002) or player, request.id, request.token)")},
+     "objectives-isolation: the victim's tutorial progress, claims, seen ids"),
+    ("a 'seen' report lands on another player's profile (BD-631)", "objectives-isolation", {
+        "src/server/ObjectiveService": ("local ok, status = repository.objectiveSeen(player, request.id)",
+                                        "local ok, status = repository.objectiveSeen(Players:GetPlayerByUserId(1002) or player, request.id)")},
+     "objectives-isolation: the victim's tutorial progress, claims, seen ids"),
 ]
 
 
