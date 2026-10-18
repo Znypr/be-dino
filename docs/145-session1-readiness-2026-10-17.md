@@ -108,18 +108,18 @@ Label: **CURRENT BUILD BEHAVIOR** status on main `fc53fd14` (CI "Build generated
 
 Send every answer to the **inbox session** (the owner inbox), one line each. Times are estimates. Steps 1 to 4 gate session 1 (about 40 minutes in total); step 6 only if phones may join.
 
-1. **BD-004, which experience (2 min).** Creator Hub, Creations; for the playtest experience write `name, universe id, place id, new or legacy` ([148](148-publish-runbook.md) step 1). Send it to the inbox session.
+1. **BD-004, which experience (2 min).** **ANSWERED 2026-10-18 (owner): "not sure yet"; stays OPEN** (OW8 in [115](115-decisions-log.md)). Creator Hub, Creations; for the playtest experience write `name, universe id, place id, new or legacy` ([148](148-publish-runbook.md) step 1). Send it to the inbox session.
 2. **Publish with the runbook (13 min: settings 8, publish 5).** [148](148-publish-runbook.md) steps 2 and 3, after the lead says the build and tag are ready. Send the Roblox version number.
 3. **Alt-account smoke (15 min).** [148](148-publish-runbook.md) step 4: can the alt join, no admin panel, assets load, a save survives a rejoin. Send `pass` or `fail` per line, plus a screenshot of anything wrong.
 4. **Rollback drill (10 min).** [148](148-publish-runbook.md) step 5: publish r1, restore r0, roll forward. Send both version numbers and "profile loaded both times: yes or no".
 5. **2-player run (15 min).** Studio Test > Local Server with 4 players ([111](111-multiplayer-audit.md) s5.6, 10 min), then 5 minutes with 2 clients on the streaming-on copy ([147](147-streaming-experiment-2026-10-17.md) s9.4). Send the output lines it asks for.
 6. **Phone run (45 min; only if phones may join).** [146](146-phone-forecast-2026-10-17.md) s7 and [55](55-playtest-release-runbook.md) s3, plus 10 minutes of walking on each streaming copy, radius pair 256/128 against 256/192 ([147](147-streaming-experiment-2026-10-17.md) s9.3). Send memory, part count and fps for each.
 7. **ONE normal 5-minute run (8 min; BD-575).** Studio, playtest build, play like a child: no scripts, no admin values. Send the Run Complete "Eggs found" number, whether a weather event came, and the `[BD-TELEMETRY] run_end` line (it now carries real `food_raw`). The target is about 15; the scripted walker made 97.
-8. **Fusion for testers (2 min; BD-577).** Keep both identity flags on (the lead recommends it), turn both off, or ask for a fuse-only switch (a code change). Send one word.
+8. **Fusion for testers (2 min; BD-577).** Keep both identity flags on (the lead recommends it), turn both off, or ask for a fuse-only switch (a code change). Send one word. **ANSWERED 2026-10-18 (owner): keep both flags on** (OW6 in [115](115-decisions-log.md)).
 9. **Grass pick, A / B / C (2 min; BD-528).** Look at `docs/evidence/2026-10-17-grass-ab/contact-sheet-A-B-C.jpg`; the lead recommends A. Send the letter. **ANSWERED 2026-10-18 (owner): A, keep the Roblox grass** (OW1 in [115](115-decisions-log.md)).
 10. **Swimmer LEAP pick (2 min; BD-569, owner question C-46 / Q20).** [101](101-hp-combat-classes-animations.md) s19: A keep the ordinary leap, B long low dash (the lead's proposal), C dash only in water. Send the letter. **ANSWERED 2026-10-18 (owner): C, zoom only in water** ("zoom only for water dinos that cant hop"; OW2 in [115](115-decisions-log.md)); the build row is BD-662 (Backlog, not built). Not the same as the fusion-ladder Q20 (ladder), which is still open.
 11. **VFX packs lab walk (10 min).** `C:/Users/znypr/dtmp/VFXLab-Packs.rbxlx` (outside the repo); questions in [144](144-vfx-packs-trial.md) s8. Send go or no-go for BD-493 and whether the puff id looks right.
-12. **V3 Compy file location (1 min).** No doc or kanban row names where it lives. Send the folder or Studio place. Not needed for session 1.
+12. **V3 Compy file location (1 min).** No doc or kanban row names where it lives. Send the folder or Studio place. Not needed for session 1. **ANSWERED 2026-10-18 (owner): "i dont know"** (OW11 in [115](115-decisions-log.md)); the lead searched this PC read-only and found no V3 Compy file (it may be inside `Place1.rbxl`). Still OPEN, not a blocker.
 
 ### 3. Built but switched off
 
@@ -189,7 +189,7 @@ Times are estimates. Steps 1 to 3 gate session 1 (step 4 too if phones may join)
 5. **BD-527 two-run pace check (about 15 min).** Why: decide if eating at the mouth changes the egg count. Where: Studio, two 5-minute Compy runs with `FoodPickupAtMouth` off then on, read `LastRunFood` ([119](119-catch-rate-15-per-run.md), [115](115-decisions-log.md) MR6, BD-527 row). The lead flips the flag in a scratch config that is never committed.
 6. **Grass pick, A / B / C (2 min).** Why: BD-528 waits for you. Where: `docs/evidence/2026-10-17-grass-ab/contact-sheet-A-B-C.jpg` and its README (the lead recommends A). **ANSWERED 2026-10-18 (owner): A** (OW1 in [115](115-decisions-log.md)).
 7. **VFX packs lab walk (about 10 min).** Why: go / no-go on adapting Pack 1 for fire auras and trails (BD-493) and a check of the puff upload id. Where: `C:/Users/znypr/dtmp/VFXLab-Packs.rbxlx` (outside the repo); questions in [144](144-vfx-packs-trial.md) s8; images `docs/evidence/review-2026-10-17/33-vfx-packs-*`.
-8. **Tell the lead where the V3 Compy file lives (1 min).** Why: no doc or kanban row names its location (searched 2026-10-17), so nobody can pick it up. Where: reply in the owner inbox with the folder or Studio place. Not needed for session 1.
+8. **Tell the lead where the V3 Compy file lives (1 min).** *(2026-10-18: owner answered "i dont know"; search found nothing, OW11 in [115](115-decisions-log.md).)* Why: no doc or kanban row names its location (searched 2026-10-17), so nobody can pick it up. Where: reply in the owner inbox with the folder or Studio place. Not needed for session 1.
 
 ### 3. What agents can do without the owner (next 5 Backlog rows by priority)
 
