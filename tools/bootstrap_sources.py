@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The text of src/client/Bootstrap.client.luau plus the client modules its screens moved to (BD-1020, docs/160 section 10).
+"""The text of src/client/Bootstrap.client.luau plus the client modules its screens moved to (BD-1088, docs/160 section 10).
 
 Bootstrap's render function used to hold every screen. Cohesive blocks now live in their own modules (a screen builder, a state
 holder, event wiring) so the main chunk stays under the local-register and size ceilings. Many verifiers search the text of the client
@@ -15,11 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "src" / "client"
 BOOTSTRAP = "Bootstrap.client.luau"
-MODULES = ("ShopScreens.luau",)
+MODULES = ("ShopScreens.luau", "Toasts.luau")
 # The ratchet for Bootstrap's own top-level `local` lines (every verifier that counts them reads this one number). Luau allows 200 locals per
-# function; the main chunk had 188 such lines on 2026-10-18 and 174 after the shop screens moved out. Lower it when more code moves out,
+# function; the main chunk had 188 such lines on 2026-10-18, 174 after the shop screens and 168 after the toast stack moved out. Lower it when more code moves out,
 # never raise it: new client features go into their own module (docs/160 section 10).
-MAX_TOP_LOCALS = 176
+MAX_TOP_LOCALS = 170
 
 
 def paths(root: Path | None = None) -> list[Path]:
