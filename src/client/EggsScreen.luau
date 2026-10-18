@@ -24,6 +24,7 @@ local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
 local Copy = require(Shared.FtueP1)
 local PhoneScale = require(Shared.PhoneScale)
+local Chip = require(Shared.ChipStyle)
 
 local EggsScreen = {}
 
@@ -37,16 +38,18 @@ end
 -- ctx: body, C, label, box, button, art, queue, str, num, nestList, rarityNames, rarityColors, scale (viewportScale),
 -- isActive(), openEgg(), openNest(id), openSettings(), autoOpenText(), notify(text, color?)
 -- Returns refresh(): cheap once-a-second text updates (timers).
-function EggsScreen.render(ctx: any)
+-- BD-1067: bodyH / bodyScale are the visible body height and the scale it renders at (ModalCompact), read NOW by render() below.
+local function build(ctx: any, bodyH: number, bodyScale: number)
     local body, C, label, box, button, art = ctx.body, ctx.C, ctx.label, ctx.box, ctx.button, ctx.art
     local capacity = Config.NestStorageCapacity
     local duration = Config.NestIncubationSeconds
     local touchH = math.clamp(45 / ctx.scale(), 64, 120)
     -- BD-531: on a phone-landscape canvas (ModalCompact.bodyHeight < 402) the whole screen is laid out inside the visible body height, so the
     -- OPEN button and AUTO never need a scroll. Desktop (402) keeps every number below exactly as before.
-    local bodyH: number = ctx.bodyH or 402
     local compact = bodyH < 402
-    local L = PhoneScale.eggsLayout(bodyH, false, ctx.bodyScale or 1) -- only read when compact (numbers asserted in tools/verify_phone_scale.py)
+    local L = PhoneScale.eggsLayout(bodyH, false, bodyScale) -- only read when compact (numbers asserted in tools/verify_phone_scale.py)
+    local fullH = math.max(402, bodyH) -- BD-1067: a tall small-width window (500 x 465) has more room than the 402 desktop body: use it, so the floored buttons never touch
+    local minButton = PhoneScale.floorButton(0, bodyScale) -- a button renders >= 44 px; 52 or less on every desktop-sized canvas, so desktop numbers do not change
     local slotY = if compact then L.slotY else 32
     local nestH = if compact then L.nestH else math.clamp(touchH + 8, 96, 118)
 
@@ -57,16 +60,16 @@ function EggsScreen.render(ctx: any)
     local luck = label(body, Copy.NestLine, 224, 2, 600, 26, 18) -- BD-369: says why only one nest opens at a time
     luck.TextXAlignment = Enum.TextXAlignment.Right
 
-    -- A rounded colour pill with one short line of text (friendly timers and chips).
+    -- A chunky colour tag (ChipStyle) with one short line of text (friendly timers and chips).
     local function pill(parent: GuiObject, text: string, color: Color3, x: number, y: number, w: number, h: number, size: number): (Frame, TextLabel)
         local frame = Instance.new("Frame")
-        frame.BackgroundColor3, frame.BorderSizePixel = color, 0
-        frame.Position, frame.Size, frame.ZIndex, frame.Parent = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h), parent.ZIndex + 1, parent
-        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = frame
-        local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = C.outline, 2, frame
+        frame.Position, frame.Size, frame.ZIndex = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h), parent.ZIndex + 1
+        Chip.apply(frame, color, C.outline) -- BD-1077: the chunky tag (rounded rectangle, 3 px outline), never a round pill
+        frame.Parent = parent
         local text = label(frame, text, 0, 0, w, h, size)
         text.TextScaled = true
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = size, 14, text -- docs/114 s4.4
+        -- docs/114 s4.4 / BD-1067: shrink-to-fit text is not raised by ModalCompact's floor pass, so its largest size already renders >= 14 px
+        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = PhoneScale.floorText(size, bodyScale), 14, text
         return frame, text
     end
 
@@ -92,7 +95,7 @@ function EggsScreen.render(ctx: any)
 
     -- Hero card: big egg on the tile floor, chips on the egg, waiting count, OPEN and AUTO.
     local cardY = if compact then L.cardY else slotY + nestH + 8
-    local cardH = if compact then L.cardH else 402 - cardY
+    local cardH = if compact then L.cardH else fullH - cardY
     local card = box(body, 0, cardY, 824, cardH, C.card, 24)
     local queue = ctx.queue()
     local nextId = ctx.str("NextChestId")
@@ -192,7 +195,7 @@ function EggsScreen.render(ctx: any)
     -- Owner 2026-10-18: a Cracked shell on the card ALWAYS says it may not hatch (the one shell rule that exists); other shells say nothing.
     local isCracked = entry ~= nil and entry.genes ~= nil and entry.genes.conditionId == "cracked"
     local hintShown = isCracked or (entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true))
-    L = PhoneScale.eggsLayout(bodyH, hintShown, ctx.bodyScale or 1)
+    L = PhoneScale.eggsLayout(bodyH, hintShown, bodyScale)
     local hintH = if compact then L.hintH elseif hintShown then 24 else 0
     local hintY = if compact then L.hintY else 94
     if hintShown then
@@ -201,10 +204,10 @@ function EggsScreen.render(ctx: any)
         crackedHint.TextXAlignment = Enum.TextXAlignment.Left
     end
 
-    local gearH = if compact then L.gearH else math.max(touchH * .6, 52)
+    local gearH = if compact then L.gearH else math.max(touchH * .6, 52, minButton)
     local openY = if compact then L.openY else 106 + hintH
     local gearY = if compact then L.gearY else cardH - 14 - gearH
-    local openH = if compact then L.openH else math.clamp(cardH - 106 - hintH - 14 - gearH - 14, 64, 96)
+    local openH = if compact then L.openH else math.clamp(cardH - 106 - hintH - 14 - gearH - 14, math.max(64, minButton), math.max(96, minButton))
     local openButton = button(card, buttonText, infoX, openY, infoW, openH, if state.canOpen or state.kind == "empty" then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
@@ -246,6 +249,43 @@ function EggsScreen.render(ctx: any)
     end
     refresh()
     return refresh
+end
+
+-- BD-1067: the screen draws itself again when the window changes size (a phone turned, a Studio window dragged): the layout above is computed from
+-- the visible body height and scale at draw time, so a drawing made at the old size would stay cut or overlapped. Bootstrap's resize handler only
+-- re-lays the panel. The returned refresh stays valid across redraws (Bootstrap keeps it for the once-a-second timers).
+function EggsScreen.render(ctx: any)
+    local ModalCompact = require(script.Parent.ModalCompact)
+    local gui = ctx.body:FindFirstAncestorOfClass("ScreenGui")
+    local drawnH, drawnScale = ctx.bodyH or 402, ctx.bodyScale or 1
+    local before: {[Instance]: boolean} = {}
+    for _, child in ctx.body:GetChildren() do before[child] = true end
+    local current = build(ctx, drawnH, drawnScale)
+    if not gui then return function() current() end end
+    local marker = Instance.new("Folder")
+    marker.Name, marker.Parent = "EggsResizeWatch", ctx.body
+    local pending = false
+    local connection: RBXScriptConnection? = nil
+    connection = gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if not marker.Parent then
+            if connection then connection:Disconnect() end
+            return
+        end
+        if pending then return end
+        pending = true
+        task.defer(function() -- after Bootstrap's own resize handler has re-laid the panel
+            pending = false
+            if not marker.Parent then return end
+            local h, s = ModalCompact.bodyHeight(), ModalCompact.bodyScale()
+            if h == drawnH and s == drawnScale then return end
+            drawnH, drawnScale = h, s
+            for _, child in ctx.body:GetChildren() do
+                if not before[child] and child ~= marker then child:Destroy() end -- only what this screen drew
+            end
+            current = build(ctx, h, s)
+        end)
+    end)
+    return function() current() end
 end
 
 return EggsScreen

@@ -99,6 +99,8 @@ def static_checks():
     assert 'EggPicture.baked(' in popup and 'EggStage' in popup, 'BD-392 popup shows the big baked egg'
     assert 'UDim2.fromOffset(580, 390)' in popup and 'EggPicture.baked(stage, genes, 262)' in popup, 'BD-392 egg is large'
     boot = read('src/client/Bootstrap.client.luau')
+    boot_top = boot  # the local count below is Bootstrap's own
+    boot = boot + read('src/client/ShopScreens.luau')  # BD-1088: the shop screens moved
     assert 'ShopCards).forHeader(' in boot and 'ShopForDino' in boot, 'BD-393 header in the aura and trail shops'
     assert boot.index('forHeader(') < boot.index('require(script.Parent.ShopCards).build('), 'BD-393 header is drawn before the cards'
     cards = read('src/client/ShopCards.luau')
@@ -110,8 +112,9 @@ def static_checks():
     arena = read('src/server/Arena.luau')
     assert 'Ground.corrected(' in arena and 'RaycastParams.new()' in arena and 'workspace.Terrain' in arena, 'BD-395 raycast ground correction'
     assert 'WorldKitRayMoved' in arena, 'BD-395 counter for the Studio measurement'
-    top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
-    assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195: %d' % len(top)
+    top = [l for l in boot_top.splitlines() if re.match(r'^local\s', l)]
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(top) <= MAX_TOP_LOCALS, 'client Bootstrap top-level locals stay at or below %d (tools/bootstrap_sources.py): %d' % (MAX_TOP_LOCALS, len(top))
     # the owner's stage files exist in the repo (the slot waits for their upload)
     for f in ('resources/ui/v2/stage/egg-stage-jungle-v1.jpg', 'resources/ui/v2/stage/eggs/egg-01_cracked.png', 'resources/ui/v2/stage/eggs/egg-02_dirty.png',
               'resources/ui/v2/stage/eggs/egg-03_normal.png', 'resources/ui/v2/stage/eggs/egg-04_rainbow.png', 'resources/ui/v2/stage/eggs/egg-05_astra.png'):

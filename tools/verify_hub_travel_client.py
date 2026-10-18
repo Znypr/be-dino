@@ -189,7 +189,8 @@ def static_checks():
     assert 'ownsFastTravel()' in menu, 'BD-391: toggle visible only after the perk is bought'
     assert '"Teleport to shops"' in menu and 'CaveHub' in menu, 'Controls tab toggle, shown only with the hub on'
     top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
-    assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195 (limit 200): %d' % len(top)
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(top) <= MAX_TOP_LOCALS, 'client Bootstrap top-level locals stay at or below %d (tools/bootstrap_sources.py; limit 200): %d' % (MAX_TOP_LOCALS, len(top))
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()

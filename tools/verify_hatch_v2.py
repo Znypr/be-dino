@@ -287,7 +287,8 @@ def check_wiring():
     boot = read('src/client/Bootstrap.client.luau')
     assert 'eggId=str("NextChestId"),' in boot
     locals_ = len(re.findall(r'^local ', boot, re.M))
-    assert locals_ <= 193, f'Bootstrap locals grew to {locals_} (limit 200, was 193): new code belongs in modules'
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert locals_ <= MAX_TOP_LOCALS, f'Bootstrap locals grew to {locals_} (ceiling {MAX_TOP_LOCALS} in tools/bootstrap_sources.py; limit 200): new code belongs in modules'
     assert 'HatchEggV2' not in boot and 'require(Shared.HatchV2' not in boot, 'Bootstrap never requires the v2 modules; HatchSequence owns the v2 egg'
     tl = read('src/shared/HatchTimeline.luau')
     assert 'require(script.Parent.HatchV2Plan)' in tl and 'function T.useV2' in tl and 'p.window or T.Paint.window' in tl

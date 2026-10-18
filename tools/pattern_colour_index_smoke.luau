@@ -1,6 +1,6 @@
 -- Offline smoke for the BD-1039 Pattern and Colour Index client modules (driven by tools/verify_pattern_colour_index.py).
 -- The same minimal Roblox mock as fusion_ui_smoke.luau (Instance tree, signals, scheduler) runs the REAL IndexTabs and PatternColourCards
--- (and the real PatternColourIndex, GeneBoost, RarityCurve, ProgressionConfig, AssetSlots) against a fake Index screen (header with title
+-- (and the real PatternColourDetail, SettingsModel, PatternColourIndex, GeneBoost, RarityCurve, ProgressionConfig, AssetSlots) against a fake Index screen (header with title
 -- and X, body) and fake owner-only values. UITheme, PrivateState, ModalCompact and the config are stubs. This proves control flow, the words
 -- and numbers on the cards, the tabs, the dot and the flag-off identity. It does NOT prove layout, drawing, touch or phone fit: that is Studio.
 -- MODULE_SOURCES is injected by the verifier.
@@ -195,10 +195,10 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "GeneBoost", "PatternColourIndex", "AssetSlots", "UITheme", "SecretSpeciesConfig", "NavigationArtwork"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "GeneBoost", "PatternColourIndex", "AssetSlots", "UITheme", "SecretSpeciesConfig", "NavigationArtwork", "SettingsModel"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
-for _, name in {"IndexTabs", "PatternColourCards", "PrivateState", "ModalCompact"} do
+for _, name in {"IndexTabs", "PatternColourCards", "PatternColourDetail", "PrivateState", "ModalCompact"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = ClientFolder
 end
 local PC = requireModule(SharedFolder.ProgressionConfig)
@@ -374,4 +374,117 @@ PrivateState.ready = false
 setValue("DiscoveryJson", {colours = 5, patterns = 3, mutations = 0})
 PrivateState.ready = true
 
-print("Pattern and Colour Index smoke passed: flag off draws nothing, tabs in the header as tall as X, remembered tab, grey cards with dim tier colours, found cards with kid names + Found on + pips, main and accent colours count, fused-away finds stay found, bound icon slot, Dinos tab hands back to Bootstrap, other screens remove the bar, the dot")
+-- ===== 8. A tap on a card opens its small detail (BD-1065) =====
+freshScreen()
+local five = {"compy", "raptor", "triceratops", "stegosaurus", "tyrannosaurus"}
+local ownedAll = {}
+for _, id in five do ownedAll[id] = {base = 0, variants = {a = variant("03_round_spots", "blue", "blue", 1)}} end
+setValue("CollectionJson", ownedAll)
+setValue("DiscoveryJson", {colours = 1, patterns = 1, mutations = 0, ids = {patterns = {}, colours = {}}})
+Tabs.mount(openFn)
+if Tabs.lastTab() ~= "patterns" then press(tabButtons().patterns) end
+local function popup() return byName(body, "PatternColourDetail") end
+assert(Tabs.lastTab() == "patterns" and popup() == nil, "no popup until a card is tapped")
+local function openCard(id) press(byName(assert(cardMap()[id], id), "CardHit")) return popup() end
+local box = openCard("03_round_spots")
+assert(box ~= nil, "a tap on a found card opens the detail")
+assert(textOf(box, "Title") == "Dots" and textOf(box, "Tier") == "Common" and textOf(box, "Boost") == "No boost")
+assert(byName(box, "FoundOn") ~= nil and byName(box, "Hint") == nil, "a pattern detail has no colour hint")
+assert(textOf(box, "Line1") == "Compy, Raptor" and textOf(box, "Line2") == "Triceratops, Stegosaurus" and textOf(box, "Line3") == "T-Rex", "the WHOLE Found on list, two to a line")
+assert(byName(box, "Lines").CanvasSize.Y.Offset == 3 * 28, "the list scrolls when it is long")
+assert(#allNamed(body, "PatternColourDetail") == 1)
+local again = openCard("03_round_spots")
+assert(#allNamed(body, "PatternColourDetail") == 1 and again ~= box, "a second tap replaces the popup, never stacks one")
+-- every way out: X, OK, the dark backdrop (and Escape / B, which close the whole menu: the popup is part of the body)
+local x = byName(popup(), "Close")
+assert(x.Size.X.Offset >= 44 and x.Size.Y.Offset >= 44 and x.Text == "X", "X is a 44 px target or more")
+press(x) assert(popup() == nil, "X closes the popup")
+openCard("03_round_spots")
+local okButton = byName(popup(), "Ok")
+assert(okButton.Size.X.Offset >= 44 and okButton.Size.Y.Offset >= 44 and okButton.Text == "OK")
+press(okButton) assert(popup() == nil, "OK closes the popup")
+openCard("03_round_spots")
+popup().Activated:Fire() assert(popup() == nil, "a tap on the dark backdrop closes the popup")
+openCard("03_round_spots")
+clearBody() assert(popup() == nil, "closing the menu (Escape, B, the X of the menu, another screen) takes the popup with it")
+-- closing the detail changes nothing else: same tab, nothing sent to Bootstrap
+freshScreen() Tabs.mount(openFn)
+if Tabs.lastTab() ~= "patterns" then press(tabButtons().patterns) end
+local openedBefore = #opened
+openCard("03_round_spots") press(byName(popup(), "Close"))
+assert(#opened == openedBefore and Tabs.lastTab() == "patterns" and byName(body, "IndexGrid") ~= nil, "closing the detail leaves the tab as it was")
+-- a card not found yet: no name, no list, a calm line
+local hidden = openCard("01_blank")
+assert(textOf(hidden, "Title") == "???" and byName(hidden, "FoundOn") == nil and textOf(hidden, "Line1") == "Not found yet" and textOf(hidden, "Line2") == "Hatch eggs to find it!")
+assert(textOf(hidden, "Tier") == "Common")
+press(byName(popup(), "Close"))
+local rare = openCard("07_diamond_scales")
+assert(textOf(rare, "Tier") == "Legendary" and textOf(rare, "Boost") == "Boost 4 of 5" and #allNamed(rare, "PipOn") == 4 and #allNamed(rare, "PipOff") == 1, "tier and pips on a card not found")
+for _, d in popup():GetDescendants() do
+    if d.ClassName == "TextLabel" or d.ClassName == "TextButton" then assert(d.TextSize >= 14, "detail text " .. d.Text) end
+end
+-- changing tab removes the popup with the old body
+press(tabButtons().colours)
+assert(popup() == nil, "another tab: the popup is gone")
+-- colours: the accent hint, in the colour detail only
+local blue = openCard("blue")
+assert(textOf(blue, "Title") == "Blue" and textOf(blue, "Hint") == "The accent colour counts more" and byName(blue, "Tile") ~= nil)
+assert(textOf(blue, "Line1") == "Compy, Raptor" and textOf(blue, "Boost") == "No boost")
+press(byName(popup(), "Close"))
+local red = openCard("red")
+assert(textOf(red, "Title") == "???" and textOf(red, "Hint") == "The accent colour counts more" and textOf(red, "Line1") == "Not found yet", "the hint is in every colour detail")
+assert(textOf(red, "Tier") == "Mythic" and textOf(red, "Boost") == "Boost 5 of 5")
+press(byName(popup(), "Close"))
+-- the card button covers ONE card only (never the screen, the header or X)
+local hits = allNamed(byName(body, "IndexGrid"), "CardHit")
+assert(#hits == 9, "one card button per colour card")
+for _, hit in hits do
+    assert(string.sub(hit.Parent.Name, 1, 5) == "Card_" and hit.Size.X.Scale == 1 and hit.Size.Y.Scale == 1 and hit.BackgroundTransparency == 1, "a card button sits inside its own card")
+end
+
+-- ===== 9. The dot survives a rejoin (BD-1065: SettingsModel.indexSeen, additive, saved only after a look) =====
+local Settings = requireModule(SharedFolder.SettingsModel)
+local lastDotButton
+local function rejoin() -- a brand new client: the module state is gone, the saved settings come back
+    loaded.IndexTabs = nil
+    Tabs = requireModule(ClientFolder.IndexTabs)
+    lastDotButton = Instance.new("TextButton")
+    lastDotButton:SetAttribute("Destination", "collection")
+    Tabs.attachDot({lastDotButton})
+    return byName(lastDotButton, "IndexDot")
+end
+Settings.reset()
+assert(Settings.indexSeen() == 0 and Settings.toStore(Settings.get()).indexSeen == nil, "never looked: nothing is stored, the stored shape is the old one")
+setValue("CollectionJson", {compy = {base = 0, variants = {a = variant("03_round_spots", "blue", "red", 1)}}})
+setValue("DiscoveryJson", {colours = 2, patterns = 1, mutations = 0, ids = {patterns = {}, colours = {}}})
+local d1 = rejoin()
+assert(d1.Visible == false, "first ever session: what you already have is not new")
+freshScreen() Tabs.mount(openFn)
+press(tabButtons().patterns)
+assert(Settings.indexSeen() == 3 and Settings.toStore(Settings.get()).indexSeen == 3, "looking saves the total (1 pattern + 2 colours) in the settings")
+assert(d1.Visible == false)
+-- the player leaves; two more finds happen (a hatch that was never looked at); a new session starts
+setValue("DiscoveryJson", {colours = 3, patterns = 2, mutations = 0, ids = {patterns = {"04_bold_patches"}, colours = {"green"}}})
+local d2 = rejoin()
+assert(d2.Visible == true, "a rejoin keeps the dot: 5 found, 3 seen")
+freshScreen() Tabs.mount(openFn)
+if Tabs.lastTab() == "patterns" then press(tabButtons().colours) else press(tabButtons().patterns) end
+assert(Settings.indexSeen() == 5 and d2.Visible == false, "looking at a tab clears the dot and saves the new total")
+local d3 = rejoin()
+assert(d3.Visible == false, "and it stays clear after another rejoin")
+-- the saved settings arrive AFTER the first reading: the dot still appears
+Settings.reset()
+local d4 = rejoin()
+assert(d4.Visible == false, "no settings yet: the first reading is the baseline")
+Settings.load({v = 1, indexSeen = 2})
+assert(d4.Visible == true, "the saved total (2) arrives: 5 found, the dot shows")
+-- junk in the saved field is just "never looked"; a huge value is capped
+for _, junk in {-5, 0 / 0, "x", {}, true} do
+    Settings.load({v = 1, indexSeen = junk})
+    assert(Settings.indexSeen() == 0, "a bad saved total reads as 0")
+end
+Settings.load({v = 1, indexSeen = 5000})
+assert(Settings.indexSeen() == 1000, "capped")
+Settings.reset()
+
+print("Pattern and Colour Index smoke passed: flag off draws nothing, tabs in the header as tall as X, remembered tab, grey cards with dim tier colours, found cards with kid names + Found on + pips, main and accent colours count, fused-away finds stay found, bound icon slot, Dinos tab hands back to Bootstrap, other screens remove the bar, the dot, a tap on a card opens the detail (X / OK / backdrop / menu close), the accent hint in colours only, the dot survives a rejoin")

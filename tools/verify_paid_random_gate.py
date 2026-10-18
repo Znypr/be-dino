@@ -56,7 +56,7 @@ def static():
     assert '"random_items_unavailable"' in body, 'the server refusal stays'
     assert 'next(Config.DeveloperProducts)' not in repo, 'no inline copy of the paid-random rule may remain on the server'
     assert 'local PaidRandomGate = require(ReplicatedStorage.Shared.PaidRandomGate)' in repo
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/ShopScreens.luau')  # BD-1088: the shop screens moved
     assert 'PaidRandomGate.blocked(Config.DeveloperProducts,Config.PaidRandomItemsEnabled,require(script.Parent.PrivateState).get("PaidRandomEligible"))' in boot, \
         'the client must call the same function with the same three inputs as the server'
     assert 'next(Config.DeveloperProducts)' not in boot, 'no client copy of the rule'

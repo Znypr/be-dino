@@ -970,7 +970,7 @@ def part_b():
 
 # ---------------------------------------------------------------------------------------------------------------- static checks
 def boot_text():
-    return read('src/client/Bootstrap.client.luau')
+    return read('src/client/Bootstrap.client.luau') + read('src/client/ShopScreens.luau')  # BD-1088: the Egg Odds panel moved to ShopScreens
 
 
 def static():

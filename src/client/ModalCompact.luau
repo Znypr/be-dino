@@ -15,6 +15,8 @@ local ctx: Ctx? = nil
 local scroller: ScrollingFrame? = nil
 local model: PhoneScale.Modal? = nil
 local pending = false
+local lastMode: string? = nil -- BD-1067: the mode of the last layout(), so a change of mode puts the body back at that mode's home
+local touched = false -- BD-1067: a compact pass has run, so something may be grown and a desktop pass must put it back
 local clearLeft = 0 -- BD-546: px a desktop panel stays right of (the left rail + gap), set by Bootstrap from TouchLayout.modalClearLeft
 
 function M.model(): PhoneScale.Modal
@@ -61,6 +63,7 @@ function M.layout()
     c.scale.Scale = m.scale
     c.panel.Position = UDim2.new(0.5, m.centerDx, c.panel.Position.Y.Scale, 0) -- BD-546: x only; the open/close slide owns y
     if m.mode == "desktop" then
+        lastMode = "desktop"
         c.panel.Size = UDim2.fromOffset(860, 520)
         c.header.Size = UDim2.fromOffset(852, 78)
         c.heading.Size, c.heading.TextSize = UDim2.fromOffset(730, 68), 40
@@ -68,6 +71,7 @@ function M.layout()
         if scroller then (scroller :: ScrollingFrame).Visible = false end
         if c.body.Parent ~= c.panel then c.body.Parent = c.panel end
         c.body.Position, c.body.Size = UDim2.fromOffset(18, 98), UDim2.fromOffset(824, 402)
+        if touched then task.defer(M.enforce) end -- BD-1067: undo what a compact canvas grew
         return
     end
     c.panel.Size = UDim2.fromOffset(m.panelW, m.panelH)
@@ -82,6 +86,10 @@ function M.layout()
     if fitScale and fitScale:IsA("UIScale") then fitScale.Scale = m.fit end
     if c.body.Parent ~= s then c.body.Parent = s end
     c.body.Size = UDim2.fromOffset(824, 402)
+    if lastMode ~= "compact" then -- BD-1067: the window became compact while a screen was open (or this is the first layout): the body still had the desktop home (18, 98)
+        c.body.AnchorPoint, c.body.Position = Vector2.zero, UDim2.fromOffset(4, 0)
+    end
+    lastMode = "compact"
     task.defer(M.enforce) -- the canvas may have been resized while a screen is open
 end
 
@@ -116,32 +124,57 @@ local function ancestorScale(object: Instance, stop: Instance): number
     return total
 end
 
+-- BD-1067: the floor pass used to GROW design sizes for good: a window dragged narrow for a moment left every button and text bigger (a nest slot
+-- 138 px tall, shifted up over the header) after the window was big again. The pass is now reversible: the design value is remembered in an
+-- attribute (CmBaseH / CmBaseText) together with the value this pass set (CmH / CmText). A value that is not the one this pass set was changed by
+-- the screen itself, so it becomes the new design value. Each pass recomputes from the design value, so growing and shrinking back are the same rule.
+local function designValue(d: Instance, baseKey: string, appliedKey: string, current: number): number
+    local base, applied = d:GetAttribute(baseKey), d:GetAttribute(appliedKey)
+    if typeof(base) ~= "number" or typeof(applied) ~= "number" or applied ~= current then return current end
+    return base
+end
+
 -- Floor pass: text >= 14 px and buttons >= 44 px on screen. Buttons grow around their centre when they sit in a free layout.
-function M.enforce()
-    local c, m = ctx, model
-    if not c or not m or m.mode ~= "compact" then return end
-    local body = c.body
-    local bottom = 0 -- BD-531: content that fits the scroller no longer gets a scroll bar from a 402 px minimum (see the Y-scale case below)
-    for _, d in body:GetDescendants() do
+-- With floor = false (a desktop panel) every remembered design value is put back instead.
+local function floorPass(c: Ctx, scalePanel: number, floor: boolean)
+    for _, d in c.body:GetDescendants() do
         if d:IsA("TextLabel") or d:IsA("TextButton") then
             local object = d :: TextLabel
             if not object.TextScaled then
-                local scale = ancestorScale(d, c.panel) * m.scale
-                local want = PhoneScale.floorText(object.TextSize, scale)
-                if want > object.TextSize then object.TextSize = want end
+                local size = object.TextSize
+                local base = designValue(d, "CmBaseText", "CmText", size)
+                local want = if floor then PhoneScale.floorText(base, ancestorScale(d, c.panel) * scalePanel) else base
+                if want ~= size then object.TextSize = want end
+                d:SetAttribute("CmBaseText", base)
+                d:SetAttribute("CmText", want)
             end
         end
         if d:IsA("TextButton") and d.Size.Y.Scale == 0 and d.Parent and d.Parent:FindFirstChildOfClass("UIGridLayout") == nil
-            and d.Parent:FindFirstChildOfClass("UIListLayout") == nil then
-            local scale = ancestorScale(d, c.panel) * m.scale
-            local want = PhoneScale.floorButton(d.Size.Y.Offset, scale)
-            if want > d.Size.Y.Offset and d.Size.Y.Offset > 0 then
-                local grow = want - d.Size.Y.Offset
+            and d.Parent:FindFirstChildOfClass("UIListLayout") == nil and d.Size.Y.Offset > 0 then
+            local height = d.Size.Y.Offset
+            local base = designValue(d, "CmBaseH", "CmH", height)
+            local want = if floor then PhoneScale.floorButton(base, ancestorScale(d, c.panel) * scalePanel) else base
+            if want ~= height then
                 d.Size = UDim2.new(d.Size.X.Scale, d.Size.X.Offset, 0, want)
-                d.Position = UDim2.new(d.Position.X.Scale, d.Position.X.Offset, d.Position.Y.Scale, d.Position.Y.Offset - grow / 2)
+                d.Position = UDim2.new(d.Position.X.Scale, d.Position.X.Offset, d.Position.Y.Scale, d.Position.Y.Offset - (want - height) / 2)
             end
+            d:SetAttribute("CmBaseH", base)
+            d:SetAttribute("CmH", want)
         end
     end
+end
+
+function M.enforce()
+    local c, m = ctx, model
+    if not c or not m then return end
+    if m.mode ~= "compact" then
+        if touched then touched = false floorPass(c, 1, false) end -- BD-1067: back on a desktop-sized canvas nothing stays grown
+        return
+    end
+    touched = true
+    local body = c.body
+    local bottom = 0 -- BD-531: content that fits the scroller no longer gets a scroll bar from a 402 px minimum (see the Y-scale case below)
+    floorPass(c, m.scale, true)
     for _, child in body:GetChildren() do
         if child:IsA("GuiObject") and child.Visible and child.Size.Y.Scale == 0 and child.Position.Y.Scale == 0 then
             bottom = math.max(bottom, child.Position.Y.Offset + child.Size.Y.Offset)

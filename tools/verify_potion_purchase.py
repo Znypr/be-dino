@@ -251,7 +251,7 @@ def script():
 
 
 def static_checks():
-    client = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
+    client = (ROOT / 'src/client/Bootstrap.client.luau').read_text() + (ROOT / 'src/client/ShopScreens.luau').read_text()  # BD-1088: transact and the shop screens moved
     server = (ROOT / 'src/server/ProgressionService.luau').read_text()
     status = (ROOT / 'src/shared/NotifyQueue.luau').read_text()
     # transact fires the remote (unless a request is already in flight) and records the pending token.
@@ -275,10 +275,10 @@ def static_checks():
     # The scrim closes the modal (a click outside the panel): documented, never buys.
     assert 'shade.Activated:Connect(function() if require(script.Parent.ModalClose).outsideTap() then close() end end)' in client  # BD-1019: still a close, now through the hatch's backdrop rule
     # Result handler: clears the pending token and re-renders the shop list.
-    r = re.search(r'shopResult\.OnClientEvent:Connect\(function\(token,ok,status\)(.*?)\nend\)', client, re.S)
+    r = re.search(r'shopResult\.OnClientEvent:Connect\(function\(token,ok,status\)(.*?)\n    end\)', client, re.S)
     assert r, 'ProgressionResult handler'
     assert 'pendingShop.token==token then pendingShop=nil' in r.group(1)
-    assert 'if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end' in r.group(1)
+    assert 'local current=isActive() if current=="auras" or current=="potions" then body:ClearAllChildren() render(current) end' in r.group(1)  # same test, the active screen comes from Bootstrap through a getter
     # ProgressionJson delta re-renders the open Potion Shop (so "Your potions" fills in without reopening).
     assert re.search(r'for _,attribute in \{[^}]*"ProgressionJson"[^}]*\} do\s+PrivateState\.onChanged\(attribute,\s*function\(\)\s+scheduleModalRefresh\(\)', client, re.S)
     sm = re.search(r'local function scheduleModalRefresh\(\)(.*?)\nend\n', client, re.S)

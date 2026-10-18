@@ -122,3 +122,15 @@ Each rule exists because it cost time on 2026-10-17/18. The evidence is the log 
 12. **Only one session writes to a branch.** Another session pushed merge commits onto the WeatherVisuals branch (log entry "WeatherVisuals split").
 
 After your task the lead logs it with `python tools/retro_log.py add ...` ([168](168-work-log-and-retrospectives.md) section 1). Put in your report what the lead needs: minutes, tool calls, what you checked, what went wrong.
+
+## 10. Where the client screens live (BD-1088, 2026-10-18)
+
+`src/client/Bootstrap.client.luau` sits close to Luau's limit of 200 locals per function (the main chunk), so it is a thin shell: the modal frame, `open` and `render`, the HUD, the hatch and the remote wiring. A screen or a feature goes into its own module under `src/client/` (required once at the top, an `attach` or `build` function that takes Bootstrap's helpers in a table; patterns: `IndexTabs.luau`, `ModalCompact.luau`, `RunComplete.luau`, `ShopScreens.luau`). **Do not add a new screen or a long block to Bootstrap.** Three numbers keep it honest, and they are lowered whenever code moves out (never raised):
+
+| Ceiling | Where | Value after BD-1088 |
+| --- | --- | --- |
+| Size of Bootstrap (bytes, LF) | `KNOWN_OVER` in `tools/verify_server_module_size.py` | 89,600 (was 123,680) |
+| Top-level `local` lines in Bootstrap (every verifier that counts them) | `MAX_TOP_LOCALS` in `tools/bootstrap_sources.py` | 170 (was 193 to 195 in nine places) |
+| Live locals of the main chunk | `SCOPE_CEILINGS` in `tools/verify_local_budget.py` | 124 (was 142 of 200) |
+
+Verifiers that search Bootstrap's text for a wiring fragment must read `tools/bootstrap_sources.py` (`text()` = Bootstrap plus the modules its screens moved to; add the module to `MODULES` when you move code). Moved so far: the shop screens (Crystal Shops, the odds pages, the purchase confirms, the Potion Shop, the pending-purchase retry) to `ShopScreens.luau`; the toast stack (BD-067) to `Toasts.luau` (`Toasts.notify` is Bootstrap's `notify`). Still inline and good next candidates: the Dino Index and dino detail screens (about 10 KB), the small screens `exit`, `food`, `tutorial`, `crystalReveal`, `batchSummary` and the settings Help page (about 7 KB), the hatch screen (9 KB, deep shared state: needs Studio).

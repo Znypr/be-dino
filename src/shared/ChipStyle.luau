@@ -9,9 +9,12 @@ local Theme = require(script.Parent.UITheme)
 
 local Chip = {}
 Chip.Spec = {radius = 9, swatchRadius = 6, outline = 3, textStroke = 2, minText = 14, minHeight = 28, tapHeight = 44}
+-- BD-1077: the SMALL variant for tags that sit in a tight card (My dinos cards, the mutation badge, a hint over a 3D view): the same look
+-- (rounded rectangle, dark outline, flat palette fill, 14 px text), just a 6 px corner and a 2 px outline, at least 17 px high (14 px text fits).
+Chip.Small = {radius = 6, outline = 2, minHeight = 17}
 
 -- Corner radius in pixels. Always an offset, so a chip can never become a full-round pill by scale.
-function Chip.radius(): UDim return UDim.new(0, Chip.Spec.radius) end
+function Chip.radius(small: boolean?): UDim return UDim.new(0, if small then Chip.Small.radius else Chip.Spec.radius) end
 function Chip.swatchRadius(): UDim return UDim.new(0, Chip.Spec.swatchRadius) end
 -- Is this chip box big enough? tappable chips need the 44 px target (docs/72).
 function Chip.heightOk(height: number, tappable: boolean?): boolean
@@ -26,14 +29,19 @@ function Chip.color(rgb: {number}): Color3
     return Color3.fromRGB(rgb[1], rgb[2], rgb[3])
 end
 
--- Round the corners and outline a frame in the chunky tag style. Returns the corner and the outline.
-function Chip.apply(frame: GuiObject, fill: Color3, outline: Color3?): (UICorner, UIStroke)
+-- Round the corners and outline a frame in the chunky tag style. Returns the corner and the outline. small = the tight-card variant (Chip.Small).
+-- An old Theme.decorate gradient is removed (a chip is a FLAT palette fill) and an old stroke is reused, so a tag that was built the old way
+-- can be converted with this one call.
+function Chip.apply(frame: GuiObject, fill: Color3, outline: Color3?, small: boolean?): (UICorner, UIStroke)
     frame.BackgroundColor3, frame.BackgroundTransparency, frame.BorderSizePixel = fill, 0, 0
+    local gradient = frame:FindFirstChildOfClass("UIGradient")
+    if gradient then gradient:Destroy() end
     local corner = frame:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
-    corner.CornerRadius = Chip.radius()
+    corner.CornerRadius = Chip.radius(small)
     corner.Parent = frame
     local stroke = frame:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
-    stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = Chip.Spec.outline, outline or Theme.Colors.outline, Enum.ApplyStrokeMode.Border
+    stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode = if small then Chip.Small.outline else Chip.Spec.outline, outline or Theme.Colors.outline, Enum.ApplyStrokeMode.Border
+    stroke.Transparency = 0
     stroke.Parent = frame
     return corner, stroke
 end
