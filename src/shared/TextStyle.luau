@@ -66,4 +66,41 @@ function TextStyle.apply(label: TextLabel | TextButton, fill: Color3?): UIStroke
     stroke.Color, stroke.Thickness, stroke.Transparency = Color3.fromRGB(s[1], s[2], s[3]), TextStyle.thickness(label.TextSize), 0
     return stroke
 end
+
+-- BD-1119 (docs/202 R4): ONE outlined text style with size floors by kind. White (or a readable tint) bold rounded text with a thick dark outline, short copy.
+--   title = a window title or a big headline: at least 22 px, outline 3.   card = text on a card, a button or a counter: at least 16 px, outline 2..3.
+--   note  = fine print (a hint, an odds line): the docs/72 floor of 14 px stays.
+-- The floors are design sizes at scale 1 (a desktop window). A small window (phone, ModalCompact) scales the panel; its floor pass keeps every text at 14 px on screen
+-- and PhoneScale.titleSize keeps a title at 22 px on screen. tools/verify_text_style.py measures both.
+TextStyle.Floors = {title = 22, card = 16, note = 14}
+TextStyle.Kinds = {"title", "card", "note"}
+function TextStyle.floorOf(kind: string): number
+    return TextStyle.Floors[kind] or TextStyle.Floors.note
+end
+-- The size to use: what was asked for, but never under the floor of its kind.
+function TextStyle.fit(kind: string, size: number): number
+    return math.max(size, TextStyle.floorOf(kind))
+end
+-- Outline thickness of a kind: titles are always 3 (thick), the rest follow the text size (2..3).
+function TextStyle.thicknessFor(kind: string, size: number): number
+    if kind == "title" then return TextStyle.MaxThickness end
+    return TextStyle.thickness(size)
+end
+-- Is this text (kind, px it renders at on screen) big enough? A title needs its 22 px on every window. A card needs 16 px on a desktop window; a small
+-- (compact, phone) window keeps the docs/72 floor of 14 px until the Studio re-check (compact = true). Notes are 14 px everywhere.
+function TextStyle.onScreenOk(kind: string, px: number, compact: boolean): boolean
+    if kind == "title" then return px >= TextStyle.Floors.title - 0.01 end
+    if kind == "card" and not compact then return px >= TextStyle.Floors.card - 0.01 end
+    return px >= TextStyle.Floors.note - 0.01
+end
+-- The standard call: font FredokaOne, size raised to the floor of its kind, the kind remembered in the TextKind attribute (the checks read it), the shared outline.
+-- Returns the UIStroke. Only the size and the stroke change; position, box and wrapping stay the screen's own.
+function TextStyle.outlined(label: TextLabel | TextButton, kind: string, fill: Color3?): UIStroke
+    label.Font = Enum.Font.FredokaOne
+    label.TextSize = TextStyle.fit(kind, label.TextSize)
+    label:SetAttribute("TextKind", kind)
+    local stroke = TextStyle.apply(label, fill)
+    if kind == "title" and stroke.Parent == label then stroke.Thickness = TextStyle.thicknessFor(kind, label.TextSize) end
+    return stroke
+end
 return TextStyle

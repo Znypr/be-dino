@@ -28,7 +28,7 @@ function Cards.label(parent: GuiObject, text: string, x: number, y: number, w: n
     t.BackgroundTransparency, t.Position, t.Size = 1, UDim2.fromOffset(x, y), UDim2.fromOffset(w, h)
     t.Font, t.TextSize, t.Text, t.TextColor3 = Enum.Font.FredokaOne, size, text, color or C.text
     t.TextWrapped, t.TextXAlignment, t.ZIndex, t.Parent = true, align or Enum.TextXAlignment.Left, parent.ZIndex + 1, parent
-    Theme.TextStyle.apply(t)
+    Theme.TextStyle.outlined(t, "card") -- BD-1119
     return t
 end
 local label = Cards.label

@@ -66,8 +66,10 @@ function M.layout()
         lastMode = "desktop"
         c.panel.Size = UDim2.fromOffset(860, 520)
         c.header.Size = UDim2.fromOffset(852, 78)
-        c.heading.Size, c.heading.TextSize = UDim2.fromOffset(730, 68), 40
-        c.closeButton.Size = UDim2.fromOffset(math.max(80, 46 / m.scale), math.max(62, 46 / m.scale))
+        c.heading.Size, c.heading.TextSize = UDim2.fromOffset(730, 68), PhoneScale.titleSize(40, m.scale, 68) -- BD-1119: a title renders at least 22 px
+        local side = PhoneScale.closeSide(PhoneScale.CloseDesktop, m.scale, 78) -- BD-1117: a red square X, at least 48 px on screen
+        c.closeButton.Size, c.closeButton.TextSize = UDim2.fromOffset(side, side), math.max(28, math.floor(side * 0.55))
+        c.heading:SetAttribute("TextKind", "title")
         if scroller then (scroller :: ScrollingFrame).Visible = false end
         if c.body.Parent ~= c.panel then c.body.Parent = c.panel end
         c.body.Position, c.body.Size = UDim2.fromOffset(18, 98), UDim2.fromOffset(824, 402)
@@ -76,8 +78,10 @@ function M.layout()
     end
     c.panel.Size = UDim2.fromOffset(m.panelW, m.panelH)
     c.header.Size = UDim2.fromOffset(m.panelW - 8, m.headerH)
-    c.heading.Size, c.heading.TextSize = UDim2.fromOffset(m.panelW - 130, m.headerH - 8), 32
-    c.closeButton.Size = UDim2.fromOffset(PhoneScale.floorButton(80, m.scale), PhoneScale.floorButton(m.headerH - 6, m.scale))
+    local side = PhoneScale.closeSide(0, m.scale, m.headerH) -- BD-1117: the X is a square of at least 48 px on screen, inside the (taller) header
+    c.heading.Size, c.heading.TextSize = UDim2.fromOffset(m.panelW - side - 38, m.headerH - 8), PhoneScale.titleSize(32, m.scale, m.headerH - 8)
+    c.closeButton.Size, c.closeButton.TextSize = UDim2.fromOffset(side, side), math.max(28, math.floor(side * 0.55))
+    c.heading:SetAttribute("TextKind", "title")
     local s = ensureScroller(c)
     s.Visible = true
     -- BD-538: the scroller is innerW x innerH inside its own UIScale `fit`, so on screen it is still (panelW - 8) x bodyH design px wide and tall

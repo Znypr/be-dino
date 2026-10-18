@@ -1,0 +1,9 @@
+{
+  "_about": "BD-1119 / BD-1117 (docs/202 R2 and R4). Exceptions to the text-size floors checked by tools/verify_text_style.py. Every entry needs a reason; a stale entry fails the check. The floors: window title 22 px on screen, card text 16 px on a desktop window, notes (fine print, TextKind \"note\") 14 px.",
+  "compact": {
+    "cardMinPx": 14,
+    "reason": "A small, phone-sized window (height under 500 px, ModalCompact) keeps the docs/72 floor of 14 px on screen for card text: the layouts there are measured by the small-window and menu-layout checks and have no room for 16 px yet. Raising it needs a Studio look at 848 x 423 and 667 x 339 first (follow-up row)."
+  },
+  "entries": [],
+  "small_literals": {}
+}

@@ -157,11 +157,13 @@ local function build(ctx: any, bodyH: number, bodyScale: number)
         -- Owner 2026-10-18: say what each chip is. "Egg type" = rarity, "Shell" = condition (small captions, 14 px, above the chips).
         local typeCaption = label(stage, Copy.ChipTypeCaption, 10, chipY - 18, chipW, 18, 14, C.text)
         typeCaption.Name, typeCaption.TextStrokeTransparency = "RarityCaption", .4
+        typeCaption:SetAttribute("TextKind", "note") -- BD-1119: fine print (the 14 px note floor), not card text
         if conditionName then
             local conditionChip = pill(stage, conditionName, C.purple, 18 + chipW, chipY, chipW, 32, 19)
             conditionChip.Name = "ConditionChip"
             local shellCaption = label(stage, Copy.ChipShellCaption, 18 + chipW, chipY - 18, chipW, 18, 14, C.text)
             shellCaption.Name, shellCaption.TextStrokeTransparency = "ConditionCaption", .4
+            shellCaption:SetAttribute("TextKind", "note")
         end
         if badge then
             local badgeChip = pill(stage, badge, badgeColor, 10, 8, 150, 30, 17)

@@ -121,7 +121,7 @@ function Toasts.attach(d: any)
         local plate=box(card,16,6,44,44,C.panel,51)
         Theme.decorate(plate,22)
         local title=label(card,"",68,3,330,30,21)
-        local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235))
+        local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235)) detail:SetAttribute("TextKind","note") -- BD-1119: the second toast line is fine print (14 px note floor)
         local count=label(card,"",392,6,44,44,20,C.gold)
         for _,t in {title,detail} do t.TextXAlignment=Enum.TextXAlignment.Left t.TextTruncate=Enum.TextTruncate.AtEnd end
         local tap=Instance.new("TextButton")

@@ -97,6 +97,9 @@ MUTANTS = {
     'catcher offset taken from gui.AbsolutePosition (breaks under a ScreenGui inset)': {
         'ModalClose': [('local origin = layer.AbsolutePosition', 'local origin = gui.AbsolutePosition')],
     },
+    'the X rule only asks for the 44 px of any button (BD-1117: the X needs 48)': {
+        'ModalCloseRules': [('Rules.MinClose = 48', 'Rules.MinClose = 44')],
+    },
     'catcher stays after finish': {
         'ModalClose': [('        if overlay.Parent then overlay:Destroy() end\n        if layer.Parent then layer:Destroy() end', '        if layer.Parent then layer:Destroy() end')],
     },
