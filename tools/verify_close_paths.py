@@ -46,6 +46,8 @@ FULL_SCREEN_REVIEWED = {
     ('Bootstrap.client.luau', 'crystalOpen'): 'OpenShop inside the crystal plate',
     ('DinoIndexPanels.luau', 'scrim'): 'EggPopup inside the Dino Index body (OK button + tap outside the card)',
     ('FusionMenu.luau', 'scrim'): 'FusionScrim (the Fusion menu itself; its panel and X sit above it)',
+    ('PatternColourCards.luau', 'hit'): 'BD-1065: CardHit covers ONE index card (a child of the card frame) so a tap opens its detail; it never reaches the header, X or the backdrop',
+    ('PatternColourDetail.luau', 'scrim'): 'BD-1065: the card detail backdrop lives INSIDE the screen body (like the Dino Index egg popup); X, OK and a tap on it all close, the menu X and Escape sit outside it',
     ('HubWalkUpClient.luau', 'button'): 'the proximity prompt button inside its own prompt',
 }
 

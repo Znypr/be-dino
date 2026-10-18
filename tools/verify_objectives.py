@@ -37,7 +37,7 @@ def doc_rows() -> list[tuple[str, str, int, int]]:
     """(id, group, goal, reward) from the docs/66 catalogue table."""
     text = (ROOT / 'docs' / '66-intake-mini-objectives.md').read_text(encoding='utf-8')
     rows = []
-    for m in re.finditer(r'^\| ([TSD]\d) \| (Tutorial|Short|Daily) \| [^|]+ \| (\d+) \| (\d+) \|$', text, re.M):
+    for m in re.finditer(r'^\| ([TSD]\d+) \| (Tutorial|Short|Daily) \| [^|]+ \| (\d+) \| (\d+) \|$', text, re.M):
         rows.append((m.group(1), m.group(2).lower(), int(m.group(3)), int(m.group(4))))
     return rows
 
@@ -91,19 +91,19 @@ local DAY0=20833*86400 -- a UTC midnight (1799971200); short windows (1800 s) ar
 local function newState(now) local s=Rules.fresh() Rules.advance(s,now) return s end
 local function finish(s,group,i) -- drive the i-th active row of a window group to its goal through the real event path
  local entry=C.ById[s[group].ids[i]]
- Rules.applyEvents(s,{{kind=entry.event,amount=entry.goal,value=entry.minValue}},DAY0+100)
+ Rules.applyEvents(s,{{kind=entry.event,amount=entry.goal,value=entry.minValue or (if entry.total then entry.goal else nil)}},DAY0+100)
  return entry
 end
 
 ------------------------------------------------------------------ BD-072 catalogue
-assert(#C.Catalogue==20 and C.SchemaVersion==1)
+assert(#C.Catalogue==23 and C.SchemaVersion==1)
 local groups={tutorial=0,short=0,daily=0}
 local tutorialTotal=0
 local seenIds={}
 for _,e in C.Catalogue do
  assert(not seenIds[e.id],"duplicate id "..e.id) seenIds[e.id]=true
  assert(groups[e.group]~=nil,e.id) groups[e.group]+=1
- assert(string.match(e.id,"^[TSD]%d$") and string.sub(e.id,1,1)==string.upper(string.sub(e.group,1,1)),e.id)
+ assert(string.match(e.id,"^[TSD]%d+$") and string.sub(e.id,1,1)==string.upper(string.sub(e.group,1,1)),e.id)
  assert(type(e.name)=="string" and #e.name>=3 and #e.name<=40,e.id.." name is short, plain copy (docs/72)")
  assert(C.EventKinds[e.event]==true,e.id.." event")
  assert(e.goal%1==0 and e.goal>=1 and e.goal<=1000,e.id.." goal")
@@ -117,8 +117,8 @@ for _,e in C.Catalogue do
  assert(e.minValue==nil or e.id=="T7","only T7 has a threshold")
  if e.group=="tutorial" then tutorialTotal+=e.reward.crystals end
 end
-assert(groups.tutorial==9 and groups.short==5 and groups.daily==6)
-assert(tutorialTotal==160,"tutorial gift is 160 Crystals (docs/66): "..tutorialTotal)
+assert(groups.tutorial==12 and groups.short==5 and groups.daily==6)
+assert(tutorialTotal==210,"tutorial gift is 210 Crystals (docs/66 160 + BD-1041 50): "..tutorialTotal)
 assert(C.Windows.short.seconds==1800 and C.Windows.daily.seconds==86400 and C.Windows.short.active==3 and C.Windows.daily.active==3)
 for _,k in {"MaxClaimCrystals","MaxClaimXP","WindowCrystalCapPerDay","SeenMax","PendingMax","ProgressCapMultiplier","RequestsPerWindow"} do
  assert(type(C[k])=="number" and C[k]>0,k)
@@ -128,8 +128,8 @@ for _,doc in @@DOC_ROWS@@ do
  local e=C.ById[doc[1]]
  assert(e and e.group==doc[2] and e.goal==doc[3] and e.reward.crystals==doc[4],"docs/66 row "..doc[1].." differs from ObjectiveConfig")
 end
-assert(@@DOC_COUNT@@==20,"docs/66 table must list the 20 objectives")
-print("BD-072 catalogue passed: 20 objectives, crystal/xp rewards only, caps, docs/66 parity, tutorial 160")
+assert(@@DOC_COUNT@@==23,"docs/66 table must list the 23 objectives")
+print("BD-072 catalogue passed: 23 objectives, crystal/xp rewards only, caps, docs/66 parity, tutorial 210")
 
 ------------------------------------------------------------------ deterministic picks
 for w=1,300 do
