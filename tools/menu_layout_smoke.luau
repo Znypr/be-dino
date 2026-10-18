@@ -57,7 +57,7 @@ stubs.PotionArt = {icon = function() return nil end}
 stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end, readyIds = function() return {} end}
 stubs.PrivateState = {get = function() return nil end, str = function(_, fallback) return fallback or "" end}
 stubs.HudSettings = nil
-local clientNames = {RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
+local clientNames = {ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
@@ -472,6 +472,44 @@ do
             check(HubRulesNow.hiddenInRun(dest, false, state) == false, string.format("hiddenInRun(%s, hub OFF, %s) must be false (the default build is unchanged)", tostring(dest), tostring(state)))
         end
     end
+end
+
+-- ===== 6. BD-1099: the class icon on a Dino Index card and in the details list =====
+do
+    local ClassRow = requireModule(ClientFolder.ClassRow)
+    local IndexProgress = requireModule(SharedFolder.IndexProgress)
+    for _, scale in {1, .8, .571} do
+        local lay = IndexProgress.cardLayout(scale, 326)
+        local world = buildWorld(1156, 793, false)
+        local cardBox = uiBox(world.body, 0, 0, 264, lay.cardHeight, Colors.card, 24)
+        local nameLabel = uiLabel(cardBox, "Compy", 4, if lay.compact then 3 else 8, 256, if lay.compact then 26 else 35, 25)
+        local rarityLabel = uiLabel(cardBox, "Common", 4, if lay.compact then 28 else 44, 256, if lay.compact then 20 else 25, 18)
+        local tag = string.format("Index card (scale %.3f, %s)", scale, if lay.compact then "compact" else "tall")
+        for _, species in {"compy", "pteranodon", "mosasaurus", "ankylosaurus"} do
+            local badge = ClassRow.card(uiLabel, cardBox, species, "Ground - 3", lay.detailY, lay.compact, lay.heroY)
+            local b, c = rectOf(badge), rectOf(cardBox)
+            local icon = {x = b.x, y = b.y, w = 26, h = 26}
+            check(badge:GetAttribute("Class") ~= nil and badge.Name == "ClassBadge", tag .. ": the badge is drawn for " .. species)
+            check(inside(icon, c), string.format("%s: the badge icon %s is inside the card %s", tag, describe(icon), describe(c)))
+            check(not overlaps(icon, rectOf(nameLabel)), tag .. ": the badge covers the dino name")
+            check(not overlaps(icon, rectOf(rarityLabel)), tag .. ": the badge covers the rarity line")
+            check(icon.y + 26 <= c.y + lay.detailY + .5, tag .. ": the badge is above the detail line")
+            check(badge.ZIndex > cardBox.ZIndex + 1, tag .. ": the badge is above the picture")
+            badge:Destroy()
+        end
+        world.gui:Destroy()
+    end
+    -- the details list: one row, replaced (never doubled), under the title
+    local world = buildWorld(1156, 793, false)
+    local list = uiBox(world.body, 0, 0, 300, 300, Colors.card, 24)
+    ClassRow.row(list, "pteranodon", 1)
+    ClassRow.row(list, "compy", 1)
+    local rows = 0
+    for _, d in list:GetChildren() do if d.Name == "ClassRow" then rows += 1 end end
+    check(rows == 1, "the details list has exactly one class row (" .. rows .. ")")
+    local row = list:FindFirstChild("ClassRow")
+    check(row ~= nil and row.LayoutOrder == 1 and row:GetAttribute("Class") == "Ground" and row:FindFirstChild("ClassBadge") ~= nil, "the class row holds the badge of the species shown")
+    world.gui:Destroy()
 end
 
 -- ===== 3. BD-1103: slips of the shop pages (overlaps, text that cannot fit its box) =====

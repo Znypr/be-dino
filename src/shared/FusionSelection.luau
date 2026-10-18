@@ -804,7 +804,7 @@ function Sel.details(d, catalog)
     local bonusText = if type(catalog.colourBonus) == "function" then catalog.colourBonus(g) else nil
     if bonusText then -- BD-1039: with the gene boost on the text is "Boost 3 of 5" (label "Boost"); otherwise the BD-172 "Colour bonus +3% growth"
         local boostValue = string.match(bonusText, "^Boost (.+)$")
-        table.insert(view.traits, 5, {label = if boostValue then "Boost" else "Colour bonus", value = boostValue or (string.gsub(bonusText, "^Colour bonus ", ""))})
+        table.insert(view.traits, 3, {label = if boostValue then "Boost" else "Colour bonus", value = boostValue or (string.gsub(bonusText, "^Colour bonus ", ""))})
     end
     local origin = type(d.origin) == "table" and d.origin or {}
     local lineage = d.lineage

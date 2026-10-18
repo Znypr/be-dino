@@ -257,7 +257,7 @@ function Panels.species(ctx)
     local function fillDetails(d: any)
         local list, label = traitsList, titleLabel
         if not list or not label then return end
-        for _, child in list:GetChildren() do if child:IsA("TextLabel") then child:Destroy() end end
+        for _, child in list:GetChildren() do if child:IsA("TextLabel") or child.Name == "ClassRow" then child:Destroy() end end
         local response = st.details[d.instanceId]
         if response == "loading" then
             W.label(list, "Loading details...", UDim2.new(1, -10, 0, 26), UDim2.new(), 18, C.gold, true)
@@ -276,7 +276,9 @@ function Panels.species(ctx)
             local l = W.label(list, text, UDim2.new(1, -10, 0, if #text > 30 then 40 else 22), UDim2.new(), 17, color, true)
             l.LayoutOrder = order
         end
-        for _, row in view.traits do line(row.label .. ": " .. row.value, if row.label == "Stage" then C.gold else nil) end
+        require(script.Parent.ClassRow).row(list, d.speciesId or speciesId, 1) -- BD-1099: the class icon and word under the title
+        order = 1
+        for _, row in view.traits do line(require(Shared.GeneBoost).traitLine(row.label, row.value), if row.label == "Stage" then C.gold else nil) end
         line(view.prestige or "", C.gold)
     end
 

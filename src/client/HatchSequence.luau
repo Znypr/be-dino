@@ -938,7 +938,8 @@ function Seq.play(args: Args): Handle
         if not failed and type(r.speciesId) == "string" then
             -- Left of the centred name text (label box 80..740 x 236..290 inside the body), vertically centred on it.
             local badgeSize = 40
-            local textWidth = math.min(a.nameLabel.TextBounds.X, a.nameLabel.AbsoluteSize.X)
+            local measured = a.nameLabel.TextBounds.X -- BD-1097: right after the text is set the engine may still answer 0: then the width is estimated, so the badge never lands on the name
+            local textWidth = math.min(if measured > 1 then measured else #a.nameLabel.Text * .55 * a.nameLabel.TextSize, a.nameLabel.AbsoluteSize.X)
             local badge = ClassBadge.create(a.body, r.speciesId, badgeSize, true)
             badge.AnchorPoint = Vector2.new(1, .5)
             badge.Position = UDim2.fromOffset(a.nameLabel.Position.X.Offset + a.nameLabel.Size.X.Offset / 2 - textWidth / 2 - 8, a.nameLabel.Position.Y.Offset + a.nameLabel.Size.Y.Offset / 2)

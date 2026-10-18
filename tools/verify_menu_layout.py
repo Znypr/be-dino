@@ -37,6 +37,12 @@ MODULES.update({
     'AssetSlots': 'src/shared/AssetSlots.luau',
     'Toasts': 'src/client/Toasts.luau',
     'RailRun': 'src/client/RailRun.luau',
+    'ClassRow': 'src/client/ClassRow.luau',
+    'ClassBadge': 'src/shared/ClassBadge.luau',
+    'ClassInfo': 'src/shared/ClassInfo.luau',
+    'ClassMovement': 'src/shared/ClassMovement.luau',
+    'IndexProgress': 'src/shared/IndexProgress.luau',
+    'CombatConfig': 'src/shared/CombatConfig.luau',
     'ToastSlot': 'src/shared/ToastSlot.luau',
 })
 
@@ -101,6 +107,16 @@ MUTANTS = {
     },
     'a toast along the bottom edge takes the tap (the menu under it cannot be pressed)': {
         'Toasts': [('for _,slot in toastCards do slot.tap.Active=not passThrough end', 'for _,slot in toastCards do slot.tap.Active=true end')],
+    },
+    # BD-1099: class icons
+    'the class icon sits on the dino name (top of the card)': {
+        'ClassRow': [('return M.badge(card, id, 8, heroY + 2, not compact, card.ZIndex + 8)', 'return M.badge(card, id, 8, 2, not compact, card.ZIndex + 8)')],
+    },
+    'the class icon hides behind the picture': {
+        'ClassRow': [('return M.badge(card, id, 8, heroY + 2, not compact, card.ZIndex + 8)', 'return M.badge(card, id, 8, heroY + 2, not compact, 1)')],
+    },
+    'the details list gets a second class row each time it is filled': {
+        'ClassRow': [('    if old then old:Destroy() end', '')],
     },
     # BD-1105: the "At home" buttons in a run
     'the "At home" buttons stay shown in a run': {

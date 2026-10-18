@@ -108,6 +108,17 @@ function Index.foundOnText(speciesIds: any, nameOf: any): string?
     return text
 end
 
+-- BD-1082: the card line is ONE short line, so it still fits a 500 px window at 14 px: "Found on Compy" when the names are short, else "Found on 3 dinos"
+-- (the tap detail lists every dino). No colon (the old "Found on: Compy, Raptor +1" wrapped to a second line the card cut off).
+Index.FoundLineMax = 16 -- characters
+function Index.foundLine(speciesIds: any, nameOf: any): string?
+    local names = Index.foundOnText(speciesIds, nameOf)
+    if names == nil then return nil end
+    local text = "Found on " .. names
+    if #speciesIds == 1 and #text <= Index.FoundLineMax then return text end
+    return string.format("Found on %d %s", #speciesIds, if #speciesIds == 1 then "dino" else "dinos")
+end
+
 -- The boost line under the pips: "Boost 3 of 5", or "No boost" for a Common one.
 function Index.boostText(pips: number): string
     if pips <= 0 then return Index.NoBoostLine end
@@ -130,8 +141,8 @@ function Index.cards(kind: string, rows: any, found: any, nameOf: any)
             local isFound = type(set) == "table" and set[row.id] == true
             local line = Index.NotFoundLine
             if isFound then
-                local on = Index.foundOnText(if type(speciesMap) == "table" then speciesMap[row.id] else nil, nameOf)
-                line = if on then "Found on: " .. on else Index.FoundBeforeLine
+                local on = Index.foundLine(if type(speciesMap) == "table" then speciesMap[row.id] else nil, nameOf)
+                line = on or Index.FoundBeforeLine
             end
             table.insert(cards, {id = row.id, name = Index.displayName(kind, row), rarity = Curve.Names[tier + 1], tier = tier, found = isFound,
                 pips = pips, boostText = Index.boostText(pips), line = line, rgb = if kind == "colours" then row.rgb else nil, position = position})

@@ -118,7 +118,7 @@ def static_checks():
     # panel wiring: egg odds get the safe-eggs count, upgrade odds do not; the note is drawn at the shared >= 14 size
     assert re.search(r'OddsCopy\.eggGroups\(progression\(\)\.conditionLevel or 0,require\(Shared\.FtueRules\)\.safeEggsLeftView\(', boot), 'Egg Odds passes the safe-eggs view'
     assert 'OddsCopy.upgradeGroups(oddsLevelOverride :: number)' in boot, 'Upgrade Odds does not'
-    assert 'label(list,group.note,10,lineY,790,28,OddsCopy.NoteTextSize)' in boot, 'note drawn at OddsCopy.NoteTextSize'
+    assert 'label(list,group.note,10,lineY,790,nh,OddsCopy.NoteTextSize)' in boot, 'note drawn at OddsCopy.NoteTextSize'
     m = re.search(r'label\(body,safeLine,0,cardsY,824,30,(\d+)', boot)
     assert m and int(m.group(1)) >= 14, 'Conditions tab line is drawn at >= 14'
     assert 'ConditionsHeader' not in boot

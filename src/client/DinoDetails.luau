@@ -56,7 +56,9 @@ function DinoDetails.show(container: GuiObject, instanceId: string, catalog, cal
             return l
         end
         line("TRAITS", C.gold)
-        for _, row in view.traits do line(row.label .. ": " .. row.value) end
+        order += 1
+        require(script.Parent.ClassRow).row(facts, d.speciesId or "compy", order) -- BD-1099: the class icon and word
+        for _, row in view.traits do line(require(Shared.GeneBoost).traitLine(row.label, row.value)) end
         line("PRESTIGE: " .. (view.prestige or ""), C.gold)
         line(if view.origin.kind == "fused" then "FUSION LINEAGE" elseif view.origin.kind == "hatched" then "ORIGINAL EGG" else "ORIGIN", C.gold)
         for _, text in view.origin.lines do line(text, nil, if #text > 48 then 46 else 28) end

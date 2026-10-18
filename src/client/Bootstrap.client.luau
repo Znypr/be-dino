@@ -434,7 +434,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
                 hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
-                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.ClassInfo).Labels[require(Shared.ClassInfo).forSpecies(id).class].." • "..require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
+                require(script.Parent.ClassRow).card(label,card,id,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(script.Parent.ClassRow).label(id).." • "..require(Shared.FtueP1).indexCount(base,gold,diamond),lay.detailY,lay.compact,lay.heroY)
                 if event then require(script.Parent.MutationBadge).chip(card,event.id,UDim2.new(0.5,0,0,lay.detailY),Vector2.new(0.5,0)) end -- BD-352: real badge, not 9 px text
                 if lay.compact then
                     local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
