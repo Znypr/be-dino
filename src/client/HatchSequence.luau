@@ -23,6 +23,8 @@ local MutationReveal = require(script.Parent.MutationReveal) -- BD-162
 local Config = require(Shared.Config)
 local V2Assets = require(Shared.HatchV2Assets) -- docs/118 s9: flag or Studio-only preview toggle
 local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
+local ModalClose = require(script.Parent.ModalClose) -- BD-1019: the tap catcher that never covers X, the end buttons or the backdrop
+local CloseRules = require(Shared.ModalCloseRules)
 
 local Seq = {}
 local batch = Timeline.session -- BD-444: where we are in the hatch party ("Egg 3 of 15")
@@ -324,6 +326,8 @@ export type Args = {
     motion: boolean,
     alive: () -> boolean, flash: (Color3, number) -> (),
     onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (), onAgain: (() -> ())?,
+    header: GuiObject?, -- BD-1019: the menu header strip (X lives there): the tap catcher starts below it
+    onAbort: (() -> ())?, -- BD-1019: the menu was closed (X, tap outside, Escape) before the player continued: nothing more is coming from this egg
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
     eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
     eggId: string?, -- BD-397: seeds the v2 paint splats (same egg -> same splashes)
@@ -404,10 +408,12 @@ function Seq.play(args: Args): Handle
     hint.Parent = a.body
     local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 14, hint
 
-    -- Full-screen tap target (>= 44 px everywhere) plus a small "Skip all" while more eggs wait. Taps are ignored until the result is in.
-    local overlay = Instance.new("TextButton")
-    overlay.Name, overlay.Text, overlay.BackgroundTransparency, overlay.AutoButtonColor = "HatchTapCatcher", "", 1, false
-    overlay.Size, overlay.ZIndex, overlay.Parent = UDim2.fromScale(1, 1), 46, a.gui
+    -- Tap target over the card body plus a small "Skip all" while more eggs wait. Taps are ignored until the result is in.
+    -- BD-1019: the catcher covers the card body only (ModalClose.hatchZone), so X, DONE / TRY AGAIN and the dark backdrop get their own taps.
+    local zone = ModalClose.hatchZone(a.gui, a.panel, a.header, a.body)
+    local overlay, layer = zone.overlay, zone.layer
+    local readyClock: number? = nil -- when the tap hint appeared (a tap outside the card cannot close the dino for the first ReadyGrace seconds)
+    local outsideFn: () -> boolean = function() return true end -- the backdrop-tap decision, set below once the sequence state exists
     local skipButton: TextButton? = nil
     -- BD-444: "Egg N of M" counter, top centre of the body, hidden for a single egg.
     local counter = Instance.new("TextLabel")
@@ -491,7 +497,8 @@ function Seq.play(args: Args): Handle
         MutationReveal.hide(mr)
         if v2 then EggV2.stop(v2) end
         if classBadge then classBadge:Destroy() classBadge = nil end
-        if overlay.Parent then overlay:Destroy() end
+        zone.destroy()
+        ModalClose.clearOutside(outsideFn)
         if fx.back.Parent then
             fx.backdrop.BackgroundTransparency = 1
             for _, f in fx.rings do f.BackgroundTransparency = 1 end
@@ -732,8 +739,8 @@ function Seq.play(args: Args): Handle
         local view = a.dino :: any
         view.ImageTransparency = 0
         if a.dino:IsA("ViewportFrame") and overlay.Parent then
-            -- Drags on the full-screen catcher turn the dino; a press that moves under 12 px is still a tap.
-            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay, baseZoom = 1.4, -- BD-262: the dino filled under half the panel
+            -- Drags on the tap catcher turn the dino; a press that moves under 12 px is still a tap.
+            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = layer, baseZoom = 1.4, -- BD-262: the dino filled under half the panel
                 hintPosition = UDim2.fromScale(.17, .6), resetPosition = UDim2.fromScale(.72, .345)})
         end
         if not motion then
@@ -775,6 +782,7 @@ function Seq.play(args: Args): Handle
 
     local function showHint()
         readyShown = true
+        readyClock = os.clock()
         local endRow = a.body:FindFirstChild("EndButtons")
         if endRow and endRow:IsA("GuiObject") then endRow.Visible = true else hint.Visible = true end
         if endRow then return end
@@ -803,6 +811,16 @@ function Seq.play(args: Args): Handle
         if Timeline.tap(state) == "advance" then advance() end
     end
     overlay.Activated:Connect(onTap)
+    -- A tap on the dark backdrop (BD-1019): while the egg is being built it counts like a tap on the egg (as before); once the dino has been shown for
+    -- ReadyGrace seconds it is the same as X. While the answer is on its way, or the egg is cracking, it does nothing (X always works).
+    outsideFn = function(): boolean
+        if finished then return true end
+        local since = if readyClock then os.clock() - readyClock else nil
+        local action = CloseRules.outsideAction(state.pending, Timeline.phase(state.durs, state.t), since)
+        if action == "tap" then onTap() end
+        return action == "close"
+    end
+    ModalClose.setOutside(outsideFn)
     table.insert(connections, Input.InputBegan:Connect(function(input, processed)
         if processed then return end
         local k = input.KeyCode
@@ -905,7 +923,7 @@ function Seq.play(args: Args): Handle
             local b = Instance.new("TextButton")
             b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", Timeline.SkipText, Vector2.new(1, 1), true
             b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(176, 48), Theme.Colors.card
-            b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
+            b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, layer
             local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
             local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
             skipButton = b
@@ -962,7 +980,8 @@ function Seq.play(args: Args): Handle
 
     table.insert(connections, RunService.Heartbeat:Connect(function(dt)
         if finished then return end
-        if not a.alive() or (a.dino and not a.dino.Parent) then finish() return end
+        if not a.alive() or (a.dino and not a.dino.Parent) then finish() if a.onAbort then (a.onAbort :: () -> ())() end return end
+        zone.step()
         local frameDt = math.min(dt, 1 / 20) -- a hitch must not skip the whole build-up
         Timeline.step(state, frameDt)
         local t = state.t

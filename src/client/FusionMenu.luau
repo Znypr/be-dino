@@ -22,6 +22,7 @@ local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local Sfx = require(Shared.Sfx)
 local OddsCopy = require(Shared.OddsCopy)
+local CloseRules = require(Shared.ModalCloseRules) -- BD-1019: which screens a tap on the dark backdrop may close
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local W = require(script.Parent.FusionWidgets)
 local DinoDetails = require(script.Parent.DinoDetails)
@@ -121,6 +122,7 @@ local function ensureGui()
     scrim.Name, scrim.Text, scrim.AutoButtonColor, scrim.Size = "FusionScrim", "", false, UDim2.fromScale(1, 1)
     scrim.BackgroundColor3, scrim.BackgroundTransparency = Color3.new(0, 0, 0), .42
     scrim.Parent = screen
+    scrim.Activated:Connect(function() if state.open and CloseRules.fusionOutsideCloses(state.mode) then FusionMenu.close() end end) -- BD-1019: a tap outside the panel = X (never while saving or revealing)
     local frame = W.box(scrim, UDim2.new(.97, -leftInset, .95, 0), UDim2.new(0, leftInset + 6, .5, 0), C.panel, 10)
     frame.Name, frame.AnchorPoint, frame.Active = "FusionPanel", Vector2.new(0, .5), true
     local limit = Instance.new("UISizeConstraint")
@@ -138,7 +140,7 @@ local function ensureGui()
     toastLabel = note
     gui, panel, body = screen, frame, content
     Input.InputBegan:Connect(function(input, processed)
-        if not processed and input.KeyCode == Enum.KeyCode.Escape and state.open then FusionMenu.close() end
+        if not processed and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) and state.open then FusionMenu.close() end
     end)
 end
 
