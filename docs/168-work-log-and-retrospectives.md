@@ -127,6 +127,8 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | BD-1030 fill BD-004 slot for newbuild, off-sale field in verify_release_ids | worker | #499 | 45.0 | - | - | good | 1 | conflict: kanban and docs/115 append conflicts at file end | dry-run redirect path was relative and wrote outside the repo; use the scratchpad absolute path |
 | 2026-10-18 | BD-1043 playtest build stamp + freshness check (PR 502) | worker | #502 | 25.0 | 45 | - | good | - | other: BD-1043 row not on main yet (PR 498 open), status change deferred | Reuse the existing on-screen label instead of editing the byte-limited Bootstrap file. |
 | 2026-10-18 | BD-1032 new species much rarer + species timing simulation (PR 505) | worker | #505 | 80.0 | 90 | - | good | 2 | other: hard-coded old odds in verify_eggs, verify_secret_species golden hash and HatchTimeline.pct (would show 0%) | Grep for the old numbers and for display formats before changing rarity; tiny percents need more decimals. |
+| 2026-10-18 | layer_stats tool, offline food dump, first food measurement BD-1049 | worker | #508 | 32.0 | 40 | 150.0 | good | - | other: Roblox Random and terrain raycasts cannot run offline, so positions are a faithful model not the real ones | A random-scatter reference on the same ground (not the theoretical 1.0) is needed for an honest spread verdict |
+| 2026-10-18 | WorldLayer class, Python mirror, layer_stats --layer (BD-1047 first half) | worker | #509 | 22.0 | 30 | 120.0 | good | - | conflict: CI workflow list line next to the other PR's line | Both PRs add a line at the same spot of the CI list; append new verifiers at different places |
 <!-- retro-table:end -->
 
 ## 6. Open items
