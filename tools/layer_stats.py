@@ -24,6 +24,7 @@ block metrics only. Walkable blocks (half or more of the block is walkable groun
 Usage:
   python tools/layer_stats.py --points build/food_layout_1404.json [--cells 256] [--png-dir DIR] [--targets t.json]
   python tools/layer_stats.py --grid layer.json          # {"half": 416, "rows": [[0, 1, ...], ...]}  (rows[iz][ix])
+  python tools/layer_stats.py --layer layer.txt [--kind-names 1=berry,2=fruit]   # WorldLayer text (src/shared/WorldLayer.luau via tools/worldlayer.py); each non-zero cell is one point
 Points files: JSON {"points": [[x, z, kind], ...], "arena": 416, "mask": {"cell": 4, "rows": ["0101..", ...]}} or CSV x,z,kind.
 Pure Python plus Pillow for the pictures (CI installs it).
 """
@@ -566,6 +567,8 @@ def main(argv=None):
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument('--points', help='JSON or CSV with x, z, kind')
     src.add_argument('--grid', help='JSON {"half": 416, "rows": [[..], ..]}')
+    src.add_argument('--layer', help='WorldLayer text file (WL1:...), a square layer')
+    ap.add_argument('--kind-names', help='names for the digits of --layer / --grid, for example 1=berry,2=fruit,3=egg,4=amber')
     ap.add_argument('--half', type=float, default=None, help='half arena width in studs (default 416 or the file)')
     ap.add_argument('--cells', type=int, default=DEFAULT_CELLS, help='cells across the arena (cell size = 2 x half / cells)')
     ap.add_argument('--blocks', default=','.join(map(str, BLOCK_CELLS)), help='block sizes in cells')
@@ -578,14 +581,23 @@ def main(argv=None):
 
     mask = None
     half = args.half
+    names = dict(part.split('=', 1) for part in (args.kind_names or '').split(',') if '=' in part)
     if args.points:
         points, file_half, mask = load_points(args.points)
         half = half or file_half
-    else:
+    elif args.grid:
         data = json.loads(Path(args.grid).read_text(encoding='utf-8'))
         half = half or float(data.get('half', DEFAULT_HALF))
-        points = points_from_grid(data['rows'], half, data.get('kinds'))
+        points = points_from_grid(data['rows'], half, {**data.get('kinds', {}), **names})
         args.cells = len(data['rows'])
+    else:
+        import worldlayer
+        layer = worldlayer.decode(Path(args.layer).read_text(encoding='utf-8'))
+        if layer.width != layer.height:
+            ap.error('--layer needs a square layer (width = height)')
+        half = half or layer.world_half_width
+        points = points_from_grid(layer.rows(), half, names)
+        args.cells = layer.width
     blocks = tuple(int(b) for b in args.blocks.split(','))
     result = analyse(points, half, args.cells, blocks, mask, args.empty_radius)
     print(report(result, args.name))
