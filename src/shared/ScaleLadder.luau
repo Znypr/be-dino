@@ -84,12 +84,12 @@ ScaleLadder.Dino = {
     secret = {
         order = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus"}, -- Shared/SecretSpeciesConfig.Order
         species = {
-            chickosaurus = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 4.00, height = 6.60, length = 5.80, snout = 2.90, headLength = 1.28, measured = false},
-            pigeon = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.70, height = 6.60, length = 6.30, snout = 3.15, headLength = 1.39, measured = false},
-            dodo = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 5.30, height = 6.60, length = 6.50, snout = 3.25, headLength = 1.43, measured = false},
-            duck = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.90, height = 6.60, length = 6.70, snout = 3.35, headLength = 1.47, measured = false},
-            penguin = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 4.40, height = 6.60, length = 5.89, snout = 2.95, headLength = 1.30, measured = false},
-            budgiesaurus = {scale = 1.85, tier = 1, basis = "bulk", target = 5.55, width = 6.40, height = 5.20, length = 5.14, snout = 2.57, headLength = 1.13, measured = false},
+            chickosaurus = {scale = 3.06, tier = 1, basis = "height", target = 6.60, width = 3.92, height = 6.61, length = 6.12, snout = 3.06, headLength = 1.35, measured = true},
+            pigeon = {scale = 2.86, tier = 1, basis = "height", target = 6.60, width = 5.21, height = 6.61, length = 5.72, snout = 2.86, headLength = 1.26, measured = true},
+            dodo = {scale = 3.46, tier = 1, basis = "height", target = 6.60, width = 3.81, height = 6.61, length = 6.92, snout = 3.46, headLength = 1.52, measured = true},
+            duck = {scale = 3.03, tier = 1, basis = "height", target = 6.60, width = 4.39, height = 6.61, length = 6.06, snout = 3.03, headLength = 1.33, measured = true},
+            penguin = {scale = 2.38, tier = 1, basis = "bulk", target = 5.55, width = 5.81, height = 6.19, length = 4.76, snout = 2.38, headLength = 1.05, measured = true},
+            budgiesaurus = {scale = 0.9, tier = 1, basis = "bulk", target = 5.55, width = 3.60, height = 6.60, length = 7.12, snout = 3.56, headLength = 1.57, measured = true},
             foxosaurus = {scale = 0.79, tier = 1, basis = "height", target = 6.60, width = 3.00, height = 6.64, length = 6.32, snout = 3.16, headLength = 1.39, measured = true},
         },
     },

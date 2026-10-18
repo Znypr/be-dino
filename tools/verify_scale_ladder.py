@@ -56,12 +56,12 @@ MEASURED = {
 # mesh, its row is re-read from the Studio bounding box, this table is updated and the row's `measured` turns true. Also used by the camera,
 # hit size and mouth reach verifiers, so the secrets are covered by every sizing rule with their model slot empty or filled.
 SECRET_BOXES = {
-    'chickosaurus': (4.00, 6.60, 5.80),
-    'pigeon': (3.70, 6.60, 6.30),
-    'dodo': (5.30, 6.60, 6.50),
-    'duck': (3.90, 6.60, 6.70),
-    'penguin': (4.40, 6.60, 5.89),
-    'budgiesaurus': (6.40, 5.20, 5.14),
+    'chickosaurus': (3.92, 6.61, 6.12),  # MEASURED at scale 1 1.28 x 2.16 x 2 (docs/173) x 3.06
+    'pigeon': (5.21, 6.61, 5.72),  # MEASURED at scale 1 1.82 x 2.31 x 2 (docs/173) x 2.86
+    'dodo': (3.81, 6.61, 6.92),  # MEASURED at scale 1 1.1 x 1.91 x 2 (docs/173) x 3.46
+    'duck': (4.39, 6.61, 6.06),  # MEASURED at scale 1 1.45 x 2.18 x 2 (docs/173) x 3.03
+    'penguin': (5.81, 6.19, 4.76),  # MEASURED at scale 1 2.44 x 2.6 x 2 (docs/173) x 2.38
+    'budgiesaurus': (3.60, 6.60, 7.12),  # MEASURED at scale 1 4 x 7.33 x 7.91 (docs/173) x 0.9
     'foxosaurus': (3.00, 6.64, 6.32),  # MEASURED (BD-602 v2 Place 1 box 3.8 x 8.4 x 8.0 at scale 1) x 0.79
 }
 SECRET_SIZE_TIER = 1  # SS8: every secret is sized as a tier 1 (Compy-sized) find

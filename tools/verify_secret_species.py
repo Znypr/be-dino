@@ -56,7 +56,7 @@ def module(path):
 # changing an id) fails this verifier until this table, docs/173 and the evidence line change in the same commit. Every id is a published
 # `generate_mesh` Model of the owner's account (Roblox economy details: AssetTypeId 10, creator znyprs, the same as the 22 shipped species).
 # Never invent an id: a slot that is not here stays 0.
-BOUND_IDS = {'foxosaurus': 112996440434481}
+BOUND_IDS = {'budgiesaurus': 107910518074360, 'chickosaurus': 108391746824463, 'dodo': 128146035116312, 'duck': 129901658996389, 'foxosaurus': 112996440434481, 'penguin': 120950430829492, 'pigeon': 83982208995212}
 SLOT_RE = re.compile(r'(\{ id = "(\w+)", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )(\d+)( \})')
 
 
@@ -876,13 +876,16 @@ do
  end
  check(n==30,"all 30 run eggs rolled")
  local hatched=0
+ local seen={}
  for _,h in claimAll(Rs,us) do
-  if not h.failed then hatched+=1 check(h.secret==true and BOUND[h.speciesId]~=nil and h.count==1,"a hatched secret is a pinned bound species") end
+  if not h.failed then hatched+=1 seen[h.speciesId]=true check(h.secret==true and BOUND[h.speciesId]~=nil and h.count==1,"a hatched secret is a pinned bound species") end
  end
  check(hatched>=1,"at least one shipped secret hatched")
+ -- with several bound species a 30-egg run need not hit every one: each species that hatched has its lazy entry, a bound species that did not hatch has none
  for id in BOUND do
   local entry=data[key(7020)].collection[id]
-  check(entry~=nil and type(entry.variants)=="table","the lazy collection entry exists for "..id)
+  if seen[id] then check(entry~=nil and type(entry.variants)=="table","the lazy collection entry exists for "..id)
+  else check(entry==nil,"a bound secret that did not hatch has no collection entry: "..id) end
  end
  for _,id in shipped.Order do
   if BOUND[id]==nil then check(data[key(7020)].collection[id]==nil,"an empty-slot secret never gets a collection entry: "..id) end
@@ -1200,6 +1203,14 @@ def edit(path, old, new, count=1):
     path.write_text(text.replace(old, new), encoding='utf-8', newline='')
 
 
+def edit_re(path, pattern, repl):
+    """Regex edit (exactly one match): the shipped rows now hold the real measured numbers, so the mutations below match them by shape."""
+    text = path.read_text(encoding='utf-8')
+    new, n = re.subn(pattern, repl, text, count=1)
+    assert n == 1, f'{path.name}: pattern {pattern[:70]!r} matched {n} times'
+    path.write_text(new, encoding='utf-8', newline='')
+
+
 def build_tree(dst, fill=True, measured=True, lowpoly=True):
     """Copy src, the five sizing verifiers and docs/114 into dst; optionally fill every still EMPTY model slot with a FAKE id (the slots bound to a
     real id keep it), add the missing LowPolyDinoAssets entries and mark the remaining ladder rows measured."""
@@ -1293,28 +1304,33 @@ def wiring(runner):
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
 
-    mutate('estimate in game', 'verify_scale_ladder.py', 'still an ESTIMATE', lambda d, f, c, r: None, measured=False)
-    mutate('filled slot without a LowPolyDinoAssets entry', 'verify_scale_ladder.py', 'has no entry', lambda d, f, c, r: None, lowpoly=False)
-    mutate('filled slot without a LowPolyDinoAssets entry (registry)', 'verify_lowpoly_dinos.py', 'no entry', lambda d, f, c, r: None, lowpoly=False)
+    # since the second binding round every slot is bound to a real id with a measured row and a registry entry, so each mutation breaks one of those
+    # shipped rows (matched by shape, not by number)
+    def drop_penguin_entry(d, f, c, r):
+        edit_re(d / 'src/shared/LowPolyDinoAssets.luau', r'    penguin = \{assetId = \d+[^\n]*\n', '')
+
+    mutate('estimate in game', 'verify_scale_ladder.py', 'still an ESTIMATE',
+           lambda d, f, c, r: edit_re(d / 'src/shared/ScaleLadder.luau', r'(chickosaurus = \{[^}]*measured = )true', r'\g<1>false'))
+    mutate('filled slot without a LowPolyDinoAssets entry', 'verify_scale_ladder.py', 'has no entry', drop_penguin_entry)
+    mutate('filled slot without a LowPolyDinoAssets entry (registry)', 'verify_lowpoly_dinos.py', 'no entry', drop_penguin_entry)
     mutate('model scale off the ladder', 'verify_scale_ladder.py', 'differs from the ladder',
-           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'penguin = {{assetId = {f["penguin"]}, version = "v1", scale = 1.85', f'penguin = {{assetId = {f["penguin"]}, version = "v1", scale = 2.5'))
+           lambda d, f, c, r: edit_re(d / 'src/shared/LowPolyDinoAssets.luau', r'(penguin = \{assetId = \d+, version = "v\d", scale = )2\.38', r'\g<1>2.5'))
     mutate('model class wrong', 'verify_lowpoly_dinos.py', 'class',
            lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'tier = 1, class = "Water"}}', 'tier = 1, class = "Ground"}}'))
     mutate('asset id differs from the slot', 'verify_scale_ladder.py', 'differs from the SecretSpeciesConfig slot',
            lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', f'assetId = {f["duck"]}', f'assetId = {f["duck"] + 5000}'))
     mutate('invented LowPolyDinoAssets entry with an empty slot', 'verify_lowpoly_dinos.py', 'never invent ids',
-           lambda d, f, c, r: edit(d / 'src/shared/LowPolyDinoAssets.luau', 'compy = {assetId = 94548957808227', 'dodo = {assetId = 9990000000099, version = "v1", scale = 2.2, tier = 1, class = "Ground"},\n    compy = {assetId = 94548957808227'),
-           fill=False)
+           lambda d, f, c, r: edit_re(d / 'src/shared/SecretSpeciesConfig.luau', r'(\{ id = "dodo", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )\d+', r'\g<1>0'))
     mutate('target off the size rule', 'verify_scale_ladder.py', 'SECRET penguin',
-           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'basis = "bulk", target = 5.55, width = 4.40', 'basis = "bulk", target = 6.60, width = 4.40'))
+           lambda d, f, c, r: edit_re(d / 'src/shared/ScaleLadder.luau', r'(penguin = \{scale = [\d.]+, tier = 1, basis = "bulk", target = )5\.55', r'\g<1>6.60'))
     mutate('basis wrong for the class (Water by height)', 'verify_scale_ladder.py', 'does not fit class',
-           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'penguin = {scale = 1.85, tier = 1, basis = "bulk"', 'penguin = {scale = 1.85, tier = 1, basis = "height"'))
+           lambda d, f, c, r: edit_re(d / 'src/shared/ScaleLadder.luau', r'(penguin = \{scale = [\d.]+, tier = 1, basis = )"bulk"', r'\g<1>"height"'))
     mutate('tier not Compy-sized', 'verify_scale_ladder.py', 'SS8 says 1',
-           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'chickosaurus = {scale = 2.2, tier = 1', 'chickosaurus = {scale = 2.2, tier = 3'))
+           lambda d, f, c, r: edit_re(d / 'src/shared/ScaleLadder.luau', r'(chickosaurus = \{scale = [\d.]+, tier = )1', r'\g<1>3'))
     mutate('box drifts from the verifier list', 'verify_scale_ladder.py', 'SECRET_BOXES',
-           lambda d, f, c, r: edit(d / 'src/shared/ScaleLadder.luau', 'width = 4.00, height = 6.60, length = 5.80', 'width = 9.00, height = 6.60, length = 5.80'))
+           lambda d, f, c, r: edit_re(d / 'src/shared/ScaleLadder.luau', r'(chickosaurus = \{[^}]*)width = [\d.]+', r'\g<1>width = 9.00'))
     mutate('box off the size rule', 'verify_scale_ladder.py', 'more than 2%',
-           lambda d, f, c, r: edit(d / 'tools/verify_scale_ladder.py', "'dodo': (5.30, 6.60, 6.50)", "'dodo': (5.30, 9.00, 6.50)") or edit(d / 'src/shared/ScaleLadder.luau', 'width = 5.30, height = 6.60, length = 6.50', 'width = 5.30, height = 9.00, length = 6.50'))
+           lambda d, f, c, r: edit_re(d / 'tools/verify_scale_ladder.py', r"('dodo': \([\d.]+, )[\d.]+", r'\g<1>9.00') or edit_re(d / 'src/shared/ScaleLadder.luau', r'(dodo = \{[^}]*)height = [\d.]+', r'\g<1>height = 9.00'))
     mutate('HitSize ignores the secret rows', 'verify_hit_sizes.py', 'Luau behavior checks failed',
            lambda d, f, c, r: edit(d / 'src/shared/HitSize.luau', 'ScaleLadder.dinoRow(speciesId)', '(ScaleLadder.Dino.species :: any)[speciesId]'))
     mutate('MouthReach ignores the secret rows', 'verify_mouth_reach.py', 'exceeds the cap',

@@ -43,4 +43,10 @@ return {
     therizinosaurus = {assetId = 94894343028103, version = "v1", scale = 2.56, tier = 4, class = "Ground"},
     -- BD-606 (docs/149 s3, docs/175): the secret species whose model slot in Shared/SecretSpeciesConfig is filled. Foxosaurus v2 (BD-602 candidate C, 8 parts).
     foxosaurus = {assetId = 112996440434481, version = "v2", scale = 0.79, tier = 1, class = "Ground"},
+    chickosaurus = {assetId = 108391746824463, version = "v3", scale = 3.06, tier = 1, class = "Ground"},
+    pigeon = {assetId = 83982208995212, version = "v3", scale = 2.86, tier = 1, class = "Ground"},
+    dodo = {assetId = 128146035116312, version = "v3", scale = 3.46, tier = 1, class = "Ground"},
+    duck = {assetId = 129901658996389, version = "v3", scale = 3.03, tier = 1, class = "Ground"},
+    penguin = {assetId = 120950430829492, version = "v3", scale = 2.38, tier = 1, class = "Water"},
+    budgiesaurus = {assetId = 107910518074360, version = "v2", scale = 0.9, tier = 1, class = "Fly"},
 }
