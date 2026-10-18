@@ -294,8 +294,11 @@ def check_wiring():
     doc = read('docs/118-hatch-redesign.md')
     for word in ('Beat sheet', 'generate_mesh', 'Reduce Motion', 'Fallback chain', 'docs/105', 'PLACEHOLDER', 'evidence/2026-10-16-hatch-v2'):
         assert word in doc, word
-    kanban = read('docs/07-kanban.md')
-    assert '| BD-397 | Review / test |' in kanban and 'docs/118' in kanban.split('| BD-397 |')[1].split('\n')[0]
+    import sys  # the board rows are one file each since BD-1061 (docs/191); kanban_lib reads either layout
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import kanban_lib
+    row = kanban_lib.read_rows(ROOT).get('BD-397', '')
+    assert row.startswith('| BD-397 | Review / test |') and 'docs/118' in row, 'BD-397 row missing or not Review / test with docs/118'
     print('Wiring checks passed: flag off, guarded loader, placeholder bucket registered, v1 fallback, no Bootstrap growth, doc and Kanban row')
 
 

@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""PR check for docs/07-kanban.md: catch the two merge accidents that keep happening with parallel agents.
+"""PR check for the kanban board: catch the merge accidents that keep happening with parallel agents.
 
   python tools/verify_kanban_merge.py --base origin/main --head <PR head sha>
 
-Compares three versions of the board: BASE (tip of the target branch, normally origin/main), HEAD (the PR
-head) and MB (their merge base), row by row (a row is a line starting `| BD-nnn |`).
+Rows are one file each (docs/kanban/rows/BD-NNNN.md, BD-1061, docs/191), so git merges them per file and the old
+"an older copy of a row was put back" accident cannot happen any more. What is still checked (BASE = tip of the target
+branch, HEAD = the PR head, MB = their merge base):
 
-  (a) FAIL if the PR adds a row whose id is not in MB but IS on BASE with a different title:
-      two agents picked the same number. Renumber yours (python tools/next_bd_id.py).
-  (b) FAIL if the PR carries an OLDER version of a row than BASE has: HEAD's row differs from BASE's and
-      equals some earlier version of that row in BASE's history (and is not the merge-base text either).
-      That is a stale copy put back by a merge resolution or rebase. The PR's own legitimate edits are
-      NEW text that never existed on BASE, so they never trip this.
-      A PR that is merely behind (HEAD row == MB row, BASE newer, row untouched) merges cleanly on
-      GitHub, so that is only listed as a note, not a failure.
+  (a) FAIL if the PR adds a row whose id is not in MB but IS on BASE with a different title: two agents picked the
+      same number. Renumber yours (python tools/next_bd_id.py).
+  (c) FAIL if the row files on HEAD break a rule: one file per id, the file name matches the id (BD-0061.md for
+      BD-61), exactly one row line + newline, LF endings, no folders, no task rows left in docs/07-kanban.md.
+  (d) FAIL if the PR removes a row that MB had, unless one of its commit messages says `Kanban-Remove: BD-nnn`.
+      (Rows are never deleted in normal work: set the status to Superseded instead.)
+  (e) FAIL if BASE already uses row files but the PR still edits rows in the OLD table of docs/07-kanban.md:
+      run `python tools/kanban_migrate_pr.py <PR or branch>` (it merges main in and moves your row changes).
 
-  python tools/verify_kanban_merge.py --base origin/main --head HEAD --fix
-      rewrites the offending rows in your working copy of docs/07-kanban.md with BASE's version.
-
-If an old value is restored on purpose, change the row text (for example add a short "Board audit" note)
-so it is no longer identical to an old version.
+Before the cutover (BASE and HEAD both still use the table in docs/07-kanban.md) the old check (b) also runs:
+  (b) FAIL if the PR carries an OLDER version of a row than BASE has (a stale copy put back by a merge). A PR that is
+      merely behind is only listed as a note.
+`--fix` rewrites such stale rows from BASE in the old table; with row files there is nothing to fix.
 """
 import argparse
 import re
@@ -27,8 +27,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-KANBAN = "docs/07-kanban.md"
+TOOLS = Path(__file__).resolve().parent
+sys.path.insert(0, str(TOOLS))
+import kanban_lib as kl  # noqa: E402
+
+ROOT = TOOLS.parent
+KANBAN = kl.LEGACY
 ROW = re.compile(r"^\|\s*(BD-\d+)\s*\|")
 
 
@@ -40,7 +44,7 @@ def git(*args):
 
 
 def rows_of(text):
-    """id -> first row line (CRLF-safe, trailing space trimmed)."""
+    """id -> first row line of the OLD table text (CRLF-safe, trailing space trimmed)."""
     out = {}
     for line in text.splitlines():
         m = ROW.match(line)
@@ -50,7 +54,14 @@ def rows_of(text):
 
 
 def rows_at(ref):
-    return rows_of(git("show", "%s:%s" % (ref, KANBAN)))
+    """id -> row line at a git ref, whichever layout the ref has (row files or the old table)."""
+    return dict(kl.rows_at(ROOT, ref))
+
+
+def legacy_rows_at(ref):
+    """id -> row line in the OLD table at a git ref ({} when the file is missing)."""
+    p = subprocess.run(["git", "-C", str(ROOT), "show", "%s:%s" % (ref, KANBAN)], capture_output=True)
+    return rows_of(p.stdout.decode("utf-8", "replace")) if p.returncode == 0 else {}
 
 
 def title(row):
@@ -59,8 +70,12 @@ def title(row):
     return re.sub(r"\s+", " ", desc).strip().lower()[:70]
 
 
+def by_number(rows):
+    return {kl.number(k): (k, v) for k, v in rows.items()}
+
+
 def history_versions(base):
-    """id -> every text the row has ever had on `base` (from `git log -p`)."""
+    """id -> every text the row has ever had in the OLD table on `base` (from `git log -p`)."""
     log = git("log", "-p", "-U0", "--no-color", "--format=", base, "--", KANBAN)
     seen = {}
     for line in log.splitlines():
@@ -71,19 +86,60 @@ def history_versions(base):
 
 
 def check(base_ref, head_ref):
+    """The id-collision and stale-copy checks. -> (merge base, dupes, stale, notes)."""
     mb = git("merge-base", base_ref, head_ref).strip()
-    base, head, mbase = rows_at(base_ref), rows_at(head_ref), rows_at(mb)
-    hist = history_versions(base_ref)
+    base, head, mbase = by_number(rows_at(base_ref)), by_number(rows_at(head_ref)), by_number(rows_at(mb))
+    hist = None  # the history of the old table is read only if a row looks changed (it is slow and only matters before the cutover)
     dupes, stale, notes = [], [], []
-    for rid, hrow in head.items():
-        if rid not in mbase and rid in base and title(hrow) != title(base[rid]):
-            dupes.append((rid, hrow, base[rid]))
-        elif rid in base and rid in mbase and hrow != base[rid]:
-            if hrow in hist.get(rid, ()) and hrow != mbase[rid]:
-                stale.append((rid, hrow, base[rid]))
-            elif hrow == mbase[rid]:
+    for n, (rid, hrow) in head.items():
+        if n not in mbase and n in base and title(hrow) != title(base[n][1]):
+            dupes.append((rid, hrow, base[n][1]))
+        elif n in base and n in mbase and hrow != base[n][1]:
+            if hrow != mbase[n][1] and hist is None:
+                hist = history_versions(base_ref)
+            if hrow != mbase[n][1] and hrow in hist.get(rid, ()):
+                stale.append((rid, hrow, base[n][1]))
+            elif hrow == mbase[n][1]:
                 notes.append(rid)
     return mb, dupes, stale, notes
+
+
+def check_files(base_ref, head_ref, mb):
+    """Row-file rules. -> list of problems (plain words)."""
+    problems = []
+    head_blobs = kl.ref_row_blobs(ROOT, head_ref)
+    head_has_files = bool(head_blobs)
+    if head_has_files:
+        entries = [(path.rsplit("/", 1)[-1], raw) for path, raw in head_blobs.items()]
+        problems += kl.check_row_entries(entries)
+        if kl.ref_has_cutover(ROOT, head_ref):
+            legacy = legacy_rows_at(head_ref)
+            if legacy:
+                problems.append(kl.stray_message(list(legacy)))
+        mbase = by_number(rows_at(mb))
+        head = by_number(rows_at(head_ref))
+        gone = sorted(n for n in mbase if n not in head)
+        if gone:
+            allowed = set()
+            for msg in git("log", "--format=%B", "%s..%s" % (mb, head_ref)).splitlines():
+                m = re.match(r"\s*Kanban-Remove:\s*(.+)", msg)
+                if m:
+                    allowed |= {int(x) for x in re.findall(r"BD-(\d+)", m.group(1))}
+            lost = [n for n in gone if n not in allowed]
+            if lost:
+                problems.append("this PR removes row(s) %s. Rows are not deleted: set the status to Superseded instead "
+                                "(`python tools/kanban.py set-status BD-n Superseded --note \"why\"`). Removing on purpose? Put "
+                                "`Kanban-Remove: BD-n` on its own line in a commit message."
+                                % ", ".join(mbase[n][0] for n in lost[:12]))
+    elif kl.ref_has_cutover(ROOT, base_ref) or bool(kl.ref_row_blobs(ROOT, base_ref)):
+        old = legacy_rows_at(mb)
+        changed = sorted(rid for rid, row in legacy_rows_at(head_ref).items() if old.get(rid) != row)
+        if changed:
+            problems.append("main now keeps one file per row in %s, but this PR still edits rows in the old table of %s "
+                            "(%s%s). Run `python tools/kanban_migrate_pr.py <PR number or branch>`: it merges main in and "
+                            "moves your row changes into row files." % (kl.ROWS_DIR, KANBAN, ", ".join(changed[:6]),
+                                                                         " ..." if len(changed) > 6 else ""))
+    return problems
 
 
 def short(row, other=None, n=110):
@@ -117,17 +173,18 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", default="origin/main", help="target branch ref (default origin/main)")
     ap.add_argument("--head", default="HEAD", help="PR head ref or sha (default HEAD)")
-    ap.add_argument("--fix", action="store_true", help="rewrite stale rows in the working copy from --base")
+    ap.add_argument("--fix", action="store_true", help="rewrite stale rows in the OLD table from --base (row files need no fix)")
     a = ap.parse_args()
     try:
         mb, dupes, stale, notes = check(a.base, a.head)
+        file_problems = check_files(a.base, a.head, mb)
     except RuntimeError as e:
         print("verify_kanban_merge: cannot compare (%s).\nThe CI checkout needs full history (fetch-depth: 0)." % e)
         return 2
     if notes:
         print("note: %d row(s) are older than %s but unchanged by this PR; GitHub merges that cleanly: %s" % (
             len(notes), a.base, ", ".join(sorted(notes)[:12]) + (" ..." if len(notes) > 12 else "")))
-    if not (dupes or stale):
+    if not (dupes or stale or file_problems):
         print("kanban merge check ok (merge base %s)" % mb[:9])
         return 0
     if dupes:
@@ -136,7 +193,11 @@ def main():
             print("  %s  yours: %s" % (rid, short(hrow, brow)))
             print("  %s  main : %s" % (" " * len(rid), short(brow, hrow)))
         print("  -> keep main's row, give YOUR row a new number: run `python tools/next_bd_id.py` and renumber it\n"
-              "     (also in other docs, the PR title and branch name that mention it).")
+              "     (also in other docs, the PR title and branch name that mention it; rename the row file too).")
+    if file_problems:
+        print("FAIL (c/d/e): the kanban row files are not in order:")
+        for p in file_problems:
+            print("  - " + p)
     if stale:
         print("FAIL (b): these rows were NOT changed by this PR but carry an OLDER version than %s (a stale copy"
               " put back by a merge or rebase):" % a.base)
