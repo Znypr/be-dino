@@ -332,6 +332,7 @@ def check_wiring():
     branch = boot[boot.index('elseif name=="collection" then'):]
     assert branch.index('IndexTabs).mount(open)') < branch.index('local unlocked=0'), 'the hook comes before the Dino Index is built, so Patterns / Colours never pay for it'
     assert 'IndexTabs' not in boot.replace('require(script.Parent.IndexTabs).mount(open)', ''), 'Bootstrap knows nothing else about the tabs'
+    assert 'child.Name~="ActiveTab" and child.Name~="IndexDot"' in boot, 'BD-1063: the rail layout loop must not stretch the Index dot over the icon (Studio found a 36 px disc)'
     rail = read('src/client/FtueRail.luau')
     assert 'PatternColourIndexEnabled == true then require(script.Parent.IndexTabs).attachDot(buttons)' in rail, 'the dot hook is behind the flag'
     # the server passes the flag to the discovery log and sends ids only with it

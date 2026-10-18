@@ -41,6 +41,7 @@ The owner's point: once a world property is a grid we can cut it into **blocks o
 - This also protects later work: when a designer edits a layer the same check says right away whether the new spread is worse.
 
 ### C. Smart test bot (BD-1048, Studio-only, never shipped)
+**Built 2026-10-18: `tools/studio/player_bot.luau` and `tools/studio/run_player_bot.py`, how to run it and the first five-minute numbers are in [194](194-studio-test-bot-and-pace-numbers.md).**
 - Lives under `tools/studio/` (like the model insert snippet), run through the Studio MCP in a play session; it is not in `src/` and has no remote.
 - Behaviour like a sensible player: read the food list (or the map), pick the **best next food** by value per walking distance, walk a real path (straight line with simple obstacle and water avoidance, using the character's pathfinding), pick it up, repeat; flee or skip near a wild predator; stop to open the egg screen when eggs are waiting; log what it did.
 - Used for: the **5-minute person-like run (BD-575)**, the player walkthrough (BD-1045), and food-per-minute measurement (BD-1043 species timing and BD-418 egg rate).
