@@ -33,7 +33,7 @@ Secret.EligibleOrigins = table.freeze({ run = true, nest = true })
 -- (a plain fallback look); a secret species can NOT hatch while its slot is empty (modelReady), so a flag flip alone never shows a
 -- broken dino. Filling a slot is a separate model task (docs/77 lines secret_dino_*), and must come with the LowPolyDinoAssets and
 -- ScaleLadder entries (verify_secret_species checks the two agree).
-Secret.Order = table.freeze({ "chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus" })
+Secret.Order = table.freeze({ "chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus", "cockatoosaurus", "eaglesaurus" })
 Secret.Species = {
     chickosaurus = { id = "chickosaurus", name = "Chickosaurus", secret = true, class = "Ground", weight = 20, assetId = 108391746824463 },
     pigeon = { id = "pigeon", name = "Pigeon", secret = true, class = "Ground", weight = 20, assetId = 83982208995212 },
@@ -42,6 +42,9 @@ Secret.Species = {
     penguin = { id = "penguin", name = "Penguin", secret = true, class = "Water", weight = 12, assetId = 120950430829492 },
     budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 107910518074360 },
     foxosaurus = { id = "foxosaurus", name = "Foxosaurus", secret = true, class = "Ground", weight = 6, assetId = 112996440434481 },
+    -- BD-621 / BD-622 (docs/115 SS14): the two special birds, both Fly like the Budgiesaurus; PROVISIONAL weights, rarer than the fox.
+    cockatoosaurus = { id = "cockatoosaurus", name = "Cockatoosaurus", secret = true, class = "Fly", weight = 5, assetId = 77920946493998 },
+    eaglesaurus = { id = "eaglesaurus", name = "Eaglesaurus", secret = true, class = "Fly", weight = 3, assetId = 116840996663024 },
 }
 
 function Secret.isSecret(speciesId: any): boolean

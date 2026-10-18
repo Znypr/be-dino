@@ -49,4 +49,6 @@ return {
     duck = {assetId = 129901658996389, version = "v3", scale = 3.03, tier = 1, class = "Ground"},
     penguin = {assetId = 120950430829492, version = "v3", scale = 2.38, tier = 1, class = "Water"},
     budgiesaurus = {assetId = 107910518074360, version = "v2", scale = 0.9, tier = 1, class = "Fly"},
+    cockatoosaurus = {assetId = 77920946493998, version = "v1", scale = 1.11, tier = 1, class = "Fly"},
+    eaglesaurus = {assetId = 116840996663024, version = "v1", scale = 1.0, tier = 1, class = "Fly"},
 }

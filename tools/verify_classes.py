@@ -11,7 +11,7 @@ for sp,cl in C.SpeciesClasses do assert(C.Classes[cl],sp.." has a known class") 
 for _,sp in M.Config.SpeciesOrder do assert(C.SpeciesClasses[sp],sp.." is classed") end
 for _,sp in {"ankylosaurus","sauropelta","styracosaurus"} do assert(C.SpeciesClasses[sp]=="Armored",sp) end
 assert(C.SpeciesClasses.kentrosaurus=="Ground" and C.SpeciesClasses.elasmosaurus=="Ground","owner: Kentrosaurus and Elasmosaurus are Ground")
-assert(#C.SecretSpecies==7,"BD-604: five silly birds, Budgiesaurus and Foxosaurus")
+assert(#C.SecretSpecies==9,"BD-604: five silly birds, Budgiesaurus, Foxosaurus, BD-621/622: Cockatoosaurus and Eaglesaurus")
 assert(C.SpeciesClasses.penguin=="Water" and C.SpeciesClasses.budgiesaurus=="Fly" and C.SpeciesClasses.foxosaurus=="Ground","SS5 classes")
 for _,sp in C.SecretSpecies do assert(C.SpeciesClasses[sp],sp.." secret bird classed") end
 local cap=CM.rules("Fly").jump.heightCap

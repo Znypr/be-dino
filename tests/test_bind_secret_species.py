@@ -53,7 +53,7 @@ class PlanTests(unittest.TestCase):
 
 class ApplyTests(unittest.TestCase):
     def test_binding_a_slot_edits_all_five_places_consistently(self):
-        # since 2026-10-18 all seven shipped slots are bound, so a new id goes in with --replace (the same code path as an empty slot)
+        # since 2026-10-18 all nine shipped slots are bound, so a new id goes in with --replace (the same code path as an empty slot)
         root = scratch()
         try:
             bind.apply("budgiesaurus", 1234567890123, (4.0, 8.0, 9.0), None, "v2", True, root)
@@ -86,15 +86,16 @@ class ApplyTests(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
-    def test_the_shipped_tree_is_the_tool_output_for_all_seven(self):
+    def test_the_shipped_tree_is_the_tool_output_for_all_nine(self):
         # the measured boxes of docs/173 (growth scale 1, W x H x L) and the registry versions: replaying them must reproduce the shipped files byte for byte
-        seven = (("foxosaurus", 112996440434481, (3.8, 8.4, 8.0), "v2"), ("chickosaurus", 108391746824463, (1.28, 2.16, 2.00), "v3"),
+        nine = (("foxosaurus", 112996440434481, (3.8, 8.4, 8.0), "v2"), ("chickosaurus", 108391746824463, (1.28, 2.16, 2.00), "v3"),
                  ("pigeon", 83982208995212, (1.82, 2.31, 2.00), "v3"), ("dodo", 128146035116312, (1.10, 1.91, 2.00), "v3"),
                  ("duck", 129901658996389, (1.45, 2.18, 2.00), "v3"), ("penguin", 120950430829492, (2.44, 2.60, 2.00), "v3"),
-                 ("budgiesaurus", 107910518074360, (4.00, 7.33, 7.91), "v2"))
+                 ("budgiesaurus", 107910518074360, (4.00, 7.33, 7.91), "v2"),
+                 ("cockatoosaurus", 77920946493998, (3.427, 6.000, 6.070), "v1"), ("eaglesaurus", 116840996663024, (4.000, 5.518, 7.747), "v1"))
         root = scratch()
         try:
-            for species, asset, box, version in seven:
+            for species, asset, box, version in nine:
                 bind.apply(species, asset, box, None, version, True, root)
             for rel in (bind.CONFIG, bind.REGISTRY, bind.LADDER, bind.BOUND):
                 self.assertEqual((root / rel).read_text(encoding="utf-8"), (ROOT / rel).read_text(encoding="utf-8"), rel)
