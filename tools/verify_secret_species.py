@@ -41,7 +41,10 @@ import profile_sources  # noqa: E402
 
 # Hash of RewardMath.computeChestReward over seeds 1..400 x run sizes {1, 40, 120, 400} x 10 rolls, taken from the UNMODIFIED module
 # (origin/main 18a9d665) with the same harness. If this changes, the flag-off egg rolls are no longer identical to Build 020 as shipped.
-GOLDEN_FLAG_OFF_HASH = 2926628964
+# BD-1032 (2026-10-18) re-took it: the species weights, the run boost and RunRewardConfigVersion changed on purpose (docs/186 s3), so the golden
+# draws changed. The new value was checked against an independent flag-off reimplementation (weights -> one weighted pick -> quantity pick,
+# no secret code path) and both gave 3792976408. Old value: 2926628964.
+GOLDEN_FLAG_OFF_HASH = 3792976408
 
 
 def read(path):

@@ -1,7 +1,7 @@
 # 85 Drop odds: every rarity table (generated)
 
 Generated from the repo by `python tools/generate_drop_odds.py --runner <luau.exe>` (`RarityCurve`, `Config`, `ProgressionConfig`). Do not edit by hand.
-All numbers are **provisional**. Rarity follows the **exponential ladder** of [88](88-exponential-rarity.md) (BD-184): each tier is 5 times rarer than the one below. Dinosaur species tier totals stay at 72 / 24 / 3.2 / 0.7 / 0.1 ([82](82-species-rarity-tiers.md)). Odds below are for **one purchased egg** (no run-size boost).
+All numbers are **provisional**. Rarity follows the **exponential ladder** of [88](88-exponential-rarity.md) (BD-184): each tier is 5 times rarer than the one below. **Exception, dinosaur species (BD-1032, owner 2026-10-18):** species are steeper at the top so new kinds take time; tier totals are 91 / 8.5 / 0.42 / 0.07 / 0.01 ([82](82-species-rarity-tiers.md), [186](186-pattern-colour-indexes-and-slower-species.md) section 3, handbook conflict C-54 in [116](116-handbook-conflicts.md)). Odds below are for **one purchased egg** (no run-size boost).
 
 ## The shared ladder (`src/shared/RarityCurve.luau`)
 
@@ -20,36 +20,38 @@ Systems with fewer tiers use the first N rows and renormalise (five tiers: 80.02
 
 | # | Dinosaur | Rarity | % |
 |---:|---|---|---:|
-| 1 | Compy | Common | 26% |
-| 2 | Raptor | Common | 22% |
-| 3 | Gallimimus | Common | 9% |
-| 4 | Microraptor | Common | 8% |
+| 1 | Compy | Common | 36.4% |
+| 2 | Raptor | Common | 26% |
+| 3 | Gallimimus | Common | 12% |
+| 4 | Microraptor | Common | 9.6% |
 | 5 | Dimorphodon | Common | 7% |
-| 6 | Archaeopteryx | Uncommon | 6% |
-| 7 | Stegosaurus | Uncommon | 6% |
-| 8 | Parasaurolophus | Uncommon | 5% |
-| 9 | Pachycephalosaurus | Uncommon | 4% |
-| 10 | Pteranodon | Uncommon | 3% |
-| 11 | Triceratops | Rare | 1% |
-| 12 | Brachiosaurus | Rare | 0.7% |
-| 13 | Baryonyx | Rare | 0.5% |
-| 14 | Ichthyosaurus | Rare | 0.5% |
-| 15 | Plesiosaurus | Rare | 0.5% |
-| 16 | Ankylosaurus | Epic | 0.2% |
-| 17 | Elasmosaurus | Epic | 0.2% |
-| 18 | Therizinosaurus | Epic | 0.15% |
-| 19 | Quetzalcoatlus | Epic | 0.15% |
-| 20 | T-Rex | Legendary | 0.04% |
-| 21 | Spinosaurus | Legendary | 0.03% |
-| 22 | Mosasaurus | Legendary | 0.03% |
+| 6 | Archaeopteryx | Uncommon | 2.2% |
+| 7 | Stegosaurus | Uncommon | 2.2% |
+| 8 | Parasaurolophus | Uncommon | 1.7% |
+| 9 | Pachycephalosaurus | Uncommon | 1.3% |
+| 10 | Pteranodon | Uncommon | 1.1% |
+| 11 | Triceratops | Rare | 0.13% |
+| 12 | Brachiosaurus | Rare | 0.09% |
+| 13 | Baryonyx | Rare | 0.07% |
+| 14 | Ichthyosaurus | Rare | 0.065% |
+| 15 | Plesiosaurus | Rare | 0.065% |
+| 16 | Ankylosaurus | Epic | 0.02% |
+| 17 | Elasmosaurus | Epic | 0.02% |
+| 18 | Therizinosaurus | Epic | 0.015% |
+| 19 | Quetzalcoatlus | Epic | 0.015% |
+| 20 | T-Rex | Legendary | 0.004% |
+| 21 | Spinosaurus | Legendary | 0.003% |
+| 22 | Mosasaurus | Legendary | 0.003% |
 
 | Rarity | Species | % total |
 |---|---:|---:|
-| Common | 5 | 72% |
-| Uncommon | 5 | 24% |
-| Rare | 5 | 3.2% |
-| Epic | 4 | 0.7% |
-| Legendary | 3 | 0.1% |
+| Common | 5 | 91% |
+| Uncommon | 5 | 8.5% |
+| Rare | 5 | 0.42% |
+| Epic | 4 | 0.07% |
+| Legendary | 3 | 0.01% |
+
+Run and nest eggs: a run of up to 15 eggs (a normal 5 minute run) and a single bought egg use the odds above. Above 15 eggs the Rare, Epic and Legendary rows rise step by step to **2x** at 120 eggs (and for a nest); Common and Uncommon are not lifted (`EggRarityBoostFreeEggs`, `EggRarityBoostMaxEggs`, `SpeciesRunBoost`). At 3 eggs a minute the first Uncommon comes after about 3 minutes and the first Rare or better after about 46 minutes (median); run `python tools/simulate_species_timing.py` for the table.
 
 ## Patterns (8, by tier; eggs and the dinosaurs hatched from them)
 

@@ -449,7 +449,7 @@ end
 
 -- Odds line: base chance of one purchased egg (docs/85); FusionSelection.pct formatting.
 function T.pct(p: number): string
-    local s = string.format("%.2f", p)
+    local s = string.format(if p > 0 and p < 0.1 then "%.3f" else "%.2f", p) -- BD-1032: a Legendary is 0.004% of eggs, "%.2f" would show 0%
     if string.find(s, ".", 1, true) then s = string.gsub(s, "0+$", "") s = string.gsub(s, "%.$", "") end
     return s .. "%"
 end

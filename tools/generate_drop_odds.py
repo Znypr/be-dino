@@ -33,7 +33,7 @@ def render(rows):
     L=[]
     L.append('# 85 Drop odds: every rarity table (generated)\n')
     L.append('Generated from the repo by `python tools/generate_drop_odds.py --runner <luau.exe>` (`RarityCurve`, `Config`, `ProgressionConfig`). Do not edit by hand.')
-    L.append('All numbers are **provisional**. Rarity follows the **exponential ladder** of [88](88-exponential-rarity.md) (BD-184): each tier is 5 times rarer than the one below. Dinosaur species tier totals stay at 72 / 24 / 3.2 / 0.7 / 0.1 ([82](82-species-rarity-tiers.md)). Odds below are for **one purchased egg** (no run-size boost).\n')
+    L.append('All numbers are **provisional**. Rarity follows the **exponential ladder** of [88](88-exponential-rarity.md) (BD-184): each tier is 5 times rarer than the one below. **Exception, dinosaur species (BD-1032, owner 2026-10-18):** species are steeper at the top so new kinds take time; tier totals are 91 / 8.5 / 0.42 / 0.07 / 0.01 ([82](82-species-rarity-tiers.md), [186](186-pattern-colour-indexes-and-slower-species.md) section 3, handbook conflict C-54 in [116](116-handbook-conflicts.md)). Odds below are for **one purchased egg** (no run-size boost).\n')
     L.append('## The shared ladder (`src/shared/RarityCurve.luau`)\n')
     L.append('| Tier | Chance | About 1 in | Aura price (base 60) | Trail price (base 100) |\n|---|---:|---:|---:|---:|')
     for n,p,a,t in g('LADDER'): L.append(f'| {n} | {pct(float(p))}% | {one_in(float(p))} | {int(float(a)):,} | {int(float(t)):,} |')
@@ -45,6 +45,7 @@ def render(rows):
         L.append(f'| {i} | {n} | {r} | {pct(float(w))}% |'); k=tot.setdefault(r,[0,0.0]);k[0]+=1;k[1]+=float(w)
     L.append('\n| Rarity | Species | % total |\n|---|---:|---:|')
     for r,(c,w) in tot.items(): L.append(f'| {r} | {c} | {pct(w)}% |')
+    L.append('\nRun and nest eggs: a run of up to 15 eggs (a normal 5 minute run) and a single bought egg use the odds above. Above 15 eggs the Rare, Epic and Legendary rows rise step by step to **2x** at 120 eggs (and for a nest); Common and Uncommon are not lifted (`EggRarityBoostFreeEggs`, `EggRarityBoostMaxEggs`, `SpeciesRunBoost`). At 3 eggs a minute the first Uncommon comes after about 3 minutes and the first Rare or better after about 46 minutes (median); run `python tools/simulate_species_timing.py` for the table.')
     L.append('\n## Patterns (8, by tier; eggs and the dinosaurs hatched from them)\n')
     L.append('BD-1033 (owner 2026-10-18, [186](186-pattern-colour-indexes-and-slower-species.md)): patterns have tiers of the shared ladder (five tiers, renormalised: 80.02 / 16 / 3.2 / 0.64 / 0.13) split equally inside a tier. One table: `ProgressionConfig.EggPatterns`. Fusion rules ([90](90-fusion-ladder-v2.md)) are unchanged. A pattern rolls once per egg, independent of the colours.\n')
     L.append('| # | Pattern (id) | Name shown | Tier | % per egg | About 1 egg in |\n|---:|---|---|---|---:|---:|')
