@@ -33,13 +33,21 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import worldlayer  # noqa: E402
 
-VERSION = 'bd1047-foodlayer-v1'
+VERSION = 'bd1047-foodlayer-v2'
 SEED = 20261018
 ARENA = 416.0          # Config.ArenaHalfWidth
 EXTENT = 408.0         # FoodService places inside +-(ArenaHalfWidth - 8)
 WIDTH = 1000           # layer cells across the arena
-MIN_SPACING = 7.0      # studs, hard rule between any two foods
-CANDIDATES = 64        # best-candidate tries per food
+# Small clusters of 3 to 5 foods (SIZE_WEIGHTS): a food-seeking player still gets several pieces per stop, like today's bundles of 9
+CLUSTER_FOOD_SPACING = (3.2, 4.0)   # studs between neighbours inside a cluster
+MIN_SPACING = 2.8      # studs, hard rule between two foods of one cluster (and the starter patches)
+BETWEEN_SPACING = 6.0  # studs, hard rule between foods of different clusters
+CLUSTER_SPACING = 14.0 # studs, minimum distance between cluster centres (blue noise between clusters)
+CANDIDATES = 64        # best-candidate tries per cluster
+SIZE_WEIGHTS = ((3, 0.1), (4, 0.3), (5, 0.6))   # share of clusters of 3, 4 and 5 foods
+GAP_TARGET = 22.0      # studs: after placing, clusters are moved until no ground spot is farther than this from any food (the written rule is 25)
+REPAIR_ROUNDS = 1500   # most cluster moves tried while closing gaps
+STARTER_SPACING = 3.6  # studs between starter patch foods
 KIND_IDS = {'berry': 1, 'fruit': 2, 'egg': 3, 'amber': 4}
 KIND_NAMES = {v: k for k, v in KIND_IDS.items()}
 # Same totals as today's expectation (3,582 random slots at 70/20/7/3 plus the 12 berries + 6 fruits of the starter patches), rounded to 3,600.
@@ -83,8 +91,8 @@ class Ground:
         self.hcell = model['hcell']
         self.walkable_cells = sum(sum(r) for r in self.ok_cells)
 
-    def ok(self, x, z):
-        if abs(x) > EXTENT or abs(z) > EXTENT:
+    def ok(self, x, z, limit=EXTENT):
+        if abs(x) > limit or abs(z) > limit:
             return False
         ix, iz = int((x + self.arena) / self.cell), int((z + self.arena) / self.cell)
         return 0 <= ix < self.n and 0 <= iz < self.n and self.ok_cells[iz][ix] == 1
@@ -108,13 +116,14 @@ class Ground:
             z += step
         return hit / tot if tot else 0.0
 
-    def lattice(self, step=SAMPLE_STEP):
+    def lattice(self, step=SAMPLE_STEP, limit=EXTENT):
+        """Ground spots every `step` studs inside +-limit (the repair step uses the whole arena, rim included)."""
         out = []
-        z = -EXTENT + step / 2
-        while z < EXTENT:
-            x = -EXTENT + step / 2
-            while x < EXTENT:
-                if self.ok(x, z):
+        z = -limit + step / 2
+        while z < limit:
+            x = -limit + step / 2
+            while x < limit:
+                if self.ok(x, z, limit):
                     out.append((x, z))
                 x += step
             z += step
@@ -125,15 +134,18 @@ class Ground:
 class Hash:
     """Points in square buckets for 'is anything closer than d' questions."""
 
-    def __init__(self, size=MIN_SPACING * 2):
+    def __init__(self, size=12.0):
         self.size = size
         self.cells = {}
 
     def add(self, x, z):
         self.cells.setdefault((math.floor(x / self.size), math.floor(z / self.size)), []).append((x, z))
 
-    def nearest(self, x, z, cap):
-        """Distance to the nearest stored point, or `cap` when none is closer."""
+    def remove(self, x, z):
+        self.cells[(math.floor(x / self.size), math.floor(z / self.size))].remove((x, z))
+
+    def nearest(self, x, z, cap, skip_self=False):
+        """Distance to the nearest stored point (not the point at exactly (x, z) with skip_self), or `cap` when none is closer."""
         cx, cz = math.floor(x / self.size), math.floor(z / self.size)
         reach = int(cap // self.size) + 1
         best = cap * cap
@@ -141,7 +153,7 @@ class Hash:
             for dz in range(-reach, reach + 1):
                 for px, pz in self.cells.get((cx + dx, cz + dz), ()):
                     d = (px - x) ** 2 + (pz - z) ** 2
-                    if d < best:
+                    if d < best and not (skip_self and d == 0):
                         best = d
         return math.sqrt(best)
 
@@ -168,7 +180,7 @@ def in_zone(zone, x, z):
 
 # ------------------------------------------------------------------------------ fixed foods
 def starter_patch(ground, layer, centre):
-    """Nine ground sites of a hexagonal lattice (spacing MIN_SPACING) close to `centre`: the starter patch. Several lattice turns and shifts
+    """Nine ground sites of a hexagonal lattice (spacing STARTER_SPACING) close to `centre`: the starter patch. Several lattice turns and shifts
     are tried (the safe-spawn disc cuts into the patch on the spawn side) and the one with the nine nearest sites wins."""
     best = None
     for turn in range(0, 60, 6):
@@ -178,7 +190,7 @@ def starter_patch(ground, layer, centre):
                 sites = []
                 for a in range(-5, 6):
                     for b in range(-5, 6):
-                        u, v = MIN_SPACING * (a + oa + (b + ob) / 2), MIN_SPACING * (b + ob) * math.sqrt(3) / 2
+                        u, v = STARTER_SPACING * (a + oa + (b + ob) / 2), STARTER_SPACING * (b + ob) * math.sqrt(3) / 2
                         x, z = snap(layer, centre[0] + u * c - v * s, centre[1] + u * s + v * c)
                         d = math.hypot(x - centre[0], z - centre[1])
                         if d <= STARTER_RADIUS - 0.5 and ground.ok(x, z):
@@ -220,39 +232,165 @@ def hill_tops(ground, layer, count=4, apart=120.0):
 
 
 # ------------------------------------------------------------------------------ placement
+def cluster_sizes(count, rng):
+    """Cluster sizes 3, 4 or 5 (SIZE_WEIGHTS) that add up to exactly `count` foods."""
+    sizes, left = [], count
+    while left > 0:
+        options = [(n, w) for n, w in SIZE_WEIGHTS if left - n >= CLUSTER_MIN or left == n]
+        if not options:
+            sizes[rng.randrange(len(sizes))] += left  # (cannot happen for the planned counts)
+            break
+        pick = rng.random() * sum(w for _, w in options)
+        for n, w in options:
+            pick -= w
+            if pick <= 0:
+                break
+        sizes.append(n)
+        left -= n
+    return sizes
+
+
+CLUSTER_MIN = min(n for n, _ in SIZE_WEIGHTS)
+
+
+def cluster_shape(n, rng):
+    """Offsets of n foods 3.2 to 4 studs apart: a triangle, a square or a pentagon, turned and nudged a little."""
+    spacing = rng.uniform(*CLUSTER_FOOD_SPACING)
+    radius = spacing / (2 * math.sin(math.pi / n))
+    turn = rng.uniform(0, 2 * math.pi)
+    return [(radius * math.cos(turn + 2 * math.pi * k / n) + rng.uniform(-0.25, 0.25),
+             radius * math.sin(turn + 2 * math.pi * k / n) + rng.uniform(-0.25, 0.25)) for k in range(n)]
+
+
+class Placer:
+    """Holds the foods and cluster centres placed so far and answers 'may a cluster of n foods go here'."""
+
+    def __init__(self, ground, layer, rng, fixed):
+        self.ground, self.layer, self.rng = ground, layer, rng
+        self.keep_out = [(c[0], c[1], STARTER_RADIUS) for c in STARTER_CENTRES]
+        self.keep_out += [(x, z, LONE_AMBER_CLEAR) for x, z in fixed['lone']]
+        self.foods, self.centres = Hash(), Hash(CLUSTER_SPACING)
+        for x, z in list(fixed['starter']) + list(fixed['lone']):
+            self.foods.add(x, z)
+        for centre in STARTER_CENTRES:
+            self.centres.add(*centre)
+        for x, z in fixed['lone']:
+            self.centres.add(x, z)
+
+    def shape_at(self, cx, cz, n):
+        """The n food positions of a cluster centred at (cx, cz), or None when a rule is broken (ground, spacing, keep-out zones)."""
+        layer, ground = self.layer, self.ground
+        if self.centres.nearest(cx, cz, CLUSTER_SPACING) < CLUSTER_SPACING or not ground.ok(*snap(layer, cx, cz)):
+            return None
+        shape = [snap(layer, cx + ox, cz + oz) for ox, oz in cluster_shape(n, self.rng)]
+        if len({layer.cell_of(*p) for p in shape}) != n:
+            return None
+        for x, z in shape:
+            if not ground.ok(x, z) or any((x - kx) ** 2 + (z - kz) ** 2 < kr * kr for kx, kz, kr in self.keep_out):
+                return None
+            if self.foods.nearest(x, z, BETWEEN_SPACING) < BETWEEN_SPACING:
+                return None
+        if any(math.hypot(a[0] - b[0], a[1] - b[1]) < MIN_SPACING for i, a in enumerate(shape) for b in shape[i + 1:]):
+            return None
+        return shape
+
+    def add(self, cluster):
+        self.centres.add(*cluster['centre'])
+        for x, z in cluster['shape']:
+            self.foods.add(x, z)
+
+    def remove(self, cluster):
+        self.centres.remove(*cluster['centre'])
+        for x, z in cluster['shape']:
+            self.foods.remove(x, z)
+
+
+def repair_gaps(placer, clusters, samples, rng):
+    """Move clusters so no ground spot is farther than GAP_TARGET from any food: take the spot farthest from every food, lift away the most
+    crowded cluster (the one with the closest neighbouring centre, among a few tries) and put one there. A move that would open a bigger gap
+    where the cluster was, or that cannot be placed, is undone."""
+    cap = GAP_TARGET + 16.0
+
+    def near(x, z):
+        return placer.foods.nearest(x, z, cap)
+
+    dist = [near(sx, sz) for sx, sz in samples]
+    skipped = set()
+    for _ in range(REPAIR_ROUNDS):
+        far = max((i for i in range(len(samples)) if i not in skipped), key=dist.__getitem__, default=None)
+        if far is None or dist[far] <= GAP_TARGET:
+            break
+        tx, tz = samples[far]
+        movable = rng.sample(range(len(clusters)), min(80, len(clusters)))
+        movable.sort(key=lambda k: placer.centres.nearest(*clusters[k]['centre'], 40.0, skip_self=True))
+        done = False
+        for k in movable[:12]:
+            old = clusters[k]
+            ox, oz = old['centre']
+            if math.hypot(ox - tx, oz - tz) < 2 * GAP_TARGET:
+                continue
+            placer.remove(old)
+            area = [i for i, (sx, sz) in enumerate(samples) if abs(sx - ox) < cap and abs(sz - oz) < cap]
+            after = {i: near(*samples[i]) for i in area}
+            if max(after.values(), default=0.0) >= 0.97 * dist[far]:  # the hole left behind must stay clearly smaller than the one being closed
+                placer.add(old)
+                continue
+            new = None
+            for _ in range(40):
+                cx, cz = tx + rng.uniform(-10, 10), tz + rng.uniform(-10, 10)
+                shape = placer.shape_at(cx, cz, len(old['shape']))
+                if shape:
+                    new = {'centre': (cx, cz), 'shape': shape}
+                    break
+            if new is None:
+                placer.add(old)
+                continue
+            placer.add(new)
+            clusters[k] = new
+            for i in set(area) | {i for i, (sx, sz) in enumerate(samples) if abs(sx - tx) < cap and abs(sz - tz) < cap}:
+                dist[i] = near(*samples[i])
+            done = True
+            break
+        if not done:
+            skipped.add(far)
+    return clusters
+
+
 def place_points(ground, layer, rng, fixed):
-    """Best-candidate blue noise: every new food is the best of CANDIDATES tries, scored by the distance to its nearest neighbour times the
-    square root of the local density, never closer than MIN_SPACING to another food. `fixed` foods (starter patches, lone ambers) go in first."""
-    keep_out = [(c[0], c[1], STARTER_RADIUS) for c in STARTER_CENTRES]
-    keep_out += [(x, z, LONE_AMBER_CLEAR) for x, z in fixed['lone']]
+    """Small clusters on a blue-noise grid of centres: every new cluster is the best of CANDIDATES tries, scored by the distance to its nearest
+    cluster centre times the square root of the local density, never closer than CLUSTER_SPACING to another centre and never with a food closer
+    than BETWEEN_SPACING to another cluster's food; then repair_gaps closes any hole. `fixed` foods (starter patches, lone ambers) go in first.
+    Returns (points, cluster id per point; -1 for the fixed foods)."""
+    placer = Placer(ground, layer, rng, fixed)
     pts = list(fixed['starter']) + list(fixed['lone'])
-    hashed = Hash()
-    for x, z in pts:
-        hashed.add(x, z)
-    reach = MIN_SPACING * 5
+    clusters = []
+    reach = CLUSTER_SPACING * 4
     tries = 0
-    while len(pts) < TOTAL:
-        best, best_score = None, -1.0
-        for _ in range(CANDIDATES):
-            tries += 1
-            x, z = snap(layer, rng.uniform(-EXTENT, EXTENT), rng.uniform(-EXTENT, EXTENT))
-            if not ground.ok(x, z):
-                continue
-            if any((x - kx) ** 2 + (z - kz) ** 2 < kr * kr for kx, kz, kr in keep_out):
-                continue
-            d = hashed.nearest(x, z, reach)
-            if d < MIN_SPACING:
-                continue
-            score = d * math.sqrt(density(x, z))
-            if score > best_score:
-                best, best_score = (x, z), score
-        if best is None:
+    for n in cluster_sizes(TOTAL - len(pts), rng):
+        while True:
+            best, best_score = None, -1.0
+            for _ in range(CANDIDATES):
+                tries += 1
+                cx, cz = rng.uniform(-EXTENT, EXTENT), rng.uniform(-EXTENT, EXTENT)
+                shape = placer.shape_at(cx, cz, n)
+                if shape is None:
+                    continue
+                score = placer.centres.nearest(cx, cz, reach) * math.sqrt(density(cx, cz))
+                if score > best_score:
+                    best, best_score = {'centre': (cx, cz), 'shape': shape}, score
+            if best is not None:
+                break
             if tries > 50_000_000:
-                raise SystemExit('could not place %d foods with spacing %.1f' % (TOTAL, MIN_SPACING))
-            continue
-        pts.append(best)
-        hashed.add(*best)
-    return pts
+                raise SystemExit('could not place the clusters with spacing %.1f' % CLUSTER_SPACING)
+        placer.add(best)
+        clusters.append(best)
+    clusters = repair_gaps(placer, clusters, ground.lattice(8.0, ARENA - 2.0), rng)
+    cid = [-1] * len(pts)
+    for k, cluster in enumerate(clusters):
+        for x, z in cluster['shape']:
+            pts.append((x, z))
+            cid.append(k)
+    return pts, cid
 
 
 # ------------------------------------------------------------------------------ kinds
@@ -343,7 +481,7 @@ def poisson_pick(points, allowed, count, taken, rng, radius):
     return chosen
 
 
-def assign_kinds(ground, points, fixed_kinds, rng):
+def assign_kinds(ground, points, fixed_kinds, rng, cid):
     """kinds[i] for every point: fixed ones keep theirs, then ambers, the egg meadow, eggs, the fruit grove, fruit, and berries for the rest."""
     kinds = dict(fixed_kinds)
     free = [i for i in range(len(points)) if i not in kinds]
@@ -359,6 +497,12 @@ def assign_kinds(ground, points, fixed_kinds, rng):
     have = [i for i, k in kinds.items() if k == 'amber']
     ambers = cover_select(points, free, samples, COUNTS['amber'] - len(have), xy(have))
     free = take('amber', lloyd(points, free, samples, ambers, xy(have), LLOYD_ROUNDS))
+    # every amber cluster also holds an egg and a fruit, like the rich bundles of today: a stop at an amber is worth a detour
+    for i in [i for i, k in kinds.items() if k == 'amber' and cid[i] >= 0]:
+        mates = [j for j in free if cid[j] == cid[i]]
+        for kind in ('egg', 'fruit'):
+            if mates:
+                free = take(kind, [mates.pop(rng.randrange(len(mates)))])
     # egg meadow first (its eggs count toward the total), then the eggs everywhere
     meadow = next(z for z in ZONES if z['kind'] == 'egg')
     inside = [i for i in free if in_zone(meadow, *points[i])]
@@ -396,8 +540,8 @@ def generate(ground_model):
     tops = hill_tops(ground, layer)
     for k in range(len(tops)):
         fixed_kinds[len(starter) + k] = 'amber'
-    pts = place_points(ground, layer, rng, {'starter': starter, 'lone': tops})
-    kinds = assign_kinds(ground, pts, fixed_kinds, rng)
+    pts, cid = place_points(ground, layer, rng, {'starter': starter, 'lone': tops})
+    kinds = assign_kinds(ground, pts, fixed_kinds, rng, cid)
     out = []
     for i, (x, z) in enumerate(pts):
         kind = kinds[i]
@@ -409,7 +553,7 @@ def generate(ground_model):
     counts = {k: sum(1 for p in out if p[2] == k) for k in COUNTS}
     if counts != COUNTS:
         raise SystemExit('kind counts %r differ from the plan %r' % (counts, COUNTS))
-    meta = {'version': VERSION, 'seed': SEED, 'min_spacing': MIN_SPACING, 'counts': counts, 'total': TOTAL,
+    meta = {'version': VERSION, 'seed': SEED, 'min_spacing': MIN_SPACING, 'between_spacing': BETWEEN_SPACING, 'cluster_spacing': CLUSTER_SPACING, 'counts': counts, 'total': TOTAL,
             'zones': [(z['name'], z['x'], z['z'], z['r']) for z in ZONES], 'lone_ambers': [(round(x, 1), round(z, 1)) for x, z in tops]}
     return {'layer': layer, 'points': out, 'tops': tops, 'meta': meta, 'ground': ground}
 
