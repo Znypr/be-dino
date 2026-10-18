@@ -440,5 +440,49 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(mm.title_warnings(mine, main_rows, {}), [])
 
 
+class WorkLogUnionTests(unittest.TestCase):
+    """The work log is append-only: a conflict between two PRs that each added entries keeps every entry once."""
+
+    def test_union_keeps_main_then_new_pr_lines(self):
+        text, n = mm.union_lines('{"a":1}\n{"b":2}\n', '{"a":1}\n{"c":3}\n')
+        self.assertEqual(text, '{"a":1}\n{"b":2}\n{"c":3}\n')
+        self.assertEqual(n, 1)
+
+    def test_union_drops_duplicates_and_blank_lines(self):
+        text, n = mm.union_lines('{"a":1}\n\n{"a":1}\n', '{"a":1}\n{"a":1}\n\n')
+        self.assertEqual(text.count('{"a":1}'), 2)  # main's own repeated line is kept as it was, the PR adds nothing
+        self.assertEqual(n, 0)
+
+    def test_paths_are_the_documented_ones(self):
+        self.assertEqual(mm.WORKLOG_JSONL, "docs/retro/work-log.jsonl")
+        self.assertEqual(mm.WORKLOG_DOC, "docs/168-work-log-and-retrospectives.md")
+
+
+class AppendOnlyDocTests(unittest.TestCase):
+    """docs/115 and docs/116 are logs: two PRs that both appended at the end keep both blocks, main's first."""
+
+    def _write(self, body):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        p = Path(d) / "log.md"
+        p.write_bytes(body.encode("utf-8"))
+        return p
+
+    def test_both_sides_added(self):
+        p = self._write("top\n<<<<<<< HEAD\nPR text\n||||||| base\n=======\nMAIN text\n>>>>>>> origin/main\nend\n")
+        self.assertEqual(mm.resolve_append_only_doc(p), 1)
+        self.assertEqual(p.read_text(encoding="utf-8"), "top\nMAIN text\nPR text\nend\n")
+
+    def test_crlf_is_kept(self):
+        p = self._write("top\r\n<<<<<<< HEAD\r\nPR\r\n||||||| base\r\n=======\r\nMAIN\r\n>>>>>>> origin/main\r\n")
+        mm.resolve_append_only_doc(p)
+        self.assertEqual(p.read_bytes().decode("utf-8"), "top\r\nMAIN\r\nPR\r\n")
+
+    def test_edit_of_existing_text_needs_a_human(self):
+        p = self._write("<<<<<<< HEAD\nPR\n||||||| base\nold line\n=======\nMAIN\n>>>>>>> origin/main\n")
+        with self.assertRaises(mm.NeedsHuman):
+            mm.resolve_append_only_doc(p)
+
+
 if __name__ == "__main__":
     unittest.main()

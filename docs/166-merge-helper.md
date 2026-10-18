@@ -90,3 +90,6 @@ Lesson of 2026-10-18: the lead committed leftover `<<<<<<<` / `|||||||` / `=====
 It runs in three places: as an early CI step in `.github/workflows/build-generated-place.yml` (it replaced the old `git grep` step, which missed CRLF), in `tools/merge_main_into_pr.py` before the merge commit, and in `tools/merge_train.py` after each PR (a PR whose merge leaves markers is skipped and its merge aborted) and again before the push. The merge tools run their own copy of the scanner on the throwaway worktree, so it also works on old PR branches that do not have the file yet.
 
 **Not verified:** a run with `--auto-merge` against GitHub (the test does not call `gh`); a conflicted real PR with a long kanban conflict (the real-PR dry run in the PR description was a clean merge).
+
+## Append-only logs (BD-1060, 2026-10-18)
+Every PR adds a work-log entry (`docs/retro/work-log.jsonl`, rendered into docs/168) and often a note in docs/115 or docs/116, so almost every PR conflicted in those files. The helper now handles them: the jsonl is merged as a union of both sides' lines (main's first), docs/168 takes main's copy and is regenerated with `retro_log.py render`, and docs/115 / docs/116 hunks where both sides only added text keep both blocks (main's first). A hunk that edits existing text still goes to a human (exit 3).

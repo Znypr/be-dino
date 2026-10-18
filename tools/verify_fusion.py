@@ -167,6 +167,29 @@ do
  local odd=0 for _,par in gm.origin.parents do if par.genes.patternId=="02_spots" then odd+=1 else assert(par.genes.patternId==nil) end end
  assert(odd==1,"only the differing parent stores its pattern")
 end
+-- BD-1033: the donor-pattern rule keys on the pattern ID only, so it works unchanged with the weighted pattern table
+-- (ProgressionConfig.EggPatterns): every real pattern id forms a Gold, plurality wins whatever the pattern tier, and a tie goes
+-- to the smallest id (a Common/Legendary tie is decided by id, not rarity).
+do
+ local function quoteWith(assign)
+  local copy=I.copy(st)
+  for i,id in A do copy.instances[id].genes.patternId=assign[i] end
+  return F.quote(copy,OWNER,"gold",A)
+ end
+ local ids={} for _,row in PC.EggPatterns do table.insert(ids,row.id) end
+ for _,id in ids do
+  local q=assert(quoteWith({id,id,id,id,id,id}),id) assert(q.patternId==id and q.summary.patternId==id,"single pattern "..id)
+ end
+ local q4=assert(quoteWith({"07_diamond_scales","07_diamond_scales","07_diamond_scales","07_diamond_scales","01_blank","01_blank"}))
+ assert(q4.patternId=="07_diamond_scales","4 Legendary v 2 Common: plurality wins")
+ local q2=assert(quoteWith({"08_freckles","08_freckles","08_freckles","08_freckles","07_diamond_scales","07_diamond_scales"}))
+ assert(q2.patternId=="08_freckles","4 Common v 2 Legendary: plurality wins, rarity does not matter")
+ local qt=assert(quoteWith({"07_diamond_scales","07_diamond_scales","07_diamond_scales","02_emerald_islands","02_emerald_islands","02_emerald_islands"}))
+ assert(qt.patternId=="02_emerald_islands","3 v 3 tie: smallest id, not rarest")
+ local qe=assert(quoteWith({"08_freckles","08_freckles","08_freckles","01_blank","01_blank","01_blank"}))
+ assert(qe.patternId=="01_blank","tie: smallest id")
+ for _,id in ids do assert(G.valid({primaryColorId="white",secondaryColorId="white",hatchSuccess=true,blend=100,patternId=id}),"valid "..id) end
+end
 st.instances[A[3]].locked=true bad(A,"donor_locked") st.instances[A[3]].locked=nil
 st.instances[A[4]].favorited=true bad(A,"donor_locked") st.instances[A[4]].favorited=nil
 bad(A,"wrong_owner","gold","u:2")
