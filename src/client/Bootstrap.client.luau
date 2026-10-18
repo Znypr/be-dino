@@ -1727,6 +1727,7 @@ for _,attribute in {"LastEquipStatus","LastChestClaimStatus","LastNestClaimStatu
             elseif status~="opened" and status~="duplicate" and status~="" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
         elseif status=="next_run" then notify(NotifyQueue.statusText(status),C.gold,{key="ok"}) -- BD-613: picked during a run, applied at the next spawn
         elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Done!",C.accent,{key="ok"})
+        elseif status=="already_equipped" then notify(NotifyQueue.statusText(status),C.gold,{key="ok"}) -- BD-1000: a calm note, not a red error
         elseif status~="" and status~="duplicate" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
     end)
 end

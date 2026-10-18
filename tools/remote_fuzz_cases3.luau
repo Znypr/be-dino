@@ -159,6 +159,10 @@ runScenario("cross-player", nil, function(server)
     sleep(1)
     check("cross-player: B's egg and nest ids claimed by A change nothing for either player", wealth(1002) == before and wealthPoints(server, 1001) <= aBefore, "")
     check("cross-player: A cannot equip a variant that only B owns", a.attrs.LastEquipStatus == "not_owned" or a.attrs.LastEquipStatus == "locked", tostring(a.attrs.LastEquipStatus))
+    -- BD-1000: the "plain" key is a claim like any other: a species A does not hold cannot be equipped plain
+    fireNow(server, "EquipSpecies", a, "mosasaurus", tok("plain"), "plain")
+    sleep(1)
+    check("cross-player: A cannot equip a species A does not hold as 'plain'", a.attrs.LastEquipStatus == "locked" or a.attrs.LastEquipStatus == "not_owned", tostring(a.attrs.LastEquipStatus))
     -- every message the server sent in answer to A's requests went to A, never to B
     local leaked = 0
     for name, remote in server.remotes do

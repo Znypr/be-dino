@@ -76,6 +76,11 @@ end
 function L.autoOpenDecision(selection: any, requiresPass: boolean, ownsPass: boolean, rewardText: any, rarities: {[string]: number}, outcome: any, openAll: boolean): (boolean, string?, number?)
     local species = L.parseSpecies(rewardText)
     local rarity = if species then rarities[species] else nil
+    -- BD-1001: "Skip the rest" goes through cracked eggs too. A cracked egg hatches nothing (the server already settled it), so the
+    -- unreadable-species rule does not apply to it; it is counted in the summary as an egg that did not hatch.
+    if openAll and typeof(outcome) == "table" and outcome.failed == true and not L.locked(requiresPass, ownsPass) then
+        return true, species, rarity or 1
+    end
     if rarity == nil then return false, species, nil end
     return L.shouldAutoOpen(selection, requiresPass, ownsPass, rarity, outcome, openAll), species, rarity
 end
@@ -102,11 +107,12 @@ end
 function L.summaryLines(summary: any): {string}
     local lines = {string.format("Auto-opened: %d", summary.total)}
     local parts = {}
+    local counts = summary.hatchedByRarity or summary.byRarity -- BD-1001: cracked eggs have their own part below
     for rarity = #RevealSkip.Names, 1, -1 do
-        local count = summary.byRarity[rarity] or 0
+        local count = counts[rarity] or 0
         if count > 0 then table.insert(parts, string.format("%d %s", count, RevealSkip.Names[rarity])) end
     end
-    if summary.failed > 0 then table.insert(parts, string.format("%d cracked", summary.failed)) end
+    if summary.failed > 0 then table.insert(parts, if summary.failed == 1 then "1 egg did not hatch" else string.format("%d eggs did not hatch", summary.failed)) end
     if #parts > 0 then table.insert(lines, table.concat(parts, "  |  ")) end
     return lines
 end

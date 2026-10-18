@@ -637,6 +637,21 @@ function Sel.wheelRotation(stage, turns: number): number
     return turns * 360 + (1 - (stage.landingFraction or 0)) * 360
 end
 
+-- BD-1003: the colour reel's pointer used to be one gold line through the whole strip, so it crossed the label ("Cream 83.3%") of the
+-- segment it landed on. It is now two short notches, one on the top edge and one on the bottom edge; the label band in the middle stays free.
+-- Pure numbers (design px) so tools/verify_fusion_ui.py can prove the notches never touch the text.
+Sel.Reel = {height = 70, labelLines = 2, labelTextSize = 18, lineGrowth = 1.25, notchHeight = 9, notchWidth = 14}
+function Sel.reelLabelBand(): (number, number) -- top and bottom y of the centred label text
+    local R = Sel.Reel
+    local textHeight = R.labelLines * R.labelTextSize * R.lineGrowth
+    return (R.height - textHeight) / 2, (R.height + textHeight) / 2
+end
+function Sel.reelPointerClear(): boolean
+    local R = Sel.Reel
+    local top, bottom = Sel.reelLabelBand()
+    return R.notchHeight <= top and R.height - R.notchHeight >= bottom and R.labelTextSize >= 14
+end
+
 -- Horizontal reel variant used by the client: distance (in whole-strip units) the strip
 -- travels so the centre pointer stops at the middle of the committed segment.
 function Sel.reelOffset(stage, turns: number): number

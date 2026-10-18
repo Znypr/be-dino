@@ -125,7 +125,29 @@ assert(not L.shouldAutoOpen({}, true, false, 1, plain, true), "locked also block
 -- Auto-opened summary: best find on top, counts per rarity.
 local summary = {total = 6, failed = 1, byRarity = {3, 1, 1, 0, 1}}
 local lines = L.summaryLines(summary)
-assert(lines[1] == "Auto-opened: 6" and lines[2] == "1 Legendary  |  1 Rare  |  1 Uncommon  |  3 Common  |  1 cracked", lines[2])
+assert(lines[1] == "Auto-opened: 6" and lines[2] == "1 Legendary  |  1 Rare  |  1 Uncommon  |  3 Common  |  1 egg did not hatch", lines[2])
+-- BD-1001: cracked eggs are counted on their own (plain words), not twice inside the rarity counts.
+local hatchedOnly = {total = 6, failed = 2, byRarity = {3, 1, 1, 0, 1}, hatchedByRarity = {1, 1, 1, 0, 1}}
+assert(L.summaryLines(hatchedOnly)[2] == "1 Legendary  |  1 Rare  |  1 Uncommon  |  1 Common  |  2 eggs did not hatch", L.summaryLines(hatchedOnly)[2])
+-- BD-1001: "Skip the rest" (openAll) goes through cracked eggs, with or without a readable species, even when they carry Shiny/BIG/event flags.
+local crackedOutcomes = {{failed = true, genes = {conditionId = "cracked"}}, {failed = true, shiny = true, big = true, eventMutationId = "ember", genes = {conditionId = "cracked"}}}
+for _, outcome in crackedOutcomes do
+    for _, text in {"0x compy", "0x tyrannosaurus", "0x notaspecies", "garbage", ""} do
+        local skip, _, rarity = L.autoOpenDecision({}, false, false, text, RAR, outcome, true)
+        assert(skip and rarity ~= nil, "Skip the rest does not stop at a cracked egg: " .. text)
+        assert(not (L.autoOpenDecision({}, false, false, text, RAR, outcome, false)), "one-by-one reveal still shows the splat: " .. text)
+        assert(not (L.autoOpenDecision({}, true, false, text, RAR, outcome, true)), "locked pass still blocks skipping")
+    end
+end
+assert(not (L.autoOpenDecision({}, false, false, "1x notaspecies", RAR, {genes = {conditionId = "cracked"}}, true)), "an unreadable species that did not fail is still shown")
+-- 150 eggs with every second one cracked: Skip the rest shows none of them one by one.
+local stops = 0
+for i = 1, 150 do
+    local outcome = if i % 2 == 0 then {failed = true, shiny = i % 10 == 0, genes = {conditionId = "cracked"}} else {genes = {conditionId = "normal"}}
+    local text = (if i % 2 == 0 then "0x " else "1x ") .. "compy"
+    if not (L.autoOpenDecision({}, false, false, text, RAR, outcome, true)) then stops += 1 end
+end
+assert(stops == 0, "a 150-egg batch needs no taps after Skip the rest")
 assert(#L.summaryLines({total = 0, failed = 0, byRarity = {0, 0, 0, 0, 0}}) == 1)
 
 -- Never forced into hatching.

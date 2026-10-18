@@ -196,6 +196,10 @@ local noGenes = dino() noGenes.genes = nil
 assert(M.variantKey(noGenes) == nil, "a plain legacy copy has no per-copy identity")
 local req = M.equipRequest(shiny) assert(req.speciesId == "compy" and req.variantKey == M.variantKey(shiny))
 assert(M.equipRequest(gold).variantKey == nil and M.equipRequest(nil) == nil)
+-- BD-1000: a trait-free BASE copy asks for exactly itself ("plain"); it can never equal a real key; Gold/Diamond stay the species.
+local plainReq = M.equipRequest(noGenes)
+assert(plainReq.variantKey == M.PlainKey and M.PlainKey == "plain" and not string.find(M.PlainKey, ":", 1, true) and string.find(M.variantKey(shiny) :: string, ":", 1, true))
+assert(M.equipRequest(diamond).variantKey == nil, "Gold/Diamond still equip as the species")
 -- Server mirror: only a key present in the player's own collection with count > 0 is equippable.
 local entry = {variants = {[M.variantKey(shiny) :: string] = {count = 2, shiny = true, big = false, mutationId = "", genes = shiny.genes},
     [M.variantKey(big) :: string] = {count = 0, shiny = false, big = true, mutationId = "", genes = big.genes}}}

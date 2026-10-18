@@ -311,6 +311,12 @@ for _,st in seq do
   for _,sgm in st.segments do assert(sgm.p>=0) end
  end
 end
+-- BD-1003: the reel pointer is two edge notches; the label band in the middle is free, text stays 14 px or more.
+do
+ local top,bottom=S.reelLabelBand()
+ assert(S.reelPointerClear() and S.Reel.notchHeight<=top and S.Reel.height-S.Reel.notchHeight>=bottom and S.Reel.labelTextSize>=14,"the pointer never crosses a label")
+ assert(S.Reel.notchHeight*2<S.Reel.height/2,"the notches are small")
+end
 assert(seq[3].detail=="Blend 55% / 45%")
 assert(seq[4].value=="Shiny" and seq[5].value=="Ember" and seq[6].value=="Not BIG")
 assert(seq[#seq].kind=="final" and seq[#seq].title=="NEW WAVY STRIPES COMPY" and seq[#seq].replay==false)
@@ -488,6 +494,10 @@ def check_recipes():
     for name in ('fusionCalm', 'fusionDetails'):  # BD-347: the smoke stub must carry the exact shipped wording
         text = re.search(r'Copy\.%s = "([^"]+)"' % name, copy).group(1)
         assert '%s = "%s"' % (name, text) in smoke, name
+    menu = (ROOT / 'src/client/FusionMenu.luau').read_text(encoding='utf-8')
+    reel = menu[menu.index('local function reel('):menu.index('local function reel(') + 3500]
+    assert '"PointerTop"' in reel and '"PointerBottom"' in reel and 'Sel.Reel.notchHeight' in reel, 'BD-1003: reel pointer is two edge notches'
+    assert 'UDim2.new(0, 6, 1, 8)' not in menu, 'BD-1003: no full-height pointer line through the reel labels'
     print('Recipe parity passed: IdentityFusion, FusionSelection and FusionService agree on 6/3/2')
 
 

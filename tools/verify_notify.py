@@ -106,8 +106,10 @@ assert(#q.visible[1].text <= Q.MaxText and #q.visible[1].body <= Q.MaxBody, "pus
 assert(Q.MaxVisible == 3, "never more than 3 cards")
 
 -- Status codes become short copy; raw codes never reach the screen.
-assert(Q.statusText("insufficient_crystals") == "Not enough Crystals" and Q.statusText("some_new_code") == "Something went wrong. Try again" and Q.statusText(nil) == "Something went wrong. Try again")
-for code, text in Q.StatusText do assert(not string.find(text, "_") and #text <= 44, code) end
+assert(Q.statusText("insufficient_crystals") == "Not enough Crystals" and Q.statusText("some_new_code") == "Oops! Please try again" and Q.statusText(nil) == Q.GenericError)
+assert(Q.statusText("already_equipped") == "Already equipped")
+for code, text in Q.StatusText do assert(not string.find(text, "_") and #text <= Q.MaxText, code .. " fits the toast title (BD-1000)") end
+assert(#Q.GenericError <= Q.MaxText and Q.clip(Q.GenericError, Q.MaxText) == Q.GenericError, "the generic error is never cut off")
 print("Notification queue checks passed: cap 3, priority, key merge, info throttle, key gap, overflow, held majors, bump, expiry, hatch summary, status copy")
 '''
 

@@ -17,6 +17,7 @@ local ProgressionConfig = require(Shared:WaitForChild("ProgressionConfig"))
 local ProgressionRules = require(Shared:WaitForChild("ProgressionRules"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
+local SpecialFoods = require(Shared:WaitForChild("SpecialFoods"))
 
 local Hud = {}
 local C = Theme.Colors
@@ -89,6 +90,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10
     local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
+    local specialCharacter, specialSeen = nil :: Instance?, 0 -- BD-1002: which character the special-food counter was last read from
     local pendingEggs, pendingMutations, tagsSeen = 0, {} :: {[string]: number}, 0 -- BD-508: weather eggs by name; BD-378: eggs found since the last toast (merged into one)
     local function foundBefore(): boolean
         local copies = 0
@@ -155,6 +157,20 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             local toastText, toastBody = Copy.foundToast(pendingEggs, pendingMutations)
             pendingEggs, pendingMutations = 0, {}
             if hooks and hooks.notify then hooks.notify(toastText, C.gold, {key = "egg_found", icon = "egg", body = toastBody}) end
+        end
+        -- BD-1002: a special food (Golden Drumstick) gets its name and one short line; nothing for ordinary food. No sound of its own.
+        if character ~= specialCharacter then
+            specialCharacter = character
+            local seq = if character then (character :: Model):GetAttribute("SpecialFoodSeq") else nil
+            specialSeen = if typeof(seq) == "number" then seq else 0 -- a seq from before this HUD saw the character is old news
+        end
+        if character and running then
+            local seq = (character :: Model):GetAttribute("SpecialFoodSeq")
+            if typeof(seq) == "number" and seq > specialSeen then
+                specialSeen = seq
+                local title, body = SpecialFoods.pickupNote((character :: Model):GetAttribute("SpecialFoodId"))
+                if title and hooks and hooks.notify then hooks.notify(title, C.gold, {key = "special_food", body = body}) end
+            end
         end
         previous = nowEggs
         bar.Visible = running

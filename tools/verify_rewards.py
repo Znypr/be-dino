@@ -451,6 +451,8 @@ assert(RevealSkip.shouldSkip({1,2},1,plain) and RevealSkip.shouldSkip({1,2},2,pl
 assert(same(RevealSkip.Names,GameConfig.SpeciesRarityNames) and #RevealSkip.Rarities==GameConfig.SpeciesRarityScale,"skip names follow Config")
 local cracked=table.clone(plain) cracked.failed=true cracked.genes={conditionId="cracked"}
 assert(RevealSkip.shouldSkip({1},1,cracked),"cracked failures may be skipped (counted in the summary)")
+local crackedFlags=table.clone(cracked) crackedFlags.shiny=true crackedFlags.eventMutationId="ember"
+assert(not RevealSkip.isNotable(crackedFlags) and RevealSkip.shouldSkip({1},1,crackedFlags),"BD-1001: a cracked egg shows only a splat, its flags are not notable")
 for _,notable in {{shiny=true},{big=true},{eventMutationId="ember"},{genes={conditionId="rainbow"}},{genes={conditionId="astra"}}} do
  local o=table.clone(plain) for k,v in notable do o[k]=v end
  assert(RevealSkip.isNotable(o) and not RevealSkip.shouldSkip({1,2,3},1,o),"notable finds are never skipped")
@@ -461,6 +463,7 @@ toggled=RevealSkip.toggle(toggled,1) assert(#toggled==1 and toggled[1]==2)
 assert(#RevealSkip.toggle({},9)==0 and #RevealSkip.toggle({},0)==0)
 local summary=RevealSkip.summarize({{rarity=1,outcome=plain},{rarity=1,outcome=cracked},{rarity=2,outcome=plain},{rarity=3,outcome=plain},{rarity=5,outcome={shiny=true}}})
 assert(summary.total==5 and summary.byRarity[1]==2 and summary.byRarity[2]==1 and summary.byRarity[3]==1 and summary.byRarity[4]==0 and summary.byRarity[5]==1 and summary.failed==1 and summary.hatched==4 and #summary.notable==1)
+assert(summary.hatchedByRarity[1]==1 and summary.hatchedByRarity[2]==1 and summary.hatchedByRarity[3]==1 and summary.hatchedByRarity[5]==1,"BD-1001: cracked eggs are not in the hatched rarity counts")
 local lines=RevealSkip.lines(summary)
 assert(lines[1]=="5 eggs skipped (4 hatched, 1 cracked)" and lines[2]=="2 Common  |  1 Uncommon  |  1 Rare  |  1 Legendary")
 -- Preference field: validated, additive, persisted, never touches rewards.

@@ -377,6 +377,11 @@ print("Growth pace passed: GrowthPerFood 0.1 (500 food -> 50 growth, was 250; BD
 -- BD-207: special foods are off by default, never roll while off, and leave FoodCatchRate alone.
 assert(Config.SpecialFoodsEnabled==false and not SpecialFoods.rolls(0) and Config.FoodCatchRate==12/500,"special foods off")
 assert(SpecialFoods.points()==Config.SpecialFoodPoints and Config.SpecialFoodChance>0 and Config.SpecialFoodChance<=0.05,"special food provisional numbers")
+-- BD-1002: the eaten special food is named in plain words (no sound of its own); ordinary food and forged ids show nothing.
+local noteTitle,noteBody=SpecialFoods.pickupNote("golden_drumstick")
+assert(noteTitle=="Golden Drumstick!" and noteBody=="A giant tasty snack!" and #noteTitle<=30 and #noteBody<=44,"special food toast fits the toast slot")
+local noneTitle,noneBody=SpecialFoods.pickupNote("berry")
+assert(noneTitle==nil and noneBody==nil and SpecialFoods.pickupNote(nil)==nil and SpecialFoods.pickupNote(5)==nil and SpecialFoods.byId("golden_drumstick")==SpecialFoods.GOLDEN_DRUMSTICK,"no toast for ordinary food or forged ids")
 print("Special foods passed: flag false by default, no roll while off, PROVISIONAL points explicit, FoodCatchRate untouched")
 -- BD-439 (owner 2026-10-16): a player kill = 0.25 run egg with carry, at most 3 per run.
 assert(Config.PredationEggPerKill==0.25 and Config.PredationEggMaxPerRun==3,"kill egg config")
@@ -466,6 +471,10 @@ if __name__=='__main__':
  psrc=(ROOT/'src/server/PredationService.luau').read_text(encoding='utf-8')
  assert 'FoodCatchRules.awardKill(' in psrc and 'Config.PredationGrowthPoints' in psrc, 'kill egg bonus, growth unchanged'
  assert 'dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)' in src and 'FoodCatchRules.award(candidate.gained,' in src, 'growth halved but catches use raw food'
+ # BD-1002: the server tells the owning HUD which special food was eaten (a counter, once per claim tick); the HUD names it from the config
+ assert "SpecialFoods.byId(food.kind.id)" in src and 'c:SetAttribute("SpecialFoodSeq"' in src and 'c:SetAttribute("SpecialFoodId"' in src, 'server marks a special pickup on the character'
+ hud=(ROOT/'src/client/HudV2.luau').read_text(encoding='utf-8')
+ assert 'SpecialFoods.pickupNote(' in hud and '"special_food"' in hud and 'Sfx.play' not in hud[hud.index('SpecialFoods.pickupNote('):hud.index('SpecialFoods.pickupNote(')+200], 'HUD toast for the special food, no new sound'
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
  with tempfile.TemporaryDirectory() as temp:
   path=Path(temp)/'verify.luau';path.write_text(harness());subprocess.run([args.runner,str(path)],check=True)

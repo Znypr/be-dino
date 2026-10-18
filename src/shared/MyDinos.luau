@@ -41,10 +41,17 @@ function M.variantKey(d): string?
     return EggTraits.key(if type(d.mutationId) == "string" then d.mutationId else "", d.shiny == true, d.big == true, genes :: any)
 end
 
--- What the client sends for EQUIP of copy d: always the species, plus the exact variant key when it has one.
+-- BD-1000: the key a base-stage copy WITHOUT traits (the plain starter, an event-only copy) sends to equip exactly itself. Real variant keys
+-- always contain ":" (EggTraits.key), so this can never collide with one; the server stores it as a flag (ProfileCollection.equipSpecies).
+M.PlainKey = "plain"
+
+-- What the client sends for EQUIP of copy d: always the species, plus the exact variant key when it has one, or PlainKey for a
+-- trait-free base copy (so it is no longer mistaken for "any copy": the server used to play the best variant instead).
 function M.equipRequest(d)
     if type(d) ~= "table" or type(d.speciesId) ~= "string" then return nil end
-    return {speciesId = d.speciesId, variantKey = M.variantKey(d)}
+    local key = M.variantKey(d)
+    if key == nil and d.stage == "base" then key = M.PlainKey end
+    return {speciesId = d.speciesId, variantKey = key}
 end
 
 -- Server-side mirror used by the offline check: a key is only equippable when the collection entry owns it.

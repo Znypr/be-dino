@@ -16,7 +16,7 @@ Spec: [65](65-intake-notifications.md). This is playtest scope (owner, 2026-10-1
 - **Hatch batches:** each egg's reveal is the feedback. When a batch ends, one card says
   "12 dinos hatched / Best: Shiny Rare Triceratops". It is gold when the best find is Epic, Legendary or Shiny.
 - **No raw error codes.** Server codes such as `insufficient_crystals` map to short copy ("Not enough
-  Crystals"). Unknown codes show "Something went wrong. Try again".
+  Crystals"). Unknown codes show "Oops! Please try again" (BD-1000: the old text was 31 characters and the 30-character toast cut it).
 
 ## How
 - `src/shared/NotifyQueue.luau` is pure and has no Roblox dependencies, with the clock passed in. It

@@ -9,6 +9,7 @@ local ProgressionRules = shared.ProgressionRules
 local admit = shared.admitAs("ProfileCollection") -- BD-650: the label names the service in the rate_limited count
 local adopt = shared.adopt
 local equippedOf = shared.equippedOf
+local equippedPlain = shared.equippedPlain
 local findOperation = shared.findOperation
 local handleLeaseLost = shared.handleLeaseLost
 local isValidProfile = shared.isValidProfile
@@ -27,7 +28,12 @@ local trimOperations = shared.trimOperations
 -- own collection entry with count > 0, so a client can never equip a copy it does not own.
 -- deferToNextRun (BD-613): every check runs but nothing is written; a valid pick answers (true, "next_run") and the caller
 -- (CollectionService) keeps it in memory until the next spawn, then calls this again without the flag.
-function ProfileRepository.equipSpecies(player: Player, speciesId: string, variantKey: string?, deferToNextRun: boolean?): (boolean, string)
+-- BD-1000: the variantKey "plain" (MyDinos.PlainKey on the client; real variant keys always contain ":") picks the plain copy of the species, the one with no
+-- traits. It is stored as the additive flag `equippedPlain`, never as a key, so the stored pair stays what Build 020 knows.
+local PLAIN = "plain"
+function ProfileRepository.equipSpecies(player: Player, speciesId: string, variantKeyIn: string?, deferToNextRun: boolean?): (boolean, string)
+    local plain = variantKeyIn == PLAIN
+    local variantKey = if plain then nil else variantKeyIn
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, "profile_not_loaded"
@@ -53,8 +59,13 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
             return false, "not_owned"
         end
     end
+    if plain and secretEquip then return false, "not_owned" end
+    if plain then
+        -- only a species held as a plain copy (base or event-only) can be played plain; a client can never claim one it does not own
+        if typeof(cachedEntry.base) ~= "number" or (cachedEntry.base <= 0 and not ProgressionRules.eventMutation(cachedEntry)) then return false, "not_owned" end
+    end
     local currentId, currentKey = equippedOf(cached)
-    if currentId == speciesId and currentKey == variantKey then
+    if currentId == speciesId and currentKey == variantKey and equippedPlain(cached) == plain then
         syncAttributes(player, cached)
         return true, "already_equipped"
     end
@@ -83,6 +94,10 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
                     return nil
                 end
             end
+            if plain and (typeof(entry.base) ~= "number" or (entry.base <= 0 and not ProgressionRules.eventMutation(entry))) then
+                locked = true
+                return nil
+            end
             if secretEquip then
                 -- SS7: the stored pair stays a species Build 020 knows (RB1); the secret is the additive record beside it
                 profileValue.equippedSpeciesId = secretSpecies().EquipFallback
@@ -93,6 +108,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
                 profileValue.equippedVariantKey = variantKey
                 profileValue.equippedSecret = nil
             end
+            profileValue.equippedPlain = if plain and not secretEquip then true else nil -- BD-1000: lazily created, removed again by any other equip
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue
