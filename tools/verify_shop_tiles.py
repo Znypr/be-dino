@@ -154,7 +154,7 @@ for needle, why in (('Art.tabIconId(Slots.Images, tab)', 'tab icons read the bou
         err(f'ShopTiles.luau: missing {needle!r} ({why})')
 if re.search(r'rbxassetid://\d', tiles + art):
     err('ShopTiles / ShopArt must never hold a hard-coded asset id')
-boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8') + (ROOT / 'src/client/ShopScreens.luau').read_text(encoding='utf-8')  # BD-1020: the shop screens moved
 for needle, why in (('ShopTiles.decorateTab(tabButton,tab,tabsHeight)', 'tab strip icons'), ('ShopTiles.eggProduct(body,', 'green-spotted egg on the Eggs tab'),
                     ('art(body,"egg",20,cardsY+12,220)', 'the old egg stays as the fallback'), ('if ShopTiles.landing then', 'landing page'),
                     ('ShopTiles).enter(', 'SHOP / crystal counter / hub open start on the landing')):

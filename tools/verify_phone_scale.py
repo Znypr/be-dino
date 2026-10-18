@@ -155,7 +155,8 @@ def static_checks():
     assert 'math.floor(m.innerH)' in compact and 'return if m then m.effScale else 1' in compact and 'm.scrollX' not in compact and 'UDim2.fromOffset(0, if bottom <= m.innerH' in compact
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     locals_ = len(re.findall(r'^local ', boot, re.M))
-    assert locals_ <= 193, 'Bootstrap top-level locals: %d (was 193, limit 200)' % locals_
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert locals_ <= MAX_TOP_LOCALS, 'Bootstrap top-level locals: %d (ceiling %d in tools/bootstrap_sources.py; limit 200)' % (locals_, MAX_TOP_LOCALS)
     assert 'PhoneScale' in boot and 'ModalCompact' in boot, 'Bootstrap uses the scale policy'
     assert not re.search(r'^local (PhoneScale|ModalCompact)', boot, re.M), 'no new top-level locals for the compact modal'
 

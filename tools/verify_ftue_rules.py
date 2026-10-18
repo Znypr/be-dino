@@ -164,7 +164,8 @@ def static_checks():
     assert repo.index('sortByRarity(runEggs)') < repo.index('FtueRules.safeEggsLeft(cached)'), 'safe eggs are chosen after the rarity sort'
     assert 'safeEggs' not in repo.replace('safeEggsLeft', ''), 'no new persistent field'
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
-    assert len(re.findall(r'^local ', boot, re.M)) <= 195, 'Bootstrap top-level locals'
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(re.findall(r'^local ', boot, re.M)) <= MAX_TOP_LOCALS, 'Bootstrap top-level locals'
     assert 'FtueRail).attach(rail,navigationButtons)' in boot and not re.search(r'^local Ftue', boot, re.M)
     sfx = (ROOT / 'src/shared/SfxRules.luau').read_text(encoding='utf-8')
     assert 'egg_found = {cue = "pickup_hi"' in sfx, 'the egg cue reuses a registered sound'
