@@ -16,6 +16,26 @@ For now the wiki is **for the owner and the team only**, so everyone (including 
 
 **IMPORTANT, flagged to the owner:** the owner believes the GitHub repository is private. GitHub reports `Znypr/be-dino` as **PUBLIC** (checked 2026-10-18 with `gh repo view`). Everything in the repo, including this catalogue, the secret species roster, design docs and uploaded asset ids, is therefore readable by anyone. Changing repository visibility is an account setting and is the owner's decision; nothing was changed.
 
+## OWNER ANSWER 2 2026-10-18: a catalogue for everything, but few pages
+Cover **everything**: dinosaurs, colours, patterns, conditions, mutations, potions, auras, trails, food, weather, biomes and wind ("breeze"), statues and other landmarks. **Rule: no page per item.** Twelve potions are not a section of their own; each item is a *section inside* its category page (heading, small picture, a few lines, a table row), reachable by an anchor link.
+
+**Page layout (about 12 pages, hard cap 14):**
+| # | Page | Sections inside |
+|---:|---|---|
+| 1 | Home | what the catalogue is, links, the five biggest gaps |
+| 2 | Dinosaurs | one table (picture, name, class, rarity, odds), then one section per dino |
+| 3 | Colours | table by tier, one section per colour |
+| 4 | Patterns | table by tier, one section per pattern (after BD-1039) |
+| 5 | Eggs and conditions | conditions, nests, hatch rules |
+| 6 | Mutations and events | Shiny, BIG, event mutations, weather events |
+| 7 | Fusion | tiers, the ladder, what is kept and rolled |
+| 8 | Shop items | Potions, Auras, Trails as three sections, one row/section per item |
+| 9 | Food | normal and special foods, points, spawn rule |
+| 10 | World | weather, biomes, wind, statues, landmarks |
+| 11 | Odds | every chance in the game in one table |
+| 12 | Missing | every gap with the file name and folder to deliver |
+If one category passes about 40 items, it stays ONE page with a contents list and tier headings; it is not split into per-item pages. A test fails if the tool writes more than 14 pages or a page for a single item.
+
 ## Facts checked (2026-10-18)
 - The repository `Znypr/be-dino` is **public** and its GitHub wiki feature is **enabled** (empty). A GitHub wiki is its own git repository (`be-dino.wiki.git`); anything pushed there is public at once.
 - All numbers the pages need already live in code: species and tiers (`ProgressionConfig`, docs/82), egg colours (`EggColors`), patterns (`EggGenetics`), conditions, mutations (`MutationLook`), class (`ClassInfo`), odds (`ShopOdds`, docs/85), pictures (`docs/evidence`, `resources/ui`).
