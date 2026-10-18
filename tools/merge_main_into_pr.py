@@ -27,6 +27,10 @@ versus the merge base (a row added on one side, edited on one side, or removed o
 that BOTH sides added or both edited differently is not allowed: the whole file then goes to a human.
 Result: main's rows in main's order, then the PR's extra rows. Nothing else is ever auto-resolved.
 
+Append-only logs (BD-1060, 2026-10-18): docs/retro/work-log.jsonl is merged as a union of both sides' lines;
+docs/168 (generated from it) takes main's copy and is regenerated with `tools/retro_log.py render`; docs/115 and docs/116
+conflicts are resolved when BOTH sides only added text at the same place (main's block first, then the PR's).
+
 Exit codes: 0 done, 1 a check failed, 2 usage or git problem, 3 a human must resolve conflicts.
 """
 import argparse
@@ -295,6 +299,58 @@ def resolve_table_file(path):
     return len(found)
 
 
+WORKLOG_JSONL = "docs/retro/work-log.jsonl"
+WORKLOG_DOC = "docs/168-work-log-and-retrospectives.md"
+
+
+def union_lines(main_text, pr_text):
+    """Append-only log merge: main's lines in order, then the PR's lines that main does not have. Returns (text, n_from_pr)."""
+    main_lines = [l for l in main_text.splitlines() if l.strip()]
+    seen = set(main_lines)
+    extra = []
+    for l in pr_text.splitlines():
+        if l.strip() and l not in seen:
+            seen.add(l)
+            extra.append(l)
+    return chr(10).join(main_lines + extra) + chr(10), len(extra)
+
+
+def resolve_worklog_jsonl(wt, full):
+    """Both sides only append entries to docs/retro/work-log.jsonl: keep every line of both (stage 2 = the PR, stage 3 = main)."""
+    pr_text = git(wt, "show", ":2:%s" % WORKLOG_JSONL)[1]
+    main_text = git(wt, "show", ":3:%s" % WORKLOG_JSONL)[1]
+    text, n = union_lines(main_text, pr_text)
+    Path(full).write_text(text, encoding="utf-8", newline=chr(10))
+    return n
+
+
+APPEND_ONLY_DOCS = ("docs/115-decisions-log.md", "docs/116-handbook-conflicts.md")
+HUNK3 = re.compile(r"^<<<<<<< [^\n]*\n(.*?)^\|\|\|\|\|\|\| [^\n]*\n(.*?)^=======\n(.*?)^>>>>>>> [^\n]*\n", re.S | re.M)
+
+
+def resolve_append_only_doc(path):
+    """docs/115 and docs/116 are logs: when BOTH sides only added text at the same place (the shared base part of the hunk
+    is empty), keep both blocks, main's first. Any hunk where the base text was edited or removed needs a human."""
+    text, eol = read_text(path)
+    count = 0
+
+    def repl(m):
+        nonlocal count
+        pr_side, base, main_side = m.group(1), m.group(2), m.group(3)
+        if base.strip():
+            raise NeedsHuman("a hunk edits text that already existed (not append-only)")
+        count += 1
+        if main_side and not main_side.endswith("\n"):
+            main_side += "\n"
+        return main_side + pr_side
+
+    new = HUNK3.sub(repl, text)
+    if re.search(r"^(<<<<<<<|=======|>>>>>>>)", new, re.M):
+        raise NeedsHuman("conflict markers are still there (not diff3 style?)")
+    write_text(path, new, eol)
+    return count
+
+
 def show_hunks(path, limit=3, width=150):
     text, _ = read_text(path)
     out = []
@@ -465,7 +521,7 @@ def main(argv=None):
             return 2
         say("merge of %s: %s" % (remote_main, ("%d conflicted file(s)" % len(unmerged)) if unmerged else "clean"))
 
-        rep, stuck = None, []
+        rep, stuck, needs_render = None, [], False
         for path in unmerged:
             stages = {l.split()[2] for l in git(wt, "ls-files", "-u", "--", path)[1].splitlines() if l.strip()}
             full = Path(wt) / path
@@ -477,6 +533,17 @@ def main(argv=None):
                     main_text = git(wt, "show", "%s:%s" % (remote_main, KANBAN))[1]
                     rep = resolve_kanban_file(full, base_rows, main_text, pr_label=("PR #%s" % number) if number else "the PR")
                     say("  %s: resolved per row" % path)
+                elif path == WORKLOG_JSONL:
+                    n = resolve_worklog_jsonl(wt, full)
+                    say("  %s: union of both sides (append-only log), %d line(s) taken from the PR" % (path, n))
+                    needs_render = True
+                elif path in APPEND_ONLY_DOCS:
+                    n = resolve_append_only_doc(full)
+                    say("  %s: append-only log, both sides added text: %d hunk(s) kept from both sides (main first)" % (path, n))
+                elif path == WORKLOG_DOC:
+                    git(wt, "checkout", "--theirs", "--", path)  # main's copy; the table is regenerated from the log below
+                    say("  %s: took main's copy, the table is regenerated from the log" % path)
+                    needs_render = True
                 elif fnmatch.fnmatchcase(path, "docs/*.md"):
                     n = resolve_table_file(full)
                     say("  %s: allowlist (table rows, each side changed different rows): %d hunk(s) merged" % (path, n))
@@ -497,6 +564,14 @@ def main(argv=None):
             say("  python tools/verify_doc_ids.py ; python tools/verify_handbook.py ;")
             say("  python tools/verify_kanban_merge.py --base %s --head HEAD ; git push %s HEAD:%s" % (remote_main, a.remote, branch))
             return 3
+
+        if needs_render or (Path(wt) / WORKLOG_JSONL).exists() and Path(wt, WORKLOG_DOC).exists() and                 run_tool(wt, "retro_log.py", "render", "--check"):
+            if run_tool(wt, "retro_log.py", "render"):
+                say("STOP: tools/retro_log.py render failed after the work-log merge.")
+                keep_note()
+                return 1
+            git(wt, "add", "--", WORKLOG_DOC)
+            say("work log: docs/168 table regenerated from docs/retro/work-log.jsonl")
 
         # Kanban: dedupe and warn even when git merged it cleanly.
         kb = Path(wt) / KANBAN
