@@ -393,6 +393,18 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(rep.merged[0][1], "main")
         self.assertTrue(any("Done" in n for n in rep.merged[0][2]))
 
+    def test_row_that_quotes_marker_words_is_not_mistaken_for_a_leftover_marker(self):
+        quoted = row(9, text="**Marker tool.** finds `" + "<" * 7 + "` and `" + ">" * 7 + "` lines")
+        text = "\n".join(["# Kanban", "<" * 7 + " HEAD", quoted, "|" * 7 + " base", "=" * 7, row(8), ">" * 7 + " origin/main", ""])
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "k.md"
+            p.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+            rep = mm.resolve_kanban_file(p, {}, kanban([row(8)]))
+            raw = p.read_bytes().decode("utf-8")
+        self.assertIn("**Marker tool.**", raw)
+        self.assertIn("| BD-8 |", raw)
+        self.assertEqual(rep.pr_only, ["BD-9"])
+
     def test_non_row_hunk_takes_main(self):
         rep = mm.KanbanReport()
         out = mm.resolve_kanban_hunk(["Counts: old"], ["Counts: new"], {}, rep)
