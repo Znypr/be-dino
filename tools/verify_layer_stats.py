@@ -141,6 +141,18 @@ def test_targets_and_cli():
         grid = tmp / 'grid.json'
         grid.write_text(json.dumps({'half': 416, 'rows': [[1 if (i * 7 + j * 3) % 11 == 0 else 0 for i in range(64)] for j in range(64)]}), encoding='utf-8')
         check(ls.main(['--grid', str(grid), '--blocks', '8']) == 0, '--grid works')
+        import worldlayer  # BD-1047: the Python mirror of WorldLayer.luau
+        layer = worldlayer.WorldLayer(64, 64, 416)
+        for i in range(64):
+            for j in range(64):
+                if (i * 7 + j * 3) % 11 == 0:
+                    layer.set_cell(i, j, 1 + (i + j) % 4)
+        text = tmp / 'layer.txt'
+        text.write_text(layer.encode(), encoding='utf-8')
+        rule = tmp / 'rule.json'
+        rule.write_text(json.dumps({'rules': [{'kind': 'berry', 'block': 8, 'metric': 'count_max', 'min': 1}]}), encoding='utf-8')
+        check(ls.main(['--layer', str(text), '--blocks', '8', '--kind-names', '1=berry,2=fruit,3=egg,4=amber', '--targets', str(rule)]) == 0, '--layer with kind names works')
+        check(len(layer.non_zero()) == len(ls.points_from_grid(layer.rows(), 416.0)), '--layer: one point per non-zero cell')
 
 
 def test_dump(runner):

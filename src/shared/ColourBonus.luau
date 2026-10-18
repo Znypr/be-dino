@@ -30,6 +30,19 @@ function Bonus.multiplier(colors: any, genes: any): number
     return 1 + Bonus.percent(colors, genes) / 100
 end
 
+-- BD-1036 (docs/186 s5): the colour rarity a dino shows is the RARER of its two colours ("Common".."Mythic"). A missing secondary
+-- colour counts as the primary one; unknown ids and junk count as Common. Pure, server and client may both call it.
+function Bonus.rarity(colors: any, genes: any): string
+    if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return Curve.Names[1] end
+    local function tierName(id: any): string?
+        if typeof(id) ~= "string" then return nil end
+        for _, row in colors do if row.id == id then return row.rarity end end
+        return nil
+    end
+    local primary = tierName(genes.primaryColorId)
+    return Curve.rarer(primary, if genes.secondaryColorId == nil then primary else tierName(genes.secondaryColorId))
+end
+
 -- Kid-short text, nil when there is no bonus.
 function Bonus.text(colors: any, genes: any): string?
     local percent = Bonus.percent(colors, genes)
