@@ -106,6 +106,43 @@ MUTANTS = {
     'the hatch effect layers ignore the phone scroller scale': {
         'HatchSequence': [('math.round(fit * rel * 10000) / 10000', 'fit')],
     },
+    # BD-1107 (docs/200 picture 416): the ribbons, the stop tag and the class badge of the reveal card
+    'a ribbon word shrinks to fit again (TextScaled, cut at the left edge, picture 416)': {
+        'HatchSequence': [('WHITE, false, p.size, f.ZIndex + 1, 0, Color3.new(0, 0, 0)', 'WHITE, true, p.size, f.ZIndex + 1, 0, Color3.new(0, 0, 0)')],
+    },
+    'the tags are not stacked (every tag of a side sits on the same spot)': {
+        'HatchTagLayout': [('        local cy = if top == nil then L.FirstCy else top + hh', '        local cy = L.FirstCy')],
+    },
+    'a tag reaches past the left edge of the card': {
+        'HatchTagLayout': [('p.cx = if side == "left" then L.Margin + hw else L.BodyW - L.Margin - hw', 'p.cx = if side == "left" then hw - 60 else L.BodyW - L.Margin - hw')],
+    },
+    'a tag that does not fit its side is not moved to the other side (the stack runs into the name)': {
+        'HatchTagLayout': [('            if cy2 + hh <= L.Bottom + 1e-6 then side, cy, nextY = other, cy2, next2 else ok = false end', '            ok = false')],
+    },
+    'a tag reaches past the right edge of the card': {
+        'HatchTagLayout': [('p.cx = if side == "left" then L.Margin + hw else L.BodyW - L.Margin - hw', 'p.cx = if side == "left" then L.Margin + hw else L.BodyW + 40 - hw')],
+    },
+    'a long tag word is not wrapped, it is cut short': {
+        'HatchTagLayout': [('local fit = TagFit.fit(item.text, roomW, {maxSize = R.textMax, minSize = floor, maxLines = 2})', 'local fit = TagFit.fit(item.text, roomW, {maxSize = R.textMax, minSize = floor, maxLines = 1})')],
+    },
+    'the tags are laid out for 14 design px, not 14 px on screen': {
+        'TagFit': [('    return math.max(f, math.ceil(f / screenScale - 1e-9))', '    return f')],
+    },
+    'a word is measured far too small (it runs out of its tag)': {
+        'TagFit': [('    return math.ceil(math.max(em, TagFit.FlatEm * count) * size)', '    return math.ceil(0.2 * count * size)')],
+    },
+    'the tags are stacked with a huge gap (the last one reaches the name)': {
+        'HatchTagLayout': [('L.Gap = 6 ', 'L.Gap = 70 ')],
+    },
+    'the name stays centred beside the class badge (the badge lies over its first letters)': {
+        'HatchSequence': [('            a.nameLabel.TextXAlignment = Enum.TextXAlignment.Left', '            a.nameLabel.TextXAlignment = nameBase.align')],
+    },
+    'the class badge is placed for a badge a tenth as wide as it is': {
+        'HatchSequence': [('            if not icon and not word then badgeW = badgeSize end', '            badgeW = 4')],
+    },
+    'the name box keeps its old place, so the class badge lies inside it': {
+        'HatchSequence': [('            a.nameLabel.Position = UDim2.fromOffset(left + badgeW + gap, labelY)', '            a.nameLabel.Position = nameBase.pos')],
+    },
     # BD-1083 (docs/197 picture 350): a tap on an Index tab closed the Index and opened Eggs
     'the rail routing looks at the position only, not at what is on top (a tap on the Patterns tab presses the rail EGGS button)': {
         'HubTravelClientRules': [(' or onBackdrop ~= true', '')],
