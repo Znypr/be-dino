@@ -100,7 +100,7 @@ The highest local peaks (any scope):
 
 ### Growth since 16 Oct (what to watch)
 
-* **`WeatherVisuals.client.luau`: main chunk 110 -> 147 locals and 48.9 -> 69.1 KB in 15 commits.** At that rate it reaches the 185 line within about one more day of weather work. It is the first file to fix.
+* **`WeatherVisuals.client.luau`: main chunk 110 -> 147 locals and 48.9 -> 69.1 KB in 15 commits.** At that rate it reaches the 185 line within about one more day of weather work. It is the first file to fix. **Done later the same day (BD-627, [153](153-weather-visuals-split.md)): split into six client modules, main chunk 147 -> 85 locals; the 147 and 69 KB figures in this audit are the state before that split (integration sweep, [156](156-integration-sweep-2026-10-18.md)).**
 * `Bootstrap.client.luau`: +27 KB in 63 commits (the `mountHud` wrap cut the main chunk from 199 to 144 locals; the file itself is still the biggest). It is now frozen by a ratchet (below).
 * `BiomePlacement.luau` 24 -> 64 KB (data tables 16 KB, `generate` 28 KB, one function at 86 locals), `TouchLayout.luau` 11 -> 34 KB, `Arena.luau` 16 -> 30 KB, `FusionMenu.luau` 46 -> 58 KB, `HatchSequence.luau` 69 -> 77 KB.
 * `SettingsMenu.luau` is small (7.9 KB, 16 locals): no split needed.
