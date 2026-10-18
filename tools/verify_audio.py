@@ -54,6 +54,9 @@ assert(not S.rapidThrottled("pickup", 10, 10 + S.RapidGap + .01) and not S.rapid
 assert(not S.rapidThrottled("shop_buy", 10, 10.01), "other cues are unaffected")
 assert(S.clampVolume(2) == S.MaxCueVolume and S.clampVolume(.3) == .3 and S.clampVolume(-1) == 0)
 assert(S.MaxCueVolume <= .9)
+-- BD-166 (docs/161): the cues the audio report flagged stay in the quiet range (tests/test_sfx_levels.py measures the files).
+assert(S.Sounds.level_up.volume <= .3 and S.Sounds.shiny_bang.volume <= .6 and S.Sounds.hatch_legendary.volume <= .75)
+assert(S.Sounds.shop_buy.rate <= .8 or S.Sounds.shop_buy.id ~= "rbxassetid://102585210519734", "shop_buy is slowed until the soft file is uploaded")
 for _, e in S.Sounds do assert(e.gap >= 0 and e.volume > 0) end
 print("Reward cue checks passed: one at a time, 0.6 s stagger, drop when late")
 '''
