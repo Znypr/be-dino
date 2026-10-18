@@ -6,6 +6,8 @@
   * counts per kind are exactly the planned ones (3,600 foods in all, same as today's kind mix 70 / 20 / 7 / 3), one food per cell;
   * the foods are small clusters of 3 to 5 (about 3 to 3.5 studs apart), clusters at least 12 studs apart centre to centre and 5.5 studs apart
     food to food; every amber cluster also holds an egg and a fruit; every food on ground (the FoodService rule, one stud from every edge);
+  * BD-1098: no food closer than the written margin to a solid world prop (rock, trunk, log, landmark, arch, boundary boulder: the colliders
+    tools/world_colliders.py derives from the real placement grammar), so none overlaps a collider box and the FoodService obstacle rays find nothing;
   * both starter patches near (+-15, 24) are there (9 foods each, 2 berries to 1 fruit) and every lone amber stands alone;
   * tools/layer_stats.py rules: no empty small block, spread near or below random scatter, no big empty zone, short walks to the next egg and amber;
   * the food PACE stays about the same: tools/food_pace.py (a rough walker model, not a real player) on the map divided by the same model on
@@ -33,6 +35,7 @@ import food_pace  # noqa: E402
 import food_layer_data  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
+import world_colliders  # noqa: E402
 import worldlayer  # noqa: E402
 
 TARGETS = ROOT / 'tools' / 'targets' / 'food_layer_targets.json'
@@ -222,6 +225,18 @@ def check(runner):
     off = [(round(x), round(z)) for x, z, _ in pts if not ground.ok(x, z)]
     if off:
         note('%d foods are not on valid ground, for example %r' % (len(off), off[:3]))
+    # --- solid props (BD-1098)
+    margin = targets['obstacles']['margin']
+    obstacles = world_colliders.load(runner)
+    if margin > gen.OBSTACLE_MARGIN:
+        note('the target margin %g studs is larger than the generator margin %g' % (margin, gen.OBSTACLE_MARGIN))
+    near_props = []
+    for x, z, k in pts:
+        d, who = obstacles.nearest(x, z, margin)
+        if who is not None and d < margin - 1e-6:
+            near_props.append((round(x, 1), round(z, 1), k, round(d, 2), who))
+    if near_props:
+        note('%d foods are closer than %g studs to a solid prop, for example %r' % (len(near_props), margin, near_props[:3]))
     # --- starter patches and lone ambers
     st = targets['starter']
     for cx, cz in st['centres']:
@@ -247,7 +262,7 @@ def check(runner):
         if not pc[key]['min'] <= ratios[key] <= pc[key]['max']:
             note('pace %s is %.2f times today (allowed %.2f to %.2f)' % (key, ratios[key], pc[key]['min'], pc[key]['max']))
     # --- deterministic
-    rebuilt = gen.generate(model)['layer'].encode()
+    rebuilt = gen.generate(model, obstacles)['layer'].encode()
     if rebuilt != food_layer_data.TEXT:
         note('regenerating the map gives different text: the terrain or tools/generate_food_layer.py changed; run it with --write and commit')
     # --- the Luau reader FoodService uses
@@ -265,7 +280,7 @@ def main():
         for e in errors:
             print('  -', e)
         return 1
-    print('Food map passed: 3,600 foods (berry 2519 / fruit 722 / egg 251 / amber 108) in small clusters of 3 to 5, ground, starter patches, lone ambers, spread targets, pace band, deterministic, Luau reader')
+    print('Food map passed: 3,600 foods (berry 2519 / fruit 722 / egg 251 / amber 108) in small clusters of 3 to 5, ground, clear of solid props, starter patches, lone ambers, spread targets, pace band, deterministic, Luau reader')
     return 0
 
 
