@@ -20,6 +20,11 @@ What it does, in order (it never rebases, never force-pushes and never touches a
      line); THEN runs `verify_kanban_merge --base origin/main --head HEAD` (it reads committed state).
   6. Only with --push does it push; only with --push --auto-merge does it ask GitHub for auto-merge.
 
+Row files (BD-1061, docs/191): once main has docs/kanban/CUTOVER every kanban row is its own file. git merges them per
+file; a row file BOTH sides edited is merged with tools/kanban_merge_lib.py (same rule as section 3a of docs/166). A branch
+made BEFORE the cutover (still edits rows in the old table) has its row changes moved into row files by
+tools/kanban_migrate_pr.py `replay()`, automatically, in the same run.
+
 Allowlist for non-kanban conflicts (the exact rule): a file `docs/<name>.md` whose every conflict hunk is
 made only of markdown table rows (lines that start with `|`, no `|---|` separator lines), where each row has a
 unique first cell (its key) inside each side of the hunk, and for every key at most ONE side changed the row
@@ -48,6 +53,8 @@ sys.path.insert(0, str(TOOLS))
 import verify_kanban_merge as vkm  # noqa: E402  (row parsing and the post-commit check are shared, not copied)
 import kanban_merge_lib as kml  # noqa: E402  (merging two edits of one row, docs/166 section 3)
 import verify_no_conflict_markers as vncm  # noqa: E402  (refuse to commit leftover conflict markers)
+import kanban_lib as kl  # noqa: E402  (row files, BD-1061 / docs/191)
+import kanban_migrate_pr as kmp  # noqa: E402  (move a pre-cutover PR's row changes into row files)
 
 KANBAN = vkm.KANBAN
 REPO_SLUG = "Znypr/be-dino"
@@ -62,8 +69,9 @@ class GitError(RuntimeError):
     pass
 
 
-class NeedsHuman(Exception):
-    """A file cannot be resolved by the rules; message says why."""
+NeedsHuman = kmp.NeedsHuman  # one class for both modules: "a file cannot be resolved by the rules; message says why"
+NO_PYC = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")  # tools run inside the worktree must not leave __pycache__ folders in it
+ROW_FILE = re.compile(r"^docs/kanban/rows/BD-\d+\.md$")
 
 
 def git(cwd, *args, check=True):
@@ -113,6 +121,7 @@ class KanbanReport:
         self.warnings = []
         self.merged = []  # (row id, mode, notes): both sides edited the row and the two edits were MERGED
         self.pr_label = "the PR"
+        self.moved = None  # a kanban_migrate_pr.Replay when the PR's row changes were moved into row files
 
 
 def merge_both(out, k, base, main_line, pr_line, rep):
@@ -201,8 +210,10 @@ def dedupe_rows(text, main_rows_text, base_rows, rep):
 
 
 def title_warnings(final_text, main_rows, mb_rows):
+    """final_text: the old table text, or (row files) a dict id -> row line."""
     out = []
-    for rid, row in vkm.rows_of(final_text).items():
+    final = final_text if isinstance(final_text, dict) else vkm.rows_of(final_text)
+    for rid, row in final.items():
         if rid in main_rows and title_differs(row, main_rows[rid]):
             if rid not in mb_rows:
                 out.append("%s: main already has this id with a different title, so `verify_kanban_merge` will read "
@@ -241,6 +252,36 @@ def resolve_kanban_file(path, base_rows, main_text, swap=False, pr_label="the PR
     text = dedupe_rows(text, main_text, base_rows, rep)
     write_text(path, text, eol)
     return rep
+
+
+# ---------------------------------------------------------------- kanban row files (one file per task, BD-1061)
+
+def stage_text(wt, n, path):
+    """Text of a conflicted file at index stage n (1 base, 2 ours = HEAD, 3 theirs), or None if that stage is absent."""
+    rc, out, _ = git(wt, "show", ":%d:%s" % (n, path), check=False)
+    return out if rc == 0 else None
+
+
+def resolve_row_file(wt, path, rep, pr_label="the PR", swap=False):
+    """Both sides changed the same row file. Uses the same merge as the old table (tools/kanban_merge_lib.py): the main
+    side's text plus the PR's new outcome text. Normally stage 2 (HEAD) is the PR and stage 3 is main; swap=True for a
+    merge train (HEAD is the train = main's side). Raises NeedsHuman when one side deleted the file or both added it as
+    different tasks (an id collision)."""
+    base, ours, theirs = stage_text(wt, 1, path), stage_text(wt, 2, path), stage_text(wt, 3, path)
+    if ours is None or theirs is None:
+        raise NeedsHuman("one side deleted this row file and the other changed it")
+    main_s, pr_s = (ours, theirs) if swap else (theirs, ours)
+    first = lambda t: next((l.rstrip("\r") for l in t.split(chr(10)) if l.strip()), "")
+    main_line, pr_line, base_line = first(main_s), first(pr_s), (first(base) if base is not None else None)
+    rid = row_key(main_line) or row_key(pr_line) or path
+    if base_line is None and vkm.title(main_line) != vkm.title(pr_line):
+        raise NeedsHuman("%s was added on both sides with different titles: an id collision. Keep main's row and give the "
+                         "PR's row a new number (`python tools/next_bd_id.py`), then rename its file." % rid)
+    merged, mode, notes = kml.merge_row(base_line, main_line, pr_line, pr_label)
+    Path(wt, path).write_bytes((merged.rstrip() + "\n").encode("utf-8"))
+    rep.both_changed.append(rid)
+    rep.merged.append((rid, mode, notes))
+    return rid
 
 
 # ---------------------------------------------------------------- allowlist: markdown table rows, different rows
@@ -396,7 +437,7 @@ def run_tool(wt, name, *extra):
     if not script.exists():
         say("  %s: not in this tree, skipped" % name)
         return 0
-    p = subprocess.run([sys.executable, str(script), *extra], cwd=str(wt), capture_output=True)
+    p = subprocess.run([sys.executable, str(script), *extra], cwd=str(wt), capture_output=True, env=NO_PYC)
     out = (p.stdout + p.stderr).decode("utf-8", "replace").strip()
     tail = out.splitlines()[-12:]
     say("  %s: %s" % (name, "ok" if p.returncode == 0 else "FAILED (exit %d)" % p.returncode))
@@ -445,6 +486,14 @@ def check_markers(wt):
     return len(hits)
 
 
+def print_board(wt):
+    if os.path.exists(Path(wt) / "tools" / "board_summary.py"):
+        say("board counts after the merge:")
+        p = subprocess.run([sys.executable, str(Path(wt) / "tools" / "board_summary.py")], cwd=str(wt), capture_output=True, env=NO_PYC)
+        for l in p.stdout.decode("utf-8", "replace").splitlines():
+            say("  " + l)
+
+
 def commit_message(branch, rep):
     lines = ["Merge origin/main into %s" % branch, ""]
     if rep is not None:
@@ -455,6 +504,9 @@ def commit_message(branch, rep):
         if rep.merged:
             lines.append("Kanban: both sides edited %s; main's text kept and the PR's new text added."
                          % ", ".join(sorted({m[0] for m in rep.merged})))
+        if rep.moved is not None:
+            lines.append("Kanban cutover: moved this PR's row changes into docs/kanban/rows/ (new rows: %s; edited rows: %s)."
+                         % (", ".join(rep.moved.added) or "none", ", ".join(rep.moved.replaced + [m[0] for m in rep.moved.merged]) or "none"))
         if rep.deduped:
             lines.append("Kanban: dropped duplicate rows %s." % ", ".join(sorted(set(rep.deduped))))
         if rep.nonrow_hunks:
@@ -522,13 +574,27 @@ def main(argv=None):
         say("merge of %s: %s" % (remote_main, ("%d conflicted file(s)" % len(unmerged)) if unmerged else "clean"))
 
         rep, stuck, needs_render = None, [], False
+        label = ("PR #%s" % number) if number else "the PR"
+        cutover = kl.ref_has_cutover(wt, remote_main)  # main keeps one file per kanban row (docs/191)
+        migrate = cutover and not kl.ref_has_cutover(wt, head_ref)  # ... and this branch was made before that
+        if migrate:
+            say("main has the row files (docs/kanban/CUTOVER) and this branch does not: its row changes are moved over")
         for path in unmerged:
             stages = {l.split()[2] for l in git(wt, "ls-files", "-u", "--", path)[1].splitlines() if l.strip()}
             full = Path(wt) / path
             try:
+                if migrate and path == KANBAN:
+                    continue  # handled by kanban_migrate_pr.replay below
+                if ROW_FILE.match(path):
+                    rep = rep or KanbanReport()
+                    rep.pr_label = label
+                    rid = resolve_row_file(wt, path, rep, label)
+                    say("  %s: both sides edited %s, the two edits were merged" % (path, rid))
+                    git(wt, "add", "--", path)
+                    continue
                 if stages != {"1", "2", "3"}:
                     raise NeedsHuman("added/deleted on one side, not a plain edit conflict")
-                if path == KANBAN:
+                if path == KANBAN and not cutover:
                     base_rows = vkm.rows_of(git(wt, "show", "%s:%s" % (mb, KANBAN))[1])
                     main_text = git(wt, "show", "%s:%s" % (remote_main, KANBAN))[1]
                     rep = resolve_kanban_file(full, base_rows, main_text, pr_label=("PR #%s" % number) if number else "the PR")
@@ -537,7 +603,7 @@ def main(argv=None):
                     n = resolve_worklog_jsonl(wt, full)
                     say("  %s: union of both sides (append-only log), %d line(s) taken from the PR" % (path, n))
                     needs_render = True
-                elif path in APPEND_ONLY_DOCS:
+                elif path in APPEND_ONLY_DOCS or (path == KANBAN and cutover):  # the kanban page is text only after the cutover
                     n = resolve_append_only_doc(full)
                     say("  %s: append-only log, both sides added text: %d hunk(s) kept from both sides (main first)" % (path, n))
                 elif path.startswith("docs/catalog/"):
@@ -555,6 +621,16 @@ def main(argv=None):
                 git(wt, "add", "--", path)
             except NeedsHuman as e:
                 stuck.append((path, str(e)))
+        if migrate:
+            try:
+                moved = kmp.replay(wt, mb, head_ref, remote_main, label)
+                rep = rep or KanbanReport()
+                rep.pr_label, rep.moved = label, moved
+                rep.merged.extend(moved.merged)
+                for line in kmp.describe(moved):
+                    say(line)
+            except NeedsHuman as e:
+                stuck.append((KANBAN, str(e)))
         if stuck:
             say("")
             say("STOP: a human must resolve %d file(s) (the merge is left half done in the worktree):" % len(stuck))
@@ -578,7 +654,17 @@ def main(argv=None):
 
         # Kanban: dedupe and warn even when git merged it cleanly.
         kb = Path(wt) / KANBAN
-        if kb.exists():
+        if cutover:  # one file per row: git merged them; only report and warn
+            rep = rep or KanbanReport()
+            rep.warnings = title_warnings(dict(kl.read_rows(wt)), dict(kl.rows_at(wt, remote_main)), dict(kl.rows_at(wt, mb)))
+            say("kanban rows: %d row file(s) after the merge, %d row(s) edited on both sides and merged" % (
+                len(kl.read_rows(wt)), len(rep.merged)))
+            for k, mode, notes in rep.merged:
+                say(merged_line(k, mode, notes))
+            for w in rep.warnings:
+                say("  WARNING " + w)
+            print_board(wt)
+        elif kb.exists():
             main_text = git(wt, "show", "%s:%s" % (remote_main, KANBAN))[1]
             base_rows = vkm.rows_of(git(wt, "show", "%s:%s" % (mb, KANBAN))[1])
             if rep is None:
@@ -601,12 +687,7 @@ def main(argv=None):
                 say("  NOTE: PR-side non-row text dropped (main's side wins): " + " / ".join(l[:80] for l in block[:3]))
             for w in rep.warnings:
                 say("  WARNING " + w)
-            if os.path.exists(Path(wt) / "tools" / "board_summary.py"):
-                say("board counts after the merge:")
-                p = subprocess.run([sys.executable, str(Path(wt) / "tools" / "board_summary.py")], cwd=str(wt),
-                                   capture_output=True)
-                for l in p.stdout.decode("utf-8", "replace").splitlines():
-                    say("  " + l)
+            print_board(wt)
 
         say("checks before the commit:")
         failed = [n for n in ("verify_doc_ids.py", "verify_handbook.py") if run_tool(wt, n)]

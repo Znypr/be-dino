@@ -41,6 +41,7 @@ class Env:
         (self.dev / "tools").mkdir()
         if with_verifier:
             shutil.copy(TOOLS / "verify_kanban_merge.py", self.dev / "tools" / "verify_kanban_merge.py")
+            shutil.copy(TOOLS / "kanban_lib.py", self.dev / "tools" / "kanban_lib.py")  # the verifier imports it
 
     def restore_env(self):
         for k, v in self.old_env.items():
