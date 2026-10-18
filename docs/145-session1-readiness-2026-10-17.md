@@ -556,3 +556,7 @@ Label: **STUDIO EVIDENCE, desktop Studio, one player, unpublished copy, viewport
 | Bite between two real players, friend shield, team-up, 640 x 360, phone, sounds | NOT TESTED | one client only; no phone |
 
 Go / no-go: the five features are now seen working in Studio, one player. The two-player bite test and a phone pass are still open (BD-996 stays Review / test). New rows: BD-1000 to BD-1003.
+
+## Studio acceptance round 3, 2026-10-18: BLOCKED (BD-1015)
+
+Label: **STUDIO EVIDENCE, very small; no PASS or FAIL.** Appended; no history edited. Playtest build from `origin/main` `b14a52e4`, built, verified (`verify_release` passes, 40 keys), opened as `playtest-build3.rbxlx`; game viewport **1156 x 793**. The Studio mouse, keyboard and console tools and a server-side change of the secret chance were refused by the permission classifier and not retried, so the re-check of BD-1000 to BD-1003, the seven secret dinos and the 5-minute pace run (BD-575) were NOT done. Details, the refused calls and an unexplained pre-existing 55-egg run in the Play session: [evidence](evidence/2026-10-18-studio-acceptance-r3/README.md). New row: BD-1015.
