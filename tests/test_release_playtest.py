@@ -35,13 +35,19 @@ def slot(universe=222222222, place=333333333, kind="new"):
 
 
 class IdSlotTests(unittest.TestCase):
-    def test_committed_slot_is_well_formed_and_empty_until_the_owner_answers(self):
-        errors, _warnings, state = ids.check()
+    def test_committed_slot_is_the_newbuild_answer_of_2026_10_18(self):
+        errors, warnings, state = ids.check(require_filled=True)
         self.assertEqual(errors, [])
-        self.assertEqual(state, "empty")  # BD-004: when the owner answers, this test and docs/148 are updated with the slot
+        self.assertEqual(state, "filled")
+        committed = ids.load_slot()
+        self.assertEqual((committed["PlaytestUniverseId"], committed["PlaytestPlaceId"]), (ids.LEGACY_UNIVERSE_ID, ids.LEGACY_PLACE_ID))
+        self.assertEqual(committed["ExperienceKind"], "legacy")
+        self.assertIs(committed["ProductsConfirmedOffSale"], True)
+        self.assertTrue(any("OFF SALE" in w for w in warnings), warnings)
 
     def test_empty_slot_fails_the_release_gate(self):
-        errors, _ = ids.slot_problems(ids.load_slot(), CONFIG, require_filled=True)
+        empty = {"PlaytestUniverseId": None, "PlaytestPlaceId": None, "ExperienceKind": None, "AnsweredOn": None}
+        errors, _ = ids.slot_problems(empty, CONFIG, require_filled=True)
         self.assertTrue(any("BD-004 is not answered" in e for e in errors), errors)
 
     def test_partial_slot_always_fails(self):
@@ -88,6 +94,54 @@ class IdSlotTests(unittest.TestCase):
         errors, warnings = ids.slot_problems(slot(), filled_config(products=True))
         self.assertEqual(errors, [])
         self.assertTrue(any("inert" in w for w in warnings), warnings)
+
+    # ---- the optional off-sale confirmation (docs/182 s3, LEAD decision in docs/115): it must not weaken anything else ----
+    def legacy_slot(self, **extra):
+        return dict(slot(ids.LEGACY_UNIVERSE_ID, ids.LEGACY_PLACE_ID, kind="legacy"), **extra)
+
+    OFF_SALE = {"ProductsConfirmedOffSale": True, "ProductsOffSaleConfirmedOn": "2026-10-18"}
+
+    def legacy_config(self, **flags):
+        source = filled_config(ids.LEGACY_UNIVERSE_ID, ids.LEGACY_PLACE_ID, products=True)
+        for key, literal in flags.items():
+            source = with_value(source, key, literal)
+        return source
+
+    def test_off_sale_confirmation_turns_the_hard_stop_into_a_warning(self):
+        errors, warnings = ids.slot_problems(self.legacy_slot(**self.OFF_SALE), self.legacy_config(), require_filled=True)
+        self.assertEqual(errors, [])
+        self.assertTrue(any("OFF SALE" in w and "3717200374" not in w for w in warnings), warnings)
+
+    def test_without_the_field_the_hard_stop_is_unchanged(self):
+        errors, _ = ids.slot_problems(self.legacy_slot(), self.legacy_config(), require_filled=True)
+        self.assertTrue(any(e.startswith("HARD STOP") for e in errors), errors)
+
+    def test_half_a_confirmation_is_not_a_confirmation(self):
+        for extra in ({"ProductsConfirmedOffSale": True}, {"ProductsOffSaleConfirmedOn": "2026-10-18"},
+                      {"ProductsConfirmedOffSale": False, "ProductsOffSaleConfirmedOn": "2026-10-18"},
+                      {"ProductsConfirmedOffSale": "true", "ProductsOffSaleConfirmedOn": "2026-10-18"},
+                      {"ProductsConfirmedOffSale": 1, "ProductsOffSaleConfirmedOn": "2026-10-18"},
+                      {"ProductsConfirmedOffSale": True, "ProductsOffSaleConfirmedOn": "yesterday"}):
+            errors, _ = ids.slot_problems(self.legacy_slot(**extra), self.legacy_config(), require_filled=True)
+            self.assertTrue(errors, extra)
+            self.assertTrue(any(e.startswith("HARD STOP") for e in errors), (extra, errors))
+
+    def test_confirmation_never_passes_while_a_paid_line_is_on(self):
+        for flag in ("CrystalPacksEnabled", "PaidRandomItemsEnabled"):
+            errors, _ = ids.slot_problems(self.legacy_slot(**self.OFF_SALE), self.legacy_config(**{flag: "true"}), require_filled=True)
+            self.assertTrue(any("HARD STOP" in e and flag in e for e in errors), (flag, errors))
+        stripped = chr(10).join(l for l in self.legacy_config().splitlines() if "PaidRandomItemsEnabled =" not in l)
+        errors, _ = ids.slot_problems(self.legacy_slot(**self.OFF_SALE), stripped, require_filled=True)
+        self.assertTrue(any("PaidRandomItemsEnabled" in e for e in errors), errors)  # a missing line is not 'false'
+
+    def test_confirmation_does_not_help_a_new_experience_or_a_mismatch(self):
+        errors, _ = ids.slot_problems(dict(slot(), **self.OFF_SALE), filled_config(products=True))
+        self.assertTrue(any("only apply to ExperienceKind 'legacy'" in e for e in errors), errors)
+        errors, _ = ids.slot_problems(dict(slot(ids.LEGACY_UNIVERSE_ID, ids.LEGACY_PLACE_ID, kind="new"), **self.OFF_SALE),
+                                      self.legacy_config(), require_filled=True)
+        self.assertTrue(errors, errors)  # contradiction 'new' + legacy ids still fails
+        errors, _ = ids.slot_problems(self.legacy_slot(**self.OFF_SALE), filled_config(universe=1, place=2, products=True))
+        self.assertTrue(any(e.startswith("Config.") for e in errors), errors)  # ids still have to match Config
 
     def test_developer_product_ids_are_read_from_config(self):
         self.assertEqual(len(ids.developer_product_ids(CONFIG)), 6)
@@ -146,8 +200,12 @@ class GateTests(unittest.TestCase):
         self.assertEqual(rp.classify_runs([{"status": "completed", "conclusion": "failure"}])[0], "failure")
 
     def test_evaluate_gates_blocks_on_empty_ids_even_when_everything_else_is_fine(self):
-        with mock.patch.object(rp, "working_tree_problems", return_value=[]), mock.patch.object(rp, "on_main_problem", return_value=None):
-            gates = rp.evaluate_gates(skip_ci_check=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = Path(tmp) / "release_ids.json"
+            empty.write_text(json.dumps({"PlaytestUniverseId": None, "PlaytestPlaceId": None, "ExperienceKind": None, "AnsweredOn": None}),
+                             encoding="utf-8")
+            with mock.patch.object(rp, "working_tree_problems", return_value=[]), mock.patch.object(rp, "on_main_problem", return_value=None):
+                gates = rp.evaluate_gates(skip_ci_check=True, slot_path=empty)
         blocking = [g.name for g in gates if g.blocks]
         self.assertEqual(len(blocking), 1)
         self.assertIn("BD-004", blocking[0])

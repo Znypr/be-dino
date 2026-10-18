@@ -79,6 +79,15 @@ with `PlaytestUniverseId = 0: must be a positive integer Roblox ID (TODO(BD-004)
 The legacy private test experience from [42](42-live-multiplayer-test.md) (universe
 10769812255 / place 111259822927673) is **not** the Milestone 1 place.
 
+> **Update 2026-10-18 (BD-1030, [115](115-decisions-log.md)):** the owner chose that existing experience, **newbuild**
+> (universe 10769812255 / place 111259822927673), as the friends playtest experience ([182](182-publish-pack-friends-playtest.md)),
+> so the sentence above no longer blocks anything. `tools/verify_release_ids.py` still classes these ids as "legacy"
+> (`ExperienceKind` "legacy" in `tools/release_ids.json`) and accepts the six crystal-pack product ids still listed in
+> Config only because the owner confirmed all six are OFF SALE (`ProductsConfirmedOffSale`, `ProductsOffSaleConfirmedOn` 2026-10-18),
+> and only while `CrystalPacksEnabled` and `PaidRandomItemsEnabled` stay false. The fresh-experience steps below (new DataStore
+> scope, "not the legacy experience") do not apply to newbuild: it is an existing experience, so its data stores are not fresh, and the playtest store name
+> (`BeDino_Playtest_M1_v1`) is what keeps friends' data apart from Build 020 saves (docs/182 s2d).
+
 DataStores are scoped per experience, so the new experience starts empty whatever the
 store name is. The playtest store name (`BeDino_Playtest_M1_v1`) gives a reset lever
 *within* that experience (§8). Leaderboard OrderedDataStores derive their names from
