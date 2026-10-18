@@ -76,6 +76,7 @@ end
 -- ===== instances =====
 local hierarchy = {
     GuiObject = {Frame = true, TextLabel = true, TextButton = true, ScrollingFrame = true, ImageLabel = true, ViewportFrame = true},
+    GuiButton = {TextButton = true, ImageButton = true},
     BasePart = {Part = true, MeshPart = true},
 }
 local Inst = {}
@@ -109,6 +110,7 @@ local function new(class, name, parent, props)
 end
 function methods.IsA(self, cls) return self.ClassName == cls or (hierarchy[cls] and hierarchy[cls][self.ClassName]) == true or cls == "Instance" end
 function methods.GetChildren(self) return table.clone(rawget(self, "kids")) end
+function methods.IsDescendantOf(self, ancestor) local cur = rawget(self, "props").Parent while cur do if cur == ancestor then return true end cur = rawget(cur, "props").Parent end return false end
 local function walk(i, out) for _, c in rawget(i, "kids") do table.insert(out, c) walk(c, out) end return out end
 function methods.GetDescendants(self) return walk(self, {}) end
 function methods.FindFirstChild(self, name, rec)
@@ -143,6 +145,25 @@ function methods.WorldToViewportPoint(self, v)
 end
 function methods.GetServerTimeNow() return 5000 + now end
 function methods.GetGuiInset() return Vector2.new(0, 36), Vector2.zero end
+-- BD-1019: the engine's hit test. Visible GuiObjects under (x, y), topmost first (higher ZIndex wins, a later child wins a tie). The sim keeps every
+-- menu element in one flat list under the scrim, so ZIndex alone orders them (the real Sibling rules are tested in tools/close_paths_smoke.luau).
+function methods.GetGuiObjectsAtPosition(self, x, y)
+    local list = {}
+    for _, d in walk(self, {}) do
+        if d:IsA("GuiObject") then
+            local vis, cur = true, d
+            while cur and cur ~= self do
+                if cur:IsA("GuiObject") and not cur.Visible then vis = false end
+                if cur.ClassName == "ScreenGui" and not cur.Enabled then vis = false end
+                cur = cur.Parent
+            end
+            local p, s = d.AbsolutePosition, d.AbsoluteSize
+            if vis and x >= p.X and x < p.X + s.X and y >= p.Y and y < p.Y + s.Y then table.insert(list, d) end
+        end
+    end
+    table.sort(list, function(a, b) return a.ZIndex > b.ZIndex end)
+    return list
+end
 
 -- ===== services =====
 local logHistory = {}
@@ -388,7 +409,10 @@ local function hatchScreen()
     modal = "hatch"
     scrim.Visible = true scrim:ClearAllChildren()
     mtext("An egg is hatching...", 220, 90, 700, 60)
-    local catcher = mbtn("", 0, 0, 1280, 684, "HatchTapCatcher", nil)
+    mbtn("X", 990, 90, 80, 76, "CloseX", closeModal) -- the menu's X (BD-1019)
+    -- the real catcher covers the card body only (below the header strip, so X stays reachable); scenario xcovered puts the old full-screen one back
+    local catcher
+    if SCENARIO == "xcovered" then catcher = mbtn("", 0, 0, 1280, 684, "HatchTapCatcher", nil) else catcher = mbtn("", 210, 170, 860, 430, "HatchTapCatcher", nil) end
     catcher.ZIndex = 46
     local hint = mtext("Tap!", 400, 450, 400, 40, "TapHint", {Visible = false, ZIndex = 47})
     if eggs > 0 then local sk = mbtn("Skip the rest", 1090, 620, 176, 48, "SkipAll", function() end) sk.ZIndex = 47 end
@@ -402,6 +426,7 @@ end
 function open(name)
     modal = name
     scrim.Visible = true scrim:ClearAllChildren()
+    mbtn("X", 990, 90, 80, 76, "CloseX", closeModal) -- the menu's X (BD-1019)
     player:SetAttribute("MenuOpen", true)
     if name == "tutorial" then
         mtext("Welcome to Be Dino!", 220, 90, 700, 60)
