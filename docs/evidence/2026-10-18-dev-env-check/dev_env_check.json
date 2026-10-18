@@ -1,0 +1,198 @@
+{
+  "generated": "2026-10-18T03:09:50+02:00",
+  "summary": {
+    "PASS": 22,
+    "FAIL": 1,
+    "WARN": 3,
+    "INFO": 5,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "area": "Blender",
+      "name": "installed",
+      "status": "PASS",
+      "detail": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe"
+    },
+    {
+      "area": "Blender",
+      "name": "running",
+      "status": "PASS",
+      "detail": "2 processes"
+    },
+    {
+      "area": "Blender",
+      "name": "MCP add-on file",
+      "status": "PASS",
+      "detail": "blender_mcp.py is installed"
+    },
+    {
+      "area": "Blender",
+      "name": "MCP port 9876",
+      "status": "PASS",
+      "detail": "add-on answered ping (pong)"
+    },
+    {
+      "area": "Studio",
+      "name": "running",
+      "status": "PASS",
+      "detail": "1 process"
+    },
+    {
+      "area": "Studio",
+      "name": "window",
+      "status": "FAIL",
+      "detail": "Roblox Studio  MINIMISED (Studio draws 0 frames)"
+    },
+    {
+      "area": "Studio",
+      "name": "MCP plugin",
+      "status": "PASS",
+      "detail": "3 StudioMCP processes, port 13469 accepts a connection (connect only)"
+    },
+    {
+      "area": "Studio",
+      "name": "keyboard/mouse idle",
+      "status": "INFO",
+      "detail": "0 s"
+    },
+    {
+      "area": "Studio",
+      "name": "PC locked",
+      "status": "PASS",
+      "detail": "not locked"
+    },
+    {
+      "area": "Studio",
+      "name": "displays asleep",
+      "status": "PASS",
+      "detail": "Windows never turns the displays off (setting is 0)"
+    },
+    {
+      "area": "Browsers",
+      "name": "chrome installed",
+      "status": "PASS",
+      "detail": "yes"
+    },
+    {
+      "area": "Browsers",
+      "name": "chrome running",
+      "status": "INFO",
+      "detail": "not running"
+    },
+    {
+      "area": "Browsers",
+      "name": "chrome keep running in background",
+      "status": "INFO",
+      "detail": "off: closing the last window quits the browser"
+    },
+    {
+      "area": "Browsers",
+      "name": "chrome Claude extension",
+      "status": "INFO",
+      "detail": "not installed"
+    },
+    {
+      "area": "Browsers",
+      "name": "edge installed",
+      "status": "PASS",
+      "detail": "yes"
+    },
+    {
+      "area": "Browsers",
+      "name": "edge running",
+      "status": "PASS",
+      "detail": "14 processes"
+    },
+    {
+      "area": "Browsers",
+      "name": "edge keep running in background",
+      "status": "PASS",
+      "detail": "on"
+    },
+    {
+      "area": "Browsers",
+      "name": "edge Claude extension",
+      "status": "PASS",
+      "detail": "installed (profile folder: Profile 1)"
+    },
+    {
+      "area": "Tools",
+      "name": "ffmpeg",
+      "status": "PASS",
+      "detail": "on PATH"
+    },
+    {
+      "area": "Tools",
+      "name": "git",
+      "status": "PASS",
+      "detail": "git version 2.46.1.windows.1"
+    },
+    {
+      "area": "Tools",
+      "name": "gh logged in",
+      "status": "PASS",
+      "detail": "yes"
+    },
+    {
+      "area": "Tools",
+      "name": "python",
+      "status": "PASS",
+      "detail": "3.14.0"
+    },
+    {
+      "area": "Tools",
+      "name": "luau runner",
+      "status": "PASS",
+      "detail": "~/AppData/Local/Temp/bd057/luau/luau.exe"
+    },
+    {
+      "area": "Repo",
+      "name": "worktrees",
+      "status": "WARN",
+      "detail": "460 registered (many: ask the lead to clean up)"
+    },
+    {
+      "area": "Repo",
+      "name": "stale worktrees",
+      "status": "WARN",
+      "detail": "0 of 260 under .claude/worktrees had no git activity for 3+ days (nothing is deleted by this tool); 5 folders there are not registered"
+    },
+    {
+      "area": "Repo",
+      "name": "disk free",
+      "status": "PASS",
+      "detail": "29 GB free on the repo drive"
+    },
+    {
+      "area": "Power",
+      "name": "power plan",
+      "status": "INFO",
+      "detail": "always on"
+    },
+    {
+      "area": "Power",
+      "name": "monitor-timeout-ac",
+      "status": "PASS",
+      "detail": "now never; docs/158 recommends never"
+    },
+    {
+      "area": "Power",
+      "name": "standby-timeout-ac",
+      "status": "PASS",
+      "detail": "now never; docs/158 recommends never"
+    },
+    {
+      "area": "Power",
+      "name": "hibernate-timeout-ac",
+      "status": "PASS",
+      "detail": "now never; docs/158 recommends never"
+    },
+    {
+      "area": "Power",
+      "name": "disk-timeout-ac",
+      "status": "WARN",
+      "detail": "now 20 min 0 s; docs/158 recommends never (how to set: docs/158 section 3)"
+    }
+  ]
+}

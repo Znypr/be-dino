@@ -23,6 +23,7 @@
 | Rolling back a publish, profile compatibility with Build 020, DataStore restore | [111-rollback-drill.md](111-rollback-drill.md) | Offline evidence only; real drill is owner-run (BD-320) |
 | Hatch v2 (paint-bucket reveal on a 3D egg, BD-397): beat sheet, asset prompts, bake design, flag and fallbacks | [118-hatch-redesign.md](118-hatch-redesign.md) | Behind `Config.HatchV2` (false); v1 ([86](86-hatch-sequence.md)) ships |
 | Every art item the owner still has to make or upload (prompts, sizes, binding) | [109-owner-art-prompt-pack.md](109-owner-art-prompt-pack.md) | Current deduplicated checklist; tracked by BD-336 |
+| Checking player text is short and plain; comparing two screenshots | [162-kid-text-lint-and-screenshot-diff.md](162-kid-text-lint-and-screenshot-diff.md) | Offline tools `tools/lint_kid_text.py` (CI, baseline mode) and `tools/compare_screenshots.py` (on demand); BD-655, BD-656 |
 | Artwork direction | [39-egg-appearance-shared-vision.md](39-egg-appearance-shared-vision.md), [32-artwork-guide-and-todo.md](32-artwork-guide-and-todo.md) | Aspirational asset quality and approved appearance, not automatic uploaded/runtime art |
 | Shops/levels/condition mechanics | [36-crystal-shops-egg-genetics-and-progression.md](36-crystal-shops-egg-genetics-and-progression.md), [41-egg-outcomes-contract.md](41-egg-outcomes-contract.md) | Owner design vs Build 020 configuration. New condition starting odds **50/30/15/4.5/0.5** remain BD-045 |
 | Security, release and paid-random restrictions | [43-player-access-and-paid-random-policy.md](43-player-access-and-paid-random-policy.md), [44-main-integration-checklist.md](44-main-integration-checklist.md), [06-roadmap-and-testing.md](06-roadmap-and-testing.md) | Keep paid flags disabled until regulatory/runtime acceptance |
@@ -60,6 +61,10 @@ offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
 ## Where Studio renders and how the phone is tested (BD-635)
 
 [Virtual display and phone emulator](158-virtual-display-and-phone-emulator.md): research and owner-run steps for a screen that never sleeps (software virtual monitor, dummy plug as fallback), the free power-setting fix, a 10-minute acceptance test for the lead, and what the Studio Device Simulator, an Android emulator and a cheap real phone can and cannot prove. Nothing is installed yet; install steps are owner actions.
+
+## Where git worktrees may live and how they are cleaned (BD-660)
+
+[Worktree hygiene](170-worktree-hygiene.md): worktrees only in `.claude/worktrees` (or the session scratchpad), a helper removes its own after its PR merged, the lead runs `python tools/worktree_hygiene.py clean --go` weekly. The same document lists the 13 worktrees left because of unsaved files, for the owner to decide.
 
 ## Historical documents: keep for traceability, not as active instructions
 
