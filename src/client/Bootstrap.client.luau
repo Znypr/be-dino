@@ -238,7 +238,7 @@ local function pumpToasts()
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight>0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
     player:SetAttribute("MenuOpen",shade.Visible) -- BD-328: WeatherVisuals holds its big title card while a menu is open
-    -- BD-304: with a menu open the toast rides the very top, clear of the menu title. BD-378: and clear of the Crystals / XP plates (WalletRect, set by scales()).
+    -- BD-304/378: with a menu open the toast rides the top, clear of the title and the wallet plates (WalletRect).
     local wallet=toastLayer:GetAttribute("WalletRect") :: Rect?
     local plates=if wallet then {x=wallet.Min.X,y=wallet.Min.Y,w=wallet.Width,h=wallet.Height} else nil
     local slide,topY=TouchLayout.toastPlacement(gui.AbsoluteSize.X,toastScale.Scale,plates,shade.Visible,shift)
@@ -564,7 +564,7 @@ render=function(name: string)
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
             local safeLine=require(Shared.OddsCopy).safeEggsLine(require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting")))
             if safeLine then label(body,safeLine,0,cardsY,824,30,20,C.gold) end -- BD-372/365: the safe-first-eggs note, only while true
-            -- BD-394: the owner's Blender stage (jungle backdrop + condition eggs) when uploaded (ConditionStageAssetIds); else the live egg tiles, bigger.
+            -- BD-394: the Blender stage when uploaded (ConditionStageAssetIds); else the live egg tiles.
             local staged=require(script.Parent.ConditionStage).background(body,0,cardsY+62,824,144)
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
@@ -703,7 +703,7 @@ render=function(name: string)
             label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
         end
         for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end
-        -- BD-606 (SS9): one honest line about the secret dino in FREE eggs, only while secrets can really drop (flag on and a model ready); never in the upgrade odds
+        -- BD-606: a line about the secret dino in FREE eggs, only while one can drop
         if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do label(list,note,10,lineY,790,28,19) lineY+=32 end end
         list.CanvasSize=UDim2.fromOffset(0,lineY)
         button(body,"MORE DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end).TextSize=20
@@ -814,13 +814,13 @@ render=function(name: string)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
         end
-        label(scroller,"Rarer potions show up less often.",0,284,824,22,15,C.gold)
-        label(scroller,"Your potions (tap to use)",0,310,824,24,18,C.gold)
+        label(scroller,"Rarer potions show up less often.",0,278,824,20,15,C.gold)
+        label(scroller,"Your potions (tap to use)",0,298,824,22,18,C.gold)
         local slot=0
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned>0 then
-                local x=(slot%3)*276 local y=338+math.floor(slot/3)*50
+                local x=(slot%3)*276 local y=322+math.floor(slot/3)*50
                 slot+=1
                 local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,44,C.purple,function()
                     potionChoice.id=item.id
@@ -835,8 +835,8 @@ render=function(name: string)
                 end
             end
         end
-        if slot==0 then label(scroller,"Buy a potion above to use it",0,338,824,32,18) end
-        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*50+8)
+        if slot==0 then label(scroller,"Buy a potion above to use it",0,322,824,32,18) end
+        scroller.CanvasSize=UDim2.fromOffset(0,322+math.max(1,math.ceil(slot/3))*50+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
         local replacing=name=="potionReplace"
@@ -1245,7 +1245,7 @@ updateNavigation=function()
     end
 end
 updateNavigation()
-require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=function(name) if name=="auras" then require(script.Parent.ShopTiles).enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) end open(name) end,openFusion=openFusion,notify=notify,close=close}) -- BD-288: no-op while Config.CaveHub is false
+require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=function(name) if name=="auras" then require(script.Parent.ShopTiles).enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) end open(name) end,openFusion=openFusion,notify=notify,close=close,current=function() return if shade.Visible then active else "" end}) -- BD-288: no-op while Config.CaveHub is false
 require(script.Parent.FtueRail).attach(rail,navigationButtons) -- BD-368: first run: only POTIONS, SETTINGS and a MENU chip until the first egg
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
@@ -1659,7 +1659,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
         task.defer(function() open("hatch") end)
     end
 end)
--- docs/133 demo hook (client attribute, set only by the dev-only trailer director sets DemoStartHatch to open the first waiting egg exactly like OPEN on the Eggs screen.
+-- docs/133 demo hook: DemoStartHatch opens the first waiting egg like OPEN.
 do -- same effect as pressing OPEN: nothing is granted here, so no flag is needed
     player:GetAttributeChangedSignal("DemoStartHatch"):Connect(function()
         if player:GetAttribute("DemoStartHatch")~=true or hatchPending then return end
@@ -1737,7 +1737,9 @@ Input.InputBegan:Connect(function(input,processed)
     if processed then return end
     if (input.KeyCode==Enum.KeyCode.E or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then requestLeap()
     elseif (input.KeyCode==Enum.KeyCode.Escape or input.KeyCode==Enum.KeyCode.ButtonB) and shade.Visible then close()
-    elseif input.KeyCode==Enum.KeyCode.C then open("collection")
-    elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
+    elseif input.KeyCode==Enum.KeyCode.C or input.KeyCode==Enum.KeyCode.B then
+        local want=if input.KeyCode==Enum.KeyCode.C then "collection" else "eggs"
+        if require(Shared.ModalCloseRules).keyAction(if shade.Visible then active else "",want)=="close" then close() else open(want) end -- BD-1074: key twice = closed
+    end
 end)
 end mountHud() end

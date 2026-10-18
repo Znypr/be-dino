@@ -1037,4 +1037,11 @@ end
 
 function FusionMenu.isOpen(): boolean return state.open end
 
+-- BD-1074: the open key (G at the Fusion station) pressed again closes the menu, like X, but never while it is saving or showing the wheel.
+function FusionMenu.closeFromKey(): boolean
+    if not state.open or not CloseRules.fusionOutsideCloses(state.mode) then return false end
+    FusionMenu.close()
+    return true
+end
+
 return FusionMenu
