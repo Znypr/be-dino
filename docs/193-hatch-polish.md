@@ -16,7 +16,8 @@ Written 2026-10-18. Label: **CURRENT BUILD** after this change (offline proof pl
 
 * **Paint bucket art is a PLACEHOLDER.** It is built from UI shapes in the game's style (docs/72 allows that only as a marked placeholder). The final `paint_bucket` icon (docs/83 item 31, `resources/ui/v2/icons/paint-bucket-v1.png`) is still **Missing** in the catalogue; when it is uploaded and bound the shapes switch off by themselves.
 * **Rainbow sheen texture** is still **Missing** for a really good look: the `rainbowStrip` slot (docs/120) is empty. This change makes the best use of the effect textures that exist.
-* The egg zoom (1.65) and fill (0.4254) come from the Studio measure in picture 246; the Studio pictures of this change confirm or correct them (see the evidence README).
+* The egg zoom (1.42) and fill (0.497) were measured in Studio on this change (3 to 4 percent difference between the flat and the 3D egg; see the evidence README). The first guess from the QA pictures (1.65) made the 3D egg 16 percent too big.
+* Studio pictures: `docs/evidence/2026-10-18-hatch-polish/` (numbers 280 to 293 in the review folder). A real Rainbow egg appeared and shows the rainbow rings; an Astra egg did not appear.
 * Other places that still use their own pill-shaped tags (shop rarity tags, Dino Index tags, fusion tags) are not converted yet: follow-up row.
 * A secret dinosaur does not show a stop tag (the hatch result does not carry the secret flag); Shiny, BIG, event, Rainbow and Astra do.
 * Not tested: phone, gamepad, Astra egg.
