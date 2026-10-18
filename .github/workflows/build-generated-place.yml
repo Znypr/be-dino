@@ -31,6 +31,8 @@ jobs:
         run: python tools/verify_release_ids.py
       - name: Handbook checks (docs/114 UI floors, sound cap, palette, PR template; BD-408)
         run: python tools/verify_handbook.py
+      - name: Kid text lint, baseline mode (fails only on NEW hard-to-read player text; BD-655, docs/162)
+        run: python tools/lint_kid_text.py --baseline
       - name: Kanban merge safety (duplicate BD ids, stale rows put back; PRs only)
         if: github.event_name == 'pull_request'
         run: |

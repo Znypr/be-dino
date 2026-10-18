@@ -1,0 +1,23 @@
+{
+  "about": "Texts the kid-text linter (tools/lint_kid_text.py, docs/162) must leave alone. Every entry needs a reason a non-programmer can read. 'file' may use * wildcards, 'rule' may be *, 'text' is the exact string (leave it out for every string in the file).",
+  "entries": [
+    {
+      "file": "src/client/Bootstrap.client.luau",
+      "rule": "*",
+      "text": "STUDIO PREVIEW • progress not saved • test currency",
+      "reason": "Only shown inside Roblox Studio while testing. Players of the real game never see this banner."
+    },
+    {
+      "file": "src/client/Bootstrap.client.luau",
+      "rule": "*",
+      "text": "STUDIO PREVIEW: UNSAVED",
+      "reason": "Only shown inside Roblox Studio while testing. Players of the real game never see this banner."
+    },
+    {
+      "file": "src/client/Bootstrap.client.luau",
+      "rule": "TECH_PUNCT",
+      "text": "LEAP [E]",
+      "reason": "The letter in brackets shows which key to press. Kids read it as a key picture; the owner has not asked for a change."
+    }
+  ]
+}
