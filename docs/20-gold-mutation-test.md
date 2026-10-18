@@ -1,5 +1,7 @@
 # Build 010: Gold mutation test
 
+> **HISTORICAL (BD-617, 2026-10-18):** this Build 010 test covers the 50-copy Gold mutation, which no longer exists in the game. Fusion is now 6 Base to Gold, 3 Gold to Emerald, 2 Emerald to Diamond ([90](90-fusion-ladder-v2.md)).
+
 Build 010 validates BD-014. Use a fresh private test experience because the three test setup buttons intentionally overwrite Compy base/Gold counts.
 
 ## Implemented

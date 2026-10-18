@@ -1,0 +1,13 @@
+Action "smokeDense_volAction" in fx_smoke_v1.blend (Blender 5.1.2)
+Contact sheet: Blender Workbench renders, side view, 8 frames
+Picture: docs\evidence\2026-10-18-animation-and-model-checks\animation\real_files\fx_smoke_v1_strip.png
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  animation found  CHECK  the action "smokeDense_volAction" has 99 curve(s) but none move a bone or an object (they change: nodes["Math"].inputs[1].default_value, nodes["Math.001"].inputs[1].default_value, nodes["Math.003"].inputs[1].default_value), so there is no motion to measure here
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  animation found  bone or object motion to judge
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.

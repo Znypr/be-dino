@@ -105,15 +105,14 @@ COMMON_RULES = [
     _flag_off("ArtTestHarnessEnabled", "art preview harness"),
     _flag_off("QaOverlayEnabled", "BD-085 owner phone QA overlay (docs/127); flipped locally for a measurement build, never committed"),
     _flag_off("DemoDirectorEnabled", "trailer clip director, Studio-only demo tool (docs/133)"),
-    _flag_off("HatchV2", "BD-397 v2 hatch; off in every committed build until the owner assets and docs/118 evidence are approved"),
+    _flag_off("HatchV2", "BD-397 v2 hatch; off in every committed build (also the playtest, docs/157): the paint-bucket model is a PLACEHOLDER and the docs/118 owner evidence is missing"),
     _flag_off("HatchV2Preview", "docs/118 s9 Studio-only preview toggle; the owner flips it locally, never committed"),
     _flag_off("DuplicateSettlementProbe", "historical settlement probe"),
-    _flag_off("ObjectivesEnabled", "BD-072/073 mini objectives (docs/66): server rules only, no UI (BD-075) or event hooks (BD-074) yet; PROVISIONAL rewards; owner flips it after Studio evidence"),
-    _flag_off("SecretSpeciesEnabled", "BD-604/BD-228 secret silly creatures (docs/149, docs/115 SS1..SS6): roll, lazy collection entries and Index cards; PROVISIONAL 0.5% chance and model slots still empty; owner flips it after models and Studio evidence"),
-    _flag_off("GiftingEnabled", "BD-451/BD-453 Robux gifting (docs/134 s12); enabling needs the owner's explicit go-ahead and the go-live review"),
-    _flag_off("AdminGiftsEnabled", "BD-451/BD-452 free admin gifts (docs/134); owner flips it for the first live test of the gift inbox"),
-    _flag_off("GiftClaimEnabled", "BD-451 gift claim path (Gifts DataStore inbox -> profile); required by both gift senders, owner go-ahead only"),
-    _flag_off("DinoSkinsEnabled", "BD-456 dino skins data model + equip (docs/137); no species has a skin model yet and the owner decides when skins go on"),
+    _flag_off("SecretSpeciesEnabled", "BD-604/BD-228 secret silly creatures (docs/149, docs/115 SS1..SS6): roll, lazy collection entries and Index cards; PROVISIONAL 0.5% chance; all seven model slots are empty so nothing could hatch (the playtest keeps it off too, docs/157); owner flips it after models and Studio evidence"),
+    _flag_off("GiftingEnabled", "BD-451/BD-453 Robux gifting (docs/134 s12); enabling needs the owner's explicit go-ahead and the go-live review; the Robux sender is not built (the playtest keeps it off, docs/157)"),
+    _flag_off("AdminGiftsEnabled", "BD-451/BD-452 free admin gifts (docs/134); owner flips it for the first live test of the gift inbox; an admin switch, off in the playtest too (docs/157)"),
+    _flag_off("GiftClaimEnabled", "BD-451 gift claim path (Gifts DataStore inbox -> profile); required by both gift senders, owner go-ahead only; with both senders off it would only poll the Gifts store, so the playtest keeps it off (docs/157)"),
+    _flag_off("DinoSkinsEnabled", "BD-456 dino skins data model + equip (docs/137); no species has a skin model yet, so the playtest keeps it off too (docs/157); the owner decides when skins go on"),
     Rule("ProfileDataStoreName", "check", predicate=_store_name, reason="DataStore name limits"),
     Rule("PlaytestUniverseId", "check", predicate=_id_or_zero, reason="BD-004 record"),
     Rule("PlaytestPlaceId", "check", predicate=_id_or_zero, reason="BD-004 record"),
@@ -128,6 +127,8 @@ STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled", "
 PROFILES: dict[str, list[Rule]] = {
     "default": COMMON_RULES + [
         Rule("ReleaseProfile", "require", "development", reason="default build is a development build"),
+        _flag_off("ObjectivesEnabled", "BD-072..077 mini objectives (docs/66, docs/157): only the playtest profile enables it; PROVISIONAL rewards"),
+        _flag_off("FastTravelPerk", "BD-391/405 fast travel crystal perk (docs/157): only the playtest profile enables it; needs CaveHub"),
         _flag_off("IdentityPersistentEnabled", "BD-064 persistent identities; only the playtest profile enables it"),
         _flag_off("IdentityFusionPreviewEnabled", "BD-057/BD-064 fusion; only the playtest profile enables it"),
         _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics (docs/121); phase 2 shop wiring stays off until owner Studio check"),
@@ -164,12 +165,18 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("ClassMovementEnabled", "set", True, reason="BD-423 class feel (glide, dash, speed) for friends playtests, no combat needed"),
         Rule("CaveHub", "set", True, reason="owner 2026-10-16: the cave hub is in the first friends playtest (docs/125)"),
         Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: world v2, 1 part per MeshPart prop, total under 8,000 (docs/68)"),
-        # docs/145 s7: the playtest must not silently ship these. They stay off in source (default profile requires the first
-        # three too); requiring them here means a local edit before a playtest build fails the build, not only CI's default one.
-        _flag_off("CombatEnabled", "BD-243 HP combat stays off in the friends playtest: instant bigger-eats-smaller (docs/145)"),
-        _flag_off("SpecialFoodsEnabled", "BD-207 rare special foods stay off in the friends playtest (food alone must progress)"),
-        _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics stay off in the friends playtest (docs/121)"),
-        _flag_off("FastTravelPerk", "BD-391/405 Fast travel perk is not in session 1: the playtest ships it false, rail travel is free (docs/145 s7)"),
+        # docs/157 (OWNER DIRECTIVE 2026-10-18: "always use our newest features in testbuilds including fusion, food models, dino models,
+        # vegetation, map, etc"): the TEST/PLAYTEST profile turns the built player-facing features on. The default profile (which mirrors
+        # Build 020) keeps requiring every one of them false. The paid line, the test/QA/demo switches and the flags whose final art is
+        # still missing stay required-false below, each with its reason. One line per flag so a revert is a one-line change.
+        Rule("ObjectivesEnabled", "set", True, reason="BD-072..077 mini objectives panel and hooks (docs/157); BD-625 batch rides the lease renew; PROVISIONAL rewards"),
+        Rule("CombatEnabled", "set", True, reason="BD-243..252 HP combat with bite, health bars and NPC predators (docs/157); offline suites pass; phone/2-player test is exactly what the test build is for"),
+        Rule("SpecialFoodsEnabled", "set", True, reason="BD-207 rare special foods (docs/157); PROVISIONAL points; works with FoodArtMode Kit"),
+        Rule("PerDinoCosmeticsEnabled", "set", True, reason="BD-059 per-dino auras/trails with the fusion loss notice (docs/121, docs/157); fresh playtest store has no legacy purchases to migrate"),
+        Rule("FastTravelPerk", "set", True, reason="BD-391/405 fast travel as a crystal perk (owner decision D22, docs/115; price PROVISIONAL, no Robux); needs CaveHub, which the playtest sets"),
+        _flag_off("FoodPickupAtMouth", "docs/115 MR6 + BD-527: eating at the mouth changes the egg pace (+18..37 percent); the owner said keep the pacing until a real LastRunFood log exists (docs/157)"),
+        _flag_off("AutoOpenRequiresPass", "locks the auto-open setting behind a game pass: a Robux line, off in every build (docs/157)"),
+        _flag_off("PredationAtMouth", "BD-515: shares the BD-527 pace decision and is inert while CombatEnabled is on (docs/152 finding 5)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],
@@ -205,7 +212,7 @@ REHEARSAL_ON = [
 ]
 _REHEARSAL_ON_KEYS = {key for key, _ in REHEARSAL_ON}
 
-# The second scratch variant (BD-626) turns on everything the first one does EXCEPT these, which stay at the playtest value (off).
+# The second scratch variant (BD-626) turns on everything the first one does EXCEPT these, which it keeps OFF (the playtest profile sets CombatEnabled on since docs/157).
 # CombatEnabled replaces the instant bigger-eats-smaller rule, and PredationService returns at once while combat is on, so the
 # all-on build can never prove PredationAtMouth: the no-combat variant exists to run that rule (docs/152 s9).
 NO_COMBAT_OFF = {"CombatEnabled": "BD-243 HP combat replaces instant predation; with it on PredationAtMouth is inert, so this variant keeps it off to exercise the mouth rule"}
@@ -215,8 +222,8 @@ def _rehearsal_rules(keep_off: dict[str, str] | None = None) -> list[Rule]:
     keep_off = keep_off or {}
     rules: list[Rule] = []
     for rule in PROFILES["playtest"]:
-        if rule.key in _REHEARSAL_ON_KEYS and rule.mode == "require":
-            continue  # the playtest pins these off; the rehearsal turns them on (unless the variant keeps the flag off, below)
+        if rule.key in _REHEARSAL_ON_KEYS and rule.mode in ("require", "set"):
+            continue  # the playtest pins these off (or, since docs/157, already sets some on); the rehearsal states them once, below (unless the variant keeps the flag off)
         if rule.key in ("PlaytestUniverseId", "PlaytestPlaceId") and rule.mode == "check":
             rules.append(Rule(rule.key, "check", predicate=_id_or_zero, reason="rehearsal: BD-004 ids are not needed offline"))
             continue

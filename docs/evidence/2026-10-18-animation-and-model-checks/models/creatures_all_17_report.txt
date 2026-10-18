@@ -1,0 +1,542 @@
+Model check: creature_archaeopteryx.fbx (fbx, 82.8 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): archaeopteryx (10 of 51 closed piece(s), 444 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on archaeopteryx (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part archaeopteryx has 1,222 of 21,844 allowed
+  PASS  triangles in total                       1,222 triangles in 1 part(s), 713 vertices
+  PASS  size in studs                            width 4.14, height 3.00, length 5.04 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.66x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part           triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -------------  ---------  ------------------  ------  --------------  ---  -----------
+  archaeopteryx  1,222      4.14 x 3.00 x 5.04  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_baryonyx.fbx (fbx, 98.6 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): baryonyx (17 of 41 closed piece(s), 608 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on baryonyx (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part baryonyx has 1,736 of 21,844 allowed
+  PASS  triangles in total                       1,736 triangles in 1 part(s), 950 vertices
+  PASS  size in studs                            width 2.08, height 3.00, length 6.83 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.89x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.10 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part      triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  --------  ---------  ------------------  ------  --------------  ---  -----------
+  baryonyx  1,736      2.08 x 3.00 x 6.83  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_brachiosaurus.fbx (fbx, 114.3 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): brachiosaurus (13 of 43 closed piece(s), 738 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -2.00 to 2.00
+  WARN  materials and textures                   no material on brachiosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part brachiosaurus has 2,010 of 21,844 allowed
+  PASS  triangles in total                       2,010 triangles in 1 part(s), 1,091 vertices
+  PASS  size in studs                            width 1.39, height 4.00, length 5.10 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.61x the Compy's height, 0.66x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 18 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.11 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part           triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -------------  ---------  ------------------  ------  --------------  ---  -----------
+  brachiosaurus  2,010      1.39 x 4.00 x 5.10  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_dimorphodon.fbx (fbx, 69.3 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): dimorphodon (10 of 28 closed piece(s), 400 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on dimorphodon (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part dimorphodon has 940 of 21,844 allowed
+  PASS  triangles in total                       940 triangles in 1 part(s), 526 vertices
+  PASS  size in studs                            width 4.33, height 3.00, length 5.35 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.70x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 12 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 1 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part         triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -----------  ---------  ------------------  ------  --------------  ---  -----------
+  dimorphodon  940        4.33 x 3.00 x 5.35  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_egg.fbx (fbx, 51.2 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 3 warn, 16 pass)
+
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.20 to 1.20
+  WARN  materials and textures                   no material on egg (Roblox uses its default grey)
+  WARN  UVs outside 0..1                         on egg (2%)
+  PASS  triangles per part                       biggest part egg has 1,400 of 21,844 allowed
+  PASS  triangles in total                       1,400 triangles in 1 part(s), 722 vertices
+  PASS  size in studs                            width 1.81, height 2.40, length 1.81 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.36x the Compy's height, 0.24x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  face direction                           all faces agree on which side is out
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): egg
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.05 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part  triangles  W x H x L (studs)   origin  material slots  UV   flags
+  ----  ---------  ------------------  ------  --------------  ---  -----
+  egg   1,400      1.81 x 2.40 x 1.81  centre  0               yes  -    
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_elasmosaurus.fbx (fbx, 68.3 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): elasmosaurus (10 of 27 closed piece(s), 556 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on elasmosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part elasmosaurus has 1,082 of 21,844 allowed
+  PASS  triangles in total                       1,082 triangles in 1 part(s), 597 vertices
+  PASS  size in studs                            width 5.83, height 3.00, length 12.73 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 1.66x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): elasmosaurus
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 10 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part          triangles  W x H x L (studs)    origin  material slots  UV   flags      
+  ------------  ---------  -------------------  ------  --------------  ---  -----------
+  elasmosaurus  1,082      5.83 x 3.00 x 12.73  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_gallimimus.fbx (fbx, 101.0 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): gallimimus (17 of 51 closed piece(s), 614 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on gallimimus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part gallimimus has 1,778 of 21,844 allowed
+  PASS  triangles in total                       1,778 triangles in 1 part(s), 991 vertices
+  PASS  size in studs                            width 1.79, height 3.00, length 5.61 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.73x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.10 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part        triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  ----------  ---------  ------------------  ------  --------------  ---  -----------
+  gallimimus  1,778      1.79 x 3.00 x 5.61  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_ichthyosaurus.fbx (fbx, 67.5 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): ichthyosaurus (9 of 29 closed piece(s), 474 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on ichthyosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part ichthyosaurus has 1,046 of 21,844 allowed
+  PASS  triangles in total                       1,046 triangles in 1 part(s), 583 vertices
+  PASS  size in studs                            width 4.97, height 3.00, length 9.46 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 1.23x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): ichthyosaurus
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 10 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part           triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -------------  ---------  ------------------  ------  --------------  ---  -----------
+  ichthyosaurus  1,046      4.97 x 3.00 x 9.46  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_microraptor.fbx (fbx, 84.8 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 3 warn, 16 pass)
+
+  FAIL  face direction                           inside out (normals point in): microraptor (10 of 61 closed piece(s), 434 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  doubled vertices                         vertices doubled in place on microraptor (8)
+  WARN  materials and textures                   no material on microraptor (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part microraptor has 1,264 of 21,844 allowed
+  PASS  triangles in total                       1,264 triangles in 1 part(s), 754 vertices
+  PASS  size in studs                            width 4.14, height 3.00, length 5.04 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.66x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.08 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part         triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -----------  ---------  ------------------  ------  --------------  ---  -----------
+  microraptor  1,264      4.14 x 3.00 x 5.04  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_mosasaurus.fbx (fbx, 67.2 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): mosasaurus (9 of 28 closed piece(s), 484 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on mosasaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part mosasaurus has 1,042 of 21,844 allowed
+  PASS  triangles in total                       1,042 triangles in 1 part(s), 579 vertices
+  PASS  size in studs                            width 5.61, height 3.00, length 10.53 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 1.37x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): mosasaurus
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 10 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part        triangles  W x H x L (studs)    origin  material slots  UV   flags      
+  ----------  ---------  -------------------  ------  --------------  ---  -----------
+  mosasaurus  1,042      5.61 x 3.00 x 10.53  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_pachycephalosaurus.fbx (fbx, 102.3 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): pachycephalosaurus (15 of 42 closed piece(s), 566 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on pachycephalosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part pachycephalosaurus has 1,854 of 21,844 allowed
+  PASS  triangles in total                       1,854 triangles in 1 part(s), 1,011 vertices
+  PASS  size in studs                            width 1.91, height 3.00, length 6.04 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.79x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.10 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part                triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  ------------------  ---------  ------------------  ------  --------------  ---  -----------
+  pachycephalosaurus  1,854      1.91 x 3.00 x 6.04  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_parasaurolophus.fbx (fbx, 99.9 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): parasaurolophus (16 of 42 closed piece(s), 620 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on parasaurolophus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part parasaurolophus has 1,776 of 21,844 allowed
+  PASS  triangles in total                       1,776 triangles in 1 part(s), 972 vertices
+  PASS  size in studs                            width 1.67, height 3.00, length 5.30 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.69x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.10 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part             triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  ---------------  ---------  ------------------  ------  --------------  ---  -----------
+  parasaurolophus  1,776      1.67 x 3.00 x 5.30  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_plesiosaurus.fbx (fbx, 68.5 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): plesiosaurus (10 of 27 closed piece(s), 566 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on plesiosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part plesiosaurus has 1,082 of 21,844 allowed
+  PASS  triangles in total                       1,082 triangles in 1 part(s), 597 vertices
+  PASS  size in studs                            width 5.83, height 3.00, length 11.86 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 1.54x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               1 of 1 part(s) are open shells (fine for leaves and wings, not for solid bodies): plesiosaurus
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 10 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part          triangles  W x H x L (studs)    origin  material slots  UV   flags      
+  ------------  ---------  -------------------  ------  --------------  ---  -----------
+  plesiosaurus  1,082      5.83 x 3.00 x 11.86  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_pteranodon.fbx (fbx, 68.2 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): pteranodon (9 of 27 closed piece(s), 378 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on pteranodon (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part pteranodon has 916 of 21,844 allowed
+  PASS  triangles in total                       916 triangles in 1 part(s), 512 vertices
+  PASS  size in studs                            width 5.34, height 3.00, length 3.64 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.47x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 12 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 1 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part        triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  ----------  ---------  ------------------  ------  --------------  ---  -----------
+  pteranodon  916        5.34 x 3.00 x 3.64  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_quetzalcoatlus.fbx (fbx, 67.9 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): quetzalcoatlus (9 of 27 closed piece(s), 378 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on quetzalcoatlus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part quetzalcoatlus has 916 of 21,844 allowed
+  PASS  triangles in total                       916 triangles in 1 part(s), 512 vertices
+  PASS  size in studs                            width 5.05, height 3.00, length 2.93 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.38x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 12 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 1 bone(s) per vertex
+  PASS  file size                                0.07 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part            triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  --------------  ---------  ------------------  ------  --------------  ---  -----------
+  quetzalcoatlus  916        5.05 x 3.00 x 2.93  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_spinosaurus.fbx (fbx, 91.4 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): spinosaurus (18 of 41 closed piece(s), 624 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on spinosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part spinosaurus has 1,528 of 21,844 allowed
+  PASS  triangles in total                       1,528 triangles in 1 part(s), 846 vertices
+  PASS  size in studs                            width 1.78, height 3.00, length 5.83 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.76x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.09 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part         triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  -----------  ---------  ------------------  ------  --------------  ---  -----------
+  spinosaurus  1,528      1.78 x 3.00 x 5.83  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.
+
+Model check: creature_therizinosaurus.fbx (fbx, 101.1 KB, Blender 5.1.2)
+RESULT: FAIL   (1 fail, 2 warn, 17 pass)
+
+  FAIL  face direction                           inside out (normals point in): therizinosaurus (11 of 51 closed piece(s), 538 triangles). Roblox draws one side only, so these pieces look hollow or vanish. Mesh, Normals, Recalculate Outside
+  WARN  pivot (origin) per part                  origin is in the middle of the model, not at the bottom centre the world kit uses (docs/56); box z runs -1.50 to 1.50
+  WARN  materials and textures                   no material on therizinosaurus (Roblox uses its default grey)
+  PASS  triangles per part                       biggest part therizinosaurus has 1,778 of 21,844 allowed
+  PASS  triangles in total                       1,778 triangles in 1 part(s), 991 vertices
+  PASS  size in studs                            width 1.79, height 3.00, length 5.65 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 0.45x the Compy's height, 0.73x its length.
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  loose vertices and edges                 none
+  PASS  doubled vertices                         none to speak of
+  PASS  zero-area faces                          none
+  PASS  n-gons (faces with more than 4 corners)  none
+  PASS  open edges                               every part is a closed shell
+  PASS  UV map                                   every part has a UV map
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           none (flat material colours only)
+  PASS  armature                                 1 armature(s), 14 bone(s); 0 action(s) (no animation in the file)
+  PASS  bone influences                          at most 2 bone(s) per vertex
+  PASS  file size                                0.10 MB
+  PASS  part names                               1 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part             triangles  W x H x L (studs)   origin  material slots  UV   flags      
+  ---------------  ---------  ------------------  ------  --------------  ---  -----------
+  therizinosaurus  1,778      1.79 x 3.00 x 5.65  centre  0               yes  mixed faces
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

@@ -284,8 +284,47 @@ class BlenderExportOuterTests(unittest.TestCase):
 
     def test_inner_script_uses_cockatoo_settings(self):
         src = (ROOT / "tools" / "blender_export_roblox.py").read_text(encoding="utf-8")
-        for needle in ('axis_forward="-Z"', 'axis_up="Y"', "apply_unit_scale=True", 'colors_type="SRGB"', "add_leaf_bones=False"):
+        for needle in ("axis_forward=fbx_forward_axis(args.faces)", 'axis_up="Y"', "apply_unit_scale=True", "global_scale=0.01",
+                       'colors_type="SRGB"', "add_leaf_bones=False", "reset_to_rest_pose(armatures)"):
             self.assertIn(needle, src)
+
+    def test_forward_axis_turns_a_plus_y_creature_to_minus_z(self):
+        # Measured in Studio 2026-10-18 (docs/169 section 6): FBX forward "-Z" made the +Y-facing cockatoo face +Z.
+        self.assertEqual(bx.fbx_forward_axis("+Y"), "Z")
+        self.assertEqual(bx.fbx_forward_axis("-Y"), "-Z")
+        with self.assertRaises(ValueError):
+            bx.fbx_forward_axis("X")
+
+    def test_faces_goes_into_the_blender_command(self):
+        cmd = bx.blender_command("b", "a.blend", "o.fbx")
+        self.assertEqual(cmd[cmd.index("--faces") + 1], "+Y")
+        cmd = bx.blender_command("b", "a.blend", "o.fbx", faces="-Y")
+        self.assertEqual(cmd[cmd.index("--faces") + 1], "-Y")
+
+    def test_rest_pose_reset_clears_action_and_bones(self):
+        class Bone:
+            def __init__(self):
+                self.location = (0, -0.2, 0)
+                self.rotation_quaternion = (0.9, 0.1, 0, 0)
+                self.rotation_euler = (0, 0, 0.3)
+                self.scale = (2, 2, 2)
+
+        class Anim:
+            action = "Idle"
+
+        class Pose:
+            bones = [Bone(), Bone()]
+
+        class Arm:
+            animation_data = Anim()
+            pose = Pose()
+
+        arm = Arm()
+        self.assertEqual(bx.reset_to_rest_pose([arm]), 2)
+        self.assertIsNone(arm.animation_data.action)
+        for b in arm.pose.bones:
+            self.assertEqual((b.location, b.rotation_quaternion, b.rotation_euler, b.scale),
+                             ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (1.0, 1.0, 1.0)))
 
 
 class SnippetTests(unittest.TestCase):
@@ -296,6 +335,15 @@ class SnippetTests(unittest.TestCase):
         self.assertNotIn("__NAME__", text)
         self.assertIn("DryRun = true,", text)
         self.assertIn("DryRun = false,", rs.render("123", "A", "B", live=True))
+
+    def test_render_joints_table(self):
+        text = rs.render("1", "A", "B", joints="Head=Body,Crest=Head")
+        self.assertIn('Joints = { ["Head"] = "Body", ["Crest"] = "Head" },', text)
+        self.assertNotIn("Joints = nil,", text)
+        self.assertIn("Joints = nil,", rs.render("1", "A", "B"))
+        for bad in ("Head", "Head=Body;os", "A=B=C", 'H"=B'):
+            with self.assertRaises(ValueError):
+                rs.render("1", "A", "B", joints=bad)
 
     def test_render_rejects_bad_input(self):
         for args in (("12x", "A", "B"), ("1", 'A"; os.exit()', "B"), ("1", "A", "B\nC")):

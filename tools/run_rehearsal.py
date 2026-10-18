@@ -249,7 +249,9 @@ def main(argv=None) -> int:
             for r, b in zip(failed, run_all(base_cmds, base_tree, args.jobs, args.timeout)):
                 r["baseline_code"] = b["code"]
         expected = load_expected()
-        by_name = {r["cmd"]: r for r in results}
+        by_name: dict[str, list[dict]] = {}
+        for r in results:
+            by_name.setdefault(r["cmd"], []).append(r)  # a script can run twice (verify_remote_fuzz.py and its --selftest)
         for r in failed:
             if args.profile == "none":
                 r["class"] = "baseline-failure"
@@ -259,7 +261,7 @@ def main(argv=None) -> int:
                 r["class"] = "also-fails-on-baseline"
             else:
                 r["class"] = "INTERACTION"
-        stale = [name for name in expected if name in by_name and by_name[name]["code"] == 0 and args.profile != "none"]
+        stale = [name for name in expected if name in by_name and all(r["code"] == 0 for r in by_name[name]) and args.profile != "none"]
         print()
         for r in results:
             state = "ok  " if r["code"] == 0 else "FAIL"

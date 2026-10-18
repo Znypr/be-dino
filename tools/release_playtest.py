@@ -66,6 +66,8 @@ FLAG_KEYS = [
     "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled", "RunTelemetryEnabled", "PlaytestFeedbackEnabled",
     "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk",
     "HatchV2", "HatchV2Preview", "QaOverlayEnabled", "DemoDirectorEnabled", "FoodPickupAtMouth",
+    "PredationAtMouth", "ObjectivesEnabled", "GiftClaimEnabled", "GiftingEnabled", "AdminGiftsEnabled",
+    "SecretSpeciesEnabled", "DinoSkinsEnabled",  # docs/157: shown so the manifest records every decision
 ]
 
 

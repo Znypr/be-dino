@@ -53,12 +53,13 @@ DOC = "docs/151-remote-audit-2026-10-17.md"
 # added here and given a row in the audit document. ProgressionResult and RareHatch are server -> client only (no handler).
 EXPECTED_PLAYTEST_REMOTES = [
     "AdminAction", "ClaimChest", "ClaimNest", "ClassDash", "ClassGlide", "ClientWorldReady", "EquipSpecies", "FusionAction", "HubTravel",
-    "MutateSpecies", "PlaytestFeedback", "PrivateState", "ProgressionAction", "ProgressionResult", "RareHatch", "RequestEndRun",
+    "PlaytestFeedback", "PrivateState", "ProgressionAction", "ProgressionResult", "RareHatch", "RequestEndRun",
     "RequestLeap", "RequestStartRun", "SetRevealSkip", "SetSettings",
+    "CombatBite", "ObjectiveAction",  # docs/157: CombatEnabled and ObjectivesEnabled are ON in the playtest profile, so these two exist there now
 ]
 SERVER_TO_CLIENT_ONLY = ["ProgressionResult", "RareHatch"]
 # Behind a flag that is off in every release profile (or Studio-only): they exist only when the flag is on.
-DORMANT_REMOTES = ["ObjectiveAction", "GiftAction", "AdminGiftAction", "SkinAction", "CombatBite", "QaMark", "PreviewDinosaurArt", "DemoTrigger",
+DORMANT_REMOTES = ["GiftAction", "AdminGiftAction", "SkinAction", "QaMark", "PreviewDinosaurArt", "DemoTrigger",
                    "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"]
 OTHER_ENTRY_POINTS = ["ProcessReceipt", "ShowOffSpot"]
 
@@ -69,7 +70,7 @@ REVIEWED_SITES = {
     ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1,
     ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 1, ("CollectionService.luau", "event"): 2,
     ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
-    ("MutationService.luau", "event"): 2, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
+    ("MutationService.luau", "event"): 1, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
     ("QaService.luau", "event"): 1, ("RunLifecycle.luau", "event"): 3, ("VisualTestService.luau", "event"): 1,
     ("CaveShowOff.luau", "prompt"): 1, ("Bootstrap.server.luau", "receipt"): 1,
 }
@@ -82,7 +83,7 @@ SITE_PATTERNS = {
 
 # Debug and dormant switches that must be false in EVERY release profile (tools/release_profiles.py is the single place).
 PINNED_OFF = ["ChestTestGrantEnabled", "CollectionTestGrantEnabled", "MutationTestSetupEnabled", "SecurityTestHarnessEnabled",
-              "ArtTestHarnessEnabled", "QaOverlayEnabled", "DemoDirectorEnabled", "ObjectivesEnabled", "GiftingEnabled",
+              "ArtTestHarnessEnabled", "QaOverlayEnabled", "DemoDirectorEnabled", "GiftingEnabled",
               "AdminGiftsEnabled", "GiftClaimEnabled", "DinoSkinsEnabled"]
 # Source guards that keep a debug path out of a published server even if a flag were flipped by mistake.
 GUARDS = [
@@ -147,7 +148,10 @@ def build_script(only: str = "", mutants: dict | None = None, storm: int = 60, c
     # docs/152 BD-626: in the all-on rehearsal tree every scenario runs with the rehearsal Config (all flags on). The one scenario that
     # pins the PUBLISHED PLAYTEST remote inventory runs with the rehearsal flags forced back to the playtest value (off); the pin is a
     # statement about that profile, not about the rehearsal. Plain CI leaves the text untouched.
-    off_flags = ", ".join(f"{key} = false" for key, _why in release_profiles.REHEARSAL_ON)
+    # docs/157: only the rehearsal flags the playtest profile keeps OFF are forced back; the ones it sets on (Objectives, Combat, ...) stay on.
+    playtest_on = {r.key for r in release_profiles.PROFILES["playtest"] if r.mode == "set" and r.value is True}
+    off_flags = ", ".join([f"{key} = false" for key, _why in release_profiles.REHEARSAL_ON if key not in playtest_on]
+                          + [f"{key} = true" for key, _why in release_profiles.REHEARSAL_ON if key in playtest_on])
     if case_files is None:
         cases = rehearsal_env.pin(cases, 'runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)',
                                   'runScenario("published-pins", {DemoDirectorEnabled = true, ' + off_flags + '}, function(server)', label="remote fuzz published-pins")
@@ -273,12 +277,16 @@ def static_problems() -> list[str]:
         r = rules.get(key)
         if r is None or r.mode != "require" or r.value is not False:
             problems.append(f"static: tools/release_profiles.py does not pin {key} to false in every profile")
-    for profile in ("default", "playtest"):
-        combat = [r for r in release_profiles.PROFILES[profile] if r.key == "CombatEnabled"]
-        if not combat or combat[0].mode != "require" or combat[0].value is not False:
-            problems.append(f"static: profile {profile} does not pin CombatEnabled to false")
+    # docs/157: the default profile pins the two features the playtest profile turns on; the playtest SETS them.
+    for key in ("CombatEnabled", "ObjectivesEnabled"):
+        rule = [r for r in release_profiles.PROFILES["default"] if r.key == key]
+        if not rule or rule[0].mode != "require" or rule[0].value is not False:
+            problems.append(f"static: profile default does not pin {key} to false")
+        rule = [r for r in release_profiles.PROFILES["playtest"] if r.key == key]
+        if not rule or rule[0].mode != "set" or rule[0].value is not True:
+            problems.append(f"static: profile playtest does not set {key} to true (docs/157)")
     config = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
-    for key in PINNED_OFF + ["CombatEnabled"]:
+    for key in PINNED_OFF + ["CombatEnabled", "ObjectivesEnabled"]:
         if not re.search(rf"^\s*{key}\s*=\s*false\b", config, flags=re.M):
             problems.append(f"static: Config.luau does not set {key} = false")
     for rel, pattern, label in GUARDS:
@@ -309,6 +317,9 @@ MUTANTS = [
     ("AdminAction answers a non-admin", "published-pins", {
         "src/server/AdminService": ('if admins[player] ~= true then return false, "not_admin" end', "")},
      "published-pins: a non-admin gets not_admin"),
+    ("the 50-copy MutateSpecies remote is created again (BD-617 reverted)", "published-pins", {
+        "src/server/MutationService": ('    local setupTest = if Config.MutationTestSetupEnabled', '    local mutate = getRemote(folder, "MutateSpecies")\n    local setupTest = if Config.MutationTestSetupEnabled')},
+     "published-pins: the old 50-copy MutateSpecies remote does not exist"),
     ("a dinosaur can be swapped in the middle of a run again (BD-613 reverted)", "equip-next-run", {
         "src/server/CollectionService": ('local inRun = runState == "Active" or runState == "Ending"', "local inRun = false")},
      "equip-next-run: a pick during a run answers next_run"),

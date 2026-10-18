@@ -102,9 +102,19 @@ function Identity.reconcile(collection, existing, ownerKey)
         table.insert(ids, id)
     end
     -- Fused outputs are kept first so a grouped decrement (e.g. legacy Gold->Diamond)
-    -- spends legacy copies; non-fused order is unchanged from the BD-060 contract.
+    -- spends legacy copies. BD-617 (docs/155 s6, owner-approved protection): a LOCKED or FAVOURITED dinosaur is kept right after them,
+    -- so a decrement spends an unprotected copy of the bucket first; the order of all other instances is unchanged from the BD-060 contract.
+    local function marked(id)
+        local instance = state.instances[id]
+        return instance.locked == true or instance.favorited == true
+    end
+    local function rank(id)
+        if fused[id] == true then return 0 end
+        return if marked(id) then 1 else 2
+    end
     table.sort(ids, function(a, b)
-        if (fused[a] == true) ~= (fused[b] == true) then return fused[a] == true end
+        local ra, rb = rank(a), rank(b)
+        if ra ~= rb then return ra < rb end
         return a < b
     end)
     local counts = {}
@@ -112,10 +122,10 @@ function Identity.reconcile(collection, existing, ownerKey)
         local instance = state.instances[id]
         local key = instance.bucketKey
         counts[key] = (counts[key] or 0) + 1
-        -- Existing Build 020 conversion spends only plain buckets. Never erase cosmetics
-        -- or a crafted fusion result; fail closed instead.
+        -- Existing Build 020 conversion spends only plain buckets. Never erase cosmetics, a locked or favourited dinosaur
+        -- (BD-617) or a crafted fusion result; fail closed instead.
         if counts[key] > desired[key].count then
-            if fused[id] or next(instance.cosmetics.ownedAuraIds) or next(instance.cosmetics.ownedTrailIds) then
+            if fused[id] or marked(id) or next(instance.cosmetics.ownedAuraIds) or next(instance.cosmetics.ownedTrailIds) then
                 return nil, "protected_identity"
             end
             state.instances[id] = nil
