@@ -36,7 +36,7 @@ local boosted=Curve.boost({1,.2,.04},{1,10,10}) assert(boosted[2]<=1/3+EPS and b
 assert(Curve.boost({1,.2},{1,1})[2]==.2)
 -- The shipped species boost (kept by BD-184) stays inside the cap at the full-run factor.
 local tiers={0,0,0,0,0} for _,row in Config.ChestSpeciesWeights do local t=Config.SpeciesRarities[row.speciesId] tiers[t]+=row.weight end
-near(sum(tiers),100,1e-9) assert(tiers[1]==72 and tiers[2]==24 and math.abs(tiers[3]-3.2)<1e-9 and math.abs(tiers[4]-.7)<1e-9 and math.abs(tiers[5]-.1)<1e-9,"species tier totals must stay 72/24/3.2/0.7/0.1")
+near(sum(tiers),100,1e-9) assert(math.abs(tiers[1]-91)<1e-9 and math.abs(tiers[2]-8.5)<1e-9 and math.abs(tiers[3]-.42)<1e-9 and math.abs(tiers[4]-.07)<1e-9 and math.abs(tiers[5]-.01)<1e-9,"species tier totals must stay 91/8.5/0.42/0.07/0.01 (BD-1032, docs/186 s3; the docs/88 ladder is deliberately steeper at the top, docs/116 C-54)")
 local bs=Curve.boost(tiers,Config.SpeciesRunBoost)
 for i=2,5 do assert(bs[i]/bs[i-1]<=1/3+EPS,"species boost tier "..i) assert(bs[i]<bs[i-1]) end
 for i,f in Config.SpeciesRunBoost do near(bs[i],tiers[i]*f,1e-9) end -- the shipped boost is already within the cap

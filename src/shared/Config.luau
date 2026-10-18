@@ -195,9 +195,13 @@ return table.freeze({
     HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     -- PROVISIONAL run-size species boost (BD-044 five tiers). A batch of N run eggs multiplies each tier's
     -- weight by 1 + s * (SpeciesRunBoost[tier] - 1), s = (clamp(N, 1, EggRarityBoostMaxEggs) - 1) / (max - 1).
-    -- 2026-10-15 (BD-165, docs/88 exponential rarity): a full run is now ~4-40 eggs, so the boost is gentle and
-    -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
-    SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
+    -- 2026-10-15 (BD-165, docs/88 exponential rarity): the boost was gentle (Rare+ at most 1.1x).
+    -- 2026-10-18 (BD-1032, docs/186 s3, PROVISIONAL): new species are much rarer, so the boost starts only above a normal run:
+    -- s = clamp((N - EggRarityBoostFreeEggs) / (EggRarityBoostMaxEggs - EggRarityBoostFreeEggs), 0, 1). A normal 15-egg run (and a
+    -- single shop egg) has s = 0 = base odds; a 120-egg run (5,000 food, also a Nest, rarityBoostEggs = 120) has s = 1: Rare, Epic and
+    -- Legendary are 2x as likely. Uncommon is not lifted.
+    SpeciesRunBoost = {1, 1, 2, 2, 2},
+    EggRarityBoostFreeEggs = 15,
     EggRarityBoostMaxEggs = 120,
     BigChance = 0.03, -- BD-184: Rare-tier chance (docs/88)
     ShinyChance = 0.006, -- BD-184: Epic-tier chance, earned eggs in irregular weather only
@@ -213,7 +217,7 @@ return table.freeze({
     -- BD-044 reward loop (owner decision 2026-10-13): every earned run catch banks
     -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
-    RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
+    RunRewardConfigVersion = 4, -- 3: five species rarity tiers + run-size boost (BD-044); 4: much rarer new species, boost starts above 15 eggs (BD-1032). Only stamped on new rewards: banked eggs keep the species committed at settlement.
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
     RunEggMaxPerRun = 150, -- PROVISIONAL: catches stop counting at 150 eggs per run (6,250 food); a 5,000-food run (120 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked <= capacity - RunEggMaxPerRun (500)
@@ -246,31 +250,32 @@ return table.freeze({
     ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
     ChestTestGrantVersion = 1,
-    -- PROVISIONAL base species weights (sum 100): Common 72, Uncommon 24, Rare 3.2, Epic 0.7, Legendary 0.1.
-    -- Single shop eggs use these directly; run and nest batches add SpeciesRunBoost.
+    -- PROVISIONAL base species weights (sum 100): Common 91, Uncommon 8.5, Rare 0.42, Epic 0.07, Legendary 0.01 (BD-1032, docs/186 s3;
+    -- was 72 / 24 / 3.2 / 0.7 / 0.1, docs/82). Rare or better 0.5% per egg: the first one takes about 46 minutes at 3 eggs a minute.
+    -- Compy is 40% of the Common tier. Single shop eggs use these directly; run and nest batches add SpeciesRunBoost.
     ChestSpeciesWeights = {
-        {speciesId = "compy", weight = 26},
-        {speciesId = "raptor", weight = 22},
-        {speciesId = "gallimimus", weight = 9},
-        {speciesId = "microraptor", weight = 8},
+        {speciesId = "compy", weight = 36.4},
+        {speciesId = "raptor", weight = 26},
+        {speciesId = "gallimimus", weight = 12},
+        {speciesId = "microraptor", weight = 9.6},
         {speciesId = "dimorphodon", weight = 7},
-        {speciesId = "archaeopteryx", weight = 6},
-        {speciesId = "stegosaurus", weight = 6},
-        {speciesId = "parasaurolophus", weight = 5},
-        {speciesId = "pachycephalosaurus", weight = 4},
-        {speciesId = "pteranodon", weight = 3},
-        {speciesId = "triceratops", weight = 1},
-        {speciesId = "brachiosaurus", weight = 0.7},
-        {speciesId = "baryonyx", weight = 0.5},
-        {speciesId = "ichthyosaurus", weight = 0.5},
-        {speciesId = "plesiosaurus", weight = 0.5},
-        {speciesId = "ankylosaurus", weight = 0.2},
-        {speciesId = "elasmosaurus", weight = 0.2},
-        {speciesId = "therizinosaurus", weight = 0.15},
-        {speciesId = "quetzalcoatlus", weight = 0.15},
-        {speciesId = "tyrannosaurus", weight = 0.04},
-        {speciesId = "spinosaurus", weight = 0.03},
-        {speciesId = "mosasaurus", weight = 0.03},
+        {speciesId = "archaeopteryx", weight = 2.2},
+        {speciesId = "stegosaurus", weight = 2.2},
+        {speciesId = "parasaurolophus", weight = 1.7},
+        {speciesId = "pachycephalosaurus", weight = 1.3},
+        {speciesId = "pteranodon", weight = 1.1},
+        {speciesId = "triceratops", weight = 0.13},
+        {speciesId = "brachiosaurus", weight = 0.09},
+        {speciesId = "baryonyx", weight = 0.07},
+        {speciesId = "ichthyosaurus", weight = 0.065},
+        {speciesId = "plesiosaurus", weight = 0.065},
+        {speciesId = "ankylosaurus", weight = 0.02},
+        {speciesId = "elasmosaurus", weight = 0.02},
+        {speciesId = "therizinosaurus", weight = 0.015},
+        {speciesId = "quetzalcoatlus", weight = 0.015},
+        {speciesId = "tyrannosaurus", weight = 0.004},
+        {speciesId = "spinosaurus", weight = 0.003},
+        {speciesId = "mosasaurus", weight = 0.003},
     },
     -- Owner decision 2026-10-13: exactly one dinosaur per successfully hatched egg.
     -- Historical Build 020 split was 1/2/3 copies at 70/25/5; already-saved eggs keep

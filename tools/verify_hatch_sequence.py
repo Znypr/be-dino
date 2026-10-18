@@ -214,7 +214,7 @@ assert(T.stamp(-1) == 1 and T.stamp(0) > 1.1 and T.stamp(0) <= 1.13 and T.stamp(
 -- Copy.
 assert(T.hint(3) == "Tap for next egg (3 left)" and T.hint(1) == "Tap for next egg (1 left)" and T.hint(0) == "Done")
 assert(T.remaining(false, 4, 9) == 0 and T.remaining(true, 0, 0) == 1 and T.remaining(true, 2, 5) == 7)
-assert(T.pct(26) == "26%" and T.pct(12.5) == "12.5%" and T.pct(.04) == "0.04%" and T.pct(100 * 7 / 100) == "7%")
+assert(T.pct(26) == "26%" and T.pct(12.5) == "12.5%" and T.pct(.04) == "0.04%" and T.pct(100 * 7 / 100) == "7%" and T.pct(.004) == "0.004%" and T.pct(.065) == "0.065%" and T.pct(.42) == "0.42%" and T.pct(91) == "91%")
 local weights = {{speciesId = "a", weight = 26}, {speciesId = "b", weight = 74}}
 assert(near(T.speciesPct(weights, "a"), 26) and T.speciesPct(weights, "zzz") == nil and T.speciesPct(nil, "a") == nil)
 assert(T.oddsLine("Rare", 12.5) == "Rare \u{2022} 12.5% of eggs" and T.oddsLine("Rare", nil) == "Rare")
