@@ -44,7 +44,7 @@ end
 
 -- Fusion menu: a tap on the dark backdrop closes the menu only on screens where nothing is being saved or revealed.
 -- fusing = the server is committing the fusion; reveal = the wheel ceremony; details = a sub-page that has its own Back.
-Rules.FusionOutsideCloses = {browse = true, confirm = true, resume = true, unavailable = true}
+Rules.FusionOutsideCloses = {browse = true, confirm = true, resume = true, unavailable = true} :: {[string]: boolean}
 function Rules.fusionOutsideCloses(mode: string): boolean
     return Rules.FusionOutsideCloses[mode] == true
 end
