@@ -947,12 +947,11 @@ function Sel.cardTraits(d, catalog): {string}
     return list
 end
 
--- Nav FUSION target. "menu" = new Pattern Fusion Menu; "legacy" = old Build 020 page
--- (development profile only); "unavailable" = notify, open nothing.
--- ctx: {menuLoaded, remote (FusionAction exists), probe ("ok"|"disabled"|nil), profile}
+-- Nav FUSION target. "menu" = the Pattern Fusion Menu; "unavailable" = say "coming soon", open nothing.
+-- BD-617 (LEAD decision, owner directive 2026-10-18): the old Build 020 50-copy page ("legacy") is gone from the player-facing game.
+-- ctx: {menuLoaded, remote (FusionAction exists), probe ("ok"|"disabled"|nil), profile (unused, kept so old callers still work)}
 function Sel.navTarget(ctx): string
     if ctx.menuLoaded and ctx.remote and ctx.probe ~= "disabled" then return "menu" end
-    if ctx.profile == nil or ctx.profile == "development" then return "legacy" end
     return "unavailable"
 end
 

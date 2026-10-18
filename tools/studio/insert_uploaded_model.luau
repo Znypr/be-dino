@@ -152,7 +152,7 @@ end
 -- 5) place it in the row --------------------------------------------------------------------------------------
 model.Name = CFG.Name
 model:SetAttribute("UploadedAssetId", CFG.AssetId)
-model:PivotTo(CFrame.new(0, 0, 0)) -- zero rotation so the bounding box is axis aligned (FBX axes already make it face -Z)
+model:PivotTo(CFrame.new(0, 0, 0)) -- zero rotation so the bounding box is axis aligned (tools/blender_export_roblox.py --faces +Y makes a +Y-facing Blender model face -Z; older exports with forward -Z came in turned 180 degrees)
 local bbCF, bbSize = model:GetBoundingBox()
 local dx = nextMinX + bbSize.X / 2 - bbCF.Position.X
 local dy = bbSize.Y / 2 - bbCF.Position.Y -- lowest point on y = 0

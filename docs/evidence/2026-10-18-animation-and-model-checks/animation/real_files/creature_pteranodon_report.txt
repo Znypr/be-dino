@@ -1,0 +1,16 @@
+Action "None" in creature_pteranodon.fbx (Blender 5.1.2)
+Contact sheet: Blender Workbench renders, side view, 1 frames
+Picture: docs\evidence\2026-10-18-animation-and-model-checks\animation\real_files\creature_pteranodon_strip.png
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  animation found  CHECK  no action in the file (armature pteranodon_rig)
+
+Notes
+  - The file has 12 bone(s) but no action (no keyframes): it is a rig with a static pose, so there is no motion to judge. The picture shows that one pose.
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  animation found  export the clip together with the rig
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.

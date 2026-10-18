@@ -49,9 +49,9 @@ local byId=S.index(all)
 -- ===== Nav gating, egg slot look, Dino Index silhouette =====
 assert(S.navTarget({menuLoaded=true,remote=true,probe="ok",profile="playtest"})=="menu")
 assert(S.navTarget({menuLoaded=true,remote=true,probe=nil,profile="release"})=="menu")
-assert(S.navTarget({menuLoaded=true,remote=true,probe="disabled",profile="development"})=="legacy")
-assert(S.navTarget({menuLoaded=true,remote=false,profile="development"})=="legacy")
-assert(S.navTarget({menuLoaded=false,remote=true,profile="development"})=="legacy")
+assert(S.navTarget({menuLoaded=true,remote=true,probe="disabled",profile="development"})=="unavailable") -- BD-617: no old page any more
+assert(S.navTarget({menuLoaded=true,remote=false,profile="development"})=="unavailable")
+assert(S.navTarget({menuLoaded=false,remote=true,profile="development"})=="unavailable")
 assert(S.navTarget({menuLoaded=true,remote=true,probe="disabled",profile="playtest"})=="unavailable")
 assert(S.navTarget({menuLoaded=true,remote=false,profile="release"})=="unavailable")
 assert(S.eggSlotLook(nil,false)=="empty")

@@ -6,7 +6,7 @@ return function(ProfileRepository: any, shared: any)
 local Config = shared.Config
 local EggTraits = shared.EggTraits
 local ProgressionRules = shared.ProgressionRules
-local admit = shared.admit
+local admit = shared.admitAs("ProfileCollection") -- BD-650: the label names the service in the rate_limited count
 local adopt = shared.adopt
 local equippedOf = shared.equippedOf
 local findOperation = shared.findOperation
@@ -115,6 +115,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
     return true, "equipped"
 end
 
+-- LEGACY (BD-617): the Build 020 50-copy transaction. No remote and no client page call it any more (fusion is FusionAction); it is kept only so the
+-- recorded golden session (tools/profile_golden.luau) and the Build 020 data proofs keep their bytes. Delete it together with a re-recorded golden.
 function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targetMutation: string, requestToken: string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then

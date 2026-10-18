@@ -1,0 +1,35 @@
+Model check: WorldKitV3_Colossal.blend (blend, 439.6 KB, Blender 5.1.2)
+RESULT: WARN   (0 fail, 4 warn, 15 pass)
+
+  WARN  face direction                           neighbouring faces disagree about which side is out on world_tree_colossal_broad_v3 (57 edges), world_tree_colossal_broad_v3_lod1 (32 edges), world_tree_colossal_palm_v3 (229 edges) and 3 more: some faces are flipped and will vanish from one side
+  WARN  loose vertices and edges                 stray geometry on world_tree_colossal_pine_v3_lod1 (88)
+  WARN  doubled vertices                         vertices doubled in place on world_tree_colossal_palm_v3_lod1 (8)
+  WARN  n-gons (faces with more than 4 corners)  on world_tree_colossal_broad_v3 (8), world_tree_colossal_broad_v3_lod1 (8), world_tree_colossal_palm_v3 (7), world_tree_colossal_palm_v3_lod1 (7) and 2 more: Roblox cuts them into triangles its own way; triangulate first
+  PASS  triangles per part                       biggest part world_tree_colossal_broad_v3 has 4,154 of 21,844 allowed
+  PASS  triangles in total                       14,858 triangles in 6 part(s), 9,517 vertices
+  PASS  size in studs                            all 6 parts together: width 763.55, height 117.59, length 106.61 studs (Blender X, Z, Y; 1 unit = 1 stud). Compy for comparison: width 3.49, height 6.60, length 7.69 (src/shared/ScaleLadder.luau, species.compy (measured in Studio at spawn)). This is 17.82x the Compy's height, 13.86x its length.
+  PASS  pivot (origin) per part                  every origin is inside its part (6 bottom centre); whole model box z runs 0.00 to 117.59
+  PASS  scale and rotation applied               every part has scale 1 and no turn on the object
+  PASS  zero-area faces                          none
+  PASS  open edges                               6 of 6 part(s) are open shells (fine for leaves and wings, not for solid bodies): world_tree_colossal_broad_v3, world_tree_colossal_broad_v3_lod1, world_tree_colossal_palm_v3 and 3 more
+  PASS  materials and textures                   1 material(s), no empty slots, no missing images
+  PASS  UV map                                   no UV map on world_tree_colossal_broad_v3, world_tree_colossal_broad_v3_lod1, world_tree_colossal_palm_v3, world_tree_colossal_palm_v3_lod1 and 2 more, but they carry vertex colours, so colour comes from those (no textures possible)
+  PASS  overlapping UVs                          no meaningful overlap
+  PASS  UVs outside 0..1                         all UVs inside the square
+  PASS  vertex colours                           present on 6 of 6 part(s) (Col)
+  PASS  armature                                 none (a plain static model)
+  PASS  file size                                0.43 MB
+  PASS  part names                               6 name(s), all unique and usable in scripts
+
+Parts (largest first)
+  part                            triangles  W x H x L (studs)         origin         material slots  UV  flags                      
+  ------------------------------  ---------  ------------------------  -------------  --------------  --  ---------------------------
+  world_tree_colossal_broad_v3    4,154      108.55 x 117.59 x 105.84  bottom centre  1               no  8 n-gon, mixed faces       
+  world_tree_colossal_pine_v3     4,052      74.39 x 117.29 x 80.34    bottom centre  1               no  13 n-gon, mixed faces      
+  world_tree_colossal_palm_v3     3,834      118.55 x 105.03 x 106.61  bottom centre  1               no  7 n-gon, mixed faces       
+  world_tree_colossal_palm_v3_lo  966        118.55 x 105.02 x 106.61  bottom centre  1               no  7 n-gon, mixed faces       
+  world_tree_colossal_pine_v3_lo  927        73.16 x 117.23 x 77.66    bottom centre  1               no  7 n-gon, loose, mixed faces
+  world_tree_colossal_broad_v3_l  925        110.20 x 116.81 x 95.34   bottom centre  1               no  8 n-gon, mixed faces       
+
+Limits used: see LIMITS in tools/check_model_for_roblox.py (each has its source, Roblox or project, and a plain reason).
+Not judged here: looks, taste, whether the pivot is where the animator wants it, how it reads lit in Studio.

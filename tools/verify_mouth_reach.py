@@ -299,7 +299,7 @@ def main():
     # 6 DATA
     ladder = (ROOT / 'src/shared/ScaleLadder.luau').read_text(encoding='utf-8')
     found = 0
-    for m in re.finditer(r'^        (\w+) = \{scale = [\d.]+,.*?length = ([\d.]+), snout = ([\d.]+), headLength = ([\d.]+), measured = true\},$', ladder, re.M):
+    for m in re.finditer(r'^        (\w+) = \{scale = [\d.]+,.*?length = ([\d.]+), snout = ([\d.]+), headLength = ([\d.]+), measured = (?:true|false)\},?(?: --.*)?$', ladder, re.M):  # BD-992: two rows are scaled from the Studio box (measured = false) and carry a comment
         found += 1
         name, length, snout, head = m.group(1), float(m.group(2)), float(m.group(3)), float(m.group(4))
         if name != 'microraptor' and abs(snout - length / 2) > 0.03:

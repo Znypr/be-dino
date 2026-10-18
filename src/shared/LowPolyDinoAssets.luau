@@ -8,9 +8,11 @@
 -- 10% growth per unlock tier; fly and water species are scaled by bulk up to the T-Rex", LEAD decision 2026-10-17 in docs/115). The generated
 -- models are all normalised to about 3 studs, so scale restores the intended size: scale = target size / the model's size at scale 1, where
 -- the target comes from src/shared/ScaleLadder.luau Sizing (tier = Config.SpeciesRarities, the unlock tier):
---   Ground and Armored (and Elasmosaurus, a normal Ground dino): HEIGHT 6.6 x 1.1^(tier - 1), Compy tier 1 = 6.6.
---   Fly and Water: BULK = cube root of the bounding-box volume, the T-Rex's bulk at tier 5 and 10% less per tier below (C-39, docs/116: Water was
+--   Ground (and Elasmosaurus, a normal Ground dino): HEIGHT 6.6 x 1.1^(tier - 1), Compy tier 1 = 6.6.
+--   Fly, Water and Armored: BULK = cube root of the bounding-box volume, 8.12 at tier 5 and 10% less per tier below (C-39, docs/116: Water was
 --   sized by length until the owner's wording "fly/water scaled by bulk" was applied; a long low swimmer is now chunkier and much longer).
+--   BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): the T-Rex is one growth step ABOVE tier 5 (height 10.63, bulk 8.93) and the Armored
+--   class is sized by bulk too, so the Ankylosaurus (bulk 9.95 by height) no longer outweighs it. No other species changed.
 -- tools/verify_scale_ladder.py checks every species against that rule (tolerance 2%) and that this table equals ScaleLadder.
 -- Compy 2.2 is the original spike value and the anchor. tier is stored per entry and tools/verify_lowpoly_dinos.py checks it against
 -- Config.SpeciesRarities. History: BD-225 first used scale = 2.0 * 1.1^(tier - 1) * shape; the Studio boxes (BD-471) showed that shape
@@ -19,10 +21,10 @@
 return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
     triceratops = {assetId = 107596736973492, version = "v3", scale = 2.86, tier = 3, class = "Ground"},
-    tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.47, tier = 5, class = "Ground"},
+    tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},
     stegosaurus = {assetId = 92335618053209, version = "v1", scale = 3.9, tier = 2, class = "Ground"},
-    ankylosaurus = {assetId = 125812700099310, version = "v1", scale = 3.6, tier = 4, class = "Armored"},
+    ankylosaurus = {assetId = 125812700099310, version = "v1", scale = 2.67, tier = 4, class = "Armored"},
     archaeopteryx = {assetId = 108659121473793, version = "v1", scale = 1.77, tier = 2, class = "Fly"},
     baryonyx = {assetId = 131708938808155, version = "v1", scale = 3.11, tier = 3, class = "Ground"},
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 2.91, tier = 3, class = "Ground"},

@@ -203,6 +203,8 @@ Flag: `Config.CombatEnabled` (false) and `Config.NpcPredatorsEnabled`. Pure rule
 
 ## 19. BD-569 decision brief: what the Water E leap does (2026-10-17; PROPOSAL, a feel call for the OWNER)
 
+> **ANSWERED 2026-10-18 (OWNER, Decisions dashboard; OW2 in [115](115-decisions-log.md), C-46 in [116](116-handbook-conflicts.md)): option C, "Zoom only in water"**, owner note: "zoom only for water dinos that cant hop." The text below is the brief as written (history; its recommendation B was NOT taken). Water-class E / LEAP = the flat zoom of the table entry (`ClassMovement.Classes.Water.leap`, 90 studs/s, 0.5 s, never up) while in water, no hop on land and a short cue instead. Exact spec, files and tests: BD-662 in [07-kanban.md](07-kanban.md). Not built yet. Read s19.3 column C with this in mind: the owner's note removes its "hops on land" half.
+
 Question: Water dinos have no jump; the jump button is a forward dash. What should the **E leap / LEAP button** do for them? Today it is the ordinary upward leap, while s2 and s11 of this doc say "aggressive dash" and s12 says "ground-bound". No speed number is changed by this brief. Owner question: C-46 / Q20 in [116](116-handbook-conflicts.md).
 
 ### 19.1 Today (CURRENT BUILD BEHAVIOR, read from `main` after PR #409; PR #410 is open)

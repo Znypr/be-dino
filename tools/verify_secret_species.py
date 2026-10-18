@@ -1116,8 +1116,10 @@ def build_tree(dst, fill=True, measured=True, lowpoly=True):
         lp.write_text(text[:-1] + lines + '}\n', encoding='utf-8', newline='')
     if fill and measured:
         text = (dst / 'src/shared/ScaleLadder.luau').read_text(encoding='utf-8')
-        assert text.count(', measured = false}') == 7
-        (dst / 'src/shared/ScaleLadder.luau').write_text(text.replace(', measured = false}', ', measured = true}'), encoding='utf-8', newline='')
+        # BD-992: the T-Rex and Ankylosaurus rows are also `measured = false` (scaled from the Studio box), so only the secret block is flipped
+        head, sep, tail = text.partition('    secret = {')
+        assert sep and tail.count(', measured = false}') == 7
+        (dst / 'src/shared/ScaleLadder.luau').write_text(head + sep + tail.replace(', measured = false}', ', measured = true}'), encoding='utf-8', newline='')
     return fakes, classes, rows
 
 

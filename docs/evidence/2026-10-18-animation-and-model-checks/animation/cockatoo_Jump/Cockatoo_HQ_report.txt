@@ -1,0 +1,63 @@
+Action "Jump" in Cockatoo_HQ.blend (Blender 5.1.2)
+Contact sheet: Blender Workbench renders, side view, 8 frames
+Picture: docs\evidence\2026-10-18-animation-and-model-checks\animation\cockatoo_Jump\Cockatoo_HQ_strip.png
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  frame rate              OK     24.00 frames per second
+  duration                OK     42 frames = 1.75 s per loop (frames 1 to 43)
+  loop continuity         N/A    one-shot clip (--one-shot): it does not loop, so the seam is not judged (seam step 0.00x its neighbours)
+  joint angle range       OK     biggest turn 77 degrees (ArmR)
+  joint speed             OK     fastest 404 degrees per second (ArmR)
+  jerkiness               OK     no sudden acceleration spikes
+  foot sliding            N/A    a foot is planted only 2% of the clip: it jumps, flies or swims rather than walks
+  ground penetration      CHECK  lowest mesh point sinks 9.9% of body height below the ground (frame 8)
+  floating                OK     the lowest point is 0.0% of body height above the ground at its closest
+  left/right foot timing  N/A    not a walk or run cycle
+  left/right swing size   OK     paired bones swing within 15% of each other
+  easing                  OK     eased (starts and stops softly): peak speed is 2.08x the average inside a move; key interpolation: bezier 100%
+
+Joint angles (degrees away from the rest pose; speed in degrees per second), biggest movers first
+  bone   min  max  range  peak speed  average speed
+  ArmL   0    77   77     404         95           
+  ArmR   0    77   77     404         95           
+  FootR  0    34   34     175         62           
+  LegR   0    34   34     399         94           
+  FootL  0    34   34     175         62           
+  LegL   0    34   34     399         94           
+  Tail   0    26   26     65          30           
+  Crest  0    24   24     228         50           
+  Body   0    12   12     149         42           
+  Head   0    10   10     165         32           
+
+Feet (bones named like a foot): share of the cycle planted, lowest point above ground
+  foot   planted  lowest
+  FootR  2%       1.3%  
+  FootL  16%      -1.4% 
+
+Left / right pairs (how far the bone tip travels, as a share of body height; foot timing offset as a share of the cycle)
+  pair           left / right  ratio
+  ArmL / ArmR    39% / 39%     1.00 
+  LegL / LegR    23% / 23%     1.00 
+  FootL / FootR  27% / 27%     1.00 
+
+Notes
+  - Body height 7.339 units (from the standing mesh box); ground at z = -0.075.
+  - Typical frame-to-frame pose change 0.0113 body heights.
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  frame rate              common frame rates; others get resampled on export
+  duration                seconds: shorter than 0.2 is a blink, longer than 5 is probably the wrong range selected
+  loop continuity         seam step between 10% and 2x of its neighbours, no joint jumping
+  joint angle range       under 170 degrees
+  joint speed             under 1200 degrees per second
+  jerkiness               spike over 8x average and over 2% of body height
+  foot sliding            walk and run cycles only
+  ground penetration      under 2% of body height
+  floating                under 3% (flyers and swimmers can ignore this)
+  left/right foot timing  walk and run cycles only
+  left/right swing size   ratio 0.85 to 1.15
+  easing                  between 1.15 and 2.2 (linear is 1.0, a sine is 1.57)
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.

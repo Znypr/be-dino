@@ -5,6 +5,8 @@
 > **Handbook first:** [114 Handbook](114-handbook.md) is the single fact-check reference (vision, feel, design language, palette, lighting, sound, asset/UI/FX quality bars, economy cheat sheet, PR checklist). Dated owner decisions: [115](115-decisions-log.md). Open conflicts and owner questions: [116](116-handbook-conflicts.md).
 >
 > **Helper agents:** start with the [160 Agent brief](160-agent-brief.md) (read order, decisions, git/PR workflow, safety, evidence rules, tools, reporting).
+>
+> **Work log:** [168 Work log and retrospectives](168-work-log-and-retrospectives.md) records how long each task took, what went wrong and the rules learned (`tools/retro_log.py`).
 
 ## Authority order (by question)
 
@@ -20,9 +22,11 @@
 | Current Studio instructions | [34-studio-handoff.md](34-studio-handoff.md) | Begin with its **Build 020 workflow**, not archived Build 019 steps |
 | Game balance/tunables and current data IDs | [`src/shared/Config.luau`](../src/shared/Config.luau), [`ProgressionConfig.luau`](../src/shared/ProgressionConfig.luau), current Luau source | Actual committed implementation. Confirm runtime and migration separately |
 | Actual Build 020 eggs, genes, species and rendering | [43-creature-runtime-integration.md](43-creature-runtime-integration.md), [41-egg-outcomes-contract.md](41-egg-outcomes-contract.md) | Source + tests over historical six-species/seven-color examples |
+| Which flags the test / playtest build turns ON (newest features) and which stay off, and why | [157-playtest-profile-newest-features.md](157-playtest-profile-newest-features.md) | Owner directive 2026-10-18; `tools/release_profiles.py` is the truth; the default profile is unchanged; offline evidence only |
 | Rolling back a publish, profile compatibility with Build 020, DataStore restore | [111-rollback-drill.md](111-rollback-drill.md) | Offline evidence only; real drill is owner-run (BD-320) |
 | Hatch v2 (paint-bucket reveal on a 3D egg, BD-397): beat sheet, asset prompts, bake design, flag and fallbacks | [118-hatch-redesign.md](118-hatch-redesign.md) | Behind `Config.HatchV2` (false); v1 ([86](86-hatch-sequence.md)) ships |
 | Every art item the owner still has to make or upload (prompts, sizes, binding) | [109-owner-art-prompt-pack.md](109-owner-art-prompt-pack.md) | Current deduplicated checklist; tracked by BD-336 |
+| Checking player text is short and plain; comparing two screenshots | [162-kid-text-lint-and-screenshot-diff.md](162-kid-text-lint-and-screenshot-diff.md) | Offline tools `tools/lint_kid_text.py` (CI, baseline mode) and `tools/compare_screenshots.py` (on demand); BD-655, BD-656 |
 | Artwork direction | [39-egg-appearance-shared-vision.md](39-egg-appearance-shared-vision.md), [32-artwork-guide-and-todo.md](32-artwork-guide-and-todo.md) | Aspirational asset quality and approved appearance, not automatic uploaded/runtime art |
 | Shops/levels/condition mechanics | [36-crystal-shops-egg-genetics-and-progression.md](36-crystal-shops-egg-genetics-and-progression.md), [41-egg-outcomes-contract.md](41-egg-outcomes-contract.md) | Owner design vs Build 020 configuration. New condition starting odds **50/30/15/4.5/0.5** remain BD-045 |
 | Security, release and paid-random restrictions | [43-player-access-and-paid-random-policy.md](43-player-access-and-paid-random-policy.md), [44-main-integration-checklist.md](44-main-integration-checklist.md), [06-roadmap-and-testing.md](06-roadmap-and-testing.md) | Keep paid flags disabled until regulatory/runtime acceptance |

@@ -59,7 +59,7 @@ Current Build 005 implements the `Active -> Ending` guard only. Predation, natur
 | `StartRun` | selected species ID, request token | loaded profile, owned/equippable species, state, rate, bounded strings | new server `runId`, spawn state |
 | `EquipSpecies` | species ID, request token | loaded profile, known ID, owns required copy, rate | equipped key persisted |
 | `ClaimEgg` | egg ID, request token | loaded profile, known queued egg, server time >= readyAt, rate | immutable reward persisted once |
-| `MutateSpecies` | species ID, target mutation, request token | loaded profile, known recipe, sufficient copies, equipped-copy rule, rate | atomic deduction + output |
+| ~~`MutateSpecies`~~ **REMOVED 2026-10-18 (BD-617; fusion is `FusionAction`, [52](52-fusion-remote-contract.md))** | species ID, target mutation, request token | loaded profile, known recipe, sufficient copies, equipped-copy rule, rate | atomic deduction + output |
 
 No remote accepts growth score, catch score, inventory count, reward quantity, victim death, ready timestamp or rarity result from the client.
 

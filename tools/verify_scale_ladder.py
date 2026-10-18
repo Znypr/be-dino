@@ -30,10 +30,10 @@ BEGIN, END = '<!-- scale-ladder:begin -->', '<!-- scale-ladder:end -->'
 MEASURED = {
     'compy': (3.49, 6.60, 7.69),
     'triceratops': (5.79, 8.00, 8.58),
-    'tyrannosaurus': (5.31, 9.67, 10.41),
+    'tyrannosaurus': (5.83, 10.62, 11.43),  # BD-992: SCALED_FROM_STUDIO (the BD-232 Studio box 5.31 x 9.67 x 10.41 at scale 3.47, now scale 3.81)
     'raptor': (3.49, 6.60, 7.74),
     'stegosaurus': (5.25, 7.25, 11.70),
-    'ankylosaurus': (7.78, 8.78, 14.40),
+    'ankylosaurus': (5.77, 6.51, 10.68),  # BD-992: SCALED_FROM_STUDIO (the BD-232 Studio box 7.78 x 8.78 x 14.40 at scale 3.6, now scale 2.67)
     'archaeopteryx': (7.17, 5.31, 5.92),
     'baryonyx': (3.99, 7.99, 9.33),
     'brachiosaurus': (3.73, 8.00, 8.73),
@@ -65,6 +65,14 @@ SECRET_BOXES = {
     'foxosaurus': (3.40, 6.60, 8.70),
 }
 SECRET_SIZE_TIER = 1  # SS8: every secret is sized as a tier 1 (Compy-sized) find
+# BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): two rows changed scale and were NOT re-read in Studio (no window). Their box is the last Studio
+# box times new scale / old scale (the method that matched Studio to 2 decimals for the C-39 water change). Row: species -> (Studio box at the old scale,
+# old scale, new scale). Their `measured` flag in ScaleLadder is false until a Studio re-read; MEASURED above holds the SCALED box so the camera and hit
+# verifiers keep one source of boxes. Remove the entry here (and set measured = true) once the real box is read.
+SCALED_FROM_STUDIO = {
+    'tyrannosaurus': ((5.31, 9.67, 10.41), 3.47, 3.81),
+    'ankylosaurus': ((7.78, 8.78, 14.40), 3.6, 2.67),
+}
 ALL_BOXES = {**MEASURED, **SECRET_BOXES}  # the 22 shipped species + the 7 secrets
 TOLERANCE = 0.02  # BD-232: allowed relative gap between a species size and the 10%-per-tier rule
 STAGE_COLUMNS = ('run', 'mid', 'long', 'max', 'bigMax')
@@ -119,6 +127,8 @@ for _, basis in {"height", "bulk", "length"} do
     for tier = 1, 5 do out("rule." .. basis .. "." .. tier, Ladder.targetSize(basis, tier)) end
 end
 out("rule.sizeOf.bulk", Ladder.sizeOf("bulk", 2, 3, 4))
+out("sizing.tier.tyrannosaurus", Ladder.sizingTier("tyrannosaurus"))
+out("sizing.tier.compy", Ladder.sizingTier("compy"))
 out("Dino.hubScale", Hub.HubScale)
 out("Dino.maxScale", Hub.MaxGrowthScale)
 out("Dino.bigMultiplier", Config.BigScaleMultiplier)
@@ -264,7 +274,17 @@ def check_drift(ladder, code, errors):
     for sid in ladder_order:
         row_h, row_s = num(ladder, f'Dino.species.{sid}.height'), num(ladder, f'Dino.species.{sid}.scale')
         measured = ladder[f'Dino.species.{sid}.measured'] == 'true'
-        if measured != (sid in MEASURED):
+        if sid in SCALED_FROM_STUDIO:
+            old_box, old_scale, new_scale = SCALED_FROM_STUDIO[sid]
+            want_box = tuple(round(x * new_scale / old_scale + 1e-9, 2) for x in old_box)
+            box = tuple(num(ladder, f'Dino.species.{sid}.{k}') for k in ('width', 'height', 'length'))
+            if measured:
+                errors.append(f'{sid}: the box is scaled from the Studio box, not re-read (BD-992), so measured must be false')
+            if not close(new_scale, row_s, 1e-9):
+                errors.append(f'{sid}: SCALED_FROM_STUDIO says scale {new_scale} but the ladder says {row_s}')
+            if any(not close(x, y, 0.011) for x, y in zip(box, want_box)) or any(not close(x, y, 1e-9) for x, y in zip(box, MEASURED[sid])):
+                errors.append(f'{sid}: ladder box {box} is not the Studio box {old_box} x {new_scale}/{old_scale} = {want_box} (BD-992)')
+        elif measured != (sid in MEASURED):
             errors.append(f'{sid}: measured flag {measured} disagrees with the Studio-measured list {sorted(MEASURED)}')
         elif measured:
             box = tuple(num(ladder, f'Dino.species.{sid}.{k}') for k in ('width', 'height', 'length'))
@@ -291,6 +311,13 @@ def check_sizing(ladder, code, errors):
     growth, tol, top = g('Sizing.growthPerTier'), g('Sizing.tolerance'), int(g('Sizing.topTier'))
     if not close(growth, 1.1, 1e-9) or not close(tol, TOLERANCE, 1e-9) or top != 5:
         errors.append(f'SIZING the rule constants must be growth 1.1, tolerance {TOLERANCE}, top tier 5 (owner BD-232), found {growth}, {tol}, {top}')
+    king, steps = ladder.get('Sizing.kingSpecies'), int(g('Sizing.kingSteps'))
+    if king != 'tyrannosaurus' or steps != 1:
+        errors.append(f'SIZING the king must be the tyrannosaurus one growth step above the top tier (owner 2026-10-18, BD-992), found {king}, {steps}')
+    if not close(num(code, f'sizing.tier.{king}'), int(g(f'Dino.species.{king}.tier')) + steps, 1e-9):
+        errors.append('SIZING ScaleLadder.sizingTier(king) must be its unlock tier plus kingSteps')
+    if not close(num(code, 'sizing.tier.compy'), int(g('Dino.species.compy.tier')), 1e-9):
+        errors.append('SIZING ScaleLadder.sizingTier of an ordinary species must be its unlock tier')
     rule = {
         'height': lambda t: g('Sizing.height.tier1') * growth ** (t - 1),
         'bulk': lambda t: g('Sizing.bulk.top') / growth ** (top - t),
@@ -311,24 +338,39 @@ def check_sizing(ladder, code, errors):
         errors.append('SIZING Compy (tier 1) must be the height anchor 6.6')
     box = {sid: tuple(g(f'Dino.species.{sid}.{k}') for k in ('width', 'height', 'length')) for sid in order}
     rex = box['tyrannosaurus']
-    if not close(size_of('bulk', rex), g('Sizing.bulk.top'), 0.005 * g('Sizing.bulk.top')) or not close(rex[2], g('Sizing.length.top'), 0.005):
-        errors.append('SIZING the T-Rex must be the top: its bulk and length equal Sizing.bulk.top and Sizing.length.top')
-    expect_basis = {'Fly': 'bulk', 'Water': 'bulk'}
+    king_f = growth ** steps
+    if not close(size_of('bulk', rex), g('Sizing.bulk.top') * king_f, 0.005 * g('Sizing.bulk.top') * king_f) or not close(rex[2], g('Sizing.length.top') * king_f, 0.03):
+        errors.append('SIZING the T-Rex is the king: its bulk and length equal Sizing.bulk.top and Sizing.length.top times the king step')
+    # BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): the T-Rex is the biggest dinosaur by volume (bulk) and the tallest, with a margin so a rounding
+    # of a scale can never flip it. LENGTH is deliberately not asserted: a long low swimmer and the Spinosaurus are longer (fly/water by bulk, owner BD-232).
+    rex_bulk, rex_height = size_of('bulk', rex), rex[1]
+    for sid in order:
+        if sid == 'tyrannosaurus':
+            continue
+        if size_of('bulk', box[sid]) > rex_bulk * 0.98:
+            errors.append(f'BIGGEST {sid} bulk {size_of("bulk", box[sid]):.2f} is not at least 2% below the T-Rex {rex_bulk:.2f} (owner 2026-10-18: the T-Rex must be the biggest)')
+        if box[sid][1] > rex_height * 0.95:
+            errors.append(f'BIGGEST {sid} height {box[sid][1]:.2f} is not at least 5% below the T-Rex {rex_height:.2f}')
+    for sid, b in SECRET_BOXES.items():
+        if size_of('bulk', b) > rex_bulk * 0.98 or b[1] > rex_height * 0.95:
+            errors.append(f'BIGGEST secret {sid} is not clearly smaller than the T-Rex')
+    expect_basis = {'Fly': 'bulk', 'Water': 'bulk', 'Armored': 'bulk'}
     by_tier = {}
     for sid in order:
         tier, basis = int(g(f'Dino.species.{sid}.tier')), ladder[f'Dino.species.{sid}.basis']
         if tier != int(num(code, f'species.{sid}.rarity')) or tier != int(num(code, f'species.{sid}.tier')):
             errors.append(f'SIZING {sid}: tier {tier} differs from Config.SpeciesRarities {code[f"species.{sid}.rarity"]} / LowPolyDinoAssets tier {code[f"species.{sid}.tier"]}')
         if basis != expect_basis.get(code[f'species.{sid}.class'], 'height'):
-            errors.append(f'SIZING {sid}: basis {basis} does not fit class {code[f"species.{sid}.class"]} (Ground and Armored height, Fly and Water bulk)')
-        want = rule[basis](tier)
+            errors.append(f'SIZING {sid}: basis {basis} does not fit class {code[f"species.{sid}.class"]} (Ground height, Fly, Water and Armored bulk)')
+        size_tier = tier + (steps if sid == king else 0)  # BD-992: the king is sized one growth step above its unlock tier
+        want = rule[basis](size_tier)
         target = g(f'Dino.species.{sid}.target')
         if not close(target, want, 0.006):
             errors.append(f'SIZING {sid}: target {target} is not the rule value {want:.3f} for {basis} tier {tier}')
         got = size_of(basis, box[sid])
         if abs(got - want) > tol * want:
-            errors.append(f'SIZING {sid} ({basis}, tier {tier}): size {got:.2f} is more than {tol:.0%} from the rule {want:.2f}; set its LowPolyDinoAssets scale')
-        by_tier.setdefault((basis, tier), []).append(got)
+            errors.append(f'SIZING {sid} ({basis}, tier {size_tier}): size {got:.2f} is more than {tol:.0%} from the rule {want:.2f}; set its LowPolyDinoAssets scale')
+        by_tier.setdefault((basis, size_tier), []).append(got)
     # unlock order: every higher tier is bigger than every lower tier by about 10% per step (ground height; fly and water bulk)
     for basis in ('height', 'bulk', 'length'):
         tiers = sorted(t for b, t in by_tier if b == basis)
@@ -345,9 +387,9 @@ def check_sizing(ladder, code, errors):
             errors.append(f'SIZING ground {sid} ({box[sid][1]:.2f}) is below the starter Compy ({compy_h})')
         if box[sid][1] > rex_h * (1 + tol):
             errors.append(f'SIZING ground {sid} ({box[sid][1]:.2f}) is taller than the T-Rex ({rex_h})')
-    for sid in order:  # fly and water: never above the T-Rex on their own basis
+    for sid in order:  # fly, water and armored: never above the Legendary level (and so below the T-Rex king) on their own basis
         basis = ladder[f'Dino.species.{sid}.basis']
-        top_v = {'bulk': g('Sizing.bulk.top'), 'length': g('Sizing.length.top')}.get(basis)
+        top_v = {'bulk': g('Sizing.bulk.top'), 'length': g('Sizing.length.top')}.get(basis) if sid != king else None
         if top_v and size_of(basis, box[sid]) > top_v * (1 + tol):
             errors.append(f'SIZING {sid} {basis} {size_of(basis, box[sid]):.2f} is above the T-Rex top {top_v}')
 
@@ -552,7 +594,7 @@ def render(ladder):
     add('All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.')
     add('')
     n_measured = sum(1 for sid in order if ladder[f'Dino.species.{sid}.measured'] == 'true')
-    add(f'**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471 and BD-232, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), the T-Rex on top (C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).')
+    add(f'**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471 and BD-232, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), Armored by bulk too, and the T-Rex one growth step above the top tier so it is the biggest and tallest dino (BD-992, owner 2026-10-18; the Ankylosaurus and T-Rex boxes are scaled from the Studio boxes, not re-read; C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).')
     add('')
     head = '| Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | ' + ' | '.join(f'{name} height x{fmt(stages[name])}' for name in STAGE_COLUMNS) + ' |'
     add(head)

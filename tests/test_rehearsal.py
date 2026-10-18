@@ -50,14 +50,22 @@ class RehearsalProfileTests(unittest.TestCase):
         self.assertEqual(sorted(rp.shipped_profiles()), ["default", "playtest"])
         self.assertEqual(rp.shipped_flag_problems(CONFIG), [])
 
-    def test_the_default_and_playtest_hard_stops_are_unchanged(self):
-        for flag in ("ObjectivesEnabled", "GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled"):
+    def test_the_default_and_playtest_hard_stops(self):
+        # the gift flags stay required-false in BOTH shipped profiles (docs/157: no sender is built or approved)
+        for flag in ("GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled", "SecretSpeciesEnabled", "DinoSkinsEnabled", "HatchV2"):
             for name in ("default", "playtest"):
                 self.assertTrue(any(r.key == flag and r.mode == "require" and r.value is False for r in profiles.rules_for(name)), (flag, name))
+        # ObjectivesEnabled: required false in default; since docs/157 the playtest sets it (the rehearsal states it once)
+        self.assertTrue(any(r.key == "ObjectivesEnabled" and r.mode == "require" and r.value is False for r in profiles.rules_for("default")))
         rehearsal_config = profiles.apply_profile(CONFIG, PROFILE)[0]
         for name in ("default", "playtest"):
             report = profiles.verify_source(rehearsal_config, name)
-            self.assertTrue(any("ObjectivesEnabled" in e for e in report.errors), f"{name} must refuse a Config with the rehearsal values")
+            self.assertTrue(any("GiftClaimEnabled" in e for e in report.errors), f"{name} must refuse a Config with the rehearsal values")
+        self.assertTrue(any("ObjectivesEnabled" in e for e in profiles.verify_source(rehearsal_config, "default").errors))
+        # a profile never states a flag twice
+        for name in ("default", "playtest", PROFILE):
+            keys = [(r.key, r.mode) for r in profiles.rules_for(name) if r.mode != "check"]
+            self.assertEqual(len(keys), len(set(keys)), name)
 
     def test_the_rehearsal_place_builds_and_verifies_offline(self):
         data, _, report = packager.build_profile(PROFILE, ROOT / "default.project.json")
@@ -94,8 +102,9 @@ class NoCombatVariantTests(unittest.TestCase):
 
     def test_default_and_playtest_still_refuse_its_values(self):
         variant_config = profiles.apply_profile(CONFIG, self.VARIANT)[0]
-        for name in ("default", "playtest"):
-            self.assertTrue(any("ObjectivesEnabled" in e for e in profiles.verify_source(variant_config, name).errors), name)
+        # docs/157: the playtest sets ObjectivesEnabled itself, so it refuses the variant on a flag it still keeps off
+        for name, flag in (("default", "ObjectivesEnabled"), ("playtest", "GiftClaimEnabled")):
+            self.assertTrue(any(flag in e for e in profiles.verify_source(variant_config, name).errors), name)
 
     def test_the_place_builds_and_verifies_offline(self):
         data, _, report = packager.build_profile(self.VARIANT, ROOT / "default.project.json")

@@ -26,6 +26,11 @@ ScaleLadder.Unit = "studs"
 -- `head` MeshPart along the body, both from the same Studio measurement (the part's bounding box in the model frame, 2 decimals). snout equals
 -- length / 2 for all species but Microraptor (its template wings reach further forward than the head). The generated head parts include neck,
 -- crest or frill, so Shared/MouthReach clamps the head to 20% to 25% of the body length. The eating point and radius come from these two numbers.
+-- BD-992 (docs/115 OWNER decision 2026-10-18, Q14 of docs/116: "T-Rex must be the biggest"): the T-Rex is the KING, `Sizing.kingSteps` growth steps (x1.1 each)
+-- above the top unlock tier, so it is the tallest AND the bulkiest dino (bulk 8.91 against Spinosaurus 8.64 and Mosasaurus 8.12). The Armored class is sized by
+-- BULK like Fly and Water (a low, wide, long body is not "tall"; by height the Ankylosaurus was the bulkiest dino at 9.95). Fly and Water still top out at
+-- Sizing.bulk.top (the Legendary level), which is now below the T-Rex. Not changed: every other species' scale and the unlock tiers.
+-- Length is NOT part of "biggest": a long low swimmer (Mosasaurus 16.9) or the Spinosaurus (12.1) are longer by design (fly/water by bulk, owner BD-232).
 -- The legacy (non-low-poly) Compy is about 5.5 studs (docs/68); only the low-poly rows are in this table.
 ScaleLadder.HeightPerScaleEstimate = 2.84
 ScaleLadder.Dino = {
@@ -47,10 +52,10 @@ ScaleLadder.Dino = {
     species = {
         compy = {scale = 2.2, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.69, snout = 3.84, headLength = 1.65, measured = true},
         triceratops = {scale = 2.86, tier = 3, basis = "height", target = 7.99, width = 5.79, height = 8.00, length = 8.58, snout = 4.29, headLength = 4.76, measured = true},
-        tyrannosaurus = {scale = 3.47, tier = 5, basis = "height", target = 9.66, width = 5.31, height = 9.67, length = 10.41, snout = 5.20, headLength = 5.13, measured = true},
+        tyrannosaurus = {scale = 3.81, tier = 5, basis = "height", target = 10.63, width = 5.83, height = 10.62, length = 11.43, snout = 5.71, headLength = 5.63, measured = false}, -- BD-992: the KING, one step above tier 5; box = the BD-232 Studio box x 3.81 / 3.47 (not re-read in Studio)
         raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, snout = 3.87, headLength = 2.80, measured = true},
         stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, snout = 5.85, headLength = 2.55, measured = true},
-        ankylosaurus = {scale = 3.6, tier = 4, basis = "height", target = 8.78, width = 7.78, height = 8.78, length = 14.40, snout = 7.20, headLength = 5.17, measured = true},
+        ankylosaurus = {scale = 2.67, tier = 4, basis = "bulk", target = 7.38, width = 5.77, height = 6.51, length = 10.68, snout = 5.34, headLength = 3.83, measured = false}, -- BD-992: Armored is sized by bulk (squat, wide); box = the BD-232 Studio box x 2.67 / 3.6 (not re-read in Studio)
         archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, snout = 2.96, headLength = 1.34, measured = true},
         baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, snout = 4.67, headLength = 3.82, measured = true},
         brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, snout = 4.37, headLength = 3.52, measured = true},
@@ -91,8 +96,9 @@ ScaleLadder.Dino = {
 }
 
 -- ---------------------------------------------------------------- the size rule (BD-232)
--- Unlock tier = Config.SpeciesRarities (1 Common .. 5 Legendary; a species is unlocked by hatching it). Basis by class: Ground and Armored
--- (Elasmosaurus is a normal Ground dino, docs/101) use HEIGHT; Fly and Water use BULK (C-39: the owner said "fly/water scaled by bulk"; Water was by length first).
+-- Unlock tier = Config.SpeciesRarities (1 Common .. 5 Legendary; a species is unlocked by hatching it). Basis by class: Ground
+-- (Elasmosaurus is a normal Ground dino, docs/101) uses HEIGHT; Fly, Water and (BD-992) Armored use BULK (C-39: the owner said "fly/water scaled by bulk"; Water was by length first).
+-- The king species (Sizing.kingSpecies, the T-Rex) is sized at tier topTier + kingSteps, so it is the biggest dino.
 --   height target(tier) = Sizing.height.tier1 x growthPerTier^(tier - 1)            (Compy, tier 1, is 6.6)
 --   bulk   target(tier) = Sizing.bulk.top   / growthPerTier^(topTier - tier)        (the T-Rex's bulk is the top, tier 5)
 --   length target(tier) = Sizing.length.top / growthPerTier^(topTier - tier)        (kept as a helper; no species uses it since C-39)
@@ -102,9 +108,11 @@ ScaleLadder.Sizing = {
     growthPerTier = 1.1,
     tolerance = 0.02,
     topTier = 5,
+    kingSpecies = "tyrannosaurus", -- BD-992: "T-Rex must be the biggest" (owner 2026-10-18)
+    kingSteps = 1, -- the king is this many growth steps (x growthPerTier each) above the top unlock tier: target = rule(topTier + kingSteps)
     height = {tier1 = 6.6},
-    bulk = {top = 8.12}, -- T-Rex bulk at spawn: (5.31 x 9.67 x 10.41) ^ (1/3)
-    length = {top = 10.41}, -- T-Rex length at spawn
+    bulk = {top = 8.12}, -- the Legendary level of the bulk rule (Fly/Water top; the T-Rex was exactly this before BD-992): (5.31 x 9.67 x 10.41) ^ (1/3)
+    length = {top = 10.41}, -- the Legendary level of the length rule (kept as a helper)
 }
 
 -- ---------------------------------------------------------------- world: plants, trees, rocks, landmarks
@@ -168,7 +176,7 @@ function ScaleLadder.sizeOf(basis: string, width: number, height: number, length
     return height
 end
 
--- The rule: target size in studs for a basis and unlock tier (1 to 5), not rounded.
+-- The rule: target size in studs for a basis and unlock tier (1 to 5, or topTier + kingSteps for the king), not rounded.
 function ScaleLadder.targetSize(basis: string, tier: number): number
     local s = ScaleLadder.Sizing
     if basis == "height" then return s.height.tier1 * s.growthPerTier ^ (tier - 1) end
@@ -206,6 +214,14 @@ function ScaleLadder.tallestDinoAtOne(): (string, number)
         if row.height > best then bestId, best = id, row.height end
     end
     return bestId, best
+end
+
+-- BD-992: the tier a species is SIZED at: its unlock tier, plus Sizing.kingSteps for the king (the T-Rex). nil for an unknown species.
+function ScaleLadder.sizingTier(speciesId: string): number?
+    local row: any = ScaleLadder.dinoRow(speciesId)
+    if row == nil then return nil end
+    if speciesId == ScaleLadder.Sizing.kingSpecies then return row.tier + ScaleLadder.Sizing.kingSteps end
+    return row.tier
 end
 
 return ScaleLadder

@@ -554,6 +554,17 @@ local function wealth(userId)
     for _, k in WEALTH do
         local value = profile[k]
         if k == "metrics" and type(value) == "table" then value = {robux = value.robux, rarest = value.rarest} end -- playSeconds moves with the lease renew
+        -- docs/157: with ObjectivesEnabled (playtest) a player's OWN queued objective progress is flushed with the lease renew, so progress/flush/seen
+        -- move on their own. What a hostile request could steal is a claim or the crystals paid out, so only those are compared.
+        if k == "objectives" and type(value) == "table" then
+            local claims = {earned = value.earned and value.earned.crystals, daily = value.daily and value.daily.claimed,
+                short = value.short and value.short.claimed, tutorial = value.tutorial and value.tutorial.claimed}
+            local touched = (claims.earned or 0) ~= 0
+            for _, list in {claims.daily or {}, claims.short or {}, claims.tutorial or {}} do
+                for _, claimed in list do if claimed == true then touched = true end end
+            end
+            value = if touched then claims else nil -- the empty record is created lazily on first contact: not a change
+        end
         parts[#parts + 1] = k .. "=" .. canon(value)
     end
     return table.concat(parts, ";")
