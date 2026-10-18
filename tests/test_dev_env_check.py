@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -96,6 +97,10 @@ def build_machine(base):
     touch(os.path.join(base, "Local", "Google", "Chrome", "User Data", "Local State"), json.dumps({"background_mode": {"enabled": False}}))
     touch(os.path.join(base, "Local", "Microsoft", "Edge", "User Data", "Local State"), json.dumps({"background_mode": {"enabled": True}}))
     touch(os.path.join(base, "Local", "Microsoft", "Edge", "User Data", "Profile 1", "Extensions", dec.CLAUDE_EXTENSION_ID, "1.0", "manifest.json"), "{}")
+    # the luau runner lives at a fixed path on the owner PC: point the check at a fake file so tests pass on any machine (CI runs on Linux)
+    fake_luau = os.path.join(base, "luau.exe")
+    touch(fake_luau)
+    mock.patch.object(dec, "LUAU", fake_luau).start()
 
 
 def by_name(results, area, name):
@@ -110,6 +115,7 @@ class CheckTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.p = FakeProbes(self.tmp.name)
         build_machine(self.tmp.name)
+        self.addCleanup(mock.patch.stopall)
 
     def run_all(self):
         return dec.run_checks(self.p)
@@ -323,6 +329,7 @@ class MainTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p = FakeProbes(tmp)
             build_machine(tmp)
+            self.addCleanup(mock.patch.stopall)
             out_json = os.path.join(tmp, "out.json")
             buf = io.StringIO()
             with redirect_stdout(buf):
