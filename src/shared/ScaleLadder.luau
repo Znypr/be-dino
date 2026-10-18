@@ -82,7 +82,7 @@ ScaleLadder.Dino = {
     -- ESTIMATES with bird proportions. A secret species with a filled model slot (SecretSpeciesConfig.assetId) MUST have measured = true,
     -- i.e. its row re-read from the Studio bounding box like the 22 (tools/verify_scale_ladder.py fails otherwise).
     secret = {
-        order = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus"}, -- Shared/SecretSpeciesConfig.Order
+        order = {"chickosaurus", "pigeon", "dodo", "duck", "penguin", "budgiesaurus", "foxosaurus", "cockatoosaurus", "eaglesaurus"}, -- Shared/SecretSpeciesConfig.Order
         species = {
             chickosaurus = {scale = 3.06, tier = 1, basis = "height", target = 6.60, width = 3.92, height = 6.61, length = 6.12, snout = 3.06, headLength = 1.35, measured = true},
             pigeon = {scale = 2.86, tier = 1, basis = "height", target = 6.60, width = 5.21, height = 6.61, length = 5.72, snout = 2.86, headLength = 1.26, measured = true},
@@ -91,6 +91,8 @@ ScaleLadder.Dino = {
             penguin = {scale = 2.38, tier = 1, basis = "bulk", target = 5.55, width = 5.81, height = 6.19, length = 4.76, snout = 2.38, headLength = 1.05, measured = true},
             budgiesaurus = {scale = 0.9, tier = 1, basis = "bulk", target = 5.55, width = 3.60, height = 6.60, length = 7.12, snout = 3.56, headLength = 1.57, measured = true},
             foxosaurus = {scale = 0.79, tier = 1, basis = "height", target = 6.60, width = 3.00, height = 6.64, length = 6.32, snout = 3.16, headLength = 1.39, measured = true},
+            cockatoosaurus = {scale = 1.11, tier = 1, basis = "bulk", target = 5.55, width = 3.80, height = 6.66, length = 6.74, snout = 3.37, headLength = 1.48, measured = true},
+            eaglesaurus = {scale = 1.0, tier = 1, basis = "bulk", target = 5.55, width = 4.00, height = 5.52, length = 7.75, snout = 3.88, headLength = 1.71, measured = true},
         },
     },
 }

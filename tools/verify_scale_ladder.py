@@ -63,6 +63,8 @@ SECRET_BOXES = {
     'penguin': (5.81, 6.19, 4.76),  # MEASURED at scale 1 2.44 x 2.6 x 2 (docs/173) x 2.38
     'budgiesaurus': (3.60, 6.60, 7.12),  # MEASURED at scale 1 4 x 7.33 x 7.91 (docs/173) x 0.9
     'foxosaurus': (3.00, 6.64, 6.32),  # MEASURED (BD-602 v2 Place 1 box 3.8 x 8.4 x 8.0 at scale 1) x 0.79
+    'cockatoosaurus': (3.80, 6.66, 6.74),  # MEASURED at scale 1 3.427 x 6 x 6.07 (docs/173) x 1.11
+    'eaglesaurus': (4.00, 5.52, 7.75),  # MEASURED at scale 1 4 x 5.518 x 7.747 (docs/173) x 1.0
 }
 SECRET_SIZE_TIER = 1  # SS8: every secret is sized as a tier 1 (Compy-sized) find
 # BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): two rows changed scale and were NOT re-read in Studio (no window). Their box is the last Studio
@@ -404,7 +406,7 @@ def check_secret(ladder, code, errors):
         'bulk': lambda t: g('Sizing.bulk.top') / growth ** (top - t),
     }
     tol = g('Sizing.tolerance')
-    order = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 8) if f'Dino.secret.order.{i}' in ladder]
+    order = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 12) if f'Dino.secret.order.{i}' in ladder]
     if ','.join(order) != code['secret.order']:
         errors.append('SECRET ScaleLadder.Dino.secret.order differs from SecretSpeciesConfig.Order')
     if sorted(order) != sorted(SECRET_BOXES):
@@ -606,7 +608,7 @@ def render(ladder):
         dims = ' x '.join(f'{g(f"Dino.species.{sid}.{k}"):.2f}' for k in ('width', 'height', 'length'))
         add(f'| {sid} | {int(g(f"Dino.species.{sid}.tier"))} | {ladder[f"Dino.species.{sid}.basis"]} | {g(f"Dino.species.{sid}.target"):.2f} | {fmt(g(f"Dino.species.{sid}.scale"))} | {dims} | {src} | {cells} |')
     add('')
-    sec = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 8)]
+    sec = [ladder[f'Dino.secret.order.{i}'] for i in range(1, 12) if f"Dino.secret.order.{i}" in ladder]
     n_sec = sum(1 for sid in sec if ladder[f'Dino.secret.species.{sid}.measured'] == 'true')
     add(f'**Secret species (BD-606, docs/115 SS8; behind `SecretSpeciesEnabled`: off in the default profile, on in the playtest; only a species with a bound model can drop, docs/173).** Sized by the same rule as tier 1 (Compy-sized); {n_sec} of {len(sec)} are measured. A row stays an ESTIMATE (design box, bird proportions) until its mesh exists; a secret whose model slot is filled must be MEASURED.')
     add('')
