@@ -96,10 +96,10 @@ function L.shownReason(selection: any, requiresPass: boolean, ownsPass: boolean,
     return nil
 end
 
--- Never auto-opens Shiny, BIG, event mutations, Rainbow/Astra (RevealSkip.isNotable). openAll = the optional
--- "Open all" convenience (every rarity, same never-skip rules).
+-- Never auto-opens Shiny, BIG, event mutations, Rainbow/Astra, secrets (RevealSkip.isNotable). openAll = the optional
+-- "Open all" convenience (every rarity but Legendary, same never-skip rules; BD-1057).
 function L.shouldAutoOpen(selection: any, requiresPass: boolean, ownsPass: boolean, rarity: number, outcome: any, openAll: boolean): boolean
-    local list = if openAll and not L.locked(requiresPass, ownsPass) then RevealSkip.Rarities else L.effective(selection, requiresPass, ownsPass)
+    local list = if openAll and not L.locked(requiresPass, ownsPass) then RevealSkip.OpenAllRarities else L.effective(selection, requiresPass, ownsPass)
     return RevealSkip.shouldSkip(list, rarity, outcome)
 end
 
