@@ -10,7 +10,7 @@ In the playtest window the dino **wiggled a lot**. The owner guessed it is looki
 - So the wiggle in a Studio window is almost certainly **our own Studio test helper** steering the dino with simple "walk to a point" commands (and the idle sway animation). I could not confirm which helper from here; if it was a person, it is not wiggle code at all. Either way the owner is right: **it is not a faithful player simulation.**
 
 ## How food is placed today (`src/server/FoodService.luau`)
-- The arena is split into sectors (`Config.FoodSectorCount`). Each sector gets one cluster centre, jittered at random with a fixed seed (`Config.FoodSeed`), and `FoodClusterItems` items are scattered inside a cluster radius. About 2,400 foods in all.
+- The arena is split into sectors (`Config.FoodSectorCount`). Each sector gets one cluster centre, jittered at random with a fixed seed (`Config.FoodSeed`), and `FoodClusterItems` items are scattered inside a cluster radius. 20 x 20 sectors x 9 items = **3,600 foods** in all (`Config.FoodSectorCount`, `FoodClusterItems`; the code comment about 2,400 is old).
 - Each item's kind is a weighted random roll: berry 70, fruit 20, egg 7, amber 3 (points 1 / 4 / 15 / 50). A starter patch near spawn is fixed.
 - Items avoid water, steep ground, rocks and trunks. Each item respawns after `FoodRespawnSeconds`.
 - Weakness (owner point): one cluster per sector with random jitter gives clumps and empty gaps with no design behind them. Nothing measures the spread.
@@ -20,10 +20,17 @@ In the playtest window the dino **wiggled a lot**. The owner guessed it is looki
 A tool that reads the real food positions and prints: nearest-food distance for 2,000 random ground points (min / median / max), empty zones larger than N studs, and a **heatmap picture** (top-down, brighter = more food, colour = best food kind). The owner sees the problem as a picture before anything changes.
 
 ### B. Food map grid (BD-1047)
-- A small data file holds the **designed food map**: a grid (start with 128 x 128 cells over the arena; 1,000 x 1,000 is far finer than a 4-stud food item needs and would be a huge file, so the resolution is a tool setting). Each cell holds 0 (none) or a food kind 1..4 (berry, fruit, egg, amber), plus the special food as 5 only when that flag is on.
+- A small data file holds the **designed food map** as a `WorldLayer` (section D). **Owner correction 2026-10-18: a 1,000 x 1,000 grid is NOT a big file** (my first answer was wrong). One hex digit per cell is 1,000,000 characters raw, 500 KB packed two cells per byte, and because the map is almost all zeros (3,600 food pieces) **run-length encoding makes it a few KB**. The arena is 832 studs wide (`ArenaHalfWidth` 416), so 1,000 cells is about 0.83 stud per cell: fine enough for any food. Resolution stays a tool setting (start 256 x 256 to keep pictures small; 1,000 x 1,000 is allowed). Each cell holds 0 (none) or a food kind 1..4 (berry, fruit, egg, amber), plus the special food as 5 only when that flag is on.
 - A generator makes the map with rules, not pure dice: minimum distance between items (blue-noise spacing), a few designed hot spots (a fruit grove, an egg meadow, a lonely amber on a hill), gentle density from spawn outward, guaranteed food within N studs of the player's spawn and of the Home exit, none in water or on rocks. A seed still makes it deterministic.
 - `FoodService` reads the map instead of the sector/jitter code. Same total count, same points per kind, same respawn rules; the spawner keeps the existing ground, water and obstacle checks as a safety net. Existing Food attributes and the catch rules do not change.
 - The heatmap picture of A is regenerated from the map and saved as the evidence.
+
+### D. One generic map class for more than food (owner idea 2026-10-18, BD-1050)
+The owner's point: this is not a picture drawn on the map, it is **a small 2D table of hex digits** inside an ordinary class, and it can serve other things too: which tree kind grows where, how big, separating trees better, shaping biomes.
+- **`WorldLayer`** (pure Luau, no Instances, like `BiomeMap`): `WorldLayer.decode(text)`, `layer:at(x, z)`, `layer:set(x, z, v)`, `layer:encode()` (run-length encoded hex text a ModuleScript can hold), plus a world-to-cell conversion and `neighbours`. Server and offline tools use the same code, so tests can read it.
+- **One layer per job**, each with its own digit meaning: `food` (kind), `treeKind` (0 none, 1 broad, 2 pine, 3 palm, ...), `treeSize` (size band), `biome` (index into `BiomeMap.Order`). A layer is 1 byte per cell in memory (1 MB at 1,000 x 1,000), which is fine on the server.
+- **What exists already:** `BiomeMap` is a smooth seeded math field (blobs and noise) and `BiomePlacement` places six kinds of props by that field and a seed. `WorldLayer` does not replace them at once. First step: **bake** the current biome field and the current prop picks into layers (so we can SEE them as pictures and measure clumps), then let a designer-edited layer override the dice where the owner wants control (trees spread better, clearings where wanted, a fruit grove here, a bare ridge there).
+- A tiny text/PNG preview tool (`tools/layer_preview.py`) turns any layer into a coloured picture for the owner.
 
 ### C. Smart test bot (BD-1048, Studio-only, never shipped)
 - Lives under `tools/studio/` (like the model insert snippet), run through the Studio MCP in a play session; it is not in `src/` and has no remote.
