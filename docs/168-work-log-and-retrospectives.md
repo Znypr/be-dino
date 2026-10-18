@@ -106,6 +106,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | Lead: said a browser was unavailable before probing it | lead | - | - | - | - | rework | 1 | unverified-claim: browser called unavailable without a probe, tool-missing: tool probe not run at session start | Probe a tool before saying it is missing. (tool: dev_env_check (planned, not in repo yet); docs/160 section 9) |
 | 2026-10-18 | Lead: ran verify_kanban_merge before committing | lead | - | - | - | - | rework | 1 | other: verifier run before committing | Commit first, then run verify_kanban_merge. (brief: docs/160 section 3 (numbers and the kanban)) |
 | 2026-10-18 | Lead: doc-number collisions between parallel agents | lead | - | - | - | - | rework | 1 | doc-number-collision: two agents took the same docs number | Get numbers from the tool, never by eye. (tool: tools/next_bd_id.py --doc) |
+| 2026-10-18 | merge-train tool | lead | - | - | - | - | good | - | ci-red: serial merges restart CI for every waiting PR | serial merges restart CI N times; batch with one CI run (tool: tools/merge_train.py) |
 <!-- retro-table:end -->
 
 ## 6. Open items

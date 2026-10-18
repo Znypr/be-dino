@@ -33,6 +33,7 @@ grep -n "BD-NNN" docs/07-kanban.md             # your row
 - Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. PR body footer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - Paste the handbook checklist ([114](114-handbook.md) section 13, same text as `.github/pull_request_template.md`) into the PR body and tick it honestly.
 - Auto-merge: `gh pr merge N --repo Znypr/be-dino --squash --auto` (CI must be green).
+- **Many PRs waiting? Use the merge train** instead of merging them one by one (every squash-merge restarts CI for all the others): `python tools/merge_train.py <PR numbers> [--push]` or `--auto-select --hold <active agents' PRs>`, see [172](172-merge-train.md).
 - Do not leave `git stash` entries (the stash is shared between worktrees); use a WIP commit.
 
 **Numbers and the kanban** (one board only: [07-kanban.md](07-kanban.md); status lives only there; never mark Done without recorded evidence):
