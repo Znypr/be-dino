@@ -75,6 +75,7 @@ Shared by every screen below: **X** `closeButton` (built 80x76; `ModalCompact` k
 | Fusion confirm | yes | Not now | new (cancels, fuses nothing) | yes | new | no | Tested: a backdrop tap on confirm sends no fuse. |
 | Fusion reveal (wheels) | yes | Skip, Next, See my dino | ignored on purpose (do not cut the ceremony short) | yes | new | no | |
 | Egg origin popup (Dino Index) | none (card) | OK | tap anywhere | via the menu | via the menu | no | |
+| Pattern / colour detail (Index Patterns and Colours tabs, BD-1065; `PatternColourDetail.luau`) | yes (56 px) | OK (48 px) | tap anywhere on the backdrop or the card | via the menu (closes the whole menu) | via the menu | no: it lives inside the screen body, never over the header or the menu X | Closing only hides it; nothing is claimed or sent. The card button that opens it (`CardHit`) covers one card only. Both are on the reviewed list in `tools/verify_close_paths.py`. |
 | Objectives (tasks) panel | none | header tap folds / opens, CLAIM per row | none | none | none | no | A HUD panel, not a modal: nothing to close. |
 | Goals panel | none | header tap folds / opens | none | none | none | no | HUD panel. |
 | Gift popup (`GiftPopup`) | none | OK ("ack"), Mute, Turn off | none | none | none | no | Hidden while a menu is open. Not a modal. |
