@@ -8,10 +8,10 @@
    "why": "slider knob of the QA panel: a round handle (and the panel is hidden from players)"
   },
   {
-   "file": "src/client/Bootstrap.client.luau",
+   "file": "src/client/Toasts.luau",
    "contains": "Theme.decorate(plate,22)",
    "kind": "panel",
-   "why": "a big 22 px plate corner on a large panel, not a tag (Bootstrap is not changed by this task)"
+   "why": "a big 22 px plate corner on a large panel, not a tag (the toast icon plate; the code moved from Bootstrap to Toasts.luau in BD-1088, unchanged)"
   },
   {
    "file": "src/client/CombatHud.luau",
