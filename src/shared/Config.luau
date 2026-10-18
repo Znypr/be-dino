@@ -89,6 +89,10 @@ return table.freeze({
     FoodCatchRate = 12 / 500, -- PROVISIONAL (owner 2026-10-16, BD-418, docs/119: a normal 5-minute run, about 600-700 food, gives about 15 run eggs; 500 food = 12, 5,000 = 120; HISTORICAL: 4/500 on 2026-10-15, 40/500 on 2026-10-13); raw food points, growth boosts do not multiply catches
     -- BD-207: rare special foods. All PROVISIONAL, off by default (pinned off in the default profile). Points are RAW food points.
     SpecialFoodsEnabled = false,
+    -- BD-1038 (docs/186 s6): rarer patterns and colours give the EQUIPPED dino a little faster growth (+1% a point, at most +15%) and walking
+    -- (+0.5% a point, at most +7%), computed on the server (GeneBoost.luau, formula version bd1038-geneboost-v1). PROVISIONAL numbers.
+    -- false = unchanged (the BD-172 colour bonus stays as it was). Pinned off in the default profile, ON in the playtest profile (docs/157).
+    GeneBoostEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
