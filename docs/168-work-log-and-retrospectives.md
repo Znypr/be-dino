@@ -121,6 +121,7 @@ Rewritten by `python tools/retro_log.py render`; do not edit by hand. A test fai
 | 2026-10-18 | Lead: committed leftover conflict markers | lead | - | 5.0 | - | - | rework | 1 | unverified-claim: assumed the regex worked | check for markers before every commit; CI check being built (tool: tools/verify_no_conflict_markers.py) |
 | 2026-10-18 | Lead: both-sides-edited kanban row lost main notes | lead | - | 15.0 | - | - | rework | 1 | conflict: BD-621 row edited on main and in the train | merge helpers must merge both texts, not keep one (tool: tools/kanban_merge_lib.py) |
 | 2026-10-18 | Lead: committed leftover conflict markers (CRLF regex); kanban rows edited on both sides lost main's notes | lead | - | - | - | - | rework | 1 | conflict: conflict markers committed in docs; both-sides-edited kanban rows dropped main's notes | a check must treat CRLF like LF, and a both-edited row must keep both sides (tool: tools/verify_no_conflict_markers.py) |
+| 2026-10-18 | Class icons + clearer Eggs card (BD-1022/1023) | worker | #497 | 40.0 | 75 | - | ok | - | other: kanban append conflict on merge, fixed by taking main and re-appending my rows | Image icons via Open Cloud are Decals; docs/120 wants Image: needs a Studio check. Appending kanban rows at the file end conflicts with every parallel PR; insert near the end of an existing section instead or use merge_main_into_pr.py. |
 <!-- retro-table:end -->
 
 ## 6. Open items
