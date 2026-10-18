@@ -1,13 +1,12 @@
-Prompts for the cockatoo (BD-621), rewritten 2026-10-18 for the owner's PRIMARY reference docs/reference/cockatoo-owner-ref-2-raptor-pose.webp
-(the earlier candidates A-D from the photo and the first draft prompts are obsolete; they are kept in git history, commit 44f9903f and cdcdd788).
-Use generate_mesh: text only, segmentation=explicit, partNames "body, head, crest, left wing, right wing, left leg, right leg, tail" (the wings are the small feathered arms), run async, delete duplicate generations. Each prompt is under 490 characters.
-Say colours positively (the generator ignored negations like "not orange" on the budgie). Suggested size x 5, y 8, z 8.
+Prompts for the cockatoo (BD-621), revised 2026-10-18 (v2) with the ChatGPT turnaround sheet docs/reference/cockatoo-turnaround-chatgpt-v1.png (reference only, not final art)
+on top of the owner's PRIMARY reference docs/reference/cockatoo-owner-ref-2-raptor-pose.webp. The sheet shows (front, side facing right, back): an upright neutral stance on two long grey scaly legs with three big black curved claws; a cream-white body of soft layered scalloped feathers; a long-bladed pale-yellow crest swept back and up from the side, two horn-like yellow tufts either side of a white centre spike from the front, a radiating yellow fan from the back; a hooked dark-grey beak; a big round brown eye; small feathered arms with black claws and a yellow-tipped feather fringe; a tail fan of yellow-tipped feathers.
+v1 prompts are in git history (commit of PR 443). Use generate_mesh: text only, segmentation=explicit, partNames "body, head, crest, left wing, right wing, left leg, right leg, tail" (the wings are the small feathered arms), run async, delete duplicate generations. Each prompt is under 490 characters. Say colours positively (the generator ignored negations like "not orange" on the budgie). Suggested size x 5, y 8, z 8.
 
-A (429 chars):
-soft fluffy feathered raptor-style cockatoo dinosaur in a low crouching run, leaning forward on two strong grey scaly legs with big black curved claws, small feathered arms with black claws held forward, cream-white layered feathers, swept-back pale yellow crest of long feather blades, yellow-tipped tail feathers, hooked dark grey beak, big round brown eye, chunky tail, cute rounded low-poly, soft facets, kids game, side pose
+A (453 chars):
+cute feathered cockatoo raptor dinosaur standing upright on two strong grey scaly legs with big black curved claws, cream-white body covered in soft layered scalloped feathers, swept-back crest of long pale yellow feather blades with a white centre tuft, small feathered arms with black claws held forward, hooked dark grey beak, big round brown eye, tail of long feathers with yellow tips swept back, rounded low-poly, soft facets, kids game, side pose
 
-B (397 chars):
-chubby friendly cockatoo dinosaur standing on two sturdy grey legs with black curved claws, small cream-white feathered arms with black claws forward, round fluffy cream-white body with layered feathers, big head, tall swept-back pale yellow feather crest, hooked dark grey beak, big round brown eye, yellow-tipped white tail, cute rounded low-poly, soft facets, matte pastel, kids game, side pose
+B (417 chars):
+chubby friendly cockatoo dinosaur, round fluffy cream-white body with layered scalloped feathers, big head with a fan of pale yellow crest feathers swept back and up, hooked dark grey beak, big round brown eye, short strong grey scaly legs with big black claws, small feathered arms with black claws forward, short tail of yellow-tipped feathers, cute rounded low-poly, soft facets, matte pastel, kids game, side pose
 
-C (302 chars):
-simple cockatoo raptor dinosaur, upright, cream-white body, swept-back yellow crest, dark grey hooked beak, big brown eye, small white arms with black claws, two grey legs with big black claws, white tail with yellow tips, very simple low-poly, few large soft facets, matte pastel, kids game, side pose
+C (307 chars):
+simple cockatoo raptor dinosaur, upright, cream-white body, swept-back pale yellow crest, dark grey hooked beak, big brown eye, small white arms with black claws, two grey legs with big black claws, white tail with yellow tips, very simple low-poly, few large soft facets, matte pastel, kids game, side pose

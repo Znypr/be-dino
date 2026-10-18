@@ -1,0 +1,4 @@
+Source: ChatGPT (owner account, Instant model), 2026-10-18, practice workflow with the lead.
+Input image: docs/reference/cockatoo-owner-draft.webp (owner draft).
+Prompt: Make a character turnaround reference sheet of the cockatoo dinosaur creature in the attached image, matching its design exactly: soft cream-white feathers, swept-back pale-yellow crest, hooked dark-grey beak, big round brown eye, small feathered arms with black curved claws, strong grey scaly legs with big black claws, chunky tail with yellow-tipped feathers. Show 3 views side by side on a plain light-grey background: front view, side view facing right, back view. Same proportions and size in every view, full body, neutral standing pose, soft even lighting, cute stylised 3D game character, no text, no props, no ground shadow.
+Result: cockatoo-turnaround-chatgpt-v1.png (front, side right, back), 1.6 MB. Reference only, not final art (AGENTS.md art rule).
