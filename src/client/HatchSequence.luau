@@ -74,7 +74,8 @@ type PaintKit = {buckets: {CanvasGroup}, bucketPaints: {{Frame}}, bucketImages: 
     patternChip: Frame, patternLabel: TextLabel, patternScale: UIScale, patternStroke: UIStroke,
     conditionChip: Frame, conditionLabel: TextLabel, conditionStroke: UIStroke}
 local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
-local TIN, TIN_SHADE, TIN_RIM, TIN_HANDLE = Color3.fromRGB(236, 240, 250), Color3.fromRGB(188, 200, 226), Color3.fromRGB(250, 251, 255), Color3.fromRGB(206, 215, 234)
+-- a mid-tone steel, so every egg colour reads on it: pale Cream and dark Black both have contrast against it
+local TIN, TIN_SHADE, TIN_RIM, TIN_HANDLE = Color3.fromRGB(168, 184, 212), Color3.fromRGB(132, 148, 180), Color3.fromRGB(206, 216, 236), Color3.fromRGB(196, 208, 230)
 local CHIP_FILL = Theme.Colors.card -- palette fill of a chip that holds a swatch and a tag
 local TIER_COLORS: {Color3} = Theme.RarityColors -- Common grey .. Mythic red, the game's one rarity palette
 -- Chip fill per egg condition, from the shared palette only (there is no condition colour table yet, docs/116 C-17): Cracked gold, Rainbow purple, Astra blue.
@@ -114,7 +115,7 @@ local function buildBucketShapes(group: CanvasGroup): (Frame, {Frame})
     local body = box("BucketBody", shapes, 14, 34, 64, 54, 27, TIN, true, 10)
     box("BucketShade", body, 4, 36, 56, 12, 28, TIN_SHADE, false, 6)
     local paints: {Frame} = {}
-    table.insert(paints, box("BucketPaintCap", body, 0, 0, 64, 28, 28, WHITE, false, 10))
+    table.insert(paints, box("BucketPaintCap", body, 0, 0, 64, 28, 28, WHITE, true, 10)) -- outlined: pale paint (Cream) must still read against the tin
     for n, d in {{8, 10, 18}, {26, 12, 26}, {46, 10, 14}} do table.insert(paints, box("BucketPaintDrip" .. n, body, d[1], 14, d[2], d[3] + 6, 28, WHITE, false, 5)) end
     local rim = box("BucketRim", shapes, 9, 26, 74, 17, 29, TIN_RIM, true, 8)
     table.insert(paints, box("BucketPaintSurface", rim, 5, 3, 64, 8, 30, WHITE, false, 4))
@@ -919,10 +920,10 @@ function Seq.play(args: Args): Handle
                     elseif r.mutationColor and not r.shiny and not r.big then r.mutationColor else Theme.Colors.gold
                 local tag, tagTitle = Chip.new(a.body, {name = "StopTag", fill = fill, size = UDim2.fromOffset(tagRect.w, tagRect.h), position = UDim2.fromOffset(tagRect.cx, tagRect.cy),
                     anchor = Vector2.new(.5, .5), z = a.body.ZIndex + 6, textInset = 8})
-                tagTitle.Position, tagTitle.Size = UDim2.fromOffset(8, 1), UDim2.new(1, -16, 0, 26)
+                tagTitle.Position, tagTitle.Size = UDim2.fromOffset(8, 1), UDim2.new(1, -16, 0, 27)
                 tagTitle.Text = why
                 local line = Instance.new("TextLabel")
-                line.Name, line.BackgroundTransparency, line.Position, line.Size, line.ZIndex = "StopLine", 1, UDim2.fromOffset(8, 27), UDim2.new(1, -16, 0, 17), tag.ZIndex + 1
+                line.Name, line.BackgroundTransparency, line.Position, line.Size, line.ZIndex = "StopLine", 1, UDim2.fromOffset(8, 29), UDim2.new(1, -16, 0, 19), tag.ZIndex + 1
                 line.Font, line.TextColor3, line.TextScaled, line.Text, line.Parent = Enum.Font.FredokaOne, WHITE, true, Timeline.StopLine, tag
                 line.TextStrokeTransparency, line.TextStrokeColor3 = 0, Theme.Colors.outline
                 local lineLimit = Instance.new("UITextSizeConstraint") lineLimit.MinTextSize, lineLimit.MaxTextSize, lineLimit.Parent = Chip.Spec.minText, 20, line

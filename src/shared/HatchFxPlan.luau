@@ -190,7 +190,7 @@ P.Card = {
     dino = {cx = 412, cy = 118, w = 504, h = 236}, -- the dinosaur view: top 0, bottom 236 (the name label starts at 236)
     baseZoom = 1.15,                               -- was 1.4: the head was cut
     nameTop = 236,                                 -- the name label (Bootstrap: y 236)
-    stopTag = {cx = 116, cy = 160, w = 190, h = 46}, -- "Rainbow egg! / Skip stops here"; left margin, under the ribbons, beside the dinosaur
+    stopTag = {cx = 116, cy = 160, w = 190, h = 50}, -- "Rainbow egg! / Skip stops here"; left margin, under the ribbons, beside the dinosaur
     counterGap = 12,                               -- px between the "Egg N of M" counter and the X button in the header
 }
 function P.cardRect(name: string): {number}
@@ -206,7 +206,7 @@ P.KeepOut = {
     {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
     {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
-    {16, 136, 216, 184},   -- BD-1073: the "why Skip stopped" tag (left margin)
+    {16, 134, 216, 186},   -- BD-1073: the "why Skip stopped" tag (left margin)
     {649, 36, 799, 70},    -- BIG ribbon (right)
 }
 -- Foreground sparkles live ONLY in the two side margins, below the ribbons: returns x, y, size, opacity.
