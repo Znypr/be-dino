@@ -34,6 +34,8 @@ MODULES = {
     'ConditionStageRules': 'src/shared/ConditionStageRules.luau',
     'MutationLook': 'src/shared/MutationLook.luau',
     'ChipStyle': 'src/shared/ChipStyle.luau',
+    'HubTravelClientRules': 'src/shared/HubTravelClientRules.luau',
+    'IndexTabs': 'src/client/IndexTabs.luau',
 }
 MODULES.update({k: v for k, v in cp.MODULES.items() if k not in MODULES})
 
@@ -103,6 +105,16 @@ MUTANTS = {
     },
     'the hatch effect layers ignore the phone scroller scale': {
         'HatchSequence': [('math.round(fit * rel * 10000) / 10000', 'fit')],
+    },
+    # BD-1083 (docs/197 picture 350): a tap on an Index tab closed the Index and opened Eggs
+    'the rail routing looks at the position only, not at what is on top (a tap on the Patterns tab presses the rail EGGS button)': {
+        'HubTravelClientRules': [(' or onBackdrop ~= true', '')],
+    },
+    'the backdrop answer is always yes': {
+        'ModalClose': [('    return top ~= nil and M.BackdropNames[top.Name] == true', '    return true')],
+    },
+    'any control counts as the backdrop': {
+        'ModalClose': [('    return top ~= nil and M.BackdropNames[top.Name] == true', '    return top ~= nil')],
     },
 }
 
