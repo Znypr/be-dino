@@ -136,7 +136,7 @@ def check_wiring():
     settings = read('src/client/SettingsMenu.luau')
     server = profile_sources.repository_text()
     for needle, where, name in (
-        ('Copy.waitingText', eggs, 'Eggs screen count'), ('Copy.NestLine', eggs, 'nest line'), ('Copy.crackedHintShown', eggs, 'cracked hint'),
+        ('Copy.eggOfText', eggs, 'Eggs screen count'), ('Copy.NestLine', eggs, 'nest line'), ('Copy.crackedHintShown', eggs, 'cracked hint'),
         ('ctx.explore()', eggs, 'explore button'), ('Copy.hatchButtons', hatch, 'end buttons'), ('onAgain', hatch, 'try again'),
         ('Copy.foundToast', hud, 'one found toast'), ('controlsLines', settings, 'controls list'),
         ('upgradeButton(', boot, 'shop upgrade lock'), ('worldTextAllowed', boot, 'world text vs modal'),

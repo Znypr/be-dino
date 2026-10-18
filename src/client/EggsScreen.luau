@@ -151,9 +151,14 @@ function EggsScreen.render(ctx: any)
         local chipW = if conditionName then (stageW - 28) // 2 else stageW - 20
         local rarityChip = pill(stage, ctx.rarityNames[rarity], ctx.rarityColors[rarity], 10, chipY, chipW, 32, 19)
         rarityChip.Name = "RarityChip"
+        -- Owner 2026-10-18: say what each chip is. "Egg type" = rarity, "Shell" = condition (small captions, 14 px, above the chips).
+        local typeCaption = label(stage, Copy.ChipTypeCaption, 10, chipY - 18, chipW, 18, 14, C.text)
+        typeCaption.Name, typeCaption.TextStrokeTransparency = "RarityCaption", .4
         if conditionName then
             local conditionChip = pill(stage, conditionName, C.purple, 18 + chipW, chipY, chipW, 32, 19)
             conditionChip.Name = "ConditionChip"
+            local shellCaption = label(stage, Copy.ChipShellCaption, 18 + chipW, chipY - 18, chipW, 18, 14, C.text)
+            shellCaption.Name, shellCaption.TextStrokeTransparency = "ConditionCaption", .4
         end
         if badge then
             local badgeChip = pill(stage, badge, badgeColor, 10, 8, 150, 30, 17)
@@ -170,7 +175,7 @@ function EggsScreen.render(ctx: any)
 
     local infoX = stageW + 30
     local infoW = 824 - infoX - 14
-    local waitingText = Copy.waitingText(ctx.num("ActiveChestCount"), waiting) -- BD-369: counts the card egg; hidden at 0
+    local waitingText = Copy.eggOfText(ctx.num("ActiveChestCount"), waiting) -- "Egg 1 of N": N counts the card egg (BD-369); hidden at 0
     -- BD-531 compact: row 1 holds the waiting count and the status pill side by side; the OPEN button takes the height left above AUTO.
     local rowH = if compact then L.rowH else 38
     local pillX, pillW = infoX, if entry then math.min(280, infoW) else infoW
@@ -184,12 +189,14 @@ function EggsScreen.render(ctx: any)
     local timerChip, timer = pill(card, statusText, if state.canOpen then C.accent else C.blue, pillX, pillY, pillW, rowH, if compact then 20 else 22)
     timerChip.Name = "EggStatusPill"
     -- BD-369: after the safe first eggs, say once in one short line that an egg can crack.
-    local hintShown = entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true)
+    -- Owner 2026-10-18: a Cracked shell on the card ALWAYS says it may not hatch (the one shell rule that exists); other shells say nothing.
+    local isCracked = entry ~= nil and entry.genes ~= nil and entry.genes.conditionId == "cracked"
+    local hintShown = isCracked or (entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true))
     L = PhoneScale.eggsLayout(bodyH, hintShown, ctx.bodyScale or 1)
     local hintH = if compact then L.hintH elseif hintShown then 24 else 0
     local hintY = if compact then L.hintY else 94
     if hintShown then
-        local crackedHint = label(card, Copy.CrackedHint, infoX, hintY, infoW, 22, 19, C.gold)
+        local crackedHint = label(card, if isCracked then Copy.CrackedShellLine else Copy.CrackedHint, infoX, hintY, infoW, 22, 19, C.gold)
         crackedHint.Name = "CrackedHint"
         crackedHint.TextXAlignment = Enum.TextXAlignment.Left
     end
@@ -234,7 +241,7 @@ function EggsScreen.render(ctx: any)
         timerChip.BackgroundColor3 = if state.canOpen then C.accent else C.blue
         if entry then
             local remaining = math.max(0, (if typeof(entry.readyAt) == "number" then entry.readyAt else ctx.num("NextChestReadyAt")) - workspace:GetServerTimeNow())
-            timer.Text = if remaining <= 0 then "READY!" else "Ready in " .. UIFormat.duration(remaining)
+            timer.Text = if remaining <= 0 then Copy.ReadyStatus else "Ready in " .. UIFormat.duration(remaining)
         end
     end
     refresh()

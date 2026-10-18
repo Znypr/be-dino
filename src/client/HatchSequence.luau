@@ -855,7 +855,7 @@ function Seq.play(args: Args): Handle
             -- Left of the centred name text (label box 80..740 x 236..290 inside the body), vertically centred on it.
             local badgeSize = 40
             local textWidth = math.min(a.nameLabel.TextBounds.X, a.nameLabel.AbsoluteSize.X)
-            local badge = ClassBadge.create(a.body, r.speciesId, badgeSize)
+            local badge = ClassBadge.create(a.body, r.speciesId, badgeSize, true)
             badge.AnchorPoint = Vector2.new(1, .5)
             badge.Position = UDim2.fromOffset(a.nameLabel.Position.X.Offset + a.nameLabel.Size.X.Offset / 2 - textWidth / 2 - 8, a.nameLabel.Position.Y.Offset + a.nameLabel.Size.Y.Offset / 2)
             badge.ZIndex, badge.Visible = a.nameLabel.ZIndex + 1, false

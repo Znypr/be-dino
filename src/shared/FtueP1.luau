@@ -19,6 +19,22 @@ function P.waitingText(active: number, banked: number): string?
     return "Eggs waiting: " .. tostring(total)
 end
 
+-- Eggs screen clarity (owner 2026-10-18: "i dont know what this means"): the card egg is the NEXT egg, so it says "Egg 1 of N" (N = every
+-- unopened egg, the card egg included, same count as waitingText) and the two chips on the egg get a small caption each.
+-- ChipTypeCaption names the RARITY chip (Common ... Legendary), ChipShellCaption the CONDITION chip (Cracked ... Astra).
+P.ChipTypeCaption = "Egg type"
+P.ChipShellCaption = "Shell"
+P.ReadyStatus = "Ready to open!"
+P.ReadyButton = "OPEN EGG"
+-- The ONLY shell with a rule today: a Cracked egg may fail to hatch (ProgressionConfig.Conditions hatchChance .2, ProfileEggs outcome.failed).
+-- Other shells change how the egg looks only (BD-181/BD-185: no dino stat), so they get no line.
+P.CrackedShellLine = "Cracked shell: it may not hatch!"
+function P.eggOfText(active: number, banked: number): string?
+    local total = math.max(0, math.floor(active)) + math.max(0, math.floor(banked))
+    if total <= 0 then return nil end
+    return "Egg 1 of " .. tostring(total)
+end
+
 -- Hatched eggs are estimated from the collection copies (one starter Compy is not an egg). The card egg may be Cracked
 -- only after the safe first eggs; show the hint on the cards after them for a short while.
 function P.crackedHintShown(collectionCopies: number, hasCardEgg: boolean): boolean

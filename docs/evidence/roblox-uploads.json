@@ -28,5 +28,45 @@
     "sha256": "3466d551614806dd1aa46d547711ac5b0332af35f924d48783631ae36b410dd5",
     "moderation": "Approved",
     "uploaded": "2026-10-18T01:49:07Z"
+  },
+  {
+    "assetId": "134254487145276",
+    "assetType": "Decal",
+    "displayName": "class-ground-v1",
+    "file": "class-ground-v1.png",
+    "bytes": 118207,
+    "sha256": "06955556ffaffb505f531310af0fc023d69a3f7b09d8c8de38d3e43e07093d04",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T12:04:42Z"
+  },
+  {
+    "assetId": "120243405242003",
+    "assetType": "Decal",
+    "displayName": "class-water-v1",
+    "file": "class-water-v1.png",
+    "bytes": 109372,
+    "sha256": "735456f6d28834c49b078e798398e1247d8277123daa9dd92d7f744d0ffd4d3e",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T12:04:48Z"
+  },
+  {
+    "assetId": "83033883399492",
+    "assetType": "Decal",
+    "displayName": "class-fly-v1",
+    "file": "class-fly-v1.png",
+    "bytes": 110760,
+    "sha256": "efc81b86bbd3a8e0e30bc8a0bc27aed20a2dce5b6ba66fbc794eafc25215956d",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T12:04:54Z"
+  },
+  {
+    "assetId": "110730963166179",
+    "assetType": "Decal",
+    "displayName": "class-armored-v1",
+    "file": "class-armored-v1.png",
+    "bytes": 124061,
+    "sha256": "0769a8fb3f2c819ad4c88c21a8b1aed779c3519bdf73c88ad6db7e8a25afc15c",
+    "moderation": "Approved",
+    "uploaded": "2026-10-18T12:05:00Z"
   }
 ]

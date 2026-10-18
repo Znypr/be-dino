@@ -16,18 +16,28 @@ end
 assert(CI.forSpecies(nil).class=="Ground" and CI.forSpecies("bogus").hint=="Fast runner")
 assert(Cfg.ClassMovementEnabled==false and Cfg.CombatEnabled==false,"the committed Config has the class movement and combat flags off")
 for _,c in M.ClassMovement.ClassNames do assert(CI.Labels[c] and CI.Hints[c],c) end
--- Class badge (owner 2026-10-16): 4 slots, one letter each, unbound = clearly a placeholder, bound = the owner icon.
-local seen={}
-for c,slot in CI.IconSlots do assert(M.AssetSlots.Images[slot]=="" and #CI.Letters[c]==1 and not seen[CI.Letters[c]],c) seen[CI.Letters[c]]=true end
+-- Class badge (owner 2026-10-18): the owner's 4 icons are bound and the class word is the label; NO one-letter label exists any more.
+assert(CI.Letters==nil,"the letter badge (G / W / F / A) is gone")
+assert(CI.Labels.Ground=="Ground" and CI.Labels.Water=="Water" and CI.Labels.Fly=="Fly" and CI.Labels.Armored=="Armored","owner words")
+local slotOf={Ground="class_ground",Water="class_water",Fly="class_flyer",Armored="class_armored"}
+local ids,seen={},{}
+for c,slot in CI.IconSlots do
+  assert(slotOf[c]==slot,"slot for "..c)
+  local id=M.AssetSlots.Images[slot]
+  assert(id:match("^rbxassetid://%d+$") and not seen[id],"bound and distinct: "..slot) seen[id]=true ids[slot]=id
+  for _,word in CI.Labels do assert(#word>1,"never one letter") end
+end
 for _,c in M.ClassMovement.ClassNames do assert(CI.IconSlots[c],c) end
 for id,class in Combat.SpeciesClasses do
   local sp=M.ClassBadge.spec(id)
-  assert(sp.class==class and sp.placeholder and sp.image==nil and sp.letter==CI.Letters[class] and sp.label==CI.Labels[class],id)
+  assert(sp.class==class and not sp.placeholder and sp.image==ids[CI.IconSlots[class]] and sp.label==CI.Labels[class],id)
 end
-M.AssetSlots.Images.class_water="rbxassetid://123"
-local w=M.ClassBadge.spec("mosasaurus") assert(w.image=="rbxassetid://123" and not w.placeholder and w.letter=="W")
-M.AssetSlots.Images.class_water="not an id" assert(M.ClassBadge.spec("mosasaurus").placeholder,"malformed id falls back")
-M.AssetSlots.Images.class_water=""
+-- missing or malformed id: clean fallback (the class word on a colour pill), never a crash and never a letter
+for _,bad in {"","not an id","rbxassetid://"} do
+  M.AssetSlots.Images.class_water=bad
+  local w=M.ClassBadge.spec("mosasaurus") assert(w.placeholder and w.image==nil and w.label=="Water","fallback for '"..bad.."'")
+end
+M.AssetSlots.Images.class_water=ids.class_water
 assert(M.ClassBadge.spec(nil).class=="Ground","unknown species is Ground")
 local hex={Ground={47,158,68},Fly={30,136,229},Water={15,143,128},Armored={168,100,58}}
 for c,h in hex do local k=CI.Colors[c] assert(k and k[1]==h[1] and k[2]==h[2] and k[3]==h[3],"colour "..c) end
@@ -64,13 +74,19 @@ if r.returncode == 0:
         assert 'ClassMovementEnabled' in t, q
         assert 'Config.CombatEnabled' not in t.replace('GameConfig.CombatEnabled', ''), q + ' still gated on combat'
     assert 'ClassInfo' in read('src/client/Bootstrap.client.luau'), 'picker uses ClassInfo'
-    assert 'ClassInfo.Colors[spec.class]' in read('src/shared/ClassBadge.luau'), 'badge uses class colour'
+    assert 'ClassInfo.Colors[info.class]' in read('src/shared/ClassBadge.luau'), 'badge uses class colour'
     assert 'PlaceholderFill' not in read('src/shared/ClassBadge.luau'), 'neutral fill gone'
     assert '.Colors[' in read('src/client/Bootstrap.client.luau'), 'picker line uses class colour'
     rp = read('tools/release_profiles.py')
     assert '_flag_off("ClassMovementEnabled"' in rp and 'Rule("ClassMovementEnabled", "set", True' in rp
     cb = read('src/shared/ClassBadge.luau')
-    assert 'PLACEHOLDER' in cb and 'UICorner' in cb and 'AssetSlots.image' in cb
+    assert 'AssetSlots.image' in cb and 'withLabel' in cb and 'PlaceholderLetter' not in cb and 'Letters' not in cb, 'icon + word, no letter'
+    assert 'ClassBadge.create(a.body, r.speciesId, badgeSize, true)' in read('src/client/HatchSequence.luau'), 'reveal shows icon plus word'
+    for n in ('ground', 'water', 'fly', 'armored'):
+        assert (ROOT / f'resources/ui/v2/icons/class-{n}-v1.png').exists(), n
+    reg = read('docs/77-asset-registry.md')
+    for slot in ('class_ground', 'class_water', 'class_flyer', 'class_armored'):
+        assert f'| {slot} |' in reg, 'docs/77 line for ' + slot
     hs = read('src/client/HatchSequence.luau')
     assert 'ClassBadge.create' in hs and 'classBadge' in hs and 'speciesId' in hs, 'reveal card shows the class badge'
     assert 'speciesId=id' in read('src/client/Bootstrap.client.luau'), 'reveal passes the species id'
