@@ -46,10 +46,26 @@ local function transact(action,id,replace)
     shopAction:FireServer(action,id,token,replace==true)
 end
 
+-- BD-1103: on a small window every 14 px text is more design px (the body is drawn smaller to fit) and the floor pass raises text and buttons to 14 / 44 px, so a
+-- fixed box is too small for what is put in it. These two numbers say how tall a text box and a button must be; on a desktop window they are the old design numbers.
+local function textPx(size: number): number -- the text size (design px) the window really draws
+    return if require(script.Parent.ModalCompact).model().mode=="compact" then math.max(size,math.ceil(14/require(script.Parent.ModalCompact).bodyScale())) else size
+end
+local function fitH(text: string,size: number,width: number,minH: number): number -- height a wrapped text needs (0.5 em per character, 1.05 em per line)
+    local px=textPx(size)
+    return math.max(minH,math.ceil(math.max(1,math.ceil(#text*.5*px/width))*px*1.05))
+end
+local function buttonH(minH: number): number
+    return if require(script.Parent.ModalCompact).model().mode=="compact" then math.max(minH,math.ceil(45/require(script.Parent.ModalCompact).bodyScale())) else minH
+end
+
 -- d: {body, heading, header, label, box, button, art, open, notify, viewportScale, num, str, decoded, progression, render, active}
 function Shop.attach(d: any)
     body, heading, header, label, box, button, art = d.body, d.heading, d.header, d.label, d.box, d.button, d.art
-    open, notify, viewportScale, num, str, decoded = d.open, d.notify, d.viewportScale, d.num, d.str, d.decoded
+    open, notify, num, str, decoded = d.open, d.notify, d.num, d.str, d.decoded
+    -- BD-1101: the scale the body REALLY renders at (ModalCompact.bodyScale = panel scale x the narrow-width fit), not only the panel scale: at 500 px the fit is 0.71, so a
+    -- button laid out for 45 px at the panel scale rendered 32 px and the floor pass grew it up over the heading strip.
+    viewportScale = function() return require(script.Parent.ModalCompact).bodyScale() end
     progression, render, isActive = d.progression, d.render, d.active
     local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder
     shopAction = remotes:WaitForChild("ProgressionAction")
@@ -76,11 +92,15 @@ function Shop.render(name: string)
         local p=progression()
         p.trails=p.trails or {}
         local isTrail=cosmeticTab=="trails"
-        local touch=Input.TouchEnabled
+        local touch=Input.TouchEnabled or require(script.Parent.ModalCompact).model().mode=="compact" -- BD-1101: a small PC window gets the same room-for-44-px layout as a phone
         local targetHeight=if touch then math.max(45,45/viewportScale()) else 44
         local tabsHeight=if touch then targetHeight else 40
         local cardsY=tabsHeight+12
-        local cardsHeight=if touch then 402-cardsY-targetHeight-12 else 270
+        -- BD-1101/BD-1103: on a small window the visible body is taller than 402 design px (innerH) and every 14 px text and 44 px button is bigger in design px,
+        -- so the card is as tall as the room (never less than its parts need: name, chips, a 56 px picture, two text lines, the button); it scrolls when it must.
+        local bodyH=if touch then math.max(402,require(script.Parent.ModalCompact).bodyHeight()) else 402
+        local function cardHeightFor(y: number): number return math.max(68+56+52+targetHeight+10,bodyH-y-targetHeight-12) end
+        local cardsHeight=if touch then cardHeightFor(cardsY) else 270
         local buyY=cardsHeight-targetHeight-10
         if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
         local noCrystalsHint=require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab)
@@ -226,9 +246,10 @@ function Shop.render(name: string)
             return
         end
         -- BD-393: say whose style this is (the one equipped dino) and where to change it; the cards move down a little.
-        require(script.Parent.ShopCards).forHeader({label=label,box=box},body,cardsY-2,str("EquippedSpeciesId","compy"))
-        cardsY+=require(Shared.ShopForDino).HeaderHeight
-        cardsHeight=if touch then 402-cardsY-targetHeight-12 else require(Shared.ShopForDino).CardsHeightDesktop
+        local headerH=if touch then math.max(require(Shared.ShopForDino).HeaderHeight,math.ceil(28/viewportScale())+8) else require(Shared.ShopForDino).HeaderHeight
+        require(script.Parent.ShopCards).forHeader({label=label,box=box},body,cardsY-2,str("EquippedSpeciesId","compy"),headerH)
+        cardsY+=headerH
+        cardsHeight=if touch then cardHeightFor(cardsY) else require(Shared.ShopForDino).CardsHeightDesktop
         buyY=cardsHeight-targetHeight-10
         local owned=if isTrail then p.trails else p.auras
         local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
@@ -239,14 +260,14 @@ function Shop.render(name: string)
             local equipped,locked=equippedId==item.id,isTrail and num("AccountLevel")<item.level and not owned[item.id]
             require(script.Parent.ShopCards).build({label=label,box=box,button=button,art=art},body,{
                 kind=if isTrail then "trail" else "aura",item=item,speciesId=str("EquippedSpeciesId","compy"),owned=owned[item.id]==true,equipped=equipped,level=num("AccountLevel"),
-                x=slot*276,y=cardsY,height=cardsHeight,buyY=buyY,targetHeight=targetHeight,
+                x=slot*276,y=cardsY,height=cardsHeight,buyY=buyY,targetHeight=targetHeight,scale=viewportScale(),
                 onPress=function()
                     if locked then notify("Requires account level "..item.level,C.gold) return end
                     if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
                     else chosenAura=item.id open("auraConfirm") end
                 end})
         end
-        local footerY=402-targetHeight
+        local footerY=if touch then math.max(bodyH-targetHeight,cardsY+cardsHeight+12) else 402-targetHeight
         if isTrail then
             -- BD-334: the arrow that cannot go further is dimmed and inert (page 1 "<", page 4 ">").
             button(body,"<",0,footerY,110,targetHeight,if trailPage<=1 then C.card else C.blue,function() if trailPage<=1 then return end trailPage=math.max(1,trailPage-1) open("auras") end).TextTransparency=if trailPage<=1 then .6 else 0
@@ -268,12 +289,12 @@ function Shop.render(name: string)
                 label(list,row.text,560,lineY,220,30,22,C.blue).TextXAlignment=Enum.TextXAlignment.Right
                 lineY+=32
             end
-            if group.note then label(list,group.note,10,lineY,790,28,OddsCopy.NoteTextSize) lineY+=30 end
+            if group.note then local nh=fitH(group.note,OddsCopy.NoteTextSize,790,28) label(list,group.note,10,lineY,790,nh,OddsCopy.NoteTextSize) lineY+=nh+2 end -- BD-1103: the box grows with the text on a small window
             label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
         end
-        for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end
+        for _,note in OddsCopy.notes(not upgradeOdds) do local nh=fitH(note,19,790,28) label(list,note,10,lineY,790,nh,19) lineY+=nh+4 end
         -- BD-606: a line about the secret dino in FREE eggs, only while one can drop
-        if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do label(list,note,10,lineY,790,28,19) lineY+=32 end end
+        if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do local nh=fitH(note,19,790,28) label(list,note,10,lineY,790,nh,19) lineY+=nh+4 end end
         list.CanvasSize=UDim2.fromOffset(0,lineY)
         button(body,"MORE DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end).TextSize=20
         button(body,"BACK",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open(if upgradeOdds then "conditionConfirm" else "eggPurchase") end)
@@ -331,8 +352,9 @@ function Shop.render(name: string)
         art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
         label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
-        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,57,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
-        button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
+        local buyH=buttonH(57) -- BD-1103: BUY and CANCEL never touch, however big the 44 px floor makes them
+        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
+        button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),C.red,function() open("auras") end)
     elseif name=="potions" then
         heading.Text,header.BackgroundColor3="Potion Shop",C.accent
         local p=progression()
@@ -357,41 +379,55 @@ function Shop.render(name: string)
             end
         end)
         -- docs/68: 6 offers in a 3x2 grid plus the owned list scroll together, so the panel fits a phone landscape (UIScale) and desktop.
+        -- BD-1103: every height below is the old design number on a desktop window; on a small window the text and button floors (14 / 44 px) make the parts taller, so
+        -- the card, the row pitch and everything under the grid follow (a hint over the second row, a price over a name and a USE row under the hint were the slips).
+        local potionOffers=ProgressionRules.shopOffers(window)
+        local nameH,leftH,btnH,useH=math.max(24,textPx(19)+5),math.max(20,textPx(15)+5),buttonH(44),buttonH(44)
+        local descH=36
+        for _,offer in potionOffers do
+            local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
+            descH=math.max(descH,fitH(UIFormat.potion(item.kind,item.multiplier,item.duration),15,186,36))
+        end
+        local cardH=2+nameH+descH+leftH+2+btnH+4 -- 132 on a desktop window
+        local pitch=cardH+8
+        local scrollerH=math.max(368,(if require(script.Parent.ModalCompact).model().mode=="compact" then require(script.Parent.ModalCompact).bodyHeight() else 402)-34)
         local scroller=Instance.new("ScrollingFrame")
         scroller.Name="PotionScroll"
-        scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
+        scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,scrollerH),1
         scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
         scroller.ScrollingDirection=Enum.ScrollingDirection.Y
         local rarityColor=Theme.RarityColors
         local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
-        for i,offer in ProgressionRules.shopOffers(window) do
+        for i,offer in potionOffers do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
-            local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
+            local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*pitch
             local color=rarityColor[item.rarity] or C.accent
             -- BD-267: shared card states (Normal / Sold out): src/shared/ShopCardState + src/client/ShopCard.
             local ShopCardState,ShopCard=require(Shared.ShopCardState),require(script.Parent.ShopCard)
             local look=ShopCardState.look({left=left,buyButton=item.price.." Crystals"},item.price.." Crystals")
-            local card=box(scroller,x,y,264,132,ShopCard.cardColor(C.card:Lerp(color,.28),look),24)
+            local card=box(scroller,x,y,264,cardH,ShopCard.cardColor(C.card:Lerp(color,.28),look),24)
             art(card,bottle(item),6,8,64)
-            label(card,item.name,74,2,186,24,19,color)
-            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,26,186,36,15)
-            label(card,if left>0 then left.." left" else look.caption,74,62,186,20,15,ShopCard.captionColor(look))
-            local buy=button(card,look.buttonText,8,84,248,44,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
+            label(card,item.name,74,2,186,nameH,19,color)
+            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,2+nameH,186,descH,15)
+            label(card,if left>0 then left.." left" else look.caption,74,2+nameH+descH,186,leftH,15,ShopCard.captionColor(look))
+            local buy=button(card,look.buttonText,8,2+nameH+descH+leftH+2,248,btnH,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
                 if left>0 then potionChoice.id=item.id open("potionConfirm") end
             end)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
         end
-        label(scroller,"Rarer potions show up less often.",0,278,824,20,15,C.gold)
-        label(scroller,"Your potions (tap to use)",0,298,824,22,18,C.gold)
+        local hintY,hintH,titleH=2*pitch-2,math.max(20,textPx(15)+5),math.max(22,textPx(18)+4)
+        label(scroller,"Rarer potions show up less often.",0,hintY,824,hintH,15,C.gold)
+        label(scroller,"Your potions (tap to use)",0,hintY+hintH,824,titleH,18,C.gold)
+        local listY=hintY+hintH+titleH+2 -- 322 on a desktop window
         local slot=0
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned>0 then
-                local x=(slot%3)*276 local y=322+math.floor(slot/3)*50
+                local x=(slot%3)*276 local y=listY+math.floor(slot/3)*(useH+6)
                 slot+=1
-                local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,44,C.purple,function()
+                local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,useH,C.purple,function()
                     potionChoice.id=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
@@ -399,13 +435,13 @@ function Shop.render(name: string)
                 useButton.TextSize=16
                 -- BD-101: the owner's potion icon beside the name (a sibling above the button, so the text keeps its own padding);
                 -- no valid image id -> no icon and the button looks exactly as before.
-                if require(Shared.PotionArt).icon(scroller,item.id,UDim2.fromOffset(34,34),UDim2.fromOffset(x+5,y+22),useButton.ZIndex+1) then
+                if require(Shared.PotionArt).icon(scroller,item.id,UDim2.fromOffset(34,34),UDim2.fromOffset(x+5,y+useH/2),useButton.ZIndex+1) then
                     local pad=Instance.new("UIPadding") pad.PaddingLeft=UDim.new(0,40) pad.Parent=useButton
                 end
             end
         end
-        if slot==0 then label(scroller,"Buy a potion above to use it",0,322,824,32,18) end
-        scroller.CanvasSize=UDim2.fromOffset(0,322+math.max(1,math.ceil(slot/3))*50+8)
+        if slot==0 then label(scroller,"Buy a potion above to use it",0,listY,824,math.max(32,textPx(18)+6),18) end
+        scroller.CanvasSize=UDim2.fromOffset(0,listY+math.max(1,math.ceil(slot/3))*(useH+6)+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
         local replacing=name=="potionReplace"
@@ -413,11 +449,12 @@ function Shop.render(name: string)
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
         label(body,if replacing then "Using this ends your old "..item.kind.." potion" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
-        button(body,if replacing then "Replace" else "BUY POTION",290,263,510,58,C.accent,function()
+        local buyH=buttonH(58) -- BD-1103: BUY and CANCEL never touch
+        button(body,if replacing then "Replace" else "BUY POTION",290,263,510,buyH,C.accent,function()
             if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..potionChoice.window,false) end
             open("potions")
         end)
-        button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
+        button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),C.red,function() open("potions") end)
     end
 end
 
