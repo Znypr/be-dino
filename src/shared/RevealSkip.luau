@@ -41,6 +41,7 @@ end
 -- outcome: {big, shiny, eventMutationId, genes={conditionId}, failed}
 function Skip.isNotable(outcome: any): boolean
     if typeof(outcome) ~= "table" then return true end -- unknown data is never hidden
+    if outcome.failed == true then return false end -- BD-1001: a cracked egg shows only a splat; flags it carries (Shiny, BIG, event) have nothing to show
     if outcome.shiny == true or outcome.big == true then return true end
     if typeof(outcome.eventMutationId) == "string" and outcome.eventMutationId ~= "" then return true end
     local genes = outcome.genes
@@ -55,11 +56,14 @@ end
 
 -- entries: {{rarity=number, outcome=table, speciesId=string?}}
 function Skip.summarize(entries: {any})
-    local summary = {total = #entries, byRarity = table.create(#Skip.Names, 0), failed = 0, hatched = 0, notable = {}}
+    local summary = {total = #entries, byRarity = table.create(#Skip.Names, 0), hatchedByRarity = table.create(#Skip.Names, 0), failed = 0, hatched = 0, notable = {}}
     for _, entry in entries do
         local rarity = math.clamp(entry.rarity or 1, 1, #Skip.Names)
         summary.byRarity[rarity] += 1
-        if entry.outcome and entry.outcome.failed == true then summary.failed += 1 else summary.hatched += 1 end
+        if entry.outcome and entry.outcome.failed == true then summary.failed += 1 else
+            summary.hatched += 1
+            summary.hatchedByRarity[rarity] += 1 -- BD-1001: the screen counts cracked eggs on their own line
+        end
         if Skip.isNotable(entry.outcome) then table.insert(summary.notable, entry) end
     end
     return summary

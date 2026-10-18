@@ -264,6 +264,24 @@ assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].runEggBank==0)
 -- BD-044 hatch page: the next queued run egg (aurora) committed in the same transaction and waits to be revealed.
 assert(#data['u:888'].eggs==0 and eventUser.attrs.NextChestId==data['u:888'].recentOperations[#data['u:888'].recentOperations].outcome.eggId)
 assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="aurora")
+-- BD-1000: the plain copy is a real choice. "plain" plays NO traits (it used to answer already_equipped and keep the best variant);
+-- the stored pair stays what Build 020 knows, the choice is the additive flag equippedPlain.
+do
+local okPlain,whyPlain=Repository.equipSpecies(eventUser,"raptor","plain")
+assert(okPlain and whyPlain=="equipped" and (eventUser.attrs.EquippedGenesJson==nil or eventUser.attrs.EquippedGenesJson=="null") and eventUser.attrs.EquippedBig==false and eventUser.attrs.EquippedShiny==false,"the plain copy plays plain")
+assert(data['u:888'].equippedPlain==true and data['u:888'].equippedVariantKey==nil and data['u:888'].equippedSpeciesId=="raptor")
+local againOk,againWhy=Repository.equipSpecies(eventUser,"raptor","plain")
+assert(againOk and againWhy=="already_equipped","a second plain equip changes nothing")
+local goBack,goBackWhy=Repository.equipSpecies(eventUser,"raptor")
+assert(goBack and goBackWhy=="equipped" and eventUser.attrs.EquippedEventMutation=="aurora" and data['u:888'].equippedPlain==nil,"the keyless equip plays the best copy again and drops the flag")
+assert(Repository.equipSpecies(eventUser,"raptor","plain") and Repository.equipSpecies(eventUser,"compy","plain") and data['u:888'].equippedSpeciesId=="compy")
+assert(not Repository.equipSpecies(eventUser,"mosasaurus","plain"),"a species the player does not hold is still refused")
+assert(select(2,Repository.equipSpecies(eventUser,"compy","plain"))=="already_equipped")
+assert(select(2,Repository.equipSpecies(eventUser,"raptor","not:a:key"))=="not_owned","a made-up key is still refused")
+Repository.release(eventUser)
+assert(Repository.load(eventUser) and eventUser.attrs.EquippedSpeciesId=="compy","the plain choice survives a rejoin")
+assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="aurora")
+end
 assert(not Repository.commitRunSettlement(eventUser,"bad-event",10,{{eventId="volcano",mutationId="frost"}}))
 Repository.release(eventUser)
 assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="aurora")

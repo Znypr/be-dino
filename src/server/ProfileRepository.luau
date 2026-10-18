@@ -303,6 +303,15 @@ local function equippedOf(profile: any): (string, string?)
     end
     return profile.equippedSpeciesId, profile.equippedVariantKey
 end
+-- BD-1000: "the plain copy" is a real choice. With no variant key the game used to play the BEST variant of the species, so a child who
+-- tapped the plain starter Compy kept seeing the fancy one (and the answer was "already_equipped"). The additive flag `profile.equippedPlain`
+-- (set only by an equip of the plain copy, never rewritten for existing profiles; Build 020 ignores it) says: play no traits. It only counts
+-- while the species is still held as a plain copy (base or event-only), so a stale flag falls back to the old behaviour.
+local function equippedPlain(profile: any): boolean
+    if profile.equippedPlain ~= true or profile.equippedVariantKey ~= nil or profile.equippedSecret ~= nil then return false end
+    local entry = profile.collection[profile.equippedSpeciesId]
+    return typeof(entry) == "table" and typeof(entry.base) == "number" and (entry.base > 0 or ProgressionRules.eventMutation(entry) ~= nil)
+end
 
 -- BD-044: metrics.rarest and revealSkip were saved on the old three-tier species scale
 -- (1 Common, 2 Rare, 3 Legendary) until profile.rarityScale exists. Migrate once, additively, and
@@ -571,7 +580,7 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "ProfileRevision", profile.revision or 0)
     local equippedId, equippedKey = equippedOf(profile) -- BD-606: the secret species when one is equipped and honoured
     player:SetAttribute("EquippedSpeciesId", equippedId)
-    local traits = EggTraits.selected(collection[equippedId], equippedKey)
+    local traits = if equippedPlain(profile) then nil else EggTraits.selected(collection[equippedId], equippedKey) -- BD-1000: the plain copy plays no traits
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
@@ -1109,6 +1118,7 @@ local shared = {
     demoActive = demoActive,
     enqueueChestIds = enqueueChestIds,
     equippedOf = equippedOf,
+    equippedPlain = equippedPlain,
     findOperation = findOperation,
     handleLeaseLost = handleLeaseLost,
     hasSettledRun = hasSettledRun,

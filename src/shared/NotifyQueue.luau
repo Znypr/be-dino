@@ -177,6 +177,8 @@ function Q.hatchSummary(entries: {any}, rarityNames: {string}): any
         key = "hatch_summary", icon = "egg", tint = rarityNames[rarity]}
 end
 
+-- BD-1000: the title slot holds Q.MaxText (30) characters; the old "Something went wrong. Try again" was 31 and showed as "Something went wrong. Try...".
+Q.GenericError = "Oops! Please try again"
 -- Server status codes -> short child-friendly copy (docs/72). Unknown codes never show raw text.
 Q.StatusText = {
     insufficient_crystals = "Not enough Crystals",
@@ -186,8 +188,8 @@ Q.StatusText = {
     level_locked = "Reach a higher level first",
     sold_out = "Sold out! Check back soon",
     not_offered = "Not in the shop right now",
-    stale_window = "The shop just changed. Try again",
-    window_required = "The shop just changed. Try again",
+    stale_window = "Shop changed. Try again",
+    window_required = "Shop changed. Try again",
     inventory_full = "Your bag is full",
     queue_full = "Hatch some eggs first",
     max_level = "Already at the top level",
@@ -197,13 +199,14 @@ Q.StatusText = {
     profile_not_loaded = "Still loading. Try again",
     save_failed = "Could not save. Try again",
     lease_lost = "Please rejoin the game",
-    bank_full = "Hatch some eggs first, then open this nest",
+    bank_full = "Hatch eggs to make room",
     not_ready = "That nest is still incubating",
     nest_pending = "That nest is still incubating",
     next_run = "Your new dino starts next game",
+    already_equipped = "Already equipped", -- BD-1000: a calm note, never an error
 }
 function Q.statusText(status: any): string
-    return if typeof(status) == "string" and Q.StatusText[status] then Q.StatusText[status] else "Something went wrong. Try again"
+    return if typeof(status) == "string" and Q.StatusText[status] then Q.StatusText[status] else Q.GenericError
 end
 
 return Q

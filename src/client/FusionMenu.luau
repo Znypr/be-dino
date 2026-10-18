@@ -792,7 +792,7 @@ local function chanceBar(parent: Instance, stage, animate: boolean, name: string
 end
 
 local function reel(parent: Instance, stage, animate: boolean)
-    local frame = W.box(parent, UDim2.new(1, -24, 0, 70), UDim2.new(0, 12, .34, 0), C.outline, 6)
+    local frame = W.box(parent, UDim2.new(1, -24, 0, Sel.Reel.height), UDim2.new(0, 12, .34, 0), C.outline, 6)
     frame.ClipsDescendants, frame.Name = true, "Reel"
     local strip = Instance.new("Frame")
     strip.BackgroundTransparency, strip.Size, strip.Position, strip.Parent = 1, UDim2.fromScale(1, 1), UDim2.fromScale(.5, 0), frame
@@ -811,14 +811,22 @@ local function reel(parent: Instance, stage, animate: boolean)
                 edge.Color, edge.Thickness, edge.Parent = C.outline, 2, block
                 block.Parent = strip
                 if seg.p / total * unit > .1 then
-                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), 18)
+                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), Sel.Reel.labelTextSize)
                 end
             end
         end
     end
-    local pointer = Instance.new("Frame")
-    pointer.Size, pointer.AnchorPoint, pointer.Position = UDim2.new(0, 6, 1, 8), Vector2.new(.5, .5), UDim2.fromScale(.5, .5)
-    pointer.BackgroundColor3, pointer.BorderSizePixel, pointer.Parent = C.gold, 0, frame
+    -- BD-1003: two short notches on the top and bottom edge instead of a line through the strip, so the pointer never crosses a label.
+    for i, notchName in {"PointerTop", "PointerBottom"} do
+        local notch = Instance.new("Frame")
+        notch.Name = notchName
+        notch.Size = UDim2.fromOffset(Sel.Reel.notchWidth, Sel.Reel.notchHeight)
+        notch.AnchorPoint, notch.Position = Vector2.new(.5, if i == 1 then 0 else 1), UDim2.fromScale(.5, if i == 1 then 0 else 1)
+        notch.BackgroundColor3, notch.BorderSizePixel, notch.ZIndex, notch.Parent = C.gold, 0, frame.ZIndex + 5, frame
+        local notchCorner = Instance.new("UICorner")
+        notchCorner.CornerRadius = UDim.new(0, 3)
+        notchCorner.Parent = notch
+    end
     local goal = UDim2.fromScale(.5 - Sel.reelOffset(stage, FusionMenu.ReelTurns) * unit, 0)
     if animate then
         local tween = TweenService:Create(strip, TweenInfo.new(FusionMenu.ReelSeconds, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = goal})

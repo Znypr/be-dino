@@ -329,6 +329,7 @@ function FoodService.start(dinosaur,repository)
                 claim.candidate.gained += food.kind.points * adminFoodMultiplier
                 if trackTelemetry then claim.candidate.raw = (claim.candidate.raw or 0) + food.kind.points end -- BD-575: pickup value BEFORE the admin multiplier
                 if trackObjectives then claim.candidate.items += 1 end -- BD-074: pickups per player this tick (summed, not reported one by one)
+                if SpecialFoods.byId(food.kind.id) ~= nil then claim.candidate.special = food.kind.id claim.candidate.specials = (claim.candidate.specials or 0) + 1 end -- BD-1002
             end
             for _, candidate in candidates do
                 if candidate.gained > 0 then
@@ -339,6 +340,10 @@ function FoodService.start(dinosaur,repository)
                     local after=RunEggTags.nextScore(before,whole,Config.MaxCatchScore,Config.RunEggMaxPerRun)
                     c:SetAttribute("CatchScore",after)
                     if after>before then RunLifecycle.noteNestWeather(c) end -- BD-479: a nest newly earned by this catch is stamped with the weather NOW (clear too)
+                    if candidate.special ~= nil then -- BD-1002: tells this player's HUD to name the special food (a counter, so two in a row both show)
+                        c:SetAttribute("SpecialFoodId", candidate.special)
+                        c:SetAttribute("SpecialFoodSeq", (c:GetAttribute("SpecialFoodSeq") or 0) + (candidate.specials or 1))
+                    end
                     -- BD-044: every catch is one run egg. Only eggs caught during weather carry a
                     -- compact catch-time tag {eventId, mutationId, n=catch ordinal}; clear-weather
                     -- eggs need none. Genes/traits are committed once at settlement.

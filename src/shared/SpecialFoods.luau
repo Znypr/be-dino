@@ -8,6 +8,22 @@ local ScaleLadder = require(script.Parent.ScaleLadder) -- BD-407: the pickup siz
 local SpecialFoods = {}
 -- Kid-friendly name and one-line benefit. Art: existing registered food_drumstick mesh (BD-387); no new art needed.
 SpecialFoods.GOLDEN_DRUMSTICK = {id = "golden_drumstick", name = "Golden Drumstick", benefit = "A giant tasty snack!", size = ScaleLadder.Food.goldenDrumstick.size, rgb = {255, 205, 80}}
+-- All special foods by id (the id is the pickup's kind id and the "SpecialFoodId" character attribute).
+SpecialFoods.All = {SpecialFoods.GOLDEN_DRUMSTICK}
+function SpecialFoods.byId(id: any): any?
+    if typeof(id) ~= "string" then return nil end
+    for _, food in SpecialFoods.All do
+        if food.id == id then return food end
+    end
+    return nil
+end
+-- BD-1002: the toast shown when a special food is eaten (title <= NotifyQueue.MaxText, body <= NotifyQueue.MaxBody; docs/72). nil for an
+-- unknown id, so ordinary food (which never sets the attribute) and forged values show nothing. No sound of its own.
+function SpecialFoods.pickupNote(id: any): (string?, string?)
+    local food = SpecialFoods.byId(id)
+    if food == nil then return nil, nil end
+    return food.name .. "!", food.benefit
+end
 function SpecialFoods.enabled(): boolean
     return Config.SpecialFoodsEnabled == true
 end
