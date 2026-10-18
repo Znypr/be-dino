@@ -43,6 +43,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WARN_ABOVE = 140  # docs/150: WeatherVisuals.client grew 110 -> 147 and Bootstrap sat at 198 inside one day; warn early, fail at 185
 FAIL_ABOVE = 185
 COMPILER_LIMIT = 200
+# A ratchet for scopes that were once close to the limit: (file under the repo, scope name) -> highest live-locals count allowed. Lower it
+# when code moves out, never raise it (BD-1020: the Bootstrap main chunk went 142 -> 128 when the shop screens moved to ShopScreens.luau).
+SCOPE_CEILINGS = {("src/client/Bootstrap.client.luau", "<main chunk>"): 130}
 
 
 def find_tool(explicit, sibling_of, name, env):
@@ -309,6 +312,7 @@ def main():
 
     rows = scan(ast_tool, Path(args.src))
     bad = [row for row in rows if row[0] > FAIL_ABOVE]
+    over_ceiling = [row for row in rows if row[0] > SCOPE_CEILINGS.get((row[1], row[2]), 1000) and row not in bad]
     warn = [row for row in rows if WARN_ABOVE < row[0] <= FAIL_ABOVE]
     if args.top:
         print("top %d scopes by live locals (compiler limit %d):" % (args.top, COMPILER_LIMIT))
@@ -318,6 +322,10 @@ def main():
         print("WARN (above %d, fails above %d): %s" % (WARN_ABOVE, FAIL_ABOVE, describe(row)))
     for row in bad:
         print("FAIL (above %d, compiler limit %d): %s" % (FAIL_ABOVE, COMPILER_LIMIT, describe(row)), file=sys.stderr)
+    for row in over_ceiling:
+        print("FAIL (ratchet %d for this scope, see SCOPE_CEILINGS): %s" % (SCOPE_CEILINGS[(row[1], row[2])], describe(row)), file=sys.stderr)
+    if over_ceiling:
+        return 1
     if bad:
         print("Group related locals into a table or move a block into a module before adding more.", file=sys.stderr)
         return 1

@@ -66,7 +66,8 @@ def static_checks():
     assert 'Theme.MotionEnabled' in hud and 'Rules.shouldPop' in hud, 'pop goes through the rule and Reduce Motion'
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     locals_ = len(re.findall(r'^local ', boot, re.M))
-    assert locals_ <= 195, 'Bootstrap top-level locals: %d (limit 200, was 195 before BD-080)' % locals_
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert locals_ <= MAX_TOP_LOCALS, 'Bootstrap top-level locals: %d (ceiling %d in tools/bootstrap_sources.py; limit 200)' % (locals_, MAX_TOP_LOCALS)
     assert 'growthLabel' not in boot and 'catchLabel' not in boot, 'old growth/catch labels removed'
     assert 'Safe sanctuary' not in boot and '"Island")' not in boot and ' GROWTH"' not in boot, 'Island/Sanctuary/GROWTH HUD text removed'
     assert 'GrowthIcon' not in boot and 'GrowthBar' not in boot, 'three-bar growth tile removed'

@@ -97,7 +97,7 @@ def main():
     for line in layout.splitlines():
         if line.strip().startswith(('style =', 'potion =', 'shop =', 'crystals =')):
             assert 'rock_crystal' not in line, 'a shop station must not use the decoration crystal: ' + line.strip()[:60]
-    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8') + (ROOT / 'src/client/ShopScreens.luau').read_text(encoding='utf-8')  # BD-1020: the shop screens moved
     assert 'b.TextScaled=true' in boot and 'UITextSizeConstraint' in boot and 'packButton(nil)' in boot, 'BD-430: pack button text scales to fit, never "..."'
     assert 'button(card,"...",' not in boot, 'no "..." placeholder on a pack button'
     static_crystals_tab(boot)

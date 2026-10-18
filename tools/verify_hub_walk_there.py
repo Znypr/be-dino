@@ -236,7 +236,8 @@ def static_checks():
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     assert 'HubGuide' not in boot and 'HubSign' not in boot, 'client Bootstrap untouched (no new locals)'
     top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
-    assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195: %d' % len(top)
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(top) <= MAX_TOP_LOCALS, 'client Bootstrap top-level locals stay at or below %d (tools/bootstrap_sources.py): %d' % (MAX_TOP_LOCALS, len(top))
     # BD-292: rail buttons are 54 px high (rule floor 44) and dimmed ones keep that size
     assert 'button(rail,entry[1],7,7+(i-1)*62,172,54,' in boot, 'rail buttons are 54 px high'
     assert 'MinTarget = 44' in (ROOT / 'src/shared/HubTravelClientRules.luau').read_text()

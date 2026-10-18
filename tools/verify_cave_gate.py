@@ -226,7 +226,8 @@ def static_checks():
     boot_c = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     assert 'HubGateClient' not in boot_c and 'HubWalkUpClient' not in boot_c, 'client Bootstrap is untouched (no new locals)'
     top = [l for l in boot_c.splitlines() if re.match(r'^local\s', l)]
-    assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195 (limit 200): %d' % len(top)
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(top) <= MAX_TOP_LOCALS, 'client Bootstrap top-level locals stay at or below %d (tools/bootstrap_sources.py; limit 200): %d' % (MAX_TOP_LOCALS, len(top))
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()

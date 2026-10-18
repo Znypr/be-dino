@@ -106,7 +106,8 @@ def static_checks():
     hud = (ROOT / 'src/client/GoalHud.luau').read_text(encoding='utf-8')  # goal HUD block moved out of Bootstrap (register limit)
     assert 'GoalsPanel.attach(gui,goalHUD' in hud and 'GoalsPanel.setDinos' in hud and 'GoalsPanel.setSpecies' in hud and 'indexCounts' in hud and 'GoalHud).build' in boot
     assert not re.search(r'^local Goals', boot, re.M), 'no new top-level local in Bootstrap'
-    assert len(re.findall(r'^local ', boot, re.M)) <= 195, 'Bootstrap top-level locals'
+    from bootstrap_sources import MAX_TOP_LOCALS
+    assert len(re.findall(r'^local ', boot, re.M)) <= MAX_TOP_LOCALS, 'Bootstrap top-level locals'
 
 
 if __name__ == '__main__':
