@@ -417,7 +417,7 @@ local function applyHatch(profileValue: any, chest: any, index: number, outcome:
             outcome.speciesId, outcome.count, bucketKey)
     end
     if not outcome.failed then -- BD-436: permanent discovery log; first-time finds feed the hatch "NEW!" tag
-        local fresh=ProgressionRules.discover(profileValue,chest.genes,mutationId)
+        local fresh=ProgressionRules.discover(profileValue,chest.genes,mutationId,Config.PatternColourIndexEnabled==true)
         if next(fresh) then outcome.discovered=fresh end
     end
     outcome.eventMutationId=mutationId

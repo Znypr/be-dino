@@ -105,12 +105,15 @@ function ProfileRepository.demoGrantEggs(player: Player, eggs: {any}, newFind: b
                 if newFind then -- forget these traits so the first hatch of each shows the NEW! ribbon
                     local log = progress.discovered
                     if typeof(log) == "table" then
-                        if typeof(log.colours) == "table" then log.colours[g.primaryColorId or ""] = nil end
+                        if typeof(log.colours) == "table" then
+                            log.colours[g.primaryColorId or ""] = nil
+                            if Config.PatternColourIndexEnabled == true then log.colours[g.secondaryColorId or ""] = nil end -- BD-1039: the accent colour is a find too
+                        end
                         if typeof(log.patterns) == "table" then log.patterns[g.patternId or ""] = nil end
                         if typeof(log.mutations) == "table" then log.mutations[egg.mutationId or ""] = nil end
                     end
                 else
-                    ProgressionRules.discover(profileValue, g, egg.mutationId)
+                    ProgressionRules.discover(profileValue, g, egg.mutationId, Config.PatternColourIndexEnabled == true)
                 end
             end
             bankEggs(profileValue, batch, now)

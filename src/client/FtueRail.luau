@@ -24,6 +24,7 @@ end
 
 -- rail = the left menu frame; buttons = the six nav buttons in order (each has a "Destination" attribute).
 function Rail.attach(rail: Frame, buttons: {TextButton})
+    if require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")).PatternColourIndexEnabled == true then require(script.Parent.IndexTabs).attachDot(buttons) end -- BD-1039: the dot on the Dinos button (flag)
     local chip = Instance.new("TextButton")
     chip.Name, chip.Text, chip.Font, chip.TextSize, chip.TextColor3 = "MenuChip", Rules.MenuChipText, Enum.Font.FredokaOne, 20, Theme.Colors.text
     chip.BackgroundColor3, chip.ZIndex, chip.Visible, chip.AutoButtonColor = Theme.Colors.card, rail.ZIndex + 3, false, true
