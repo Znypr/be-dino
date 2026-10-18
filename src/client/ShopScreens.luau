@@ -1,5 +1,5 @@
 --!strict
--- BD-1020 / docs/160 s10: the shop screens (Crystal Shops, the odds pages, the purchase confirms and the Potion Shop) were inline in
+-- BD-1088 / docs/160 s10: the shop screens (Crystal Shops, the odds pages, the purchase confirms and the Potion Shop) were inline in
 -- Bootstrap's render function. They live here now, code unchanged. Bootstrap calls attach once with its screen helpers, then
 -- render(name) for every name in Shop.names. The shop state (tab, page, pending purchase) is kept here.
 local Players = game:GetService("Players")

@@ -86,7 +86,7 @@ def check(read) -> list[str]:
         rel = p.relative_to(ROOT).as_posix()
         if PURCHASE_API.search(strip(read(rel))) and rel not in ALLOWED_PURCHASE_FILES:
             errs.append(f"{rel} uses Marketplace purchase APIs outside the allowed files")
-    client = strip(read("src/client/Bootstrap.client.luau") + read("src/client/ShopScreens.luau"))  # BD-1020: the crystal-pack cards moved with the shop screens
+    client = strip(read("src/client/Bootstrap.client.luau") + read("src/client/ShopScreens.luau"))  # BD-1088: the crystal-pack cards moved with the shop screens
     if "PromptProductPurchase" in client and "CrystalPacksEnabled" not in client:
         errs.append("client crystal-pack UI is not gated by Config.CrystalPacksEnabled")
     prog = strip(read("src/server/ProgressionService.luau"))

@@ -100,7 +100,7 @@ def static_checks():
     assert 'UDim2.fromOffset(580, 390)' in popup and 'EggPicture.baked(stage, genes, 262)' in popup, 'BD-392 egg is large'
     boot = read('src/client/Bootstrap.client.luau')
     boot_top = boot  # the local count below is Bootstrap's own
-    boot = boot + read('src/client/ShopScreens.luau')  # BD-1020: the shop screens moved
+    boot = boot + read('src/client/ShopScreens.luau')  # BD-1088: the shop screens moved
     assert 'ShopCards).forHeader(' in boot and 'ShopForDino' in boot, 'BD-393 header in the aura and trail shops'
     assert boot.index('forHeader(') < boot.index('require(script.Parent.ShopCards).build('), 'BD-393 header is drawn before the cards'
     cards = read('src/client/ShopCards.luau')
