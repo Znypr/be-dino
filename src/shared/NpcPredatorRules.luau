@@ -179,6 +179,15 @@ function Npc.valid(world: any, p: any, now: number): boolean
     return true
 end
 
+-- BD-1025: a wild predator ignores a player more than CombatConfig.WildMaxSizeRatio times smaller (no reward, hard to see) or bigger
+-- (hopeless). Size = Stats.sizeUnits of the GrowthScore. A player entry with no `score` is not filtered (old callers).
+function Npc.sizeOk(npc: any, p: any): boolean
+    if typeof(p) ~= "table" or typeof(p.score) ~= "number" then return true end
+    local ratio = Stats.sizeRatio(npc.score, p.score)
+    local limit = CombatConfig.WildMaxSizeRatio
+    return ratio <= limit and ratio >= 1 / limit
+end
+
 function Npc.canBite(world: any, p: any, now: number): boolean
     if not Npc.valid(world, p, now) then return false end
     return now >= (world.grace[p.key] or 0)
@@ -188,7 +197,7 @@ end
 function Npc.pickTarget(world: any, npc: any, players: any, now: number, range: number): any
     local best, bestDistance = nil, math.huge
     for _, p in players do
-        if Npc.canBite(world, p, now) and ((if npc.ignore then npc.ignore[p.key] else nil) or 0) <= now and math.abs(num(p.y, 0) - npc.y) <= C.VerticalLimit then
+        if Npc.canBite(world, p, now) and Npc.sizeOk(npc, p) and ((if npc.ignore then npc.ignore[p.key] else nil) or 0) <= now and math.abs(num(p.y, 0) - npc.y) <= C.VerticalLimit then
             local d = planar(npc.x, npc.z, p.x, p.z)
             if d <= range and (d < bestDistance or (d == bestDistance and best and p.key < best.key)) then
                 best, bestDistance = p, d
@@ -488,7 +497,7 @@ local function stepOne(world: any, npc: any, now: number, dt: number, players: a
         end
     elseif state == "chase" then
         local t = findPlayer(players, npc.targetKey)
-        if not t or not Npc.valid(world, t, now) then retreat(npc, now) return end
+        if not t or not Npc.valid(world, t, now) or not Npc.sizeOk(npc, t) then retreat(npc, now) return end
         local d = planar(npc.x, npc.z, t.x, t.z)
         if d > C.GiveUpRange or now - npc.chaseStartedAt > C.ChaseMaxSeconds or npc.stuck >= C.StuckSeconds then
             retreat(npc, now)
@@ -555,7 +564,7 @@ end
 -- Join the NPC into the shared combat world: same class table, HP, damage and regen as a player (CombatStats via CombatRules).
 function Npc.joinCombat(world: any, combatWorld: any, npc: any, now: number): any
     if not world.enabled then return nil end
-    return CombatRules.join(combatWorld, {userId = npc.userId, runId = npc.runId, class = npc.class, score = npc.score, now = now})
+    return CombatRules.join(combatWorld, {userId = npc.userId, runId = npc.runId, class = npc.class, score = npc.score, now = now, hpX = CombatConfig.WildHpX, wild = true})
 end
 
 -- Resolve one bite event through CombatRules.attack (range, cone, cooldown, spawn protection all re-checked there).
@@ -565,7 +574,7 @@ function Npc.performBite(world: any, combatWorld: any, event: any, now: number, 
     if not world.enabled or not npc or npc.key ~= event.npcKey then return {ok = false, reason = "gone"} end
     local candidates = {}
     for _, p in players do
-        if Npc.canBite(world, p, now) then
+        if Npc.canBite(world, p, now) and Npc.sizeOk(npc, p) then
             table.insert(candidates, {key = p.key, pos = {X = p.x, Y = num(p.y, 0), Z = p.z}, radius = p.radius})
         end
     end

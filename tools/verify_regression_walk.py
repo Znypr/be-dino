@@ -228,6 +228,15 @@ def main() -> int:
     expect(failures, v.get(8, ("", ""))[0] == "FAIL" and "corners" in v.get(8, ("", ""))[1], "clipped: a dino cut off by the camera must FAIL step 8")
     print("clipped: a dino outside the screen fails step 8")
 
+    # BD-1019: the owner's bug (a full-screen tap catcher above the hatch menu) must FAIL step 7, naming the cover; the happy path proves X was tapped for real
+    lines = run_scenario(args.runner, "xcovered")
+    v = verdicts(lines)
+    expect(failures, v.get(7, ("", ""))[0] == "FAIL" and "X is COVERED by HatchTapCatcher" in v.get(7, ("", ""))[1], "xcovered: an X under a full-screen catcher must FAIL step 7 and name HatchTapCatcher")
+    expect(failures, "X closes the hatch party mid-way" in v.get(7, ("", ""))[1], "xcovered: step 7 must also try the real X tap")
+    happy7 = [l for l in walk_lines if l.startswith("WALK 07")]
+    expect(failures, bool(happy7) and "X closes the hatch party mid-way (a real tap)" in happy7[0] and "X is reachable on the open menu" in happy7[0], "happy: step 7 must tap X and check it is reachable")
+    print("xcovered: an X under a full-screen catcher fails step 7")
+
     readme = (WALK / "README.md").read_text(encoding="utf-8")
     for name in list(SCRIPTS.values()) + ["selftest/sim.luau"]:
         expect(failures, name in readme, "README.md does not mention %s" % name)
@@ -236,7 +245,7 @@ def main() -> int:
         print("FAIL:", f)
     if failures:
         return 1
-    print("regression walk self-test passed: contract, 13-step order, 5 broken scenarios caught")
+    print("regression walk self-test passed: contract, 13-step order, 6 broken scenarios caught")
     return 0
 
 

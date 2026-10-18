@@ -144,8 +144,32 @@ def git_state(root=ROOT):
         return None, None
 
 
-def build_profile(profile, project_path=ROOT / "default.project.json"):
-    """Build with a release profile applied to Config. Returns (data, sources, report)."""
+STAMPED_PROFILES = ("playtest",)  # BD-1043: only the playtest build shows the commit on screen; default output is byte-for-byte unchanged
+_BUILD_LINE = re.compile(r'^(    Build = "redesign-\d+)(",)', re.MULTILINE)
+
+
+def short_commit(commit, dirty=False):
+    """The id shown on screen: 8 hex characters, plus * when the build had uncommitted changes. Empty-safe (no git -> '')."""
+    if not commit or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
+        return ""
+    return commit[:8] + ("*" if dirty else "")
+
+
+def stamp_build_label(source, stamp):
+    """Append ' <stamp>' to Config.Build so the existing on-screen 'BUILD ...' label shows the commit. Empty stamp = source unchanged."""
+    if not stamp:
+        return source
+    if not re.fullmatch(r"[0-9a-f]{7,40}\*?", stamp):
+        raise ValueError(f"Unsafe build stamp {stamp!r}")
+    stamped, count = _BUILD_LINE.subn(lambda m: f"{m.group(1)} {stamp}{m.group(2)}", source)
+    if count != 1:
+        raise ValueError(f"Expected exactly one 'Build = \"redesign-NNN\"' line in Config, found {count}")
+    return stamped
+
+
+def build_profile(profile, project_path=ROOT / "default.project.json", stamp=""):
+    """Build with a release profile applied to Config. Returns (data, sources, report).
+    `stamp` (short git id, see short_commit) is written into Config.Build for the profiles in STAMPED_PROFILES only."""
     import sys
     tools = str(Path(__file__).resolve().parent)
     if tools not in sys.path:
@@ -158,6 +182,8 @@ def build_profile(profile, project_path=ROOT / "default.project.json"):
             return source
         rewritten, report = release_profiles.apply_profile(source, profile)
         reports.append(report)
+        if profile in STAMPED_PROFILES:
+            rewritten = stamp_build_label(rewritten, stamp)
         return rewritten
 
     data, sources = build(project_path, transform, release_profiles.workspace_properties(profile))
@@ -174,8 +200,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     suffix = "" if args.profile in (None, "default") else "-" + args.profile
     output = args.output or ROOT / ("build/BeDino-Build" + build_version() + suffix + ".rbxlx")
+    stamp = ""
     if suffix:
-        data, sources, report = build_profile(args.profile)
+        commit, dirty = git_state()
+        stamp = short_commit(commit, dirty)
+        data, sources, report = build_profile(args.profile, stamp=stamp)
         import release_profiles  # build_profile put tools/ on sys.path
         for streaming_error in release_profiles.streaming_config_errors(args.profile):
             report.errors.append(streaming_error)
@@ -185,6 +214,14 @@ if __name__ == "__main__":
                   f"integrity {setting.integrity_mode}" + (" (SCRATCH profile: never publish this place)" if setting.scratch else ""))
         for warning in report.warnings:
             print(f"WARNING: {warning}")
+        if args.profile in STAMPED_PROFILES and commit:  # BD-1043: playtest files are built from a fresh origin/main (local ref, no network)
+            try:
+                import playtest_freshness
+                missed, _ = playtest_freshness.behind(commit)
+                if missed:
+                    print(f"WARNING: this checkout is {missed} commits behind origin/main; run `git fetch origin` and merge before building a playtest")
+            except Exception:  # best effort only, never blocks a build
+                pass
         if not report.ok:
             for error in report.errors:
                 print(f"ERROR: {error}")
@@ -195,9 +232,9 @@ if __name__ == "__main__":
     output.write_bytes(data)
     manifest = {"format": 1, "place_sha256": hashlib.sha256(data).hexdigest(), "sources": sources}
     if suffix:
-        commit, dirty = git_state()
         manifest.update({"profile": args.profile, "build": "redesign-" + build_version(),
                          "git_commit": commit, "git_dirty": dirty, "config_overrides": report.applied,
+                         "build_label": "BUILD redesign-" + build_version() + (" " + stamp if stamp and args.profile in STAMPED_PROFILES else ""),
                          "warnings": report.warnings})
         setting = release_profiles.streaming_for(args.profile)
         manifest["streaming"] = {"enabled": setting.enabled, "target_radius": setting.target_radius, "min_radius": setting.min_radius,

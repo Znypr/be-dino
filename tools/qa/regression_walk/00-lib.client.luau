@@ -113,6 +113,42 @@ function W.closeModal() -- Bootstrap's own close() through its documented client
     return W.wait(function() return not W.modalOpen() end, 2)
 end
 
+-- BD-1019 (docs/181): is `o` reachable by a tap? The engine's own hit test lists what sits at o's centre, topmost first; the first object that
+-- takes input (a button, or Active) must be o or something inside it. Returns nil when o is reachable, else the object that covers it.
+-- Owner bug 2026-10-18: a full-screen tap catcher sat above the hatch menu, so X did nothing. AbsolutePosition may or may not include the top
+-- bar (same doubt as W.tap), so the centre is tried both ways: reachable if either answer is o.
+function W.cover(o)
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return nil end
+    local c = W.center(o)
+    local inset = GuiService:GetGuiInset()
+    local first = nil
+    for _, pos in {c, c + inset} do
+        local ok, list = pcall(function() return pg:GetGuiObjectsAtPosition(pos.X, pos.Y) end)
+        if ok then
+            for _, d in list do
+                if d:IsA("GuiButton") or d.Active then
+                    if d == o or d:IsDescendantOf(o) then return nil end
+                    first = first or d
+                    break
+                end
+            end
+        end
+    end
+    return first
+end
+-- Adds the "X is reachable on the open menu" check when a menu is open (called for every step at report time and by the hatch step).
+function W.closeCheck(list)
+    local s = W.scrim()
+    if not (s and W.visible(s)) then return end
+    local x = W.btn(s, "X")
+    if not x then W.add(list, false, "the open menu has no X button") return end
+    local blocker = W.cover(x)
+    local a = x.AbsoluteSize
+    W.add(list, blocker == nil, if blocker == nil then "X is reachable on the open menu" else "X is COVERED by " .. blocker.Name .. " (" .. blocker.ClassName .. ", ZIndex " .. blocker.ZIndex .. ")")
+    W.add(list, a.X >= 44 and a.Y >= 44, string.format("X is %.0fx%.0f px (44 minimum)", a.X, a.Y))
+end
+
 -- HUD rectangles that must never overlap each other (BD-531 / BD-524 are exactly such overlaps)
 function W.hudRects()
     local g = W.gui()
@@ -305,6 +341,7 @@ function W.run(list)
                 else
                     W.mem[n] = nil
                     if W.resume == n then W.resume = nil end
+                    pcall(W.closeCheck, checks)
                     W.errCheck(checks, m.since)
                     W.report(n, name, checks, note)
                 end

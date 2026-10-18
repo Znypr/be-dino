@@ -38,7 +38,7 @@ local FusionSelection=require(Shared.FusionSelection)
 local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
-local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: a timeout (no infinite-yield warning); the server makes this folder after the world
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: a timeout (no infinite-yield warning); the server makes this folder
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
@@ -174,7 +174,7 @@ end)
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 require(script.Parent.ModalCompact).attach({gui=gui,panel=panel,header=header,heading=heading,body=body,closeButton=closeButton,scale=scale}) -- BD-333: phone landscape layout, no-op on desktop
-shade.Activated:Connect(close)
+shade.Activated:Connect(function() if require(script.Parent.ModalClose).outsideTap() then close() end end) -- BD-1019: a tap on the dark backdrop = X, except while a hatch is cracking
 -- BD-067 toasts: up to 3 pooled cards stacked from the old toast slot (y=80). NotifyQueue decides
 -- what shows (priority, merge, throttle); this only draws. Tap a card to dismiss the newest one.
 local drawToasts
@@ -257,7 +257,7 @@ task.spawn(function()
 end)
 local function viewportScale(): number
     local size=gui.AbsoluteSize
-    return require(script.Parent.ModalCompact).model().scale -- BD-546: PhoneScale.modal plus the left-rail clearance. BD-333: desktop = the old (w-40)/860,(h-40)/520 rule; short canvases use the compact layout
+    return require(script.Parent.ModalCompact).model().scale -- BD-546/BD-333: PhoneScale.modal plus the rail clearance; short canvases use the compact layout
 end
 -- BD-054: prefer the active input style; fall back to TouchEnabled on older clients.
 local function touchMode(): boolean
@@ -347,7 +347,7 @@ local function open(name: string)
     Theme.animate(panel,.16,{Position=require(script.Parent.ModalCompact).home(.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
     Theme.animate(blur,.16,{Size=blurTarget()})
-    if name=="hatch" then -- BD-519: a slide still running from the last modal must not move the hatch body; it starts from the settled home
+    if name=="hatch" then -- BD-519: the hatch body starts from the settled home, not a slide still running
         Theme.cancel(body)
         body.AnchorPoint,body.Position=Vector2.zero,require(script.Parent.ModalCompact).place(true,motion)
     end
@@ -448,7 +448,7 @@ hatchState.next = function(): boolean
     if hatchPending then return false end
     hatchPending=true
     hatchState.serial+=1
-    local serial=hatchState.serial -- BD-525: this claim's own 8 s watchdog; an older one must not cancel a LATER claim still in flight
+    local serial=hatchState.serial -- BD-525: this claim's own 8 s watchdog
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
         if hatchPending and hatchState.serial==serial then
@@ -470,7 +470,7 @@ local cosmeticTab="auras"
 local trailPage=1
 local oddsLevelOverride=nil
 local outcomeState={page=1,filters={}}
-local potionChoice={id="speed_common",window=0} -- BD-539: window was the global chosenPotionWindow; it is the shop window the offers were drawn from
+local potionChoice={id="speed_common",window=0} -- BD-539: the shop window the offers were drawn from
 local pendingShop=nil
 local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
@@ -515,13 +515,13 @@ render=function(name: string)
         local buyY=cardsHeight-targetHeight-10
         if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
         local noCrystalsHint=require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab)
-        local hintInFooter=noCrystalsHint and (cosmeticTab=="auras" or cosmeticTab=="trails") -- BD-445 / BD-529: the aura and trail pages own the bottom line, so the hint takes its place instead of drawing over it
+        local hintInFooter=noCrystalsHint and (cosmeticTab=="auras" or cosmeticTab=="trails") -- BD-445/BD-529: the hint takes the footer line of the aura and trail pages
         if noCrystalsHint and not hintInFooter then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
         -- BD-532 (docs/115 EG1): the server refuses random crystal items under this exact rule (Shared/PaidRandomGate); the egg and the condition
         -- upgrade are greyed out "Coming soon" BEFORE the tap instead of answering "Not available yet" after it. The policy gate is not loosened.
         local PaidRandomGate=require(Shared.PaidRandomGate)
         local randomBlocked=PaidRandomGate.blocked(Config.DeveloperProducts,Config.PaidRandomItemsEnabled,require(script.Parent.PrivateState).get("PaidRandomEligible"))
-        local ShopTiles=require(script.Parent.ShopTiles) -- BD-047: tab icons, green-spotted egg, landing tiles; each shows only when its image id exists
+        local ShopTiles=require(script.Parent.ShopTiles) -- BD-047: tab icons; each shows only when its image id exists
         local shopTabs=require(Shared.FtueP1).shopTabs(num("AccountLevel"))
         if ShopTiles.landing then
             ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals"),randomBlocked),
@@ -1056,7 +1056,7 @@ render=function(name: string)
                 detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
             elseif mutation then
                 -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
-                local tint=mutationColor :: Color3 -- BD-155: the dinosaur itself is tinted by PreviewTraits (MutationLook) when the view is created
+                local tint=mutationColor :: Color3 -- BD-155: PreviewTraits tints the dinosaur itself
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
@@ -1078,13 +1078,14 @@ render=function(name: string)
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
-            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
+            gui=gui,panel=panel,header=header,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
             nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
             eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId")), -- BD-223: the egg's condition look from the first frame
             eggId=str("NextChestId"), -- BD-397: seeds the v2 paint splats (no-op while Config.HatchV2 is false)
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
+            onAbort=function() skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() skippedEntries={} end, -- BD-1019: X / tap outside / Escape mid-party: the rest stays in the queue
             onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" end end,
             onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
                 autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
@@ -1248,7 +1249,7 @@ require(script.Parent.FtueRail).attach(rail,navigationButtons) -- BD-368: first 
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
-require(script.Parent.HudV2).attach(hud,gui,{notify=notify}) -- BD-080: egg plate (bottom-left) + SIZE bar (top-centre); growth tile and catches text removed
+require(script.Parent.HudV2).attach(hud,gui,{notify=notify}) -- BD-080: egg plate (bottom-left) + SIZE bar (top-centre)
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
 local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
@@ -1454,7 +1455,7 @@ local function scales()
         labelObject.TextScaled,labelObject.TextSize,labelObject.TextXAlignment=touch,entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
     end
     previewNotice.Text=if touch then "STUDIO PREVIEW: UNSAVED" else "STUDIO PREVIEW • progress not saved • test currency"
-    foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,(if touch then layout.hud.y else math.min(layout.hud.y,layout.feedback.y))-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts); BD-507: and above the Tell us! button
+    foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,(if touch then layout.hud.y else math.min(layout.hud.y,layout.feedback.y))-6) -- BD-080/BD-507: debug line for Studio/admin only, above the egg plate and the Tell us! button
     require(script.Parent.HudV2).layout(layout)
     gui:SetAttribute("FeedbackRect",Rect.new(layout.feedback.x,layout.feedback.y,layout.feedback.x+layout.feedback.w,layout.feedback.y+layout.feedback.h)) -- BD-507: FeedbackClient puts its Tell us! button here, clear of the egg plate
     gui:SetAttribute("GoalsRect",if layout.goals then Rect.new(layout.goals.x,layout.goals.y,layout.goals.x+layout.goals.w,layout.goals.y+layout.goals.h) else nil) -- BD-531: GoalsPanel sits on the reserved spot (nil = its own desktop formula)
@@ -1463,8 +1464,8 @@ local function scales()
         gui:SetAttribute("ObjectivesOpenRect",if layout.objectivesOpen then Rect.new(layout.objectivesOpen.x,layout.objectivesOpen.y,layout.objectivesOpen.x+layout.objectivesOpen.w,layout.objectivesOpen.y+layout.objectivesOpen.h) else nil)
     end
     gui:SetAttribute("AdminRect",Rect.new(layout.admin.x,layout.admin.y,layout.admin.x+layout.admin.w,layout.admin.y+layout.admin.h)) -- BD-531: AdminPanel puts its Admin button here (phone: not on the egg plate)
-    gui:SetAttribute("ChipRect",Rect.new(layout.chip.x,layout.chip.y,layout.chip.x+layout.chip.w,layout.chip.y+layout.chip.h)) -- BD-538: HubTravelClient puts "Back to the middle" here (phone: clear of the weather column)
-    if Config.GiftClaimEnabled==true then -- BD-570: GiftPopup sits on this rect (clear of the HUD pieces); flag off = no attribute, nothing computed
+    gui:SetAttribute("ChipRect",Rect.new(layout.chip.x,layout.chip.y,layout.chip.x+layout.chip.w,layout.chip.y+layout.chip.h)) -- BD-538: HubTravelClient puts the Back to the middle chip here
+    if Config.GiftClaimEnabled==true then -- BD-570: GiftPopup sits on this rect; flag off = no attribute
         local gift=TouchLayout.giftRect(layout,size.X,size.Y)
         gui:SetAttribute("GiftRect",Rect.new(gift.x,gift.y,gift.x+gift.w,gift.y+gift.h))
         gui:SetAttribute("GiftVariant",gift.variant)
@@ -1504,7 +1505,7 @@ player:WaitForChild("PlayerGui").DescendantAdded:Connect(function(descendant)
 end)
 pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueLayout) end)
 goalHUD:GetPropertyChangedSignal("Visible"):Connect(queueLayout) -- BD-531: the Goals header appears after the first egg
-do -- BD-531: ... and is hidden during a run, so the right-hand column re-lays out when the run starts or ends
+do -- BD-531: hidden during a run, so the right column re-lays out when a run starts or ends
     local function watch(character: Model) character:GetAttributeChangedSignal("RunState"):Connect(queueLayout) end
     player.CharacterAdded:Connect(watch)
     if player.Character then watch(player.Character) end
@@ -1645,7 +1646,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
     if autoHatching and skip then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount")),os.clock()) -- BD-444: a quickly opened egg still counts
-        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() if autoHatching then (hatchState.next :: any)() end end) -- stay under the server claim cooldown; BD-1019: X / Escape stops the loop
         return
     end
     -- BD-170: when Open (or Next egg) already put a waiting egg on screen, hand the answer to it; otherwise open the screen with the result.
@@ -1666,7 +1667,7 @@ do -- same effect as pressing OPEN: nothing is granted here, so no flag is neede
         if (hatchState.next :: any)() then open("hatch") end
     end)
 end
-do -- docs/133 demo hooks (dev-only trailer director): skip the welcome (How to play) modal, and close whatever modal is open
+do -- docs/133 demo hooks (dev-only): skip the welcome modal, close the open modal
     player:GetAttributeChangedSignal("DemoSkipTutorial"):Connect(function()
         if player:GetAttribute("DemoSkipTutorial")~=true then return end
         seenTutorial=true
@@ -1734,7 +1735,7 @@ end
 Input.InputBegan:Connect(function(input,processed)
     if processed then return end
     if (input.KeyCode==Enum.KeyCode.E or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then requestLeap()
-    elseif input.KeyCode==Enum.KeyCode.Escape then close()
+    elseif (input.KeyCode==Enum.KeyCode.Escape or input.KeyCode==Enum.KeyCode.ButtonB) and shade.Visible then close()
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
 end)
