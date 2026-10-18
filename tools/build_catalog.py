@@ -52,6 +52,12 @@ PROVISIONAL = {
     "food": ("src/shared/Config.luau", "FoodCatchRate = 12 / 500, -- PROVISIONAL"),
     "special food": ("src/shared/Config.luau", "BD-207: rare special foods. All PROVISIONAL"),
 }
+# Weighted tables (lists of rows with a `weight`) that the catalogue shows, per data module. tests/test_catalog.py fails when the code gets
+# another weighted table that is not listed here, so a new odds table cannot slip past the catalogue unseen.
+CATALOGUED_TABLES = {
+    "Config": {"ChestSpeciesWeights", "ChestQuantityWeights"},
+    "ProgressionConfig": {"EggColors", "EggPatterns", "Weather"},
+}
 TIER_NAMES_FALLBACK = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
 FLAG_OF_SECTION = {"secret": "SecretSpeciesEnabled", "special food": "SpecialFoodsEnabled", "fusion": "IdentityFusionPreviewEnabled",
                    "cave hub": "CaveHub"}
@@ -73,6 +79,15 @@ class Ctx:
         self.prog: dict[str, Any] = self.d["ProgressionConfig"]
         names = (self.d.get("RarityCurve") or {}).get("Names") or TIER_NAMES_FALLBACK
         self.tier_names: list[str] = list(names)
+
+    def patterns(self) -> tuple[list[dict[str, Any]], str]:
+        """(patterns, source label). Reads ProgressionConfig.EggPatterns (id, name, rarity, weight) when it exists, else the plain id list."""
+        rows = self.prog.get("EggPatterns")
+        if rows:
+            def tier(p: dict[str, Any]) -> int:
+                return self.tier_names.index(p["rarity"]) if p.get("rarity") in self.tier_names else 0
+            return sorted((dict(r) for r in rows), key=lambda p: (tier(p), -p["weight"], p["id"])), "src/shared/ProgressionConfig.luau` EggPatterns"
+        return [{"id": p} if isinstance(p, str) else dict(p) for p in self.calls["patterns"]], "src/shared/EggGenetics.luau` Patterns"
 
     # -- paths and links
     def up(self, repo_path: str) -> str:
@@ -344,8 +359,7 @@ def build_eggs(ctx: Ctx) -> Page:
     page.add("colours", "Colours", "\n\n".join(body), [(f"colour-{c['id']}", c["name"]) for c in ordered])
 
     # -- patterns
-    raw = ctx.calls["patterns"]
-    patterns = [{"id": p} if isinstance(p, str) else dict(p) for p in raw]
+    patterns, pattern_source = ctx.patterns()
     mask_ids = set((d.get("LowPolyPattern") or {}).get("Ids") or [])
     has_weights = all("weight" in p for p in patterns)
     wsum = sum(p["weight"] for p in patterns) if has_weights else len(patterns)
@@ -361,11 +375,12 @@ def build_eggs(ctx: Ctx) -> Page:
         if pid not in mask_ids:
             ctx.gaps.add("mask", "Pattern", name, f"Eggs-and-looks#{a}", "no pattern mask in LowPolyPattern.Ids", "src/shared", "LowPolyPattern.luau")
         rows.append([f"[{name}](#{a})", p.get("rarity", "all the same"), pct(chance)])
-        status.append([f"[{name}](#{a})", f"yes: `{icon}`" if icon else "MISSING", "no slot in code yet", mask, "`src/shared/EggGenetics.luau` Patterns"])
+        status.append([f"[{name}](#{a})", f"yes: `{icon}`" if icon else "MISSING", "no slot in code yet", mask, f"`{pattern_source}"])
         blocks.append(item_heading(a, name, 4) + f"id: `{pid}`\n\n" + (ctx.image(icon, name, 120) + "\n\n" if icon else "_No icon yet (see Missing)._\n\n")
-                      + f"- **Chance:** {pct(chance)} ({one_in(chance)}) per egg" + (f"\n- **Rarity:** {p['rarity']}" if "rarity" in p else "\n- **Rarity:** every pattern is equally likely today"))
+                      + f"- **Chance:** {pct(chance)} ({one_in(chance)}) per egg" + (f"\n- **Rarity:** {p['rarity']}" if "rarity" in p else "\n- **Rarity:** every pattern is equally likely"))
     mode = ctx.calls.get("blendMode", "")
-    body = [f"{len(patterns)} patterns. The two colours mix by a share from 1 to 99 ({mode} mode); matching colours are 100 to 1.", "",
+    odds_version = prog.get("PatternOddsVersion")
+    body = [f"{len(patterns)} patterns" + (f" (odds version `{odds_version}`)" if odds_version else "") + f". The two colours mix by a share from 1 to 99 ({mode} mode); matching colours are 100 to 1.", "",
             table(["Pattern", "Rarity", "Chance per egg"], rows), "", "**STATUS**", "", table(["Pattern", "Icon", "Asset id", "Mask", "Odds from"], status), ""] + blocks
     page.add("patterns", "Patterns", "\n\n".join(body), [(f"pattern-{kebab(p['id'])}", p.get("name") or title_from_id(p["id"])) for p in patterns])
 
@@ -402,6 +417,7 @@ def build_eggs(ctx: Ctx) -> Page:
     facts = [
         f"- Eggs from food: {num(500 * cfg['FoodCatchRate'], 3)} eggs per 500 food points{ctx.prov_mark('food')}. One catch is one egg; one egg is one dino.",
         f"- Waiting eggs: {cfg['ChestQueueCapacity']} in the queue, {cfg['ChestOverflowCapacity']} more in overflow, up to {num(cfg['RunEggBankCapacity'])} banked; a run stops counting at {cfg['RunEggMaxPerRun']} eggs.",
+        "- Each good egg gives " + " or ".join(f"{r['count']} dinosaur" + ("" if r["count"] == 1 else "s") for r in cfg["ChestQuantityWeights"]) + ".",
         f"- Each egg shows for {num(cfg['HatchRevealSeconds'])} second(s) when it hatches.",
         f"- Nests: {cfg['NestStorageCapacity']} spots, {num(cfg['NestIncubationSeconds'] / 3600, 3)} hours each, {cfg['NestMinSize']} to {cfg['NestMaxSize']} eggs{ctx.prov_mark('nests')}. "
         f"A run needs {cfg['NestMinRunSeconds']} seconds and {cfg['NestMinCatches']} catch to drop one; one more nest per {cfg['NestEggsPerExtraNest']} extra eggs. "
@@ -729,8 +745,15 @@ def build_odds(ctx: Ctx) -> str:
         members = [c for c in prog["EggColors"] if c.get("rarity", ctx.tier_names[0]) == name]
         if members:
             rows.append([f"Colour: {name}", pct(100 * sum(c["weight"] for c in members) / scale), "per colour slot", "Eggs-and-looks.md#colours", "src/shared/ProgressionConfig.luau EggColors", ""])
-    n = len(ctx.calls["patterns"])
-    rows.append(["Pattern: each one", pct(100 / n), f"per egg ({n} patterns)", "Eggs-and-looks.md#patterns", "src/shared/EggGenetics.luau Patterns", ""])
+    plist, psource = ctx.patterns()
+    if all("weight" in x and "rarity" in x for x in plist):
+        ptotal = sum(x["weight"] for x in plist)
+        for name in ctx.tier_names:
+            members = [x for x in plist if x["rarity"] == name]
+            if members:
+                rows.append([f"Pattern: {name}", pct(100 * sum(x["weight"] for x in members) / ptotal), f"per egg ({len(members)} pattern(s) in this tier)", "Eggs-and-looks.md#patterns", psource.replace("`", ""), ""])
+    else:
+        rows.append(["Pattern: each one", pct(100 / len(plist)), f"per egg ({len(plist)} patterns)", "Eggs-and-looks.md#patterns", psource.replace("`", ""), ""])
     rows.append(["BIG", pct(100 * cfg["BigChance"]), "per egg", "Mutations-and-fusion.md#big-and-shiny", "src/shared/Config.luau BigChance", ""])
     rows.append(["Shiny", pct(100 * cfg["ShinyChance"]), "per earned egg in irregular weather", "Mutations-and-fusion.md#big-and-shiny", "src/shared/Config.luau ShinyChance", ""])
     for w in prog["Weather"]:

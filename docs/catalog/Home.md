@@ -157,14 +157,14 @@ Read from `tools/release_profiles.py` and `src/shared/Config.luau`.
 
 | Item | Missing | Put it in folder | File name | Note |
 |---|---|---|---|---|
-| [Blank](Eggs-and-looks.md#pattern-01-blank) | icon | `resources/ui/v2/patterns` | `01_blank-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Emerald islands](Eggs-and-looks.md#pattern-02-emerald-islands) | icon | `resources/ui/v2/patterns` | `02_emerald_islands-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Round spots](Eggs-and-looks.md#pattern-03-round-spots) | icon | `resources/ui/v2/patterns` | `03_round_spots-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Bold patches](Eggs-and-looks.md#pattern-04-bold-patches) | icon | `resources/ui/v2/patterns` | `04_bold_patches-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Horizontal bands](Eggs-and-looks.md#pattern-05-horizontal-bands) | icon | `resources/ui/v2/patterns` | `05_horizontal_bands-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Wavy stripes](Eggs-and-looks.md#pattern-06-wavy-stripes) | icon | `resources/ui/v2/patterns` | `06_wavy_stripes-v1.png` | no pattern icon for the Index (square, black pattern on white) |
-| [Diamond scales](Eggs-and-looks.md#pattern-07-diamond-scales) | icon | `resources/ui/v2/patterns` | `07_diamond_scales-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Plain](Eggs-and-looks.md#pattern-01-blank) | icon | `resources/ui/v2/patterns` | `01_blank-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Dots](Eggs-and-looks.md#pattern-03-round-spots) | icon | `resources/ui/v2/patterns` | `03_round_spots-v1.png` | no pattern icon for the Index (square, black pattern on white) |
 | [Freckles](Eggs-and-looks.md#pattern-08-freckles) | icon | `resources/ui/v2/patterns` | `08_freckles-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Patches](Eggs-and-looks.md#pattern-04-bold-patches) | icon | `resources/ui/v2/patterns` | `04_bold_patches-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Bands](Eggs-and-looks.md#pattern-05-horizontal-bands) | icon | `resources/ui/v2/patterns` | `05_horizontal_bands-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Waves](Eggs-and-looks.md#pattern-06-wavy-stripes) | icon | `resources/ui/v2/patterns` | `06_wavy_stripes-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Islands](Eggs-and-looks.md#pattern-02-emerald-islands) | icon | `resources/ui/v2/patterns` | `02_emerald_islands-v1.png` | no pattern icon for the Index (square, black pattern on white) |
+| [Diamonds](Eggs-and-looks.md#pattern-07-diamond-scales) | icon | `resources/ui/v2/patterns` | `07_diamond_scales-v1.png` | no pattern icon for the Index (square, black pattern on white) |
 
 ### Special food
 
@@ -213,7 +213,11 @@ Every chance in the game in one table. Details are on the linked pages.
 | Colour: Epic | 0.64% | per colour slot | [open](Eggs-and-looks.md#colours) | `src/shared/ProgressionConfig.luau EggColors` |  |
 | Colour: Legendary | 0.128% | per colour slot | [open](Eggs-and-looks.md#colours) | `src/shared/ProgressionConfig.luau EggColors` |  |
 | Colour: Mythic | 0.0256% | per colour slot | [open](Eggs-and-looks.md#colours) | `src/shared/ProgressionConfig.luau EggColors` |  |
-| Pattern: each one | 12.5% | per egg (8 patterns) | [open](Eggs-and-looks.md#patterns) | `src/shared/EggGenetics.luau Patterns` |  |
+| Pattern: Common | 80.03% | per egg (3 pattern(s) in this tier) | [open](Eggs-and-looks.md#patterns) | `src/shared/ProgressionConfig.luau EggPatterns` |  |
+| Pattern: Uncommon | 16.01% | per egg (2 pattern(s) in this tier) | [open](Eggs-and-looks.md#patterns) | `src/shared/ProgressionConfig.luau EggPatterns` |  |
+| Pattern: Rare | 3.201% | per egg (1 pattern(s) in this tier) | [open](Eggs-and-looks.md#patterns) | `src/shared/ProgressionConfig.luau EggPatterns` |  |
+| Pattern: Epic | 0.6402% | per egg (1 pattern(s) in this tier) | [open](Eggs-and-looks.md#patterns) | `src/shared/ProgressionConfig.luau EggPatterns` |  |
+| Pattern: Legendary | 0.128% | per egg (1 pattern(s) in this tier) | [open](Eggs-and-looks.md#patterns) | `src/shared/ProgressionConfig.luau EggPatterns` |  |
 | BIG | 3% | per egg | [open](Mutations-and-fusion.md#big-and-shiny) | `src/shared/Config.luau BigChance` |  |
 | Shiny | 0.6% | per earned egg in irregular weather | [open](Mutations-and-fusion.md#big-and-shiny) | `src/shared/Config.luau ShinyChance` |  |
 | Weather mutation: dewdrop | 2% | per egg in Rain | [open](Mutations-and-fusion.md#event-mutations) | `src/shared/ProgressionConfig.luau Weather` | PROVISIONAL |

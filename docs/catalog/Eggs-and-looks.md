@@ -11,7 +11,7 @@ Pages: [Be Dino! team catalogue](Home.md) | [Dinosaurs](Dinosaurs.md) | **Eggs a
 - [Colours](#colours)
   [Cream](#colour-white) | [Blue](#colour-blue) | [Green](#colour-green) | [Pink](#colour-pink) | [Teal](#colour-teal) | [Amber](#colour-gold) | [Purple](#colour-violet) | [Red](#colour-red) | [Black](#colour-black)
 - [Patterns](#patterns)
-  [Blank](#pattern-01-blank) | [Emerald islands](#pattern-02-emerald-islands) | [Round spots](#pattern-03-round-spots) | [Bold patches](#pattern-04-bold-patches) | [Horizontal bands](#pattern-05-horizontal-bands) | [Wavy stripes](#pattern-06-wavy-stripes) | [Diamond scales](#pattern-07-diamond-scales) | [Freckles](#pattern-08-freckles)
+  [Plain](#pattern-01-blank) | [Dots](#pattern-03-round-spots) | [Freckles](#pattern-08-freckles) | [Patches](#pattern-04-bold-patches) | [Bands](#pattern-05-horizontal-bands) | [Waves](#pattern-06-wavy-stripes) | [Islands](#pattern-02-emerald-islands) | [Diamonds](#pattern-07-diamond-scales)
 - [Egg conditions](#conditions)
   [Cracked](#condition-cracked) | [Dirty](#condition-dirty) | [Normal](#condition-normal) | [Rainbow](#condition-rainbow) | [Astra](#condition-astra)
 - [Nests and hatching](#nests)
@@ -128,101 +128,51 @@ id: `black`
 <a id="patterns"></a>
 ## Patterns
 
-8 patterns. The two colours mix by a share from 1 to 99 (uniform mode); matching colours are 100 to 1.
+8 patterns (odds version `bd1033-patterns-v1`). The two colours mix by a share from 1 to 99 (uniform mode); matching colours are 100 to 1.
 
 | Pattern | Rarity | Chance per egg |
 |---|---|---|
-| [Blank](#pattern-01-blank) | all the same | 12.5% |
-| [Emerald islands](#pattern-02-emerald-islands) | all the same | 12.5% |
-| [Round spots](#pattern-03-round-spots) | all the same | 12.5% |
-| [Bold patches](#pattern-04-bold-patches) | all the same | 12.5% |
-| [Horizontal bands](#pattern-05-horizontal-bands) | all the same | 12.5% |
-| [Wavy stripes](#pattern-06-wavy-stripes) | all the same | 12.5% |
-| [Diamond scales](#pattern-07-diamond-scales) | all the same | 12.5% |
-| [Freckles](#pattern-08-freckles) | all the same | 12.5% |
+| [Plain](#pattern-01-blank) | Common | 26.68% |
+| [Dots](#pattern-03-round-spots) | Common | 26.68% |
+| [Freckles](#pattern-08-freckles) | Common | 26.68% |
+| [Patches](#pattern-04-bold-patches) | Uncommon | 8.003% |
+| [Bands](#pattern-05-horizontal-bands) | Uncommon | 8.003% |
+| [Waves](#pattern-06-wavy-stripes) | Rare | 3.201% |
+| [Islands](#pattern-02-emerald-islands) | Epic | 0.6402% |
+| [Diamonds](#pattern-07-diamond-scales) | Legendary | 0.128% |
 
 **STATUS**
 
 | Pattern | Icon | Asset id | Mask | Odds from |
 |---|---|---|---|---|
-| [Blank](#pattern-01-blank) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Emerald islands](#pattern-02-emerald-islands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Round spots](#pattern-03-round-spots) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Bold patches](#pattern-04-bold-patches) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Horizontal bands](#pattern-05-horizontal-bands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Wavy stripes](#pattern-06-wavy-stripes) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Diamond scales](#pattern-07-diamond-scales) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
-| [Freckles](#pattern-08-freckles) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/EggGenetics.luau` Patterns |
+| [Plain](#pattern-01-blank) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Dots](#pattern-03-round-spots) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Freckles](#pattern-08-freckles) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Patches](#pattern-04-bold-patches) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Bands](#pattern-05-horizontal-bands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Waves](#pattern-06-wavy-stripes) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Islands](#pattern-02-emerald-islands) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
+| [Diamonds](#pattern-07-diamond-scales) | MISSING | no slot in code yet | yes (procedural mask in code) | `src/shared/ProgressionConfig.luau` EggPatterns |
 
 <a id="pattern-01-blank"></a>
-### Blank
+### Plain
 
 id: `01_blank`
 
 _No icon yet (see Missing)._
 
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
-
-<a id="pattern-02-emerald-islands"></a>
-### Emerald islands
-
-id: `02_emerald_islands`
-
-_No icon yet (see Missing)._
-
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
+- **Chance:** 26.68% (1 in 3.75) per egg
+- **Rarity:** Common
 
 <a id="pattern-03-round-spots"></a>
-### Round spots
+### Dots
 
 id: `03_round_spots`
 
 _No icon yet (see Missing)._
 
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
-
-<a id="pattern-04-bold-patches"></a>
-### Bold patches
-
-id: `04_bold_patches`
-
-_No icon yet (see Missing)._
-
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
-
-<a id="pattern-05-horizontal-bands"></a>
-### Horizontal bands
-
-id: `05_horizontal_bands`
-
-_No icon yet (see Missing)._
-
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
-
-<a id="pattern-06-wavy-stripes"></a>
-### Wavy stripes
-
-id: `06_wavy_stripes`
-
-_No icon yet (see Missing)._
-
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
-
-<a id="pattern-07-diamond-scales"></a>
-### Diamond scales
-
-id: `07_diamond_scales`
-
-_No icon yet (see Missing)._
-
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
+- **Chance:** 26.68% (1 in 3.75) per egg
+- **Rarity:** Common
 
 <a id="pattern-08-freckles"></a>
 ### Freckles
@@ -231,8 +181,58 @@ id: `08_freckles`
 
 _No icon yet (see Missing)._
 
-- **Chance:** 12.5% (1 in 8) per egg
-- **Rarity:** every pattern is equally likely today
+- **Chance:** 26.68% (1 in 3.75) per egg
+- **Rarity:** Common
+
+<a id="pattern-04-bold-patches"></a>
+### Patches
+
+id: `04_bold_patches`
+
+_No icon yet (see Missing)._
+
+- **Chance:** 8.003% (1 in 12) per egg
+- **Rarity:** Uncommon
+
+<a id="pattern-05-horizontal-bands"></a>
+### Bands
+
+id: `05_horizontal_bands`
+
+_No icon yet (see Missing)._
+
+- **Chance:** 8.003% (1 in 12) per egg
+- **Rarity:** Uncommon
+
+<a id="pattern-06-wavy-stripes"></a>
+### Waves
+
+id: `06_wavy_stripes`
+
+_No icon yet (see Missing)._
+
+- **Chance:** 3.201% (1 in 31) per egg
+- **Rarity:** Rare
+
+<a id="pattern-02-emerald-islands"></a>
+### Islands
+
+id: `02_emerald_islands`
+
+_No icon yet (see Missing)._
+
+- **Chance:** 0.6402% (1 in 156) per egg
+- **Rarity:** Epic
+
+<a id="pattern-07-diamond-scales"></a>
+### Diamonds
+
+id: `07_diamond_scales`
+
+_No icon yet (see Missing)._
+
+- **Chance:** 0.128% (1 in 781) per egg
+- **Rarity:** Legendary
 
 <a id="conditions"></a>
 ## Egg conditions
@@ -332,6 +332,7 @@ id: `astra`
 
 - Eggs from food: 12 eggs per 500 food points (PROVISIONAL). One catch is one egg; one egg is one dino.
 - Waiting eggs: 5 in the queue, 10 more in overflow, up to 1,000 banked; a run stops counting at 150 eggs.
+- Each good egg gives 1 dinosaur.
 - Each egg shows for 1 second(s) when it hatches.
 - Nests: 5 spots, 3 hours each, 6 to 12 eggs (PROVISIONAL). A run needs 120 seconds and 1 catch to drop one; one more nest per 30 extra eggs. A nest with no free spot turns into 50 crystals.
 - Nest luck: BIG 6%, Shiny 1.5%, +2 condition tiers.

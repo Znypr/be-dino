@@ -100,6 +100,27 @@ class CatalogTests(unittest.TestCase):
             self.assertIn(f"**Rarity:** {rarity}", section, cid)
             self.assertIn("#%02X%02X%02X" % (int(r), int(g), int(b)), section, cid)
 
+    def test_pattern_odds_equal_the_code(self):
+        prog = read("src/shared/ProgressionConfig.luau")
+        rows = re.findall(r'\{id="(\w+)",name="([^"]+)",rarity="(\w+)",weight=(\d+)\}', prog.split("EggPatterns={", 1)[1].split("RarityFactors", 1)[0])
+        self.assertGreaterEqual(len(rows), 8)
+        total = sum(int(w) for *_, w in rows)
+        text = self.pages["Eggs-and-looks.md"]
+        for pid, name, rarity, weight in rows:
+            section = text.split(f'<a id="pattern-{core.kebab(pid)}"></a>', 1)[1].split('<a id="', 1)[0]
+            self.assertIn(f"**Chance:** {core.pct(100 * int(weight) / total)}", section, pid)
+            self.assertIn(f"**Rarity:** {rarity}", section, pid)
+            self.assertIn(f"### {name}", section, pid)
+
+    def test_every_weighted_table_in_the_code_is_catalogued(self):
+        """A new odds table (a list of rows with a weight) must be added to build_catalog.CATALOGUED_TABLES and shown on a page."""
+        dump = core.dump_data(ROOT, runner())["data"]
+        for module, known in build_catalog.CATALOGUED_TABLES.items():
+            for key, value in dump[module].items():
+                weighted = isinstance(value, list) and value and all(isinstance(r, dict) and "weight" in r for r in value)
+                if weighted:
+                    self.assertIn(key, known, f"{module}.{key} is a weighted odds table the catalogue does not show yet")
+
     def test_potion_prices_equal_the_code(self):
         prog = read("src/shared/ProgressionConfig.luau")
         rows = re.findall(r'\{id="(\w+)",name="([^"]+)",kind="\w+",rarity="(\w+)",duration=(\d+),multiplier=([\d.]+),price=(\d+)\}', prog)

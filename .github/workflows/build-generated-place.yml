@@ -98,6 +98,7 @@ jobs:
           python tools/verify_world_overlap.py --runner /tmp/luau/luau
           python tools/verify_world_props.py --runner /tmp/luau/luau
           python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
+          python tools/verify_layer_stats.py --runner /tmp/luau/luau
           python tools/verify_colossal_lod.py --runner /tmp/luau/luau
           python tools/verify_scale_ladder.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
@@ -154,6 +155,7 @@ jobs:
           python tools/verify_classes.py --runner /tmp/luau/luau
           python tools/verify_colour_bonus.py --runner /tmp/luau/luau
           python tools/verify_rarity.py --runner /tmp/luau/luau
+          python tools/verify_patterns.py --runner /tmp/luau/luau
           python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py

@@ -27,8 +27,15 @@ function Odds.lines(level)
     total=0 for _,row in Progression.EggColors do total+=row.weight end
     for _,row in Progression.EggColors do table.insert(lines,string.format("%s (%s): %.4f%% per slot",row.name,row.rarity or "Common",100*row.weight/total)) end
     for _,row in Progression.EggColors do if row.id=="black" then table.insert(lines,"Black / Black genes: "..Outcomes.percent((row.weight/total)^2)) end end
-    local patterns=Outcomes.patterns()
-    table.insert(lines,"Patterns: "..#patterns.." equally likely; "..Outcomes.percent(1/#patterns).." each")
+    table.insert(lines,"Patterns (each egg, by rarity):")
+    local patternRows=Progression.EggPatterns
+    if patternRows then
+        local patternTotal=0 for _,row in patternRows do patternTotal+=row.weight end
+        for _,row in patternRows do table.insert(lines,string.format("%s (%s): %.4f%%",row.name,row.rarity,100*row.weight/patternTotal)) end
+    else
+        local patterns=Outcomes.patterns()
+        table.insert(lines,"Patterns: "..#patterns.." equally likely; "..Outcomes.percent(1/#patterns).." each")
+    end
     local mode=Outcomes.blendMode()
     table.insert(lines,if mode=="legacy" then "Primary share 0-100%: "..Outcomes.percent(1/101).." each"
         elseif mode=="uniform" then "Mixed share 1-99%: "..Outcomes.percent(1/99).." each; matching genes 100%"
