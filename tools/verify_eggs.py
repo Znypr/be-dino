@@ -88,12 +88,12 @@ for _,color in Progression.EggColors do
  assert(colorAt((cum-.001)/scale)==color.id,color.id.." upper edge")
 end
 assert(cum==scale)
-assert(Progression.EggColors[9].id=="black" and Progression.EggColors[9].weight==512)
+assert(Progression.EggColors[9].id=="black" and Progression.EggColors[9].weight==1280) -- BD-1036: equal split inside Mythic (was 512)
 assert(not Genetics.valid({conditionId="astra",hatchSuccess=false,primaryColorId="white",secondaryColorId="black",blend=80}))
 for i,trail in Progression.Trails do
  if i>1 then local prior=Progression.Trails[i-1] assert(trail.level>prior.level and trail.price>prior.price and trail.speed>prior.speed) end
 end
-print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, exact tiered colour intervals (Black 0.00512%), size-only BIG 1.2x and ten increasing trail tiers")
+print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, exact tiered colour intervals (Black 0.0128%), size-only BIG 1.2x and ten increasing trail tiers")
 -- BD-1032 (docs/186 s3): species are much rarer (T-Rex 0.004% of eggs) and the run boost starts above 15 eggs, so the sweep uses 100,000 evenly spaced
 -- quantiles per run size (the rarest species needs at least a few) and "monotonic" means: never lower, lifted once the run is above the free size.
 local previousRare,previousLegend,previousCount=0,0,0

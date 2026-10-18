@@ -295,6 +295,13 @@ assert(T.colorReveal(colors, {primaryColorId = "green", secondaryColorId = "nope
 for _, row in colors do assert(not string.find(color(row.id, "black").name, "+", 1, true)) end
 assert(T.colorReveal(colors, {primaryColorId = "nope"}) == nil and T.colorReveal(nil, {}) == nil and T.colorReveal(colors, nil) == nil)
 local lastTier = 0 for _, id in {"white", "green", "pink", "violet", "red", "black"} do local t = color(id).tier assert(t > lastTier, "rarer colours never get a lower tier") lastTier = t end
+-- BD-1036: a colour row that declares its rarity shows exactly that tier, whatever the percent cut-offs say (Pink/Teal 1.6% = Rare).
+local declared = {{id = "white", name = "Cream", rarity = "Common", weight = 4000256}, {id = "pink", name = "Pink", rarity = "Rare", weight = 160010},
+    {id = "gold", name = "Amber", rarity = "Epic", weight = 64004}, {id = "violet", name = "Purple", rarity = "Legendary", weight = 12801},
+    {id = "red", name = "Red", rarity = "Mythic", weight = 1280}, {id = "blue", name = "Blue", weight = 4000256}}
+local function declaredTier(id) return T.colorReveal(declared, {primaryColorId = id, secondaryColorId = id}).tierName end
+assert(declaredTier("white") == "Common" and declaredTier("pink") == "Rare" and declaredTier("gold") == "Epic" and declaredTier("violet") == "Legendary" and declaredTier("red") == "Mythic")
+assert(declaredTier("blue") == "Common", "a row without a rarity falls back to the percent cut-offs")
 assert(T.tier(nil) == 1 and T.tier(100) == 1 and T.tier(0) == 6 and T.tier(25) == 1 and T.tier(24.9) == 2)
 local patternNames = {["03_round_spots"] = "Round Spots"}
 local patternList = {"01_blank", "02_emerald_islands", "03_round_spots", "04_bold_patches", "05_horizontal_bands", "06_wavy_stripes", "07_diamond_scales", "08_freckles"}
