@@ -30,7 +30,7 @@ function RunComplete.build(d: any)
     end
     local level = d.label(body, "Level " .. d.num("AccountLevel"), 30, 282, 220, 36, 24, C.gold)
     level.TextXAlignment = Enum.TextXAlignment.Center
-    d.button(body, "BACK TO SANCTUARY", if d.hasEggs then 30 else 212, 348, if d.hasEggs then 370 else 400, 48, C.accent, d.back)
+    d.button(body, "Back home", if d.hasEggs then 30 else 212, 348, if d.hasEggs then 370 else 400, 48, C.accent, d.back)
     if d.hasEggs then d.button(body, "OPEN EGGS", 424, 348, 370, 48, C.gold, d.openEggs) end
 end
 

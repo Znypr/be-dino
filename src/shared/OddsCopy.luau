@@ -125,7 +125,7 @@ end
 -- lines for the Fusion Menu: a calm one-liner beside FUSE and a details line in the odds panel. If Robux-linked donors or a
 -- paid fusion ever ship, the server gate (random_items_unavailable) stays and this wording must be revisited first.
 Copy.fusionCalm = "Odds are shown before you fuse"
-Copy.fusionDetails = "Fusion uses no real money in this version. The chances above are exact and are shown before you fuse."
+Copy.fusionDetails = "Fusion uses no real money in this version. The chances are exact, shown before you fuse."
 
 -- BD-606 (docs/115 SS9, docs/149 s5): ONE honest line about the secret dino, for FREE eggs only (eggs found on runs and opened from free nests).
 -- It is told only while secret dinos can really drop (Config.SecretSpeciesEnabled AND at least one model slot filled: the caller passes that as

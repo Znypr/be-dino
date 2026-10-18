@@ -102,7 +102,7 @@ def main():
     assert 'button(card,"...",' not in boot, 'no "..." placeholder on a pack button'
     static_crystals_tab(boot)
     cue = (ROOT / 'src/client/GoCue.luau').read_text(encoding='utf-8')
-    assert 'GoCueLabel' not in cue and 'SetAttribute("GoCue"' in cue and 'GoCueText' in boot, 'TAP TO GO! sits on the button face, no floating label'
+    assert 'GoCueLabel' not in cue and 'SetAttribute("GoCue"' in cue and 'GoCueText' in boot, 'Tap to go! sits on the button face, no floating label'
     sm = (ROOT / 'src/client/SettingsMenu.luau').read_text(encoding='utf-8')
     assert 'if lab then break end' in sm, 'Sound lab page has no tab bar behind its BACK button'
     print('verify_shop_crystals passed')

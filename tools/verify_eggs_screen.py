@@ -31,7 +31,7 @@ assert(L.waitingTotal(0, 0, false) == 0 and L.waitingTotal(-2, -1, true) == 0)
 -- Single next-egg card state machine.
 local c = L.card(nil, "", 0, 100, 0)
 assert(c.kind == "empty" and not c.canOpen)
-local t, b = L.cardCopy(c) assert(t == "Go find eggs on the island!" and b == "EXPLORE ISLAND")
+local t, b = L.cardCopy(c) assert(t == "Go find eggs on the island!" and b == "Explore")
 c = L.card(nil, "", 0, 100, 3) assert(c.kind == "banked" and not c.canOpen)
 c = L.card({readyAt = 160}, "e1", 160, 100, 4) assert(c.kind == "growing" and c.remaining == 60 and not c.canOpen and c.waiting == 4)
 t, b = L.cardCopy(c) assert(t == "Growing..." and b == "GROWING")

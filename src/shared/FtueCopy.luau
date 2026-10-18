@@ -5,11 +5,11 @@ local Copy = {}
 
 Copy.tutorialSteps = {
     { "1", "EAT & GROW", "Walk into food to eat it. Eat lots to find eggs!" },
-    { "2", "JUMP & EXPLORE", "Space to jump, E to leap. Buttons on phone." },
+    { "2", "JUMP & LEAP", "Space to jump, E to leap. Buttons on phone." },
     { "3", "SAVE & HATCH", "Tap HOME to save your eggs. Then open them!" },
 }
 
-Copy.homeConfirmLine = "Your run ends and your eggs are saved."
+Copy.homeConfirmLine = "Your run ends and eggs are saved."
 
 local function plural(n: number, one: string, many: string): string
     return if n == 1 then "1 " .. one else string.format("%d %s", n, many)
@@ -37,7 +37,7 @@ function Copy.runCompleteRows(s: {eggs: number?, crystals: number?, nests: numbe
 end
 
 -- Sanctuary card (smoke test 2026-10-16: it still said "clusters" and "Bank catches")
-Copy.sanctuaryTip1 = "Eat food to grow. Jump over hills. Stay away from bigger dinos!"
+Copy.sanctuaryTip1 = "Eat food to grow. Jump hills and avoid bigger dinos!"
 Copy.sanctuaryTip2 = "Tap HOME to save your eggs, then open them."
 
 return Copy
