@@ -1,13 +1,16 @@
 --!strict
 -- BD-044 reveal skipping (PROVISIONAL). Pure client/server-neutral selection logic.
 -- A skipped egg is still hatched and credited by the server; skipping only drops the
--- animation. Notable finds (Shiny, BIG, event mutation, Rainbow/Astra) are never skipped.
+-- animation. Notable finds (Shiny, BIG, event mutation, Rainbow/Astra, secret) are never skipped.
 -- The stored selection is a UI preference: the server never uses it for rewards.
 local Skip = {}
 -- Must match Config.SpeciesRarityNames (checked by tools/verify_rewards.py); kept literal so this
 -- module stays dependency-free.
 Skip.Rarities = {1, 2, 3, 4, 5}
 Skip.Names = {"Common", "Uncommon", "Rare", "Epic", "Legendary"}
+-- BD-1057: "Skip the rest" / Open all covers every rarity EXCEPT the top one: a Legendary find is always shown (docs/115). A player's own
+-- AUTO choice for Legendary is still honoured (it is their button, and the summary counts it).
+Skip.OpenAllRarities = {1, 2, 3, 4}
 
 -- Accepts any list of rarity numbers; returns a sorted, de-duplicated, valid list.
 function Skip.normalize(list: any): {number}
@@ -44,6 +47,7 @@ function Skip.isNotable(outcome: any): boolean
     if outcome.failed == true then return false end -- BD-1001: a cracked egg shows only a splat; flags it carries (Shiny, BIG, event) have nothing to show
     if outcome.shiny == true or outcome.big == true then return true end
     if typeof(outcome.eventMutationId) == "string" and outcome.eventMutationId ~= "" then return true end
+    if outcome.secret == true or (typeof(outcome.secretSpeciesId) == "string" and outcome.secretSpeciesId ~= "") then return true end -- BD-1057: a secret find is always shown
     local genes = outcome.genes
     if typeof(genes) == "table" and (genes.conditionId == "rainbow" or genes.conditionId == "astra") then return true end
     return false
