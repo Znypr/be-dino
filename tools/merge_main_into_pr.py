@@ -202,13 +202,18 @@ def title_differs(a, b):
     return vkm.title(a) != vkm.title(b)
 
 
-def resolve_kanban_file(path, base_rows, main_text):
-    """Resolve every hunk in `path` (a conflicted docs/07-kanban.md). Returns a KanbanReport."""
+def resolve_kanban_file(path, base_rows, main_text, swap=False):
+    """Resolve every hunk in `path` (a conflicted docs/07-kanban.md). Returns a KanbanReport.
+
+    Normally HEAD is the PR and the merged-in side is main. `swap=True` is for a merge TRAIN (tools/merge_train.py,
+    docs/172): HEAD is the train (main's side of the rule) and the merged-in side is the PR."""
     text, eol = read_text(path)
     rep = KanbanReport()
 
     def repl(m):
         ours, theirs = lines_of(m.group(1)), lines_of(m.group(3))
+        if swap:
+            ours, theirs = theirs, ours
         res = resolve_kanban_hunk(ours, theirs, base_rows, rep)
         return "".join(l + "\n" for l in res)
 

@@ -513,3 +513,26 @@ Next try for whoever repeats it: open the playtest place in a Studio started by 
 * One game bug found and fixed: the RAIN! weather card came back half visible in the hub after it had faded (`titleBig` not cleared; `verify_cave_weather` now checks it). Not re-run live.
 * One finding left open: **BD-546** (menu cards cover the left rail by 43 px at 1140 wide; Crystals tab shows R$ buttons under Coming soon, confirm inert).
 * Still owed: a phone-size run, a published server, more than one player. BD-317 may take the lines; BD-541 is Review / test with this evidence.
+
+## Studio acceptance 2026-10-18 (BD-663): first real Studio run of the playtest build
+
+Label: **STUDIO EVIDENCE, desktop Studio, one player, unpublished copy, viewport only 296 x 304.** Appended; no history edited. Full table, numbers and 18 pictures: [evidence/2026-10-18-studio-acceptance/README.md](evidence/2026-10-18-studio-acceptance/README.md). Build: main `77f03e31`, `build.py --profile playtest`, `verify_release --profile playtest` passed. The place was opened by the lead launching Studio with the `.rbxlx` as an argument (the MCP tools cannot open a file; docs/160 section 6).
+
+| Item | Result | Observation |
+| --- | --- | --- |
+| Playtest place opens, profile playtest, paid flags false | PASS | `Config`: redesign-020, playtest, `CrystalPacksEnabled` false, `PaidRandomItemsEnabled` false |
+| Spawn, gate, run, food, growth, leap | PASS | island has 3,573 food, scale 1.0 to 1.87, leap apex 12.5 |
+| Weather (7 kinds, admin remote) | PASS | loot 1.1 to 1.75 as configured; title card seen for Rain, Blizzard, Blood Moon; not pictured: Thunder, Volcano, Quake, Aurora |
+| Run end, Run Complete, once only | PASS | 38 eggs, +75 crystals; 3 duplicate end requests gave no second credit |
+| Egg hatch, Skip the rest, cracked egg | PASS | "Compy, Common, 26% of eggs", cracked "Oops! Splat!" with 1 in 5 text |
+| Dino Index and Fusion menu (6 Base to Gold, 3 Gold, 2 Emerald) | PASS | odds shown, itemised confirm, 6 rolls, "Ta-da! NEW GOLD Gold Compy"; collection 9 Compy to 3 plus 1 Gold |
+| Shop, packs OFF | PASS | Crystals tab "Coming soon", no R$ or buy button anywhere in PlayerGui |
+| Cave hub travel and "Back to the middle" | PASS | hub travel lines in the log |
+| Dino swap mid-run (BD-613) | PASS | `next_run`, model and speed unchanged |
+| Console | PASS | 0 client errors, 0 server errors or warnings (5 UIBlox boot warnings, 9 tool camera notices) |
+| Frame time | Studio desktop only | flat 15 fps (66.7 ms) client, 60 per second server; looks like window throttling, not a phone number |
+| Objectives panel, Combat, fast travel, special foods, per-dino cosmetics | NOT TESTED | all five flags are OFF in the playtest build of main `77f03e31`; PR #466 (docs/157) turns them on. Flipping them in the open copy was refused by the permission system (BD-996) |
+| HUD at real sizes, text clipping | NOT TESTED | viewport only 296 wide, HUD pieces overlap and the HOME button is under the Admin button there (BD-994, BD-995) |
+| Phone, 2 or more players, published server, rejoin after run end or fusion | NOT TESTED | needs a phone, a second client or the owner |
+
+Go / no-go rows 8 (movement window with lag), 9 (dino swap: now PASS in Studio), 12 (weather: PASS for all 7 by number, 3 pictured) change as noted; row 8 stays open (no lag was simulated). New rows: BD-994, BD-995, BD-996.
