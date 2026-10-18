@@ -38,6 +38,7 @@ local DEFAULTS = {
     targetTimeout = 16,     -- give up on one food after this many seconds
     verticalLimit = 5,      -- the server only eats food within 6 studs of height
     pathSpacing = 6,
+    casual = false,         -- true = the casual walker of the round-3b pace run (docs/194 s4): next food among the six nearest within 90 studs (not by value), walks 2.5 to 5 s, stops 0.3 to 1.6 s, looks around 2 to 4 s every 25 to 35 s
     cardWaitSeconds = 12,   -- wait this long for the Run Complete card after the run ended
 }
 
@@ -116,7 +117,7 @@ local function scan(rootPos: Vector3, count: boolean)
                 Bot.foodRaw += rec.pts
                 Bot.eats += 1
                 Bot.kinds[kindOf(part)] = (Bot.kinds[kindOf(part)] or 0) + 1
-                add("eat", string.format("%s +%d", kindOf(part), rec.pts), {kind = kindOf(part), pts = rec.pts})
+                add("eat", string.format("%s +%d", kindOf(part), rec.pts), {kind = kindOf(part), pts = rec.pts, id = idOf(part)})
             end
             rec.vis = visible
             rec.pos = part.Position
@@ -155,6 +156,25 @@ local blacklist: {[BasePart]: number} = {}
 local function choose(rootPos: Vector3, walkSpeed: number, foods: {BasePart}, preds: {Vector3}, opts)
     local best, second = nil, nil
     local clock = os.clock()
+    if opts.casual then
+        local near = {}
+        for _, part in foods do
+            local until_ = blacklist[part]
+            if until_ and until_ > clock then continue end
+            local rec = info[part]
+            local d = flat(rec.pos, rootPos)
+            local dy = math.abs(rec.pos.Y - rootPos.Y)
+            if d <= 90 and dy <= opts.verticalLimit + 6 then
+                local bad = false
+                for _, p in preds do if flat(rec.pos, p) < opts.predatorAvoid then bad = true break end end
+                if not bad then near[#near + 1] = {part = part, dist = d, pts = rec.pts, score = 0} end
+            end
+        end
+        table.sort(near, function(a, b) return a.dist < b.dist end)
+        if #near == 0 then return nil, nil end
+        local pick = if math.random() < 0.12 then near[math.random(1, #near)] else near[math.random(1, math.min(6, #near))]
+        return pick, nil
+    end
     for _, part in foods do
         local until_ = blacklist[part]
         if until_ and until_ > clock then continue end
@@ -271,6 +291,7 @@ local function loop(opts)
     local endFired = -10
     local stopReason: string? = nil
     local pathTried: {[BasePart]: boolean} = {}
+    local casualNextLook, casualWalkUntil = os.clock() + 30, os.clock() + 3
 
     add("bot", string.format("start: stop after %ss%s, autoStartRun=%s", tostring(opts.stopSeconds), if opts.stopFood then " or food " .. opts.stopFood else "", tostring(opts.autoStartRun)))
     Bot.phase = "waiting"
@@ -298,6 +319,7 @@ local function loop(opts)
             add("run", "run is Active, run clock starts", {runId = ch:GetAttribute("RunId")})
             Bot.phase = "running"
             scan(root.Position, false) -- baseline, nothing counted
+            casualNextLook, casualWalkUntil = os.clock() + 30, os.clock() + 3
         end
         local runSeconds = os.clock() - Bot.runT0
 
@@ -372,6 +394,20 @@ local function loop(opts)
                 {id = idOf(best.part), pts = best.pts, dist = best.dist, score = best.score})
         end
 
+        if opts.casual then -- the casual rhythm: short walks, short stops, a look around now and then
+            local c = os.clock()
+            if c >= casualNextLook then
+                hum:MoveTo(root.Position)
+                task.wait(2 + 2 * math.random())
+                casualNextLook = os.clock() + 25 + 10 * math.random()
+                casualWalkUntil = os.clock() + 2.5 + 2.5 * math.random()
+            elseif c >= casualWalkUntil then
+                hum:MoveTo(root.Position)
+                task.wait(0.3 + 1.3 * math.random())
+                casualWalkUntil = os.clock() + 2.5 + 2.5 * math.random()
+            end
+            if not info[target] or not info[target].vis then target = nil continue end
+        end
         -- walk
         local rec = info[target]
         hum:MoveTo(rec.pos)
@@ -514,6 +550,33 @@ function Bot.report(maxLines: number?): string
         end
     end
     return table.concat(out, "\n")
+end
+
+-- Share of points by kind, the share of amber + golden drumstick, and points from a food eaten a SECOND time in the run (the "loop"
+-- that BD-1081 slowed down). Needs the eat lines, so call it before the log is trimmed (6,000 lines) or the next start.
+function Bot.summary(): string
+    local pts, cnt, tot, perId, repeatPts = {}, {}, 0, {}, 0
+    local byMinute = {}
+    for _, e in Bot.log do
+        if e.ev == "eat" then
+            local k = e.data.kind
+            pts[k] = (pts[k] or 0) + e.data.pts
+            cnt[k] = (cnt[k] or 0) + 1
+            tot += e.data.pts
+            if perId[e.data.id] then repeatPts += e.data.pts end
+            perId[e.data.id] = true
+            local m = math.floor(e.t / 60)
+            byMinute[m] = (byMinute[m] or 0) + e.data.pts
+        end
+    end
+    local out = {}
+    for k, v in pts do out[#out + 1] = string.format("%s: %d eaten, %d pts (%.0f%%)", k, cnt[k], v, 100 * v / math.max(tot, 1)) end
+    table.sort(out)
+    local rich = (pts.amber or 0) + (pts.golden_drumstick or 0)
+    local minutes = {}
+    for m = 0, 6 do if byMinute[m] then minutes[#minutes + 1] = string.format("min%d=%d", m + 1, byMinute[m]) end end
+    return string.format("total %d pts (est). amber + golden drumstick %d = %.0f%%. points from a food eaten a second time: %d (%.1f%%)\n%s\n%s",
+        tot, rich, 100 * rich / math.max(tot, 1), repeatPts, 100 * repeatPts / math.max(tot, 1), table.concat(out, "\n"), table.concat(minutes, " "))
 end
 
 return Bot
