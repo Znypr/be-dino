@@ -194,7 +194,7 @@ local function sequenceScenario(seed)
             elseif kind == 3 then
                 fireNow(server, "EquipSpecies", a, species[roll(#species)], token(true))
             elseif kind == 4 then
-                fireNow(server, "MutateSpecies", a, if rng() < 0.6 then "compy" else species[roll(#species)], if rng() < 0.7 then "gold" else "diamond", token(true))
+                fireNow(server, "FusionAction", a, {action = "quote", targetStage = if rng() < 0.7 then "gold" else "diamond", donorIds = {}}) -- BD-617: was the removed MutateSpecies
             elseif kind <= 7 then
                 local action = actions[roll(#actions)]
                 local id = ""

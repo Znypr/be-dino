@@ -184,7 +184,7 @@ def static():
         assert banned not in svc, f'TelemetryService must not use {banned} (the server id is random, BD-653)'
     assert 'ScriptContext' in svc and 'BindToClose' in svc and 'MovementRejectCount' in svc and 'RunTelemetry.visit' in svc
     # BD-650/652: every counting hook is flag-gated and wrapped in a pcall (telemetry must never throw into gameplay)
-    hooks = {'ChestService': 5, 'CollectionService': 2, 'MutationService': 2, 'GiftService': 2, 'ObjectiveService': 1, 'SkinService': 1,
+    hooks = {'ChestService': 5, 'CollectionService': 2, 'MutationService': 1, 'GiftService': 2, 'ObjectiveService': 1, 'SkinService': 1,
              'FusionService': 2, 'ProgressionService': 1, 'ProfileRepository': 1}
     for name, expected in hooks.items():
         text = (ROOT / f'src/server/{name}.luau').read_text(encoding='utf-8')

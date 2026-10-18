@@ -128,8 +128,6 @@ runScenario("objectives-isolation", DORMANT, function(server)
     sleep(1.5)
     fireNow(server, "EquipSpecies", a, speciesB or "compy", tok("x"), variantB)
     sleep(1.5)
-    fireNow(server, "MutateSpecies", a, speciesB or "compy", "gold", tok("x"))
-    sleep(1.5)
     victimPlays()
 
     -- 2. every remote, one slot at a time, B's ids and the hostile corpus (objective handlers get the whole corpus, the rest B's names plus a few)
