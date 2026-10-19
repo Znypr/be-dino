@@ -196,9 +196,43 @@ check(desktop[1].cy == 52 and desktop[1].w == 170 and desktop[1].h == 44 and des
 -- the scale decides the floor: a smaller window never gets smaller words, only bigger ones
 local big, small = Layout.plan({CATALOG[3]}, 1), Layout.plan({CATALOG[3]}, 0.5)
 check(small[1].size > big[1].size and small[1].size * 0.5 >= 14, "a smaller card gets bigger words (14 px on screen)")
+-- ===== 4. The colour chip (BD-1154): the name and the tier tag share the chip =====
+-- Every colour name of the game with every tier word, at the 14 px floor of 7 window scales. The name has the priority: it takes the biggest size that still leaves the tier
+-- tag room; when even the floor size leaves none, the tag goes under the name; when the chip is too narrow for that, it grows wider. Nothing overlaps, nothing leaves the chip.
+local CHIP_NAMES = {"Cream", "Blue", "Stone", "Clay", "Green", "Lime", "Sky", "Teal", "Pink", "Lilac", "Amber", "Navy", "Purple", "Wine", "Red", "Black"}
+local CHIP_TIERS = {"COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"}
+local chipPlans, below, wide = 0, 0, 0
+for _, scale in SCALES do
+    local floor = TagFit.floorSize(scale)
+    for _, name in CHIP_NAMES do
+        for _, tier in CHIP_TIERS do
+            local plan = Layout.chipPlan(name, tier, scale)
+            local tag = string.format("chip %s + %s at scale %.2f", name, tier, scale)
+            chipPlans += 1
+            check(plan.fits, tag .. ": the name and the tier tag do not fit the chip")
+            check(plan.nameSize >= floor and plan.nameSize >= 14 and plan.tierSize >= floor and plan.nameSize <= 40, string.format("%s: sizes %d / %d under the floor %d", tag, plan.nameSize, plan.tierSize, floor))
+            check(TagFit.width(name, plan.nameSize) <= plan.nameW and flat(name, plan.nameSize) <= plan.nameW, string.format("%s: '%s' needs %d of its %d px box", tag, name, TagFit.width(name, plan.nameSize), plan.nameW))
+            check(TagFit.width(tier, plan.tierSize) + 8 <= plan.tierW, string.format("%s: '%s' needs %d of its %d px tag", tag, tier, TagFit.width(tier, plan.tierSize) + 8, plan.tierW))
+            local nameR = {x = plan.nameX, y = plan.nameY, w = plan.nameW, h = plan.nameH}
+            local tierR = {x = if plan.tierRight then plan.tierX - plan.tierW else plan.tierX, y = plan.tierY, w = plan.tierW, h = plan.tierH}
+            check(not overlaps(nameR, tierR), tag .. ": the name box and the tier tag overlap (the old CreamCOMMON)")
+            check(nameR.x >= 46 and tierR.x >= 46 and nameR.x + nameR.w <= plan.w and tierR.x + tierR.w <= plan.w and nameR.y >= 0 and tierR.y >= 0 and nameR.y + nameR.h <= plan.h and tierR.y + tierR.h <= plan.h,
+                tag .. ": a part leaves the chip or runs into the swatch")
+            check(plan.h >= 50 and plan.w >= 210 and plan.w <= Layout.Chip.maxW, tag .. ": the chip is smaller than the old 210 x 50 or wider than its maximum")
+            if plan.mode == "below" then below += 1 end
+            if plan.w > 210 then wide += 1 end
+        end
+    end
+end
+local a, b = Layout.chipPlan("Cream", "COMMON", 1), Layout.chipPlan("Green", "UNCOMMON", 0.57)
+check(a.mode == "inline" and a.nameSize == Layout.Chip.nameMax and a.w == 210 and a.h == 50, "desktop: Cream + COMMON sits side by side at the full name size on the old 210 x 50 chip")
+check(b.mode == "inline" or b.mode == "below", "a small window still answers")
+check(Layout.chipPlan("Purple", "LEGENDARY", 0.5).w > 210, "the longest tier word at the smallest window grows the chip wider (probe: 210 px has no room under the name)")
+check(below >= 6, "probe lost sensitivity: the tier tag goes under the name in small windows (" .. below .. " cases)")
+check(wide >= 1, "probe lost sensitivity: a chip grows wider for the longest tier words (" .. wide .. " cases)")
 if failures > 0 then error(failures .. " tag-fit check(s) failed") end
-print(string.format("Tag fit passed: TagFit maths, Fusion tabs at %d windows (wide row at %d: %s; the old third rule fails at %d), %d tag plans (%d subsets x %d scales + the long and crowded cases)",
-    #WINDOWS, wideCount, table.concat(wideList, " "), oldFails, planned, subsets, #SCALES))
+print(string.format("Tag fit passed: TagFit maths, Fusion tabs at %d windows (wide row at %d: %s; the old third rule fails at %d), %d tag plans (%d subsets x %d scales + the long and crowded cases), %d colour chips (%d with the tier under the name, %d wider)",
+    #WINDOWS, wideCount, table.concat(wideList, " "), oldFails, planned, subsets, #SCALES, chipPlans, below, wide))
 '''
 
 
@@ -263,6 +297,18 @@ MUTANTS = {
     },
     'the stop tag never moves to the other side': {
         'HatchTagLayout': [('            if cy2 + hh <= L.Bottom + 1e-6 then side, cy, nextY = other, cy2, next2 else ok = false end', '            ok = false')],
+    },
+    'the colour chip tier tag ignores the name (it always sits beside it)': {
+        'HatchTagLayout': [('        local room = w - C.left - C.right - C.gap - tierW\n', '        local room = w - C.left - C.right - C.gap - 40\n')],
+    },
+    'the colour chip never grows wider than 210 px': {
+        'HatchTagLayout': [('maxW = 252', 'maxW = 210')],
+    },
+    'the colour chip name may shrink under the 14 px floor': {
+        'HatchTagLayout': [('        for size = math.max(C.nameMax, floor), floor, -1 do', '        for size = math.max(C.nameMax, floor), 8, -1 do')],
+    },
+    'the colour chip tier tag is not measured (it has the old 94 px)': {
+        'HatchTagLayout': [('    local tierW = TagFit.width(tier, floor) + 2 * C.pad + C.slack', '    local tierW = 94')],
     },
     'the stop tag is as short as its title only': {
         'HatchTagLayout': [('    local h = title.height + line.height + 8', '    local h = title.height + 8')],

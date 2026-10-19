@@ -85,4 +85,50 @@ function L.plan(items: {Item}, screenScale: number): ({Placed}, boolean)
     return placed, ok
 end
 
+-- BD-1154 (docs/217, pictures 547 and 552): the COLOUR chip under a paint bucket, [swatch] Name [TIER], used to give the name a 60 px box and put the tier tag over
+-- its end ("Cream" + COMMON read CreamCOMMON, "Green" + UNCOMMON read GreeUNCOMMON). Now the name and the tier tag SHARE the chip's width by measure, and the name has
+-- the priority: the name takes the biggest size that still leaves the tier room (never under the 14 px floor of the window); when even the floor size does not leave
+-- room, the tier tag goes to a second line under the name (the chip grows taller); when the chip is too narrow for that too, it grows wider (up to Chip.maxW).
+-- Pure numbers, chip coordinates (the chip's top left is 0, 0). `tier` is the word shown on the tag (already upper case).
+L.Chip = {w = 210, h = 50, maxW = 252, left = 46, right = 8, gap = 6, pad = 4, vpad = 5, lineGap = 2, nameMax = 24, slack = 4}
+export type ChipPlan = {mode: string, w: number, h: number, nameSize: number, nameX: number, nameY: number, nameW: number, nameH: number,
+    tierSize: number, tierX: number, tierY: number, tierW: number, tierH: number, tierRight: boolean, fits: boolean}
+function L.chipPlan(name: string, tier: string, screenScale: number): ChipPlan
+    local C = L.Chip
+    local floor = TagFit.floorSize(screenScale)
+    local tierW = TagFit.width(tier, floor) + 2 * C.pad + C.slack -- the tag at the floor size: it never grows past it
+    local tierH = math.ceil(floor * TagFit.LineHeight) + 4
+    local function fitSize(room: number): number? -- the biggest whole name size in [floor, nameMax] that holds the name in `room`
+        for size = math.max(C.nameMax, floor), floor, -1 do
+            if TagFit.width(name, size) + C.slack <= room then return size end
+        end
+        return nil
+    end
+    local last: ChipPlan? = nil
+    for _, w in {C.w, C.maxW} do
+        -- 1. side by side: [swatch] Name [TIER]
+        local room = w - C.left - C.right - C.gap - tierW
+        local size = fitSize(room)
+        if size then
+            local nameH = math.ceil(size * TagFit.LineHeight)
+            local h = math.max(C.h, nameH + 2 * C.vpad, tierH + 2 * C.vpad)
+            return {mode = "inline", w = w, h = h, nameSize = size, nameX = C.left, nameY = (h - nameH) / 2, nameW = room, nameH = nameH, tierSize = floor,
+                tierX = w - C.right, tierY = h / 2 - tierH / 2, tierW = tierW, tierH = tierH, tierRight = true, fits = true}
+        end
+        -- 2. the tier tag on a second line under the name
+        local roomBelow = w - C.left - C.right
+        local sizeBelow = fitSize(roomBelow)
+        if sizeBelow and tierW <= roomBelow then
+            local nameH = math.ceil(sizeBelow * TagFit.LineHeight)
+            local h = math.max(C.h, C.vpad + nameH + C.lineGap + tierH + C.vpad)
+            return {mode = "below", w = w, h = h, nameSize = sizeBelow, nameX = C.left, nameY = C.vpad, nameW = roomBelow, nameH = nameH, tierSize = floor,
+                tierX = C.left, tierY = C.vpad + nameH + C.lineGap, tierW = tierW, tierH = tierH, tierRight = false, fits = true}
+        end
+        local nameH = math.ceil(floor * TagFit.LineHeight)
+        last = {mode = "below", w = w, h = C.vpad + nameH + C.lineGap + tierH + C.vpad, nameSize = floor, nameX = C.left, nameY = C.vpad, nameW = roomBelow, nameH = nameH,
+            tierSize = floor, tierX = C.left, tierY = C.vpad + nameH + C.lineGap, tierW = tierW, tierH = tierH, tierRight = false, fits = false}
+    end
+    return last :: ChipPlan
+end
+
 return L

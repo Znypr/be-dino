@@ -192,8 +192,67 @@ do
 end
 print("Rarity words ok")
 
+-- ===== BD-1153 (docs/217): a pop-in UIScale never reaches the floor pass =====
+-- Studio round 10: a hatch ribbon or tag is made with a UIScale of 0 and pops in. The floor pass multiplied every UIScale up to the panel, so the floor 14 / ~0 became 229112335,
+-- the engine clamped the word to TextSize 100 (the mock clamps like the engine) and the clamped 100 was stored as the design size, so every tag word stayed at 100. A word under
+-- a UIScale of 0, 1e-8, 0.001, 0.14, 0.3, 0.49, 0.5, 0.6, 0.7, 0.9 and 1 goes through the pass (three times, then once more on its way up and once settled) at every window
+-- size: it stays in 14 .. 40, the remembered design size stays the asked 14, and once it is at 1 it is what a word that never popped in gets. Under a REAL window scale (BodyFit) of 0.3
+-- the floor stops at 40 instead of asking for 59.
+local POP_SCALES = {0, 1e-8, 0.001, 0.14, 0.3, 0.49, 0.5, 0.6, 0.7, 0.9, 1}
+local popReadings = 0
+local function popWord(world, startScale, small)
+    local holder = world.body
+    if small then
+        holder = inst("Frame", "Card", holder, {Size = UDim2.fromOffset(300, 120), ZIndex = 25})
+        inst("UIScale", "BodyFit", holder, {Scale = 0.3})
+    end
+    local tag = inst("Frame", "Ribbon", holder, {Size = UDim2.fromOffset(200, 44), ZIndex = 26})
+    local u = inst("UIScale", "UIScale", tag, {Scale = startScale})
+    return inst("TextLabel", "Word", tag, {Size = UDim2.fromOffset(150, 40), Text = "Skip stops here", TextSize = 14, ZIndex = 27}), u
+end
+local function designOk(word)
+    local base = word:GetAttribute("CmBaseText")
+    return base == 14 or (base == nil and ModalCompact.model().mode ~= "compact") -- a desktop window runs no floor pass and remembers nothing
+end
+for _, size in SIZES do
+    local w, h = size[1], size[2]
+    local ref = buildWorld(w, h, false)
+    local refWord = popWord(ref, 1, false)
+    ModalCompact.enforce()
+    local settled = refWord.TextSize
+    local refSmall = popWord(ref, 1, true)
+    ModalCompact.enforce()
+    local settledSmall = refSmall.TextSize
+    ref.gui:Destroy()
+    for _, small in {false, true} do
+        for _, startScale in POP_SCALES do
+            local world = buildWorld(w, h, false)
+            local word, u = popWord(world, startScale, small)
+            local tag = string.format("Pop-in %dx%d%s from UIScale %s", w, h, if small then " (window scale 0.3)" else "", tostring(startScale))
+            for pass = 1, 3 do
+                ModalCompact.enforce()
+                popReadings += 1
+                check(word.TextSize >= 14 and word.TextSize <= 40, string.format("%s: the word is %d px after pass %d (must stay in 14 .. 40; the engine clamps at 100)", tag, word.TextSize, pass))
+                check(designOk(word), string.format("%s: the design size is %s after pass %d (it was asked 14)", tag, tostring(word:GetAttribute("CmBaseText")), pass))
+            end
+            local expect = if small then settledSmall else settled
+            check(word.TextSize == expect, string.format("%s: while it pops in the word is %d px, a word that never popped in has %d (a pop-in is not a window)", tag, word.TextSize, expect))
+            if startScale < 1 then
+                u.Scale = 0.01
+                ModalCompact.enforce()
+                check(word.TextSize >= 14 and word.TextSize <= 40 and designOk(word), string.format("%s: on its way up the word is %d px", tag, word.TextSize))
+                u.Scale = 1
+                ModalCompact.enforce()
+            end
+            check(word.TextSize == expect and designOk(word), string.format("%s: settled the word is %d px, a word that never popped in has %d", tag, word.TextSize, expect))
+            world.gui:Destroy()
+        end
+    end
+end
+print("Pop-in floor ok: " .. popReadings .. " readings")
+
 for i, entry in ALLOW do
     if not allowUsed[i] then print("ALLOWSTALE " .. i) end
 end
 if failures > 0 then error(failures .. " text-floor check(s) failed") end
-print("Text floor smoke passed: " .. texts .. " texts judged at " .. #SIZES .. " sizes")
+print("Text floor smoke passed: " .. texts .. " texts judged at " .. #SIZES .. " sizes, " .. popReadings .. " pop-in readings")

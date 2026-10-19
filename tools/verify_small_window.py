@@ -144,6 +144,26 @@ MUTANTS = {
     'the name box keeps its old place, so the class badge lies inside it': {
         'HatchSequence': [('            a.nameLabel.Position = UDim2.fromOffset(left + badgeW + gap, labelY)', '            a.nameLabel.Position = nameBase.pos')],
     },
+    # BD-1153 (docs/217): a tag pops in from UIScale 0; the floor pass must not multiply it in, cap the answer, or store a clamped size
+    'every UIScale is multiplied into the floor, a pop-in from 0 included (Studio: TextSize 100, "Ra...")': {
+        'ModalCompact': [('if u.Scale >= 0.999 then total *= u.Scale end', 'total *= u.Scale')],
+    },
+    'only a pop-in under half is ignored (a tag at 0.6 still grows its word to 42 px)': {
+        'ModalCompact': [('if u.Scale >= 0.999 then total *= u.Scale end', 'if u.Scale >= 0.5 then total *= u.Scale end')],
+    },
+    'the floor has no cap (a very small window asks for 59 px)': {
+        'ModalCompact': [('    return math.max(base, math.min(want, math.max(limit, 2 * base)))', '    return want')],
+    },
+    'the raised size is stored as the design size (the clamp becomes the new base)': {
+        'ModalCompact': [('d:SetAttribute("CmBaseText", base) -- the size the screen asked for: never the engine\'s clamped answer', 'd:SetAttribute("CmBaseText", object.TextSize)')],
+    },
+    # BD-1154 (docs/217): the colour name and the tier tag share the chip
+    'the colour chip keeps the old boxes (name 60 px wide, the tier tag lies over its end)': {
+        'HatchSequence': [('        local plan = TagLayout.chipPlan(reveal.name, tierWord, screenScale)', '        local plan = {mode = "inline", w = 210, h = 50, nameSize = 14, nameX = 46, nameY = 8, nameW = 60, nameH = 34, tierSize = 14, tierX = 202, tierY = 10, tierW = 94, tierH = 30, tierRight = true, fits = true}')],
+    },
+    'the colour chip tier tag ignores the name (it always sits beside it at the old width)': {
+        'HatchTagLayout': [('        local room = w - C.left - C.right - C.gap - tierW\n        local size = fitSize(room)', '        local room = w - C.left - C.right - C.gap - 40\n        local size = fitSize(room)')],
+    },
     # BD-1083 (docs/197 picture 350): a tap on an Index tab closed the Index and opened Eggs
     'the rail routing looks at the position only, not at what is on top (a tap on the Patterns tab presses the rail EGGS button)': {
         'HubTravelClientRules': [(' or onBackdrop ~= true', '')],

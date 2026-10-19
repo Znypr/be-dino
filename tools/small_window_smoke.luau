@@ -79,6 +79,33 @@ stubs.HatchEggV2 = {create = function() return nil end, stop = function() end}
 Services.HttpService = {JSONDecode = function() return {} end}
 Services.TweenService = {Create = function(_, target, _, goals) return {Play = function() for k, v in goals do target[k] = v end end, Cancel = function() end, Completed = signal()} end}
 Services.UserInputService = {InputBegan = inputBegan}
+-- BD-1153: the pop-in cases play the tweens over their duration (frame by frame, linear) instead of jumping to the goal, so a ribbon, tag or chip really passes through
+-- UIScale 0 .. 1 while ModalCompact's floor pass runs, like in the engine. POPIN is off for every other check of this file (they judge the settled picture).
+local POPIN = false
+do
+    local instant = Services.TweenService.Create
+    Services.TweenService.Create = function(self, target, info, goals)
+        if not POPIN then return instant(self, target, info, goals) end
+        local duration = math.max((info and info.Time) or 0, 1 / 30)
+        local conn = nil
+        local tween = {Completed = signal()}
+        function tween.Cancel() if conn then conn:Disconnect() conn = nil end end
+        function tween.Play()
+            local from = {}
+            for key in goals do from[key] = target[key] end
+            local t = 0
+            conn = heartbeat:Connect(function(dt)
+                t += dt
+                local k = math.min(1, t / duration)
+                for key, goal in goals do
+                    if type(goal) == "number" and type(from[key]) == "number" then target[key] = from[key] + (goal - from[key]) * k elseif k >= 1 then target[key] = goal end
+                end
+                if k >= 1 then tween.Cancel() tween.Completed:Fire() end
+            end)
+        end
+        return tween
+    end
+end
 local function register(name)
     local m = Instance.new("ModuleScript") m.Name = name
     m.Parent = if clientNames[name] then ClientFolder else SharedFolder
@@ -361,8 +388,8 @@ local function playHatch(modal, motion, result)
     NEW_WORDS = result.newWords or {}
     if result.genes then
         res.genes = result.genes
-        res.colorReveal = {name = "Cream", tier = 1, tierName = "Common", rgb = {247, 234, 196}, id = "white"}
-        res.secondReveal = {name = "Blue", tier = 1, tierName = "Common", rgb = {36, 132, 211}, id = "blue"}
+        res.colorReveal = result.chipA or {name = "Cream", tier = 1, tierName = "Common", rgb = {247, 234, 196}, id = "white"}
+        res.secondReveal = result.chipB or {name = "Blue", tier = 1, tierName = "Common", rgb = {36, 132, 211}, id = "blue"}
         res.patternReveal = {name = "Dots", tier = 1, tierName = "Common", plain = false}
     end
     handle.supply(res)
@@ -492,6 +519,164 @@ for _, stage in HATCH_STAGES do
     end
 end
 
+-- ===== BD-1153 (docs/217): a pop-in UIScale never reaches the floor pass =====
+-- Studio round 10: a hatch ribbon or tag is made with a UIScale of 0 and pops in. ModalCompact's floor pass multiplied every UIScale up to the panel, so the floor 14 / ~0
+-- became 229112335, the engine clamped the word to TextSize 100 and the clamped 100 was stored as the design size (CmBaseText), so it never came back: every tag word was 100 px
+-- big in a 15 px box. Here (a) a label under a UIScale of 0, 1e-8, 0.001, 0.14, 0.3, 0.49, 0.5, 0.7 and 1 goes through the pass, and the word stays in 14 .. 40 with its
+-- design size untouched, and once the scale reaches 1 the word is exactly what a fresh label at scale 1 gets; (b) the REAL hatch screen plays with
+-- tweens that really run frame by frame, the floor pass runs every frame, and every ribbon and stop-tag word stays in 14 .. 40 with CmBaseText equal to the size it was asked.
+local TagFitReal = requireModule(SharedFolder.TagFit)
+local POPIN_SIZES = {{516, 481}, {848, 423}, {667, 339}, {500, 465}, {740, 340}, {1156, 793}}
+local POP_SCALES = {0, 1e-8, 0.001, 0.14, 0.3, 0.49, 0.5, 0.6, 0.7, 0.9, 1} -- the FusionMenu result holder pops from 0.6 and 0.7, a banner from 0.7, a card from 0
+local popChecks = 0
+local function designOk(word, asked) -- the remembered design size is what was asked (a desktop window runs no floor pass and remembers nothing)
+    local base = word:GetAttribute("CmBaseText")
+    return base == asked or (base == nil and ModalCompact.model().mode ~= "compact")
+end
+local function makeTagWord(modal, size, startScale, nested) -- nested = under a window-scale card
+    local holder = modal.body
+    if nested then -- a card under a real window scale of 0.3 (a very small window): the floor would be 14 / (0.3 * panel scale), over 50 px, and must stop at 40
+        holder = inst("Frame", "Card", holder, {Size = UDim2.fromOffset(300, 120), ZIndex = 25})
+        inst("UIScale", "BodyFit", holder, {Scale = 0.3})
+    end
+    local tag = inst("Frame", "Ribbon", holder, {Size = UDim2.fromOffset(200, 44), ZIndex = 26})
+    local u = inst("UIScale", "UIScale", tag, {Scale = startScale})
+    local word = inst("TextLabel", "Word", tag, {Size = UDim2.fromOffset(150, 40), Text = "Skip stops here", TextSize = size, ZIndex = 27})
+    return word, u
+end
+for _, win in POPIN_SIZES do
+    local w, h = win[1], win[2]
+    local fresh = buildModal(w, h)
+    local freshWord = makeTagWord(fresh, 14, 1, false)
+    ModalCompact.enforce()
+    local settled = freshWord.TextSize -- what a label that never popped in gets (the pass is reversible and idempotent: the same on every run)
+    local freshNested = makeTagWord(fresh, 14, 1, true)
+    ModalCompact.enforce()
+    local settledNested = freshNested.TextSize
+    fresh.gui:Destroy()
+    for _, nested in {false, true} do
+        for _, startScale in POP_SCALES do
+            local modal = buildModal(w, h)
+            local word, u = makeTagWord(modal, 14, startScale, nested)
+            local tag = string.format("Pop-in %dx%d%s from UIScale %s", w, h, if nested then " (small window scale)" else "", tostring(startScale))
+            for pass = 1, 3 do -- idempotent: the same answer on every pass
+                ModalCompact.enforce()
+                popChecks += 1
+                check(word.TextSize >= 14 and word.TextSize <= 40, string.format("%s: the word is %d px after pass %d (must stay in 14 .. 40, the engine's clamp is 100)", tag, word.TextSize, pass))
+                check(designOk(word, 14), string.format("%s: the design size is %s after pass %d, it was asked 14", tag, tostring(word:GetAttribute("CmBaseText")), pass))
+            end
+            local expect = if nested then settledNested else settled
+            check(word.TextSize == expect, string.format("%s: while it pops in the word is %d px, a word that never popped in has %d (a pop-in is not a window)", tag, word.TextSize, expect))
+            if startScale < 1 then
+                u.Scale = 0.01 -- a tween step on its way up must not change the answer's range
+                ModalCompact.enforce()
+                check(word.TextSize >= 14 and word.TextSize <= 40 and designOk(word, 14), string.format("%s: on its way up the word is %d px (design %s)", tag, word.TextSize, tostring(word:GetAttribute("CmBaseText"))))
+                u.Scale = 1 -- the pop-in finishes
+                ModalCompact.enforce()
+            end
+            check(word.TextSize == expect and designOk(word, 14), string.format("%s: after the pop-in the word is %d px (design %s), a label that never popped in has %d", tag, word.TextSize, tostring(word:GetAttribute("CmBaseText")), expect))
+            modal.gui:Destroy()
+        end
+    end
+end
+
+-- (b) the real hatch screen, tweens that run for real, the floor pass on every frame
+local function popInHatch(w, h, stage)
+    POPIN = true
+    local modal = buildModal(w, h)
+    local handle, args = playHatch(modal, true, stage.result)
+    local asked, kinds = {}, 0
+    local tag = string.format("Hatch pop-in %dx%d (%s)", w, h, stage.name)
+    local function tagWords()
+        local list = {}
+        for _, d in modal.body:GetChildren() do
+            if isGui(d) and (d.Name == "Ribbon" or d.Name == "StopTag") then
+                for _, l in d:GetDescendants() do
+                    if l.ClassName == "TextLabel" and not l.TextScaled and l.Text ~= "" then table.insert(list, l) end
+                end
+            end
+        end
+        return list
+    end
+    for _ = 1, math.floor(stage.seconds * 30) do
+        frames(1)
+        for _, l in tagWords() do
+            if asked[l] == nil then asked[l] = l.TextSize kinds += 1 end -- seen before this frame's pass: the size the hatch screen asked for
+        end
+        ModalCompact.enforce() -- what a new child schedules in the game
+        for _, l in tagWords() do
+            popChecks += 1
+            check(l.TextSize >= 14 and l.TextSize <= 40, string.format("%s: '%s' is %d px (asked %s): must stay in 14 .. 40", tag, l.Text, l.TextSize, tostring(asked[l])))
+            local base = l:GetAttribute("CmBaseText") -- nil on a desktop window (no floor pass there)
+            check(base == asked[l] or (base == nil and ModalCompact.model().mode ~= "compact"), string.format("%s: '%s' design size is %s but it was asked %s", tag, l.Text, tostring(base), tostring(asked[l])))
+        end
+    end
+    check(kinds >= (stage.tagCount or 1), string.format("%s: %d tag words were drawn, expected at least %d", tag, kinds, stage.tagCount or 1))
+    for _, l in tagWords() do -- settled: at least 14 px on screen (the pass raised the word for this window)
+        check(l.TextSize * scaleAt(l) >= 14 - .01, string.format("%s: '%s' is %.1f px on screen once it settled", tag, l.Text, l.TextSize * scaleAt(l)))
+    end
+    handle.cancel()
+    modal.gui:Destroy()
+    POPIN = false
+end
+for _, stage in HATCH_STAGES do
+    if stage.tags then
+        for _, win in POPIN_SIZES do popInHatch(win[1], win[2], stage) end
+    end
+end
+
+-- ===== BD-1154 (docs/217, pictures 547 and 552): the colour name and the tier tag share the chip =====
+-- Every colour with its own tier (and the longest words with the longest tier tags) in both chips, at every window size: the name keeps its
+-- own box (not under 14 px on screen, measured with TagFit, not cut), the tier tag lies beside it or under it, the two never overlap, nothing leaves the chip.
+local CHIP_COLOURS = {
+    {"Cream", 1}, {"Blue", 1}, {"Stone", 1}, {"Clay", 1}, {"Green", 2}, {"Lime", 2}, {"Sky", 2}, {"Teal", 3}, {"Pink", 3}, {"Lilac", 3},
+    {"Amber", 4}, {"Navy", 4}, {"Purple", 5}, {"Wine", 5}, {"Red", 6}, {"Black", 6},
+    {"Cream", 2}, {"Green", 5}, {"Lilac", 5}, {"Purple", 2}, {"Stone", 5}, {"Cream", 5}, {"Sky", 4}, {"Wine", 2}, {"Amber", 5}, {"Cream", 6},
+}
+local TIER_WORDS = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
+local chipsJudged = 0
+local function chipPair(a, b, w, h, motion, kindTag)
+    local function reveal(c) return {name = c[1], tier = c[2], tierName = TIER_WORDS[c[2]], rgb = {200, 200, 200}, id = string.lower(c[1])} end
+    local modal = buildModal(w, h)
+    local handle = playHatch(modal, motion, {rarity = 2, remaining = 5, chipA = reveal(a), chipB = reveal(b),
+        genes = {conditionId = "plain", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}})
+    frames(math.floor(2.6 * 30))
+    for i, c in {a, b} do
+        local chip = modal.panel:FindFirstChild("PaintChip" .. i, true)
+        local tag = string.format("Chip %s + %s at %dx%d%s (%s)", c[1], string.upper(TIER_WORDS[c[2]]), w, h, if motion then "" else ", Reduce Motion", kindTag)
+        if check(chip ~= nil and chip.Visible, tag .. ": the chip is shown") then
+            local nameLabel, badge, swatch = chip:FindFirstChild("Text"), chip:FindFirstChild("TierBadge"), chip:FindFirstChild("Swatch")
+            local badgeLabel = badge and badge:FindFirstChild("Text")
+            if check(nameLabel ~= nil and badge ~= nil and badgeLabel ~= nil and swatch ~= nil, tag .. ": name, tag and swatch exist") then
+                chipsJudged += 1
+                local k = scaleAt(nameLabel)
+                local chipR = {x = 0, y = 0, w = chip.Size.X.Offset, h = chip.Size.Y.Offset}
+                local nameR, tierR, swatchR = designRect(nameLabel), designRect(badge), designRect(swatch)
+                local word = string.upper(TIER_WORDS[c[2]])
+                check(not nameLabel.TextScaled and not badgeLabel.TextScaled, tag .. ": the words are measured sizes, not shrink-to-fit")
+                check(nameLabel.Text == c[1] and badgeLabel.Text == word, tag .. ": the words are the colour and the tier")
+                check(nameLabel.TextSize * k >= 14 - .01 and badgeLabel.TextSize * k >= 14 - .01, string.format("%s: %.1f / %.1f px on screen (needs 14)", tag, nameLabel.TextSize * k, badgeLabel.TextSize * k))
+                check(nameLabel.TextSize <= 40 and badgeLabel.TextSize <= 40, tag .. ": a word over 40 design px")
+                check(TagFitReal.width(c[1], nameLabel.TextSize) <= nameR.w, string.format("%s: '%s' (%d px) needs %d of its %d px box", tag, c[1], nameLabel.TextSize, TagFitReal.width(c[1], nameLabel.TextSize), nameR.w))
+                check(TagFitReal.width(word, badgeLabel.TextSize) + 8 <= tierR.w, string.format("%s: '%s' (%d px) needs %d of its %d px tag", tag, word, badgeLabel.TextSize, TagFitReal.width(word, badgeLabel.TextSize) + 8, tierR.w))
+                check(not overlaps(nameR, tierR), string.format("%s: the name box %s lies over the tier tag %s", tag, describe(nameR), describe(tierR)))
+                check(not overlaps(swatchR, nameR) and not overlaps(swatchR, tierR), tag .. ": the swatch touches a word")
+                for _, part in {{"name", nameR}, {"tier tag", tierR}} do
+                    check(inside(part[2], chipR, .01), string.format("%s: the %s %s leaves the chip %s", tag, part[1], describe(part[2]), describe(chipR)))
+                end
+            end
+        end
+    end
+    handle.cancel()
+    modal.gui:Destroy()
+end
+for i = 1, #CHIP_COLOURS, 2 do
+    local a, b = CHIP_COLOURS[i], CHIP_COLOURS[i + 1] or CHIP_COLOURS[1]
+    for _, size in SIZES do
+        chipPair(a, b, size[1], size[2], true, "colours") -- Reduce Motion skips the paint buckets and their chips: nothing to judge there
+    end
+end
+
 -- ===== BD-1083: a tap on an Index tab must stay the tab's (docs/197 picture 350) =====
 -- HubTravelClient turns a raw tap into "close the menu and travel" when it lands on a rail button while a menu is up. It used to look at the
 -- position only; at 500 px the Index tabs lie over the EGGS rail button, so a tap on Patterns closed the Index and opened Eggs. The engine's hit
@@ -552,4 +737,4 @@ for _, size in SIZES do
 end
 
 if failures > 0 then error(failures .. " small-window check(s) failed") end
-print("Small window smoke passed: " .. #SIZES .. " sizes")
+print("Small window smoke passed: " .. #SIZES .. " sizes, " .. popChecks .. " pop-in readings, " .. chipsJudged .. " colour chips")
