@@ -669,13 +669,11 @@ local leapText=label(leapButton,"LEAP [E]",56,0,225,60,22)
 -- BD-247 HP combat HUD (health bars, Bite button in this row): no-op while Config.CombatEnabled is false. No new locals here (200-local limit).
 require(script.Parent.CombatHud).attach({timers=timers,leapButton=leapButton,leapText=leapText,button=button,label=label,notify=notify,shade=shade})
 local weatherTile=box(timers,0,72,286,62,C.panel,2)
-local weatherArt=Theme.icon(weatherTile,"weather")
-if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
 local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
 local buffsText=label(timers,"",0,145,286,68,16,C.gold)
 require(script.Parent.PotionChips).attach(buffsText) -- BD-101: potion icons beside the active-potion timer lines
+require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num}) -- BD-1124: the weather and potion timer words (moved out: 200-local and size limits)
 local function timerText(seconds) return UIFormat.duration(seconds) end
-local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
     local left=num("LeapReadyAt")-now
@@ -683,28 +681,7 @@ local function refreshProgressionHUD()
     leapButton.BackgroundColor3=if left>0 then C.card else C.blue
     local c=player.Character
     leapButton.Active=left<=0 and c~=nil and c:GetAttribute("RunState")=="Active"
-    local id=workspace:GetAttribute("WeatherId") or "clear"
-    if id~=lastWeather then
-        lastWeather=id
-        if weatherArt then weatherArt:Destroy() end
-        local event=ProgressionRules.item(ProgressionConfig.Weather,id)
-        weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
-        if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
-        if id~="clear" then
-            notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue,{key="weather",icon=if event then event.icon or id else "weather",body="Special eggs can drop!"})
-            Sfx.play("weather_start")
-        end
-    end
-    weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
-    local p=progression() local lines={}
-    for kind,buff in p.buffs do
-        if buff.expiresAt>now then table.insert(lines,string.upper(string.sub(kind,1,1))..string.sub(kind,2).." potion "..timerText(buff.expiresAt-now)) end
-    end
-    table.sort(lines)
-    local boosts=UIFormat.boostLines(num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier"))
-    if #boosts>0 then table.insert(lines,table.concat(boosts," • ")) end
-    buffsText.Text=table.concat(lines,"\n")
-    require(script.Parent.PotionChips).update(p.buffs,now)
+    require(script.Parent.HudTimers).refresh(progression(),now) -- weather tile, potion lines, potion chips
     ShopScreens.retryPending() -- same token again after 8 s, so a delayed result cannot charge twice
 end
 -- BD-052: the single Home control (bottom-centre). In Sanctuary it starts a run instead.

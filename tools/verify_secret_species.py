@@ -1068,7 +1068,7 @@ def static():
         'local secret=i>#Config.SpeciesOrder',
         'if found and not secret then unlocked+=1 end',
         'IndexProgress.summary(unlocked,#Config.SpeciesOrder)',
-        'meter(body,0,356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,progress.text)',
+        'meter(body,0,if bigBar then 350 else 356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,if bigBar then progress.short else progress.text',  # BD-1124: the big Found X/Y bar behind TimerChipsEnabled
         'if Config.SecretSpeciesEnabled==true then label(body,Secret.summary(Secret.countFound(decoded("CollectionJson","{}"))).text',
         'require(Shared.SecretSpeciesConfig).RarityLabel',
     ):

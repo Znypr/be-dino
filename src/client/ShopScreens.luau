@@ -24,7 +24,7 @@ local Sfx = require(Shared.Sfx)
 local C = Theme.Colors
 
 local Shop = {}
-Shop.names = {auras = true, oddsSimple = true, eggOdds = true, eggOutcomes = true, eggPurchase = true, conditionConfirm = true, auraConfirm = true,
+Shop.names = {auras = true, oddsSimple = true, eggOdds = true, eggOutcomes = true, eggPurchase = true, conditionConfirm = true, auraConfirm = true, auraInfo = true,
     potions = true, potionConfirm = true, potionReplace = true}
 
 -- Bootstrap's screen helpers, set by attach.
@@ -265,7 +265,8 @@ function Shop.render(name: string)
                     if locked then notify("Requires account level "..item.level,C.gold) return end
                     if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
                     else chosenAura=item.id open("auraConfirm") end
-                end})
+                end,
+                onInfo=function() chosenAura=item.id open("auraInfo") end}) -- BD-1144: the Info word of the price card (read-only page, no buying there)
         end
         local footerY=if touch then math.max(bodyH-targetHeight,cardsY+cardsHeight+12) else 402-targetHeight
         if isTrail then
@@ -355,6 +356,29 @@ function Shop.render(name: string)
         local buyH=buttonH(57) -- BD-1103: BUY and CANCEL never touch, however big the 44 px floor makes them
         button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
         button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),C.red,function() open("auras") end)
+    elseif name=="auraInfo" then
+        -- BD-1118 / BD-1144 (docs/202 R3, docs/213): the read-only details page behind the Info word of a price card. The name in its tier colour, the short
+        -- lines of ShopPreview.infoLines with the rarity word coloured (RarityWord), a Back button and NO buy button: buying stays on auraConfirm.
+        local isTrail=cosmeticTab=="trails"
+        local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
+        local p=progression()
+        local owned=if isTrail then (p.trails or {}) else p.auras
+        local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
+        heading.Text,header.BackgroundColor3=if isTrail then "About this trail" else "About this aura",C.purple
+        art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
+        local RarityWord=require(Shared.RarityWord)
+        local _,tierColour=RarityWord.get(item.rarity)
+        local nameH=fitH(item.name,29,510,40)
+        label(body,item.name,290,24,510,nameH,29,tierColour).Name="InfoName"
+        local lineY=24+nameH+8
+        local lines=require(Shared.ShopPreview).infoLines(item,isTrail,{owned=owned[item.id]==true,equipped=equippedId==item.id},if isTrail then nil else UIFormat.boost("Growth",item.growth))
+        for i,line in lines do
+            local lh=fitH(line,22,510,30)
+            local l=label(body,line,290,lineY,510,lh,22) l.Name="InfoLine"..i l.TextXAlignment=Enum.TextXAlignment.Left
+            RarityWord.paintLabel(l)
+            lineY+=lh+4
+        end
+        button(body,"BACK",290,math.max(lineY+12,261),510,buttonH(45),C.blue,function() open("auras") end).Name="InfoBack"
     elseif name=="potions" then
         heading.Text,header.BackgroundColor3="Potion Shop",C.accent
         local p=progression()
@@ -364,7 +388,7 @@ function Shop.render(name: string)
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
-            restock.Text=string.format("Crystals: %s  •  New offers in %s",num("Crystals"),UIFormat.duration(left))
+            restock.Text=require(Shared.TimerWords).restock(num("Crystals"),left,Config.TimerChipsEnabled==true) -- BD-1124: "New in 25 s" with the flag on
         end
         header_text()
         task.spawn(function()

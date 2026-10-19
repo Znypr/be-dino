@@ -32,13 +32,14 @@ local rarityColors=Theme.RarityColors
 local rarityNames=Config.SpeciesRarityNames
 local oddsWeight,oddsTotal={},0 -- base chance of one purchased egg, shown on Dino Index cards (docs/85)
 for _,row in Config.ChestSpeciesWeights do oddsWeight[row.speciesId]=row.weight oddsTotal+=row.weight end
-local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
-    local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
+local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string,h: number?,size: number?)
+    local b=box(parent,x,y,w,h or 34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
     local fraction=if maxValue>0 then math.clamp(value/maxValue,0,1) else 0
     fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(if motion then 0 else fraction,0,1,0),0,color,b.ZIndex+1,b
     Theme.animate(fill,.22,{Size=UDim2.new(fraction,0,1,0)})
-    label(b,text,0,0,w,34,20)
+    label(b,text,0,0,w,h or 34,size or 20)
+    return b
 end
 
 -- d: {body, heading, header, label, box, button, open, notify, viewportScale, num, str, decoded, openFusion, equip, copies, bestMutation,
@@ -116,7 +117,9 @@ function Screens.render(name: string)
         -- BD-269: "Collected X of Y (P%)" bar with milestone ticks (src/shared/IndexProgress).
         local progress=IndexProgress.summary(unlocked,#Config.SpeciesOrder)
         local meterWidth=if pg.pages>1 then 420 else 600
-        meter(body,0,356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,progress.text)
+        -- BD-1124 (docs/202 R12): with TimerChipsEnabled the bar is big (44 px, like the buttons beside it) and says "Found 1/22" in 24 px; else the BD-269 line.
+        local bigBar=Config.TimerChipsEnabled==true
+        meter(body,0,if bigBar then 350 else 356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,if bigBar then progress.short else progress.text,if bigBar then 44 else nil,if bigBar then 24 else nil).Name="IndexBar"
         if Config.SecretSpeciesEnabled==true then label(body,Secret.summary(Secret.countFound(decoded("CollectionJson","{}"))).text,0,328,420,24,18,C.gold) end -- BD-604 SS4: secrets counted apart from the 22
         if pg.pages>1 then
             button(body,"<",430,350,50,44,C.blue,function() IndexProgress.state.page=pg.page-1 open("collection") end)
@@ -126,7 +129,7 @@ function Screens.render(name: string)
         for _,tick in progress.ticks do
             if tick.fraction<1 then
                 local mark=Instance.new("Frame") mark.Name,mark.BorderSizePixel,mark.ZIndex,mark.Parent="IndexMilestone",0,body.ZIndex+8,body
-                mark.Size,mark.Position=UDim2.fromOffset(4,8),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,388) -- BD-300: below the bar, never over its text
+                mark.Size,mark.Position=UDim2.fromOffset(4,8),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,if bigBar then 396 else 388) -- BD-300: below the bar, never over its text
                 mark.BackgroundColor3=if tick.reached then C.gold else C.text
                 mark.BackgroundTransparency=if tick.reached then 0 else .35
             end

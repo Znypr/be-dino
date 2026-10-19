@@ -45,8 +45,72 @@ local function equippedRing(card: GuiObject)
     ring.Name, ring.Color, ring.Thickness, ring.ApplyStrokeMode, ring.Parent = "EquippedRing", C.gold, 4, Enum.ApplyStrokeMode.Border, card
 end
 
--- spec: {kind="trail"|"aura", item, owned, equipped, level, x, y, height, buyY, targetHeight, onPress}
+-- BD-1118 / BD-1144 (docs/202 R3, docs/213): the card with the price on the button, drawn when Config.ShopCardPriceButtonEnabled is true.
+-- Row 1: the name in its tier colour (RarityWord) and the Info word button (44 px or more on screen); then the stage (more than half the card) with the
+-- benefit as a dark band along its bottom; then ONE full-width button with the crystal icon and the price. No chips, no price caption. The equipped ring stays.
+-- spec adds onInfo (opens the read-only details page). onPress is the same as the old card: a tap on the price only opens the confirm page.
+function Cards.buildPrice(ui, parent: GuiObject, spec)
+    local item, isTrail = spec.item, spec.kind == "trail"
+    local base = if isTrail then P.trailCard(item, spec) else P.auraCard(item, UIFormat.boost("Growth", item.growth), spec)
+    local data = P.priceCard(base, item, isTrail)
+    local color = rgb(item.color)
+    local card = ui.box(parent, spec.x, spec.y, Cards.Width, spec.height, ShopCard.cardColor(Color3.fromRGB(40, 46, 66):Lerp(color, .62), data.look), 24)
+    card.Name = (if isTrail then "TrailCard_" else "AuraCard_") .. item.id
+    local scale = math.max(spec.scale or 1, .1)
+    local infoH = math.max(36, math.ceil(P.Touch / scale)) -- the Info button is a 44 px tap target on screen
+    local infoW = math.max(72, math.ceil(#data.info * math.max(18, math.ceil(14 / scale)) * .55) + 24)
+    local rowH = infoH + 8
+    local _, tierColour = RarityWord.get(data.rarity)
+    local name = ui.label(card, data.name, 8, 4, Cards.Width - 16 - infoW - 6, infoH, 25, tierColour)
+    name.Name, name.TextXAlignment = "Name", Enum.TextXAlignment.Left
+    local info = ui.button(card, data.info, Cards.Width - 8 - infoW, 4, infoW, infoH, C.blue, spec.onInfo)
+    info.Name, info.TextSize = "Info", 20
+    local previewY = rowH
+    local previewH = spec.buyY - 6 - previewY
+    local s = stage(ui, card, previewY, previewH, color, data.dim)
+    local iconId = if isTrail then P.trailIconId(Config.TrailIconAssetIds, item.id) else nil
+    if iconId then
+        local img = Instance.new("ImageLabel")
+        img.Name, img.BackgroundTransparency, img.Image, img.ScaleType = "TrailIcon", 1, iconId, Enum.ScaleType.Fit
+        img.Size, img.AnchorPoint, img.Position, img.ZIndex, img.Parent = UDim2.fromScale(.9, .9), Vector2.new(.5, .5), UDim2.fromScale(.5, .5), s.ZIndex + 1, s
+    elseif isTrail then
+        local live = Theme.icon(s, "trail_" .. item.id)
+        if live then live.Position, live.Size = UDim2.fromScale(0, 0), UDim2.fromScale(1, 1) end
+        local who = Preview.add(s, spec.speciesId or "compy", "silhouette")
+        who.Name, who.ZIndex = "DinoSilhouette", s.ZIndex + 6
+        who.Size, who.Position = UDim2.fromScale(.34, 1), UDim2.fromScale(.64, 0)
+    else
+        local size = math.clamp(previewH - 36, 56, 120)
+        ui.art(s, "aura_" .. item.id, (Cards.Width - 16 - size) / 2, (previewH - 30 - size) / 2, size)
+    end
+    -- the benefit ("Growth +15%", "Faster") as a dark band along the bottom of the stage, never over the button
+    local bandH = math.max(28, math.ceil(14 / scale) + 10)
+    local band = ui.box(s, 0, previewH - bandH, Cards.Width - 16, bandH, Color3.fromRGB(14, 18, 30), s.ZIndex + 30)
+    band.Name, band.BackgroundTransparency = "BenefitBand", .18
+    ui.label(band, data.benefit, 6, 0, Cards.Width - 28, bandH, 20, ShopCard.CalmText).Name = "Benefit"
+    -- ONE wide button: the price on it while it can be bought
+    local tone = data.button.tone
+    local buttonColor = if tone == "buy" or tone == "equip" then C.accent elseif tone == "unequip" then C.card else ShopCard.SoldOutColor
+    local act = ui.button(card, data.button.text, 8, spec.buyY, Cards.Width - 16, spec.targetHeight, buttonColor, spec.onPress)
+    act.Name = "Action"
+    act.Active, act.AutoButtonColor = data.button.active, data.button.active
+    if not data.button.active then act.TextTransparency = .25 end
+    if tone == "buy" then
+        local iconSize = math.clamp(spec.targetHeight - 12, 24, 40)
+        local icon = ui.art(act, "amber", 10, (spec.targetHeight - iconSize) / 2, iconSize) -- nil where the art is not bound (and in the mocks)
+        if icon then
+            icon.Name = "CrystalIcon"
+            local pad = Instance.new("UIPadding")
+            pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, iconSize + 14), act -- the price never touches the icon
+        end
+    end
+    if data.equipped then equippedRing(card) end
+    return card, data
+end
+
+-- spec: {kind="trail"|"aura", item, owned, equipped, level, x, y, height, buyY, targetHeight, onPress, onInfo}
 function Cards.build(ui, parent: GuiObject, spec)
+    if MainConfig.ShopCardPriceButtonEnabled == true then return Cards.buildPrice(ui, parent, spec) end
     local item, isTrail = spec.item, spec.kind == "trail"
     local data = if isTrail then P.trailCard(item, spec) else P.auraCard(item, UIFormat.boost("Growth", item.growth), spec)
     local color = rgb(item.color)

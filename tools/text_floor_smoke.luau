@@ -95,7 +95,7 @@ for _, touch in {false, true} do
             texts += textChecks(world, tag)
             world.gui:Destroy()
         end
-        for _, pageName in {"auraConfirm", "eggPurchase", "oddsSimple", "eggOdds", "potions", "potionConfirm", "potionReplace"} do
+        for _, pageName in {"auraConfirm", "auraInfo", "eggPurchase", "oddsSimple", "eggOdds", "potions", "potionConfirm", "potionReplace"} do -- auraInfo: BD-1144
             local world = buildWorld(w, h, touch)
             local shop = mountShop(world, {touch = touch, potions = {speed_common = 2}})
             showMenu(world)

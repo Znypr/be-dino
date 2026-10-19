@@ -195,12 +195,13 @@ def floors(args):
     if problems:
         raise SystemExit('%d small-text allowance problem(s)' % len(problems))
     print('Small text allowance passed: %s' % ', '.join('%s %d' % (k, v['count']) for k, v in sorted(allow['small_literals'].items())))
-    ok, out = tf.run_smoke(args.runner, None, allow['entries'])
-    tail = [l for l in out.splitlines() if l.startswith(('FAIL', 'ALLOWSTALE', 'Text floor'))]
-    print('\n'.join(tail[:40]))
-    if not ok or any(l.startswith('ALLOWSTALE') for l in tail):
-        print(out[-1500:])
-        raise SystemExit('text-floor smoke failed (a stale allow entry also fails)')
+    for price in (False, True):  # BD-1144: the second run draws the shop card with the price on the button
+        ok, out = tf.run_smoke(args.runner, None, allow['entries'], price=price)
+        tail = [l for l in out.splitlines() if l.startswith(('FAIL', 'ALLOWSTALE', 'Text floor'))]
+        print('\n'.join(('[price on the button] ' if price else '') + l for l in tail[:40]))
+        if not ok or any(l.startswith('ALLOWSTALE') for l in tail):
+            print(out[-1500:])
+            raise SystemExit('text-floor smoke failed (a stale allow entry also fails)')
     if args.no_mutants:
         return
     from concurrent.futures import ThreadPoolExecutor  # each mutant is its own luau process: run them side by side

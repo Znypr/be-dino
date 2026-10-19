@@ -12,6 +12,7 @@
 
 local sources = MODULE_SOURCES
 local RAIL_WORDS = false -- BD-1116: tools/verify_menu_layout.py flips this to true for a second run with Config.HudRailWordsEnabled on
+local PRICE_BUTTON = false -- BD-1144: the verifiers flip this to true for a run with Config.ShopCardPriceButtonEnabled on (the shop card with the price on the button)
 local loaded, stubs = {}, {}
 local failures = 0
 local function check(ok, message)
@@ -80,6 +81,7 @@ local function requireModule(m)
     return loaded[name]
 end
 local ConfigReal = requireModule(SharedFolder.Config)
+if PRICE_BUTTON then ConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = true loaded.Config = ConfigReal end -- BD-1144: the real Config is frozen; every module reads this copy
 local PhoneScale = requireModule(SharedFolder.PhoneScale)
 local TouchLayout = requireModule(SharedFolder.TouchLayout)
 local HubRules = requireModule(SharedFolder.HubTravelClientRules)
@@ -654,8 +656,12 @@ for _, size in {{1156, 793}, {1445, 841}} do
     local card = nil
     for _, d in world.body:GetChildren() do if string.find(d.Name, "AuraCard_", 1, true) then card = d break end end
     check(card ~= nil and card.Size.Y.Offset == 250 and card.Position.Y.Offset == 92, tag .. ": aura cards are 250 high at y 92")
-    local chipBox = card and card:FindFirstChild("Chip_Common")
-    check(chipBox ~= nil and chipBox.Size.X.Offset == 104, tag .. ": the rarity chip is 104 wide")
+    if PRICE_BUTTON then -- BD-1144: the price card has no chips (tools/verify_shop_card_price.py checks its parts)
+        check(card ~= nil and card:FindFirstChild("Chip_Common") == nil and card:FindFirstChild("Info") ~= nil, tag .. ": the price card has an Info button and no chip")
+    else
+        local chipBox = card and card:FindFirstChild("Chip_Common")
+        check(chipBox ~= nil and chipBox.Size.X.Offset == 104, tag .. ": the rarity chip is 104 wide")
+    end
     world.gui:Destroy()
     world, shop = fresh("auraConfirm")
     local cancel = byText(world.body, "CANCEL")

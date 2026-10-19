@@ -17,6 +17,7 @@ function Progress.summary(found: number, total: number)
     return {
         found = found, total = total, fraction = fraction, percent = percent, ticks = ticks,
         text = string.format("Collected %d of %d  (%d%%)", found, total, percent),
+        short = string.format("Found %d/%d", found, total), -- BD-1124 (docs/202 R12): the count on the big bar when Config.TimerChipsEnabled
     }
 end
 
