@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Chip = require(Shared.ChipStyle)
+local RarityWord = require(Shared.RarityWord) -- BD-1120: the tier colour of a rarity chip comes from RarityWord / Theme.RarityColors (no second palette)
 local Config = require(Shared.ProgressionConfig)
 local MainConfig = require(Shared.Config)
 local P = require(Shared.ShopPreview)
@@ -56,7 +57,8 @@ function Cards.build(ui, parent: GuiObject, spec)
     local textPx = math.max(18, math.ceil(14 / math.max(spec.scale or 1, .1)))
     local function wide(text: string, least: number): number return math.max(least, math.ceil(#text * textPx * .55) + 14) end
     local rarityW = wide(data.chip.text, 104)
-    chip(ui, card, data.chip.text, rgb(data.chip.color):Lerp(Color3.fromRGB(20, 24, 40), .3), 8, 38, rarityW)
+    local _, tierColour = RarityWord.get(data.chip.text)
+    chip(ui, card, data.chip.text, tierColour:Lerp(Color3.fromRGB(20, 24, 40), .3), 8, 38, rarityW)
     local secondX = if rarityW > 104 then 8 + rarityW + 6 else 118
     if isTrail then
         ui.label(card, data.levelText, secondX, 38, Cards.Width - 8 - secondX, 26, 19, if data.kind == "locked" then C.gold else ShopCard.CalmText)

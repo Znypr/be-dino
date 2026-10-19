@@ -25,7 +25,7 @@ assert(P.speedWords(1)=="Normal speed" and P.speedWords(1.02)=="A little faster"
 assert(P.speedWords(1.12)=="Much faster" and P.speedWords(1.18)=="Super fast")
 -- rarity chips cover every rarity used by trails and auras
 for _,list in {Config.Trails,Config.Auras} do for _,it in list do
- local c=P.rarityChip(it.rarity) assert(c.text==it.rarity and P.RarityColors[it.rarity],it.rarity)
+ local c=P.rarityChip(it.rarity) assert(c.text==it.rarity and c.color==nil and P.RarityColors==nil,it.rarity)
 end end
 assert(P.rarityChip(nil).text=="Common")
 -- icon slot: nil entries fall back to the live preview; only real asset ids pass

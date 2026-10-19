@@ -206,7 +206,7 @@ function Shop.render(name: string)
                     art(card,"amber",10+(76-iconSize)/2,8+(76-iconSize)/2,iconSize)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
-                    local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
+                    local tag=label(card,"",92,74,166,20,16,C.accent) tag.Visible=false
                     local b=button(card,require(Shared.ShopCardState).packButton(nil),8,96,248,44,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextScaled=true b.TextWrapped=false b.Active=false -- BD-430: the price always fits the button, never "..."
                     local fit=Instance.new("UITextSizeConstraint") fit.MaxTextSize,fit.MinTextSize,fit.Parent=22,14,b -- docs/114 s4.4: never under 14 px
@@ -306,7 +306,7 @@ function Shop.render(name: string)
         local lineY=0
         for _,line in lines do
             local lineHeight=if #line>95 then 88 elseif #line>60 then 66 else 44
-            label(list,line,10,lineY,790,lineHeight,21)
+            require(Shared.RarityWord).paintLabel(label(list,line,10,lineY,790,lineHeight,21)) -- BD-1120: "Rainbow (Epic): 1%" shows Epic in its colour
             lineY+=lineHeight+2
         end
         list.CanvasSize=UDim2.fromOffset(0,lineY)
@@ -382,11 +382,11 @@ function Shop.render(name: string)
         -- BD-1103: every height below is the old design number on a desktop window; on a small window the text and button floors (14 / 44 px) make the parts taller, so
         -- the card, the row pitch and everything under the grid follow (a hint over the second row, a price over a name and a USE row under the hint were the slips).
         local potionOffers=ProgressionRules.shopOffers(window)
-        local nameH,leftH,btnH,useH=math.max(24,textPx(19)+5),math.max(20,textPx(15)+5),buttonH(44),buttonH(44)
+        local nameH,leftH,btnH,useH=math.max(24,textPx(19)+5),math.max(20,textPx(16)+4),buttonH(44),buttonH(44)
         local descH=36
         for _,offer in potionOffers do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
-            descH=math.max(descH,fitH(UIFormat.potion(item.kind,item.multiplier,item.duration),15,186,36))
+            descH=math.max(descH,fitH(UIFormat.potion(item.kind,item.multiplier,item.duration),16,186,36))
         end
         local cardH=2+nameH+descH+leftH+2+btnH+4 -- 132 on a desktop window
         local pitch=cardH+8
@@ -409,8 +409,8 @@ function Shop.render(name: string)
             local card=box(scroller,x,y,264,cardH,ShopCard.cardColor(C.card:Lerp(color,.28),look),24)
             art(card,bottle(item),6,8,64)
             label(card,item.name,74,2,186,nameH,19,color)
-            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,2+nameH,186,descH,15)
-            label(card,if left>0 then left.." left" else look.caption,74,2+nameH+descH,186,leftH,15,ShopCard.captionColor(look))
+            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,2+nameH,186,descH,16)
+            label(card,if left>0 then left.." left" else look.caption,74,2+nameH+descH,186,leftH,16,ShopCard.captionColor(look))
             local buy=button(card,look.buttonText,8,2+nameH+descH+leftH+2,248,btnH,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
                 if left>0 then potionChoice.id=item.id open("potionConfirm") end
             end)
@@ -418,7 +418,7 @@ function Shop.render(name: string)
             buy.TextSize=16
         end
         local hintY,hintH,titleH=2*pitch-2,math.max(20,textPx(15)+5),math.max(22,textPx(18)+4)
-        label(scroller,"Rarer potions show up less often.",0,hintY,824,hintH,15,C.gold)
+        label(scroller,"Rarer potions show up less often.",0,hintY,824,hintH,15,C.gold):SetAttribute("TextKind","note") -- BD-1119: a hint (note, 14 px floor)
         label(scroller,"Your potions (tap to use)",0,hintY+hintH,824,titleH,18,C.gold)
         local listY=hintY+hintH+titleH+2 -- 322 on a desktop window
         local slot=0

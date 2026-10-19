@@ -275,6 +275,7 @@ function Panels.species(ctx)
             order += 1
             local l = W.label(list, text, UDim2.new(1, -10, 0, if #text > 30 then 40 else 22), UDim2.new(), 17, color, true)
             l.LayoutOrder = order
+            require(Shared.RarityWord).paintLabel(l) -- BD-1120: the tier word in its colour
         end
         require(script.Parent.ClassRow).row(list, d.speciesId or speciesId, 1) -- BD-1099: the class icon and word under the title
         order = 1

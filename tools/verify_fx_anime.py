@@ -306,6 +306,7 @@ local function scenario(effects, calm, bound, width)
     local gui
     MODS.SettingsModel = {get = function() return {effects = effects, calm = calm} end}
     MODS.Sfx = {play = function(n) played[#played + 1] = n end}
+    MODS.Config = {RareFindBannerEnabled = false} -- BD-1121: the two-line announcement is off here: others' rares stay the plain banner
     MODS.HatchTimeline = {durations = function() return {revealAt = 0.5} end}
     local remote = {OnClientEvent = {Connect = function(_, fn) handler = fn return {Disconnect = function() end} end}}
     local screen = nil

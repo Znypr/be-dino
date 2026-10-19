@@ -5,10 +5,7 @@ local State = require(script.Parent.ShopCardState)
 local P = {}
 P.MinText = 14   -- docs/72: no text under 14 px
 P.Touch = 44     -- smallest tap target in px
-P.RarityColors = {
-    Common = {160, 168, 180}, Uncommon = {88, 200, 110}, Rare = {80, 150, 255},
-    Epic = {176, 100, 255}, Legendary = {255, 170, 40}, Mythic = {255, 90, 200},
-}
+-- BD-1120: no rarity palette here any more. The chip colour is Theme.RarityColors (docs/114 s5.2), read through Shared/RarityWord by src/client/ShopCards.
 P.AuraTiers = {Common = 1, Rare = 2, Legendary = 3}
 
 -- Speed in words, never "1.04x": the number only picks the word.
@@ -20,9 +17,8 @@ function P.speedWords(speed: number): string
     return "Super fast"
 end
 
-function P.rarityChip(rarity: string?): {text: string, color: {number}}
-    local name = rarity or "Common"
-    return {text = name, color = P.RarityColors[name] or P.RarityColors.Common}
+function P.rarityChip(rarity: string?): {text: string}
+    return {text = rarity or "Common"}
 end
 
 -- The owner's icon id for a trail, or nil (the card then shows the live preview). ids: Config.TrailIconAssetIds.

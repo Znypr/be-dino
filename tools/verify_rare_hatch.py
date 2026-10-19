@@ -86,6 +86,31 @@ assert(me == 2 and all == 1, "rejoin inside 45 s: own celebration, no second ann
 clock += R.Cooldown + 1 record(42, "r3")
 assert(me == 3 and all == 2, "after the cooldown a new announcement is allowed: all=" .. all)
 record(43, "o1") assert(all == 3, "another player is not limited by 42's cooldown")
+-- 8. BD-1121 the two-line announcement: words, the checks of the server payload, the fades
+local NAMES = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
+assert(R.FindTitle == "RARE FIND!" and R.SecretFindTitle == "SECRET FIND!" and R.findTitle("legendary") == "RARE FIND!" and R.findTitle("secret") == "SECRET FIND!")
+assert(R.findLine({kind = "legendary"}, "Legendary", "Compy") == "A Legendary Compy was found!")
+assert(R.findLine({kind = "shiny", shiny = true}, "Epic", "Raptor") == "An Epic Shiny Raptor was found!", "An before a vowel")
+assert(R.findLine({kind = "mutation", mutation = true}, "Uncommon", "T-Rex") == "An Uncommon Mutant T-Rex was found!")
+assert(R.findLine({kind = "shiny", shiny = true, mutation = true}, "Rare", "Compy") == "A Rare Shiny Mutant Compy was found!")
+assert(R.findLine({kind = "secret", secret = true}, nil, nil) == "A secret dino was found!" and R.findLine({kind = "secret"}, "Rare", "Hidden Name") == "A secret dino was found!", "a secret keeps its name out of it")
+assert(R.findLine({kind = "legendary"}, nil, "Compy") == nil and R.findLine({kind = "legendary"}, "Rare", "") == nil, "missing words -> nil")
+for _, line in {R.findLine({kind = "shiny", shiny = true, mutation = true}, "Uncommon", "Quetzalcoatlus"), R.findLine({kind = "legendary"}, "Legendary", "Therizinosaurus")} do assert(#line <= 60, "short: " .. line) end
+local ok = R.findFromPayload({k = "all", kind = "legendary", tier = 5, species = "Compy", text = "Sam hatched a Legendary Compy!"}, NAMES)
+assert(ok and ok.title == "RARE FIND!" and ok.line == "A Legendary Compy was found!", "good payload")
+assert(not string.find(ok.line, "Sam") and not string.find(ok.title, "Sam"), "no player name in the new look")
+local sec = R.findFromPayload({kind = "secret", species = "Silly Name"}, NAMES)
+assert(sec and sec.title == "SECRET FIND!" and sec.line == "A secret dino was found!" and not string.find(sec.line, "Silly"), "secret payload")
+for _, bad in {
+    {kind = "legendary", tier = 9, species = "Compy"}, {kind = "legendary", tier = 0, species = "Compy"}, {kind = "legendary", tier = 2.5, species = "Compy"},
+    {kind = "legendary", tier = "5", species = "Compy"}, {kind = "legendary", tier = 5}, {kind = "legendary", tier = 5, species = ""},
+    {kind = "legendary", tier = 5, species = "<b>Compy</b>"}, {kind = "legendary", tier = 5, species = string.rep("x", 25)}, {kind = "legendary", tier = 5, species = "A\nB"},
+    {kind = "legendary", tier = 5, species = "Co\"mpy"}, {kind = "weird", tier = 5, species = "Compy"}, {tier = 5, species = "Compy"}, {kind = 5, tier = 5, species = "Compy"},
+} do assert(R.findFromPayload(bad, NAMES) == nil, "a bad payload is refused: " .. tostring(bad.species)) end
+assert(R.findFromPayload("x", NAMES) == nil and R.findFromPayload(nil, NAMES) == nil, "not a table")
+assert(R.findFromPayload({kind = "shiny", tier = 4, species = "T-Rex", shiny = true}, NAMES).line == "An Epic Shiny T-Rex was found!")
+local motion, calm = R.findPlan(false), R.findPlan(true)
+assert(motion.fadeIn > 0 and motion.fadeOut > 0 and motion.hold >= 3 and calm.fadeIn == 0 and calm.fadeOut == 0 and calm.hold == motion.hold, "Reduce Motion: no fades, the same time on screen")
 print("rare hatch rules passed")
 '''
 
@@ -114,6 +139,12 @@ def scan():
         assert not re.search(r'rbxassetid://\d+', (ROOT / p).read_text(encoding='utf-8')), p + ' must not contain asset ids'
     assert 'RareHatch' not in (ROOT / 'src/client/HatchSequence.luau').read_text(encoding='utf-8'), 'HatchSequence stays untouched (PR #240)'
     assert 'RareHatch' not in (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8'), 'Bootstrap is at the local-register limit'
+    # BD-1121: the two-line look is behind the flag on both sides; the old payload is byte for byte the same with the flag off; a secret's name never goes out
+    assert 'if Config.RareFindBannerEnabled == true then' in svc and 'event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text})' in svc, 'flag off: the old payload'
+    assert 'if info.secret then nil else speciesName' in svc, 'a secret species name is never sent'
+    assert 'Config.RareFindBannerEnabled == true and FindBanner.show(' in cli, 'the client draws the new look only with the flag on'
+    banner = (ROOT / 'src/client/RareFindBanner.luau').read_text(encoding='utf-8')
+    assert 'DisplayName' not in banner and 'data.text' not in banner, 'the new look has no player name and shows no free text'
     print('Source scan passed: server decides, server -> client only, no asset ids, HatchSequence untouched')
 
 

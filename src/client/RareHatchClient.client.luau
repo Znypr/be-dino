@@ -18,6 +18,8 @@ local Sfx = require(Shared:WaitForChild("Sfx"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Timeline = require(Shared:WaitForChild("HatchTimeline"))
 local MomentRim = require(script.Parent:WaitForChild("MomentRim"))
+local Config = require(Shared:WaitForChild("Config"))
+local FindBanner = require(script.Parent:WaitForChild("RareFindBanner")) -- BD-1121: the two-line look, only while Config.RareFindBannerEnabled
 
 local player = Players.LocalPlayer
 local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("RareHatch", 60)
@@ -197,5 +199,8 @@ remote.OnClientEvent:Connect(function(data)
     if type(data) ~= "table" or type(data.text) ~= "string" then return end
     if #data.text > 80 then return end
     if data.k == "me" then celebrate(data)
-    elseif data.k == "all" then banner(data.text, false) end
+    elseif data.k == "all" then
+        -- BD-1121: flag on and a payload that passes the checks = two lines, no panel, no name; otherwise the strip exactly as before
+        if not (Config.RareFindBannerEnabled == true and FindBanner.show(gui, data, Settings.get().calm)) then banner(data.text, false) end
+    end
 end)
