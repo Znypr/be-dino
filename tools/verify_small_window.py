@@ -34,6 +34,7 @@ MODULES = {
     'ConditionStageRules': 'src/shared/ConditionStageRules.luau',
     'MutationLook': 'src/shared/MutationLook.luau',
     'ChipStyle': 'src/shared/ChipStyle.luau',
+    'RarityWord': 'src/shared/RarityWord.luau',
     'HubTravelClientRules': 'src/shared/HubTravelClientRules.luau',
     'IndexTabs': 'src/client/IndexTabs.luau',
 }

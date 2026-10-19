@@ -8,6 +8,8 @@ How to read the marks. **SEEN** = the lead saw it on the real page on 2026-10-18
 
 ## 0. The short answer: your clicks in 10 lines
 
+**Update 2026-10-19:** the build passed the readiness audit ([209](209-playtest-readiness-audit-and-flag-table-2026-10-19.md)); read section 9 first for what changed (a step 0 and a few clarifications). The ten lines below keep their order.
+
 1. **Roblox Settings: verify your ID / age (13+).** The page says "Enable Mesh / Image APIs" is greyed out until you do (SEEN). Without it the world art and dino patterns fall back to plainer looks.
 2. Creator Hub > newbuild > **Game details**: tick **Enable Mesh / Image APIs** > Save (after step 1).
 3. Creator Hub > newbuild > Places > newbuild > **Access**: set **Maximum Visitor Count** to **4** (it says 50 now) > Save.
@@ -141,6 +143,52 @@ After: the lead runs `python tools/playtest_report.py server.log --out report.md
 7. **newbuild = the "legacy" experience** of docs/55 s2: the id tool needs kind "legacy" and then hard-stopped on the six product ids, even though all six are off sale (section 3). RESOLVED 2026-10-18 by a LEAD decision (BD-1030, docs/115): explicit off-sale field in the slot.
 8. **Live game is still Build 019**: "Last published Oct 8" while Version History shows saves on 13 and 14 Oct (versions 16, 17). Those saves were never published (UNVERIFIED reading of the two pages).
 9. docs/148 step 4 tells the owner to join "from the Roblox page"; docs/42 recorded an earlier "currently not available" that was solved by the content questionnaire (now Minimal, done).
+
+## 9. Changes since 2026-10-18 (readiness audit 2026-10-19, [209](209-playtest-readiness-audit-and-flag-table-2026-10-19.md))
+
+Label: **CURRENT BUILD BEHAVIOR, offline audit** on `origin/main` `d1325ba0`. Nothing was published or changed in Roblox; no flag, id or profile was changed. Studio, phone and a real server were not used.
+
+**Plain answer: the build is ready for you to publish.** Every offline gate passed (list in 209 section 1). Nothing that must stay off is on. Five switches want your yes first (209 section 2.2): fights (Combat), the nine secret creatures, Fusion, per-dino auras and trails, and the movement check. If you say nothing, they stay on, because the standing rule (docs/157) puts new built features into test builds.
+
+### 9.1 What friends will see that was not in the picture on 2026-10-18
+- A new **Patterns** tab and **Colours** tab in the dino Index, with "New!" ribbons and a red dot on the Dinos button when something new was found. Tiles are plain tinted squares (no pattern pictures yet).
+- **Three starter goals** after the third hatched egg: find 3 patterns, find 3 colours, find all Common patterns.
+- **Slower new dinos**: the first Rare one takes about 45 minutes. Patterns have kid names and tiers.
+- **A designed food map** (3,600 foods in small clusters). Rich foods (amber, golden drumstick) come back slowly. This changes the pace; nobody has measured a real child's 5-minute run yet.
+- **A speech bubble above every cave stall**, with the key E (X on a gamepad).
+- **Hatch screen polish**: steel bucket, one egg size, Rainbow rings, a reveal card. **OPEN EGGS** now opens the Eggs screen. **Skip the rest** stops on a Legendary or a secret creature.
+- **Menus close the same way everywhere**: the X, a tap outside, Escape, and the same key again (C, B, G).
+- **Small-window and phone layouts**, class icons, "Boost" line on the hatch card.
+- **Nine secret silly creatures** (flat 0.5 percent per free egg; the cockatoo and the eagle are placeholder models).
+- **Fights with bites and hearts** instead of the instant bigger-eats-smaller rule, plus calm wild predators.
+- **Fusion menu**, **per-dino auras and trails**, **Objectives panel**, **fast travel perk**, **Tell us! button** (bottom-left). These were already in the 2026-10-18 morning build.
+- The label at the top now reads `BUILD redesign-020 <8 letters>` (the short code of the commit the file was built from; a `*` at the end means the file had unsaved changes). It is the same number for friends and for you: if two people see different codes, one has an old file.
+
+### 9.2 What to tell the friends (one short note, plain)
+"This is a private test of our dino game. It is not finished. Your progress can be erased. There is nothing to buy and no Robux. Phones are experimental, so a computer is best. If something looks wrong, press Tell us! (bottom-left) and tap the faces. Please do not share the link."
+
+### 9.3 What to look at in the first session (owner, in order)
+1. **Can everyone get in?** If a friend sees "not available", write the exact words and the friend's age (the page says "Ages 16+ and trusted friends").
+2. **No admin panel for friends** (no F2 panel, no FOOD counter, no test wallet). You will see yours, because you made the game. **Do not move the F2 sliders while friends play**: they change the whole server.
+3. **Pace**: one friend plays a real 5-minute run with no tricks. Write down the eggs on the Run Complete screen. The expected number is about 40 for 500 food; the bot got 6 to 7 times that, so a human number is needed (BD-575).
+4. **Fights**: does the bite work? Can a friend still be eaten and still eat? (Combat is on; never tried by two people.)
+5. **Movement**: does anyone get pulled back ("rubber band") while walking, jumping, dashing? That is the movement check (switch 5 in 209).
+6. **Pictures and sounds**: no grey boxes, the cave opens, the Index tabs show, sounds play.
+7. **Save**: leave, wait a minute, join again; crystals, eggs and settings the same.
+8. **Fusion once**, **one potion**, **one secret** if lucky.
+9. **While the server runs**: F9, Server Logs, copy every line (the log is gone when the server closes). Red lines with `SaveFailed`, `LeaseLost` or `SchemaError` are the ones that matter.
+
+### 9.4 The order of your clicks: what changed
+The ten clicks in section 0 stay in the same order. New or clarified:
+- **Step 0 (new, two minutes, no clicking in Roblox):** say yes or no to the five switches (209 section 2.2, BD-1138). "Yes to all" is fine. Nothing else changes for you.
+- **Studio window size, maximise, the virtual monitor and the "three Studio windows" noise are not your job.** The lead handles them. You only need one Studio window and the file.
+- **Step 6 (the label):** it now reads `BUILD redesign-020 <8 letters>`. The lead tells you the 8 letters. The lead rebuilds the file from the newest `main` right before and checks it with `python tools/playtest_freshness.py`; if you merged something after that, ask for a new file.
+- **Step 7 (Publish):** after it, do not press Play in that Studio window (Studio access to API services is ON, so Play there can write to the real playtest store). Close it.
+- **Step 9 (rollback drill):** the first release still has no earlier playtest version, so use the two-versions way of section 5. Remember: Creator Hub "Restore" only saves the old version; publish it from Studio to make it live.
+- **Step 5 (early testers):** if a friend is under 16 and not a trusted friend, they may be blocked (section 1, "Audience reach").
+- **New question for you (not a click now):** the content questionnaire in Creator Hub lists "Paid Random Items" as non-compliant for Australia, Belgium, Brazil (under 18), the UK (under 18) and the Netherlands. The playtest build has no paid random items and nothing for sale, so the answer may be out of date; a friend in one of those places could be blocked. Check the answer when you are in Creator Hub (BD-1136).
+
+Everything else in sections 1 to 8 still holds (the Mesh / Image APIs, max players 4, Devices, the stop button in section 7).
 
 ## Handbook check
 Plain words in the owner sections; no game code, flag, id, profile or build changed; paid lines stay off; no publish, no Creator Hub change (only page reads and a tab switch to Early testers); no screenshots contain an email address; the pictures show only the owner's own experience and the usernames of the owner and the alt. Publishing, Robux, account and Studio settings stay the owner's steps.

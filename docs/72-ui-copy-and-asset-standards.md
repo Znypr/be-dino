@@ -10,6 +10,11 @@ Short rules every contributor and agent follows. The audience is children: keep 
 - Errors say what to do next in a few words.
 - No visible internal rules or hidden thresholds (for example, nest drop requirements stay invisible).
 
+## Text size floors (BD-1119, BD-1117, [208](208-text-style-window-chrome-rarity-words.md))
+- 14 px on screen stays the absolute floor of any text. One outlined text style (`Shared/TextStyle`, `outlined(label, kind)`): a window title is **22 px or more**, card text is **16 px or more on a desktop window** (a small, phone-size window keeps 14 px until the Studio re-check), fine print (a hint, a caption) is marked a *note* and is 14 px.
+- The window X is a red **square of 48 px or more**; every other tap target stays at 44 px.
+- A rarity is written with its colour: use `RarityWord` (`Shared/RarityWord`), never a hand-picked colour. Checked by `tools/verify_text_style.py` and `tools/verify_rarity_words.py`.
+
 ## UI art and icons
 - Do not generate UI art or icons ad hoc in code (vector shapes, native shape stacks) as final art. Such code drawings are PLACEHOLDERS: mark them `PLACEHOLDER` in code and in the task, and they never count as done.
 - Final UI art is its own task with this flow: brief (what, where, size, states) -> 2D drafts in 2-3 styles -> lead/owner picks -> final export at target sizes (plus phone size check) -> import/upload by the owner -> verified in Studio next to neighbouring UI.

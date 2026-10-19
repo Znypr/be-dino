@@ -198,7 +198,7 @@ local stubs = {}
 local Theme = {MotionEnabled = true, Colors = {panel = color(.2, .2, .2), card = color(.3, .3, .3), outline = color(0, 0, 0), text = color(1, 1, 1), gold = color(1, 1, 0),
     purple = color(1, 0, 1), accent = color(0, 1, 0), blue = color(0, 0, 1), red = color(1, 0, 0)},
     RarityColors = {color(.6, .6, .6), color(.3, .8, .3), color(.3, .5, 1), color(.7, .3, 1), color(1, .8, .2), color(1, .3, .3)},
-    ImageIds = {paint_bucket = "", egg_splat = "", egg_shell = ""}, TextStyle = {apply = function() return inst("UIStroke") end}}
+    ImageIds = {paint_bucket = "", egg_splat = "", egg_shell = ""}, TextStyle = {apply = function() return inst("UIStroke") end, outlined = function() return inst("UIStroke") end}}
 function Theme.decorate() end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
 stubs.UITheme = Theme
@@ -313,7 +313,7 @@ local shapes = {
 for _, shape in shapes do
     local menu = buildMenu(shape.w, shape.h, shape.pw, shape.ph, shape.s, shape.origin, shape.zero)
     check(ModalClose.coverOf(menu.gui, menu.x) == nil, shape.name .. ": X is reachable in the plain menu")
-    check(menu.x.AbsoluteSize.X * 1 >= Rules.MinTarget and menu.x.AbsoluteSize.Y >= Rules.MinTarget, shape.name .. ": X is at least 44 px on screen")
+    check(Rules.closeBigEnough(menu.x.AbsoluteSize.X, menu.x.AbsoluteSize.Y), shape.name .. ": X is at least 48 px on screen (BD-1117)")
     local cover = inst("Frame", "Veil", menu.gui, {Size = UDim2.fromScale(1, 1), ZIndex = 46, Active = true})
     check(ModalClose.coverOf(menu.gui, menu.x) == cover, shape.name .. ": the detector finds a full-screen Active Frame above X")
     cover.Visible = false
@@ -630,6 +630,7 @@ check(Rules.contains({x = 10, y = 10, w = 10, h = 10}, 10, 10) and not Rules.con
 for _, mode in {"browse", "confirm", "resume", "unavailable"} do check(Rules.fusionOutsideCloses(mode), "fusion backdrop closes " .. mode) end
 for _, mode in {"fusing", "reveal", "details", "nonsense"} do check(not Rules.fusionOutsideCloses(mode), "fusion backdrop leaves " .. mode .. " alone") end
 check(Rules.bigEnough(44, 44) and not Rules.bigEnough(43, 60), "rule: 44 px")
+check(Rules.closeBigEnough(48, 48) and not Rules.closeBigEnough(47, 60) and not Rules.closeBigEnough(60, 44) and Rules.MinClose > Rules.MinTarget, "rule: the X needs 48 px")
 
 if failures > 0 then error(failures .. " close-path checks failed") end
 print("Close paths smoke passed: X, the dark backdrop, the end buttons and 'Skip the rest' reachable on " .. #shapes .. " screen shapes (with and without Reduce Motion), backdrop rules by moment, X never claims or advances, exactly-once abort, input released (" .. created .. " mock instances)")

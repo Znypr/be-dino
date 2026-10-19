@@ -5,6 +5,7 @@
 local Rules = {}
 
 Rules.MinTarget = 44 -- docs/72 and docs/114 s4.4: a tap target is at least 44 px on screen
+Rules.MinClose = 48 -- BD-1117 (docs/202 R2): the red X of a window is at least 48 px on screen, in both directions (every other button stays at 44)
 Rules.ReadyGrace = 0.6 -- hatch: for this many seconds after the dino is shown, a tap outside the card cannot close it
 
 export type Rect = {x: number, y: number, w: number, h: number}
@@ -16,6 +17,10 @@ end
 
 function Rules.bigEnough(w: number, h: number): boolean
     return w >= Rules.MinTarget and h >= Rules.MinTarget
+end
+
+function Rules.closeBigEnough(w: number, h: number): boolean
+    return w >= Rules.MinClose and h >= Rules.MinClose
 end
 
 -- The hatch tap zone, in screen pixels: the card (panel) minus its header strip (that is where X lives) and minus the row of end buttons

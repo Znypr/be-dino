@@ -31,7 +31,7 @@ function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, m
         -- QA 2026-10-16: dark text on a light badge/tab (GOLD, NEW GOLD, slot numbers) turned into a blob with a dark outline.
         t.TextStrokeTransparency = 1
     else
-        Theme.TextStyle.apply(t) -- BD-390: shared readable style (light fill, dark stroke 2..3)
+        Theme.TextStyle.outlined(t, "card") -- BD-390 / BD-1119: shared outlined style (light fill, dark stroke 2..3); the text is scaled to its box, so only the kind is recorded
     end
     t.Parent = parent
     return t

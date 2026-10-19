@@ -411,7 +411,13 @@ runScenario(function(env, server)
     local leakedAll = false
     for _, f in server.fired do
         if f.remote == "RareHatch" and f.msg.k == "all" then
-            for key in f.msg do if key ~= "k" and key ~= "kind" and key ~= "text" then leakedAll = true end end
+            -- BD-1121: with Config.RareFindBannerEnabled the announcement also carries the tier number, the species display name and two booleans (no egg id, no user id, no player name)
+            local allowedKeys = {k = true, kind = true, text = true, tier = true, species = true, shiny = true, mutation = true}
+            for key, value in f.msg do
+                if not allowedKeys[key] then leakedAll = true end
+                if key == "species" and (type(value) ~= "string" or string.find(value, "smoke%-") or string.find(value, "300%d")) then leakedAll = true end
+                if (key == "tier" and type(value) ~= "number") or ((key == "shiny" or key == "mutation") and type(value) ~= "boolean") then leakedAll = true end
+            end
             if string.find(f.msg.text, "smoke%-") or string.find(f.msg.text, "300%d") then leakedAll = true end
         end
     end

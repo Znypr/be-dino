@@ -9,11 +9,14 @@ local PhoneScale = {}
 
 PhoneScale.MinText = 14 -- px on screen
 PhoneScale.MinButton = 44 -- px on screen (touch target edge)
+PhoneScale.MinTitle = 22 -- BD-1117 / BD-1119 (docs/202 R2, R4): a window title renders at least this many px on screen
+PhoneScale.MinClose = 48 -- BD-1117: the red X of a window is a square of at least this many px on screen (44 px stays the floor of every other button)
+PhoneScale.CloseDesktop = 64 -- design px of the X square on the desktop panel (header 78)
 PhoneScale.DesktopW, PhoneScale.DesktopH = 860, 520
 PhoneScale.CompactBelow = 500 -- gui height under this is "compact" (phone landscape; 1080x720 and bigger stay desktop)
 PhoneScale.CompactFloor = 0.8 -- never shrink a compact modal under this
 PhoneScale.Margin = 8 -- px gap between the compact panel and the screen edge
-PhoneScale.HeaderH = 48 -- compact header height (design px), desktop is 78 (BD-531: was 56; the close button still floors to 44 px)
+PhoneScale.HeaderH = 48 -- compact header height (design px) when the scale is 1 or more, desktop is 78 (BD-531: was 56). BD-1117: PhoneScale.headerHeight(scale) grows it so a 48 px X fits
 PhoneScale.ModalRailGap = 12 -- BD-546: px between the desktop left rail and a desktop modal panel
 PhoneScale.ModalRightMargin = 20 -- px between a desktop modal and the right screen edge (the old (w - 40) / 860 rule is 20 on each side)
 PhoneScale.RailLabelW = 60 -- px a rail button needs for a 14 px label (SETTINGS is about 58 px), else icon-only
@@ -27,6 +30,22 @@ export type Modal = {
     minText: number, minButton: number,
     fit: number, innerW: number, innerH: number, effScale: number, -- BD-538: body fit (see PhoneScale.modal)
 }
+
+-- BD-1117: the compact header (design px) at this scale: tall enough for the 48 px X square (1 px above and below it), never under HeaderH.
+-- At a scale near 1 the 48 design px of the old header plus the 8 px gap above the body already hold the X, so the body does not move there.
+function PhoneScale.headerHeight(scale: number): number
+    return math.max(PhoneScale.HeaderH, math.ceil(PhoneScale.MinClose / math.max(scale, 0.05)) + 2)
+end
+
+-- BD-1117: the X square (design px) for a header `headerH` high at this scale: at least MinClose on screen, at least `base`, inside the header (1 px from the top).
+function PhoneScale.closeSide(base: number, scale: number, headerH: number): number
+    return math.min(headerH - 2, math.max(base, math.ceil(PhoneScale.MinClose / math.max(scale, 0.05))))
+end
+
+-- BD-1119: the design size of a window title: `base` or bigger so it renders at least MinTitle px on screen, never taller than its box.
+function PhoneScale.titleSize(base: number, scale: number, boxH: number): number
+    return math.min(boxH, PhoneScale.floorSize(base, scale, PhoneScale.MinTitle))
+end
 
 function PhoneScale.isCompact(h: number): boolean
     return h < PhoneScale.CompactBelow
@@ -60,11 +79,13 @@ function PhoneScale.modal(w: number, h: number, clearLeft: number?): Modal
     -- now carries a UIScale `fit` = (panel width - 8) / 836 (< 1 only on those canvases), so a screen's 824 px body fits the width exactly and
     -- there is no horizontal scroll. Its inner size is innerW x innerH design px (the visible body, in the scroller's own units); screens lay
     -- themselves out in innerH and the floor pass uses effScale = scale * fit, so text still renders >= 14 px and buttons >= 44 px.
-    local bodyH = panelH - PhoneScale.BodyTop - 4
+    local headerH = PhoneScale.headerHeight(scale)
+    local bodyTop = math.max(PhoneScale.BodyTop, headerH + 2) -- BD-1117: the body only moves down when the taller header would reach it
+    local bodyH = panelH - bodyTop - 4
     local fit = math.min(1, (panelW - 8) / PhoneScale.BodyW)
     return {mode = "compact", scale = scale, panelW = panelW, panelH = panelH, bodyW = math.min(panelW - 8, 842),
-        bodyH = bodyH, scrollX = false, headerH = PhoneScale.HeaderH,
-        bodyTop = PhoneScale.BodyTop, centerDx = 0, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
+        bodyH = bodyH, scrollX = false, headerH = headerH,
+        bodyTop = bodyTop, centerDx = 0, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
         fit = fit, innerW = (panelW - 8) / fit, innerH = bodyH / fit, effScale = scale * fit}
 end
 

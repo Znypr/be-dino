@@ -55,6 +55,7 @@ function Service.record(player: Player, outcome: any)
         event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or (if secretId then secret.displayTier(secretId) else 1),
             mutation = info.mutation, mutationId = if info.mutation then tostring(outcome.eventMutationId) else nil}) -- BD-433: lets the client light the own dino's rim
         local text = Rare.text(player.DisplayName, info, speciesName)
+        info.tier, info.speciesName = Config.SpeciesRarities[species], if info.secret then nil else speciesName -- BD-1121: for the two-line look (sent only with Config.RareFindBannerEnabled); a secret's name never goes out (BD-606 SS9)
         local flushAt = nil
         if os.clock() - announced.last(player.UserId, ANNOUNCE_KEY) >= Rare.Cooldown then
             flushAt = Rare.offer(state, player.UserId, eggId, info, text, os.clock())
@@ -68,7 +69,13 @@ function Service.record(player: Player, outcome: any)
                 if not out then return end
                 announced.mark(userId, ANNOUNCE_KEY, os.clock())
                 for _, other in Players:GetPlayers() do
-                    if other ~= player then event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text}) end
+                    if other ~= player then
+                        if Config.RareFindBannerEnabled == true then -- BD-1121: the same announcement plus what the two-line look needs (no player name in it)
+                            event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text, tier = out.info.tier, species = out.info.speciesName, shiny = out.info.shiny, mutation = out.info.mutation})
+                        else
+                            event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text})
+                        end
+                    end
                 end
             end)
         end

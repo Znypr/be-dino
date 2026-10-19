@@ -53,6 +53,7 @@ function DinoDetails.show(container: GuiObject, instanceId: string, catalog, cal
             order += 1
             local l = W.label(facts, text, UDim2.new(1, -14, 0, height or 28), UDim2.new(), 20, color, true)
             l.LayoutOrder = order
+            require(Shared.RarityWord).paintLabel(l) -- BD-1120: "Species: Compy . Common . 26% of eggs" shows the tier word in its colour
             return l
         end
         line("TRAITS", C.gold)
