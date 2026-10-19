@@ -127,7 +127,7 @@ MUTANTS = {
         'HatchTagLayout': [('local fit = TagFit.fit(item.text, roomW, {maxSize = R.textMax, minSize = floor, maxLines = 2})', 'local fit = TagFit.fit(item.text, roomW, {maxSize = R.textMax, minSize = floor, maxLines = 1})')],
     },
     'the tags are laid out for 14 design px, not 14 px on screen': {
-        'TagFit': [('    return math.max(f, math.ceil(f / screenScale - 1e-9))', '    return f')],
+        'TagFit': [('    return math.max(f, math.ceil(f / math.max(screenScale, TagFit.MinScale) - 1e-9))', '    return f')],
     },
     'a word is measured far too small (it runs out of its tag)': {
         'TagFit': [('    return math.ceil(math.max(em, TagFit.FlatEm * count) * size)', '    return math.ceil(0.2 * count * size)')],

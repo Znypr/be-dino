@@ -12,6 +12,7 @@
 local TagFit = {}
 
 TagFit.MinText = 14 -- px on screen (docs/114 s4.4)
+TagFit.MinScale = 0.5 -- card scales below this are animation readings, not windows (BD-1145)
 TagFit.Em = {small = 0.55, capital = 0.64, narrow = 0.34, space = 0.32}
 TagFit.FlatEm = 0.5 -- the plain estimate of tools/menu_layout_smoke.luau and tools/small_window_smoke.luau: a word is never measured under it
 TagFit.LineHeight = 1.12 -- one line is this many times the text size high
@@ -40,7 +41,9 @@ end
 function TagFit.floorSize(screenScale: number, floorPx: number?): number
     local f = floorPx or TagFit.MinText
     if screenScale <= 0 then return f end
-    return math.max(f, math.ceil(f / screenScale - 1e-9))
+    -- BD-1145: a card scale under half is a reading taken while the card was still popping in (its UIScale was near 0), not a real window.
+    -- Studio round 9 measured 0.14 there and drew every tag word at 100 px. The biggest floor size is therefore the one for scale 0.5 (28 for 14 px).
+    return math.max(f, math.ceil(f / math.max(screenScale, TagFit.MinScale) - 1e-9))
 end
 
 export type Fit = {text: string, size: number, lines: number, width: number, height: number, fits: boolean, abbreviated: boolean}

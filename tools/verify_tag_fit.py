@@ -59,6 +59,7 @@ local function flat(text, size) return (utf8.len(text) or #text) * 0.5 * size en
 
 -- ===== 1. TagFit =====
 check(TagFit.floorSize(1) == 14 and TagFit.floorSize(0.57) == 25 and TagFit.floorSize(0.5) == 28 and TagFit.floorSize(2) == 14 and TagFit.floorSize(0) == 14, "floorSize: 14 design px at 1:1, 25 at 0.57, never under 14")
+check(TagFit.floorSize(0.14) == 28 and TagFit.floorSize(0.01) == 28 and TagFit.floorSize(0.4999) == 28, "BD-1145: a card scale under half (a pop-in reading, Studio saw 0.14) never asks for a floor above 28 px, not 100")
 check(TagFit.width("EMERALD", 14) >= 62 and TagFit.width("EMERALD", 14) > TagFit.width("emerald", 14), "capitals are wider than small letters (EMERALD at 14 px is about 63 px: the Studio picture)")
 check(TagFit.width("abc", 20) >= flat("abc", 20) and TagFit.width("Skip stops here", 18) >= flat("Skip stops here", 18) and TagFit.width("iii", 30) >= flat("iii", 30), "a word is never measured under the plain 0.5 em estimate")
 check(TagFit.width("Rainbow egg!", 28) > TagFit.width("Rainbow egg!", 14) and TagFit.width("Rainbow egg! x", 14) > TagFit.width("Rainbow egg!", 14), "wider with more size and more letters")
@@ -227,7 +228,7 @@ MUTANTS = {
         'TagFit': [('elseif (code >= 65 and code <= 90) or (code >= 48 and code <= 57) then em += TagFit.Em.capital', 'elseif false then em += TagFit.Em.capital')],
     },
     'the floor in design px ignores the window scale': {
-        'TagFit': [('    return math.max(f, math.ceil(f / screenScale - 1e-9))', '    return f')],
+        'TagFit': [('    return math.max(f, math.ceil(f / math.max(screenScale, TagFit.MinScale) - 1e-9))', '    return f')],
     },
     'a too-wide word is not wrapped': {
         'TagFit': [('        if maxLines > 1 then', '        if false then')],
@@ -255,6 +256,7 @@ MUTANTS = {
     },
     'the tag words are laid out for 14 design px at every scale': {
         'HatchTagLayout': [('    local floor = TagFit.floorSize(screenScale)', '    local floor = 14')],
+        'TagFit': [('math.max(screenScale, TagFit.MinScale)', 'screenScale')],
     },
     'a ribbon word that does not fit is cut instead of wrapped': {
         'HatchTagLayout': [('minSize = floor, maxLines = 2})\n    local w = math.min(L.MaxW, math.max(item.minW or 0', 'minSize = floor, maxLines = 1})\n    local w = math.min(L.MaxW, math.max(item.minW or 0')],
