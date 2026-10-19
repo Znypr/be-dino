@@ -234,6 +234,19 @@ MUTANTS = {
     'the X is a wide bar again (80 px wide)': {
         'ModalCompact': [('c.closeButton.Size, c.closeButton.TextSize = UDim2.fromOffset(side, side), math.max(28, math.floor(side * 0.55))\n    c.heading:SetAttribute', 'c.closeButton.Size, c.closeButton.TextSize = UDim2.fromOffset(side + 40, side), math.max(28, math.floor(side * 0.55))\n    c.heading:SetAttribute')],
     },
+    # BD-1153 (docs/217): a hatch tag pops in from UIScale 0
+    'every UIScale is multiplied into the floor, a pop-in from 0 included (TextSize 100)': {
+        'ModalCompact': [('if u.Scale >= 0.999 then total *= u.Scale end', 'total *= u.Scale')],
+    },
+    'only a pop-in under half is ignored (a card at 0.6 still grows its words)': {
+        'ModalCompact': [('if u.Scale >= 0.999 then total *= u.Scale end', 'if u.Scale >= 0.5 then total *= u.Scale end')],
+    },
+    'the floor has no cap': {
+        'ModalCompact': [('    return math.max(base, math.min(want, math.max(limit, 2 * base)))', '    return want')],
+    },
+    'the raised size is stored as the design size': {
+        'ModalCompact': [('d:SetAttribute("CmBaseText", base) -- the size the screen asked for: never the engine\'s clamped answer', 'd:SetAttribute("CmBaseText", object.TextSize)')],
+    },
     # BD-1119: card text
     'potion card text is 15 px again': {
         'ShopScreens': [('label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,2+nameH,186,descH,16)', 'label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,2+nameH,186,descH,15)')],

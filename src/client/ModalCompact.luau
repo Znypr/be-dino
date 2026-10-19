@@ -118,14 +118,34 @@ function M.place(settled: boolean, motion: boolean): UDim2
     return UDim2.fromOffset(4, if settled or not motion then 0 else 8)
 end
 
+-- BD-1153 (docs/217): the floor pass counts WINDOW scales only. Studio round 10: a hatch tag pops in from UIScale 0, so the floor 14 / ~0 became 229112335, the engine
+-- clamped the word to TextSize 100 and the clamped 100 was then stored as the design size: every tag word was drawn 100 px big and cut to "Ra...". A pop-in, a bounce or
+-- a fade (a tag, ribbon, chip, card or result that grows from 0 or .6 to 1) is not a window: while such a UIScale is under 1 it counts as 1 (the same rule as TagFit.MinScale
+-- on the layout side, and a word never grows just because its tag is still small). When it reaches 1 nothing changes: the answer was already the settled one, so the pass is
+-- idempotent and needs no second run. A window scale (the scroller fit BodyFit and the hatch card fit HatchBodyFit) counts at any value.
+local MAX_TEXT = 40 -- the floor never asks for a word bigger than this ...
+local MAX_BUTTON = 100 -- ... or a button taller than this (or twice the design size, whichever is more): a runaway answer is a bad reading, not a window
+local WINDOW_SCALES = {BodyFit = true, HatchBodyFit = true}
+
 local function ancestorScale(object: Instance, stop: Instance): number
     local total, node = 1, object.Parent
     while node and node ~= stop do
         local u = node:FindFirstChildOfClass("UIScale")
-        if u then total *= u.Scale end
+        if u then
+            if WINDOW_SCALES[u.Name] then
+                total *= u.Scale
+            else
+                if u.Scale >= 0.999 then total *= u.Scale end -- on its way up (a pop-in, a bounce) it counts as 1; a settled scale is 1 anyway
+            end
+        end
         node = node.Parent
     end
     return total
+end
+
+-- The size the floor asks for, never a runaway one (a floor that is more than twice the design size, or over `limit`, is a reading that is not a window).
+local function saneFloor(base: number, want: number, limit: number): number
+    return math.max(base, math.min(want, math.max(limit, 2 * base)))
 end
 
 -- BD-1067: the floor pass used to GROW design sizes for good: a window dragged narrow for a moment left every button and text bigger (a nest slot
@@ -147,17 +167,17 @@ local function floorPass(c: Ctx, scalePanel: number, floor: boolean)
             if not object.TextScaled then
                 local size = object.TextSize
                 local base = designValue(d, "CmBaseText", "CmText", size)
-                local want = if floor then PhoneScale.floorText(base, ancestorScale(d, c.panel) * scalePanel) else base
+                local want = if floor then saneFloor(base, PhoneScale.floorText(base, ancestorScale(d, c.panel) * scalePanel), MAX_TEXT) else base
                 if want ~= size then object.TextSize = want end
-                d:SetAttribute("CmBaseText", base)
-                d:SetAttribute("CmText", want)
+                d:SetAttribute("CmBaseText", base) -- the size the screen asked for: never the engine's clamped answer
+                d:SetAttribute("CmText", object.TextSize) -- what the label really holds now (the engine clamps TextSize to 1 .. 100)
             end
         end
         if d:IsA("TextButton") and d.Size.Y.Scale == 0 and d.Parent and d.Parent:FindFirstChildOfClass("UIGridLayout") == nil
             and d.Parent:FindFirstChildOfClass("UIListLayout") == nil and d.Size.Y.Offset > 0 then
             local height = d.Size.Y.Offset
             local base = designValue(d, "CmBaseH", "CmH", height)
-            local want = if floor then PhoneScale.floorButton(base, ancestorScale(d, c.panel) * scalePanel) else base
+            local want = if floor then saneFloor(base, PhoneScale.floorButton(base, ancestorScale(d, c.panel) * scalePanel), MAX_BUTTON) else base
             if want ~= height then
                 d.Size = UDim2.new(d.Size.X.Scale, d.Size.X.Offset, 0, want)
                 d.Position = UDim2.new(d.Position.X.Scale, d.Position.X.Offset, d.Position.Y.Scale, d.Position.Y.Offset - (want - height) / 2)
