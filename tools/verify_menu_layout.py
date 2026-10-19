@@ -21,6 +21,7 @@ MODULES = dict(sw.MODULES)
 MODULES.update({
     'TouchLayout': 'src/shared/TouchLayout.luau',
     'ShopScreens': 'src/client/ShopScreens.luau',
+    'TimerWords': 'src/shared/TimerWords.luau',  # BD-1124: the Potion Shop restock line
     'ShopTiles': 'src/client/ShopTiles.luau',
     'ShopCards': 'src/client/ShopCards.luau',
     'ShopCard': 'src/client/ShopCard.luau',

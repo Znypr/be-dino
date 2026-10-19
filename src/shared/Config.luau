@@ -127,6 +127,10 @@ return table.freeze({
     -- (auraConfirm) and nothing is bought before BUY there. false = the Build 020 card (two chips, price caption, BUY). Pinned off in the default profile, ON in
     -- the playtest profile (docs/157). Free, no Robux.
     ShopCardPriceButtonEnabled = false,
+    -- BD-1124 (docs/202 R11 and R12, docs/220): true = short timer words on the HUD ("Next: 4 min", "Rain: 2 min", "Speed: 3 min"), a drain bar under each
+    -- active-potion chip, "New in 25 s" in the Potion Shop and a big "Found 1/22" bar in the Index. false = the Build 020 sentences and the small bar.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    TimerChipsEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

@@ -388,7 +388,7 @@ function Shop.render(name: string)
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
-            restock.Text=string.format("Crystals: %s  •  New offers in %s",num("Crystals"),UIFormat.duration(left))
+            restock.Text=require(Shared.TimerWords).restock(num("Crystals"),left,Config.TimerChipsEnabled==true) -- BD-1124: "New in 25 s" with the flag on
         end
         header_text()
         task.spawn(function()
