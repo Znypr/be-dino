@@ -45,4 +45,4 @@ LEAD decision: with the Cave hub on, in a run (any state that is not Sanctuary) 
 
 * Nothing here is a picture from Studio or a phone. The mock does not draw: text widths are an estimate, a real font may differ.
 * Calm motion on and off, the real run start and end, the slim toast along the bottom edge, a toast during the Fusion menu (its own screen, not counted as a menu here).
-* **Not fixed:** the Fusion menu tab names "EMERA / DIAMO" (cut at 500 px) need a look at the real Fusion layout.
+* **Not fixed:** the Fusion menu tab names "EMERA / DIAMO" (cut at 500 px) need a look at the real Fusion layout. **Update (2026-10-19, [203](203-tags-rail-fusion-tabs-fit.md)):** fixed offline: the tabs are sized by their words and take a wide row of their own in a narrow window; the Studio look is still open.

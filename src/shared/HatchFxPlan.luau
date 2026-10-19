@@ -190,7 +190,9 @@ P.Card = {
     dino = {cx = 412, cy = 118, w = 504, h = 236}, -- the dinosaur view: top 0, bottom 236 (the name label starts at 236)
     baseZoom = 1.15,                               -- was 1.4: the head was cut
     nameTop = 236,                                 -- the name label (Bootstrap: y 236)
-    stopTag = {cx = 116, cy = 160, w = 190, h = 50}, -- "Rainbow egg! / Skip stops here"; left margin, under the ribbons, beside the dinosaur
+    -- BD-1107: the ribbons (SHINY, BIG, mutation, New pattern! / New colour!) and the "Rainbow egg! / Skip stops here" tag are stacked down the two side columns by
+    -- Shared/HatchTagLayout (measured words, no overlap): these are the columns they may use, x0 y0 x1 y1 in body px (verify_hatch_polish checks they match).
+    tagColumns = {left = {8, 20, 248, 232}, right = {576, 20, 816, 232}},
     counterGap = 12,                               -- px between the "Egg N of M" counter and the X button in the header
 }
 function P.cardRect(name: string): {number}
@@ -205,9 +207,8 @@ P.KeepOut = {
     P.chipRect("left"), P.chipRect("right"), -- colour chips under the buckets
     {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
-    {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
-    {16, 134, 216, 186},   -- BD-1073: the "why Skip stopped" tag (left margin)
-    {649, 36, 799, 70},    -- BIG ribbon (right)
+    {8, 20, 248, 232},     -- BD-1107: the left tag column (Shiny / mutation ribbons, the "why Skip stopped" tag)
+    {576, 20, 816, 232},   -- BD-1107: the right tag column (BIG, New pattern! / New colour! ribbons)
 }
 -- Foreground sparkles live ONLY in the two side margins, below the ribbons: returns x, y, size, opacity.
 function P.fgSpark(i: number, n: number, time: number)
@@ -215,8 +216,8 @@ function P.fgSpark(i: number, n: number, time: number)
     local lane = math.floor((i - 1) / 2)
     local x0 = if left then 14 else 732
     local x = x0 + ((lane * 29 + i * 11) % 64) + math.sin(time * 0.8 + i) * 6
-    local span = 180
-    local y = 200 +((time * (14 + (i % 3) * 5) + i * 71) % span)
+    local span = 140 -- BD-1107: below the tag columns (they reach y 232; a sparkle is up to 12 px big)
+    local y = 248 + ((time * (14 + (i % 3) * 5) + i * 71) % span)
     local size = math.min(P.Limits.fgSize, 6 + (i % 3) * 2)
     local opacity = math.min(P.Limits.fgAlpha, 0.12 + 0.4 * math.abs(math.sin(time * 1.6 + i * 2.1)))
     return x, y, size, opacity

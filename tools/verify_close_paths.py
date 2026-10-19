@@ -35,6 +35,8 @@ MODULES = {
     'Config': 'src/shared/Config.luau',
     'HatchV2Assets': 'src/shared/HatchV2Assets.luau',
     'ChipStyle': 'src/shared/ChipStyle.luau',
+    'TagFit': 'src/shared/TagFit.luau',  # BD-1107: the hatch tags and the class badge are measured before they are drawn
+    'HatchTagLayout': 'src/shared/HatchTagLayout.luau',
     'ModalClose': 'src/client/ModalClose.luau',
     'HatchSequence': 'src/client/HatchSequence.luau',
 }
