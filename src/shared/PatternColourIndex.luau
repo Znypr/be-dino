@@ -155,7 +155,7 @@ function Index.cards(kind: string, rows: any, found: any, nameOf: any)
     return cards
 end
 
--- {found, total, text} for the top line of a tab: "Patterns 5 / 8", "Colours 4 / 9".
+-- {found, total, text} for the top line of a tab: "Patterns 5 / 8", "Colours 4 / 16".
 function Index.header(kind: string, cards: any)
     local found, total = 0, 0
     if type(cards) == "table" then

@@ -70,3 +70,23 @@ def neutral_secret_module(root: Path = ROOT) -> str:
 def files(root: Path = ROOT) -> list[str]:
     """Repo-relative paths of the main file and every part."""
     return [MAIN] + [f"src/server/{name}.luau" for name in parts(root)]
+
+
+# BD-1037 (docs/210): the nine egg colours that existed in Build 020. The three drills that let the frozen Build 020 reader open a profile written
+# by the CURRENT code (rollback, skins RB1, secret species part B) are about transactions and unknown fields, not about colours. The seven colours
+# added later are, by design, unknown to Build 020, which then FAILS CLOSED on any stored dino that carries one (the same known lock-out class as an
+# Epic species or a newer potion: docs/111 section 2). tools/verify_rarity.py proves that class explicitly. So these drills write their profiles with
+# the nine-colour table and every other line of ProgressionConfig untouched.
+LEGACY_EGG_COLOUR_IDS = ("white", "blue", "green", "teal", "pink", "gold", "violet", "red", "black")
+_COLOUR_ROW = re.compile(r'^[ \t]*\{id="(\w+)",name="[^"]+",rarity="\w+",weight=\d+,rgb=\{\d+,\d+,\d+\}\},?[ \t]*\r?\n', re.M)
+
+
+def drill_progression_module(root: Path = ROOT) -> str:
+    """The real ProgressionConfig as a Luau expression, with the egg colours added after Build 020 left out (see above)."""
+    text = read("src/shared/ProgressionConfig.luau", root)
+    start = text.index("EggColors={")
+    end = text.index("\n    },", start)
+    block = text[start:end + 1]
+    kept = _COLOUR_ROW.sub(lambda m: m.group(0) if m.group(1) in LEGACY_EGG_COLOUR_IDS else "", block)
+    assert kept.count('{id="') == len(LEGACY_EGG_COLOUR_IDS), "the colour table no longer has the nine legacy rows in one-line form"
+    return "(function()\n" + text[:start] + kept + text[end + 1:] + "\nend)()"
