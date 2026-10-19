@@ -964,7 +964,8 @@ def part_b():
         ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
-        s = s.replace(token, module(path))
+        # BD-1037: part B lets the frozen Build 020 reader open a profile this harness wrote, so the writer has the nine colours Build 020 knows (docs/111, docs/210)
+        s = s.replace(token, profile_sources.drill_progression_module() if token == '@@PROGRESSION_CONFIG@@' else module(path))
     return s
 
 

@@ -53,7 +53,8 @@ def script():
         ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
-        s = s.replace(token, module(path))
+        # BD-1037: the writer of this drill has the nine colours Build 020 knows (profile_sources.drill_progression_module, docs/111, docs/210)
+        s = s.replace(token, profile_sources.drill_progression_module() if token == '@@PROGRESSION_CONFIG@@' else module(path))
     body = BODY
     for token, path in [
         ('@@OLD_CONFIG@@', FIXTURE + 'Config.luau'),

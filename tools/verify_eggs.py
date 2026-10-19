@@ -88,7 +88,7 @@ for _,color in Progression.EggColors do
  assert(colorAt((cum-.001)/scale)==color.id,color.id.." upper edge")
 end
 assert(cum==scale)
-assert(Progression.EggColors[9].id=="black" and Progression.EggColors[9].weight==1280) -- BD-1036: equal split inside Mythic (was 512)
+assert(Progression.EggColors[16].id=="black" and Progression.EggColors[16].weight==1280) -- BD-1036: equal split inside Mythic (was 512)
 assert(not Genetics.valid({conditionId="astra",hatchSuccess=false,primaryColorId="white",secondaryColorId="black",blend=80}))
 for i,trail in Progression.Trails do
  if i>1 then local prior=Progression.Trails[i-1] assert(trail.level>prior.level and trail.price>prior.price and trail.speed>prior.speed) end

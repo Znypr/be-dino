@@ -15,890 +15,890 @@
 [
 3,
 "settle run r1",
-82364,
-"fd9fe5c894339104"
+82264,
+"7af9a6b38e824781"
 ],
 [
 4,
 "settle run r1 replay",
-82364,
-"5da7241faac2f865"
+82264,
+"b0ba3f62958e11ca"
 ],
 [
 5,
 "settle run r2 (tags, nests)",
-156801,
-"47184e6411185f52"
+156639,
+"6bce34418a6e18db"
 ],
 [
 6,
 "settle bad run id",
-156649,
-"140ad2cda8f28fc7"
+156487,
+"258092b2fc0b858c"
 ],
 [
 7,
 "settle bad events",
-156653,
-"280c29c53cf2a617"
+156491,
+"7cb27c7ec77789e4"
 ],
 [
 8,
 "pending reveals",
-156623,
-"c0128bf644adaccc"
+156461,
+"23e32faf7ef2e55d"
 ],
 [
 9,
 "claim egg 1",
-166716,
-"bd44b347109dbc5d"
+166573,
+"87994cf011c76276"
 ],
 [
 10,
 "claim egg 2",
-166634,
-"12f3d586c838ee06"
+166487,
+"6f0c71e317d0102d"
 ],
 [
 11,
 "claim egg 3",
-166668,
-"e72eb835b0ee36bf"
+166553,
+"28c06ffaf50ce35c"
 ],
 [
 12,
 "claim egg 4",
-166609,
-"eed671aaa216af98"
+166470,
+"a80aee1158db29d3"
 ],
 [
 13,
 "claim egg 5",
-166593,
-"088d23f8721cefaa"
+166452,
+"314a04b97dabae0b"
 ],
 [
 14,
 "claim egg 6",
-166680,
-"0433b0a8af65db3c"
+166537,
+"5f42788d6e7980cf"
 ],
 [
 15,
 "claim egg 7",
-166676,
-"8b1c029d1a8dd48f"
+166533,
+"dca9b8043195b00a"
 ],
 [
 16,
 "claim egg 8",
-166599,
-"cabbf8e0c580ddce"
+166458,
+"e522d5db93a1e72d"
 ],
 [
 17,
 "claim egg 9",
-166673,
-"977b2a79a18acae3"
+166530,
+"737a4228cd426d60"
 ],
 [
 18,
 "claim egg 10",
-166607,
-"cbc0625d9f9aa75f"
+166462,
+"eac482b651b33b76"
 ],
 [
 19,
 "claim egg 11",
-173987,
-"34d21d992cfb1d43"
+173799,
+"bba45e6f73fb6ab5"
 ],
 [
 20,
 "claim egg 12",
-173918,
-"0981d440bbe6e95c"
+173730,
+"8942a2e05f4e7df4"
 ],
 [
 21,
 "claim egg 13",
-173957,
-"a6c46660a27cdace"
+173765,
+"f401c7dc48faba86"
 ],
 [
 22,
 "claim egg 14",
-173910,
-"9cffac589c3d12c8"
+173718,
+"01509988d3cde6b8"
 ],
 [
 23,
 "claim missing egg",
-173547,
-"6bbffb65ff28422f"
+173357,
+"d1212e0db02c0fa7"
 ],
 [
 24,
 "claim invalid id",
-173556,
-"ac0364dcd38686a0"
+173366,
+"4dee2fd2d955f64e"
 ],
 [
 25,
 "pending reveals after page",
-173528,
-"19750f6f887a191d"
+173338,
+"acd8d2b70d2fa31d"
 ],
 [
 26,
 "reveal skip",
-173566,
-"b9de433122fe778b"
+173376,
+"13bc3663df3ae88d"
 ],
 [
 27,
 "reveal skip bad",
-173579,
-"8d1f7b819c714c23"
+173389,
+"b13a0eebbf54d2c1"
 ],
 [
 28,
 "settings burst 1",
-173769,
-"9650697be8410c8d"
+173579,
+"4367a657ba31afa9"
 ],
 [
 29,
 "settings burst 2",
-173769,
-"976572a1c828bd83"
+173579,
+"9919fcbb9d8b82b5"
 ],
 [
 30,
 "settings burst 3",
-173769,
-"e3006036f0ace6b0"
+173579,
+"150289e48bf3a9be"
 ],
 [
 31,
 "settings burst 4",
-173771,
-"3d77002801278eb6"
+173581,
+"4ca7645a699e1c68"
 ],
 [
 32,
 "settings burst 5",
-173771,
-"4f2ea5505ac367de"
+173581,
+"e123780879612f3e"
 ],
 [
 33,
 "settings burst 6",
-173771,
-"88cf7f980b8780de"
+173581,
+"d442e7c62c65f670"
 ],
 [
 34,
 "settings burst 7",
-173771,
-"f8533138dc54bdce"
+173581,
+"b3686240cdaceeba"
 ],
 [
 35,
 "settings burst 8",
-173772,
-"a14953f604ea457a"
+173582,
+"bab4e046a312a0da"
 ],
 [
 36,
 "settings bad",
-173783,
-"794aac61ea9e5483"
+173593,
+"30f0d973d04d8179"
 ],
 [
 37,
 "after coalesce flush",
-173868,
-"4daac2d6be10e2d6"
+173678,
+"81a309dcc75c4ec4"
 ],
 [
 38,
 "nests round 1",
-174056,
-"0edfad7345a4f655"
+173866,
+"3b60f2d315d5e3a5"
 ],
 [
 39,
 "claim not-ready nest 1",
-173779,
-"bd0d8eec55837d56"
+173589,
+"c7e209a6c0edfa10"
 ],
 [
 40,
 "claim nest 1",
-178605,
-"f81c8143a3f7cf5d"
+178407,
+"06e10bbc777a0faa"
 ],
 [
 41,
 "claim nest replay 1",
-178608,
-"d0eb89ebfdd827cd"
+178410,
+"118427be1de7758a"
 ],
 [
 42,
 "nests round 2",
-178776,
-"6a11152f36359425"
+178578,
+"1bf21fbe253b886e"
 ],
 [
 43,
 "claim not-ready nest 2",
-178558,
-"20ce1bdddea3077f"
+178360,
+"a57dd7f09b809cb0"
 ],
 [
 44,
 "claim nest 2",
-181751,
-"258f18dfd9bccdc9"
+181549,
+"af5c58725daba2c0"
 ],
 [
 45,
 "claim nest replay 2",
-181754,
-"5f87b13f1b41e561"
+181552,
+"b45ac62c680b21a0"
 ],
 [
 46,
 "nests round 3",
-181863,
-"e9baa54e199c57cc"
+181661,
+"778a65a1ac4e774b"
 ],
 [
 47,
 "claim not-ready nest 3",
-181704,
-"b901b1cfc5ca5685"
+181502,
+"934ee8802c8982a4"
 ],
 [
 48,
 "claim nest 3",
-185442,
-"aac1241c30bb2458"
+185240,
+"14282bc71e0c1155"
 ],
 [
 49,
 "claim nest replay 3",
-185445,
-"c048deda26d3fc68"
+185243,
+"a46cfb17f8a4c515"
 ],
 [
 50,
 "claim nest missing",
-185390,
-"f3f2165a4bccaa76"
+185188,
+"d550e5f120b147bb"
 ],
 [
 51,
 "claim more 1",
-185795,
-"3d010b3b497a532d"
+185591,
+"a7d53402444d4cb4"
 ],
 [
 52,
 "claim more 2",
-185807,
-"75976208c3b1b51e"
+185603,
+"b9881dcf9d778245"
 ],
 [
 53,
 "claim more 3",
-185773,
-"0c33a535589c0c57"
+185571,
+"c22b7368553081d6"
 ],
 [
 54,
 "claim more 4",
-185767,
-"c0a8b71b957db52d"
+185565,
+"4c3082b2326a5030"
 ],
 [
 55,
 "claim more 10",
-193001,
-"e4d2a9ddf067c8e7"
+192801,
+"0d6a43a424811af6"
 ],
 [
 56,
 "claim more 20",
-200091,
-"357126b854a46546"
+199938,
+"691d9ae9d7db238b"
 ],
 [
 57,
 "claim more 30",
-207231,
-"2ec46d8859d385da"
+207047,
+"5febadbed13aa1c4"
 ],
 [
 58,
 "claim more 40",
-209976,
-"641dfb5aed5258ba"
+209814,
+"1060c0ad1fc76e4f"
 ],
 [
 59,
 "claim more 50",
-216708,
-"db50d81ba39e0dd1"
+216984,
+"8cbd382f2650d2dd"
 ],
 [
 60,
 "claim more 60",
-218978,
-"a291fb412ebf3cdb"
+219731,
+"9d531e17c2341465"
 ],
 [
 61,
 "claim more 70",
-225271,
-"3eafee381608d48a"
+225970,
+"0fa247a09e679acc"
 ],
 [
 62,
 "claim more 80",
-226454,
-"8929c7557f721e87"
+227113,
+"3d598fb85a07e336"
 ],
 [
 63,
 "claim more 90",
-232610,
-"86de2dc540c329ff"
+233225,
+"255258fd2628ba27"
 ],
 [
 64,
 "equip compy",
-232223,
-"78d1259d08bcd4a7"
+232838,
+"88b57a9fdc7c3da9"
 ],
 [
 65,
 "equip compy again",
-232223,
-"78d1259d08bcd4a7"
+232838,
+"88b57a9fdc7c3da9"
 ],
 [
 66,
 "equip unknown",
-232223,
-"b99ec99918d27edb"
+232838,
+"262c062f1e65e64d"
 ],
 [
 67,
 "equip variant raptor",
-232281,
-"38d538c47b7834ee"
+232894,
+"214c2e59bbc5f313"
 ],
 [
 68,
 "equip locked",
-232280,
-"554e3ef6276bf3de"
+232893,
+"4c9c70af24035e65"
 ],
 [
 69,
 "collection test grant",
-232246,
-"e2ca4f5b7fdcc255"
+232860,
+"da3a9afe24265a76"
 ],
 [
 70,
 "collection test grant replay",
-232248,
-"4d297d657d32577f"
+232862,
+"c196f72ca1d8ba5c"
 ],
 [
 71,
 "chest test grant",
-232135,
-"967c2d7a60f77dd4"
+232750,
+"2fc5189b00890e89"
 ],
 [
 72,
 "grant crystals 1",
-231847,
-"f0affac638aabc78"
+232463,
+"47ec977032682c16"
 ],
 [
 73,
 "grant crystals 2",
-231490,
-"c9a59adf06ca4331"
+232108,
+"453352b686058dd2"
 ],
 [
 74,
 "grant crystals 3",
-231166,
-"7aac2ea269329f32"
+231786,
+"7b1b366365dc77ad"
 ],
 [
 75,
 "grant crystals 4",
-230874,
-"426ff3363db2eb56"
+231495,
+"45a0296e1fdebbc8"
 ],
 [
 76,
 "grant replay",
-230865,
-"09fcc2f460bbda56"
+231486,
+"83f2fc967dbae532"
 ],
 [
 77,
 "buy potion",
-230659,
-"cb8b98a7ccacda29"
+231280,
+"bd2ab68900fd9a8b"
 ],
 [
 78,
 "buy potion again",
-230659,
-"c4b2291c2c59513a"
+231280,
+"70de491449a1afd0"
 ],
 [
 79,
 "buy potion stale",
-230663,
-"2148f845de4bd8a7"
+231284,
+"a3bf517f39a3a949"
 ],
 [
 80,
 "use potion",
-230440,
-"07a2d12de1391377"
+231063,
+"ccea096d495721df"
 ],
 [
 81,
 "use potion twice",
-230441,
-"53598d88fad70bce"
+231064,
+"b149df800555d204"
 ],
 [
 82,
 "buy aura",
-230161,
-"52dd5de9958b4343"
+230784,
+"817a03a5546bf3c7"
 ],
 [
 83,
 "equip aura",
-229900,
-"d388c3e729bc4559"
+230523,
+"7312ec0bc9090255"
 ],
 [
 84,
 "buy trail locked",
-229905,
-"62783b0cc57431fa"
+230528,
+"52036aa8bdeb45f8"
 ],
 [
 85,
 "buy perk",
-229905,
-"ccc8a79f6f77f22d"
+230528,
+"b4da79898f968ea3"
 ],
 [
 86,
 "buy egg",
-230055,
-"2d55a7c34f696535"
+230680,
+"0d44a79af82110b6"
 ],
 [
 87,
 "upgrade condition",
-229717,
-"ccce9227d2ede3e1"
+230342,
+"6817ba91d2a39e8b"
 ],
 [
 88,
 "progression read",
-230267,
-"bbe7829d06d6c42f"
+230941,
+"ea5549508aeea52a"
 ],
 [
 89,
 "objective record food",
-229701,
-"1e55db08c216a822"
+230326,
+"6d62434c733bf404"
 ],
 [
 90,
 "objective record hatch",
-229701,
-"1e55db08c216a822"
+230326,
+"6d62434c733bf404"
 ],
 [
 91,
 "objective record bad",
-229702,
-"bcc670458219ab9f"
+230327,
+"d96383b138d4a27b"
 ],
 [
 92,
 "objective view",
-230795,
-"72b5a5df058c15b5"
+231420,
+"0d0c66e9e8a4dd4b"
 ],
 [
 93,
 "objective flush",
-230041,
-"7935e7dcd841aee6"
+230666,
+"407880c6759aec32"
 ],
 [
 94,
 "objective seen",
-230038,
-"5455afd8aa802a58"
+230663,
+"83fc537ccc5ba4ee"
 ],
 [
 95,
 "objective seen again",
-230046,
-"e9996d5fdf054641"
+230671,
+"84f2480d29c82f8f"
 ],
 [
 96,
 "objective flush 2",
-230066,
-"bf2817083c55ebe4"
+230691,
+"93322928680d4f66"
 ],
 [
 97,
 "objective claim T1",
-229818,
-"629a7d182c911f50"
+230443,
+"d6eaca9bb01cdee9"
 ],
 [
 98,
 "objective claim T1 replay",
-229820,
-"4ed51bb4ac2fc108"
+230445,
+"1752ab17ae99b6cd"
 ],
 [
 99,
 "objective claim T1 again",
-229770,
-"6bd663682466da08"
+230395,
+"842028a31b0dc379"
 ],
 [
 100,
 "objective claim unknown",
-229772,
-"39c0401404104f2c"
+230397,
+"ab42e713ac44eed5"
 ],
 [
 101,
 "objective claim unmet",
-229763,
-"ba2ea3da86d5d76c"
+230388,
+"2ccd0f5d1951f077"
 ],
 [
 102,
 "gifts apply",
-229916,
-"113cdf4de45e9ab7"
+230541,
+"e38f09b83a405da6"
 ],
 [
 103,
 "gifts replay",
-229869,
-"bedb3aa4cbd147d6"
+230494,
+"aa2b1abb2d3c01d5"
 ],
 [
 104,
 "gifts revoke",
-229898,
-"401611447f77ebb8"
+230523,
+"51b28779e3353193"
 ],
 [
 105,
 "gifts bad plan",
-229870,
-"64fe0c588ba34d24"
+230495,
+"23dd1cddd0a44c87"
 ],
 [
 106,
 "mutation setup 49",
-243913,
-"5662f62119b221ab"
+244538,
+"9e4748a039a536fc"
 ],
 [
 107,
 "mutate short",
-243927,
-"3c04ab23ced35909"
+244552,
+"482ae0baf943d89e"
 ],
 [
 108,
 "mutation setup 50",
-244207,
-"69aa3c980d94fc96"
+244832,
+"121886652845169f"
 ],
 [
 109,
 "mutate gold",
-229685,
-"6b8d0c99d01fec93"
+230311,
+"f6fd220437872aee"
 ],
 [
 110,
 "mutate gold replay",
-229687,
-"dc3cde2c117def6a"
+230313,
+"fe819beb2bf39509"
 ],
 [
 111,
 "mutate conflict",
-229584,
-"280ada863a9f9a06"
+230210,
+"2d113d35f94ea7cf"
 ],
 [
 112,
 "mutate unknown",
-229586,
-"bb7a55ce0128c31a"
+230212,
+"0a2d34b5ef89701f"
 ],
 [
 113,
 "mutation setup 51",
-244278,
-"3a802adf837b8c39"
+244904,
+"3da910f22da63afe"
 ],
 [
 114,
 "fusion status",
-244264,
-"10784444230b64e0"
+244890,
+"9fba4ec71d3f9be1"
 ],
 [
 115,
 "list dinosaurs",
-280062,
-"ad8f9c5df9af8a67"
+280643,
+"ddd2501497382d42"
 ],
 [
 116,
 "fusion donors",
-244328,
-"9df49fd0f2386618"
+244954,
+"61f66f2f0068c12d"
 ],
 [
 117,
 "dinosaur details",
-245301,
-"1f4d4de9f375c0c3"
+245921,
+"69386e8b662bbbf5"
 ],
 [
 118,
 "fusion details",
-245301,
-"1f4d4de9f375c0c3"
+245921,
+"69386e8b662bbbf5"
 ],
 [
 119,
 "quote fusion",
-248914,
-"7cd81b6f33a6f285"
+249582,
+"e0d1f4a59fda6a8f"
 ],
 [
 120,
 "quote fusion bad",
-244279,
-"131bcd4f34451911"
+244905,
+"13bcd822e9ac3844"
 ],
 [
 121,
 "fuse bad digest",
-244284,
-"f8e6200b251950cd"
+244910,
+"bd7e8d6ea978b51a"
 ],
 [
 122,
 "fuse",
-241889,
-"f34f4f9581116dd7"
+242025,
+"fd4bf241d0a68273"
 ],
 [
 123,
 "fuse replay",
-241893,
-"a4fbe9079d815fd5"
+242029,
+"c056e457671a4e2d"
 ],
 [
 124,
 "list dinosaurs after",
-245159,
-"41792a73613e0e49"
+245291,
+"ce7e8c644c607222"
 ],
 [
 125,
 "skin view",
-241405,
-"3d02f210d39b42a6"
+241543,
+"744d9b6f984c3f3d"
 ],
 [
 126,
 "skin view instance",
-241430,
-"4260e3f1488aff9b"
+241568,
+"13b055f0c106981c"
 ],
 [
 127,
 "skin view missing",
-241400,
-"c142c651c3f136db"
+241538,
+"87c8218c55d14da0"
 ],
 [
 128,
 "skin equip base",
-241416,
-"75a6262bebbe4c95"
+241554,
+"6e82b556fdcfe1d2"
 ],
 [
 129,
 "skin equip clay no model",
-241417,
-"bd38196c8a38c242"
+241555,
+"480d5763ee7edfd5"
 ],
 [
 130,
 "skin equip clay",
-241416,
-"25dfa0f97d16a2a3"
+241554,
+"ea82055e06d7b552"
 ],
 [
 131,
 "skin equip not owned",
-241418,
-"61dccad6a2afe01a"
+241556,
+"3741c687dcfa6ac1"
 ],
 [
 132,
 "skin set default",
-241440,
-"629428500f1c4a24"
+241578,
+"0af48d5d846ff5ff"
 ],
 [
 133,
 "skin view default",
-241500,
-"b1415ba286fcbb42"
+241638,
+"61d011e7183123f9"
 ],
 [
 134,
 "skin unequip",
-241425,
-"578bfd1d977a0c77"
+241563,
+"9c424284e22f967e"
 ],
 [
 135,
 "skin clear default",
-241409,
-"4ecd9f2604dde058"
+241547,
+"8ac4b3557b61bb77"
 ],
 [
 136,
 "skin bad plan",
-241403,
-"876dd52aa9602338"
+241541,
+"f031bc416cbcc4db"
 ],
 [
 137,
 "purchase",
-241407,
-"3ce309e0b380b5ca"
+241545,
+"34ed0719440d9a73"
 ],
 [
 138,
 "purchase replay",
-241407,
-"3ce309e0b380b5ca"
+241545,
+"34ed0719440d9a73"
 ],
 [
 139,
 "purchase bad",
-241408,
-"aa2002fd7aeba627"
+241546,
+"a030261e915cfefa"
 ],
 [
 140,
 "buy egg gated",
-241441,
-"3aa133247e7f3982"
+241579,
+"6341015df07670c7"
 ],
 [
 141,
 "fusion gated",
-241441,
-"3aa133247e7f3982"
+241579,
+"6341015df07670c7"
 ],
 [
 142,
 "renew",
-241420,
-"24e3c941ed4857c3"
+241558,
+"8c3c2bd450a78a0c"
 ],
 [
 143,
 "settle run r3",
-316025,
-"e787e3fccab1b6da"
+316100,
+"bdced038d051c048"
 ],
 [
 144,
 "renew 2",
-315850,
-"2f83879824eecf3c"
+315925,
+"b41581c864b86fae"
 ],
 [
 145,
 "release",
-297004,
-"1c69ad1be7069e29"
+296878,
+"559a1301f5bd0f9b"
 ],
 [
 146,
 "after release",
-296599,
-"4fb7868c35163556"
+296475,
+"1827d7914b905593"
 ],
 [
 147,
 "reload",
-315230,
-"4c74fbb8ee1435a0"
+315305,
+"e03238b8845b41ce"
 ],
 [
 148,
 "reload progression",
-315797,
-"d24a210addde2998"
+315921,
+"e97ddb69e2ff0be3"
 ],
 [
 149,
 "reload claim",
-319312,
-"7760f47f0737695d"
+319362,
+"b4fba2ad2ad53e3f"
 ],
 [
 150,
 "reload release",
-300077,
-"e9a7148a7467711c"
+299934,
+"33329067a44f5bed"
 ],
 [
 151,
@@ -915,92 +915,92 @@
 [
 153,
 "preview settle",
-53637,
-"e6703a975b799935"
+53582,
+"ed63d18c420901a4"
 ],
 [
 154,
 "demo grant eggs",
-54848,
-"6e6df8ec07222b7c"
+54791,
+"aeb7bfa7ab642de9"
 ],
 [
 155,
 "demo grant eggs new find",
-55185,
-"6fa3b5d50d76c81f"
+55130,
+"a48e51fcc169c398"
 ],
 [
 156,
 "demo grant bad",
-55187,
-"212bfddd9df8d94f"
+55132,
+"31014a9085f6ba44"
 ],
 [
 157,
 "demo equip",
-55198,
-"2ed9f9399b4db69b"
+55143,
+"5c48634e9824490c"
 ],
 [
 158,
 "demo crystals",
-55197,
-"895950b68c0575c8"
+55142,
+"999fcd436c988f71"
 ],
 [
 159,
 "demo crystals bad",
-55201,
-"8bd690a0291eb9de"
+55146,
+"67e46b2dab27955f"
 ],
 [
 160,
 "preview claim 1",
-66306,
-"9d74b5a7e89d27f5"
+66353,
+"2990ac1993d6cae3"
 ],
 [
 161,
 "preview claim 2",
-66294,
-"dbc97a608055a264"
+66343,
+"f25d5280b0c13ef6"
 ],
 [
 162,
 "preview claim 3",
-66246,
-"22832d8b8d995e59"
+66293,
+"70f20089e0a0548b"
 ],
 [
 163,
 "preview claim 4",
-66225,
-"9c667fdc0095aada"
+66266,
+"7a54be4c99a81bb4"
 ],
 [
 164,
 "preview claim 5",
-66227,
-"1440d7e01861ed46"
+66272,
+"eea4973e7643fe9a"
 ],
 [
 165,
 "preview claim 6",
-66256,
-"c384f0119f900b2b"
+66343,
+"13d86c2fbcfcad21"
 ],
 [
 166,
 "preview grant crystals",
-66030,
-"2b2319aebf9de782"
+66089,
+"d42ec880938aedd6"
 ],
 [
 167,
 "preview release",
-59434,
-"28f5ddf2c4d3ed06"
+59457,
+"da720c8267b6cecc"
 ],
 [
 168,
@@ -1011,80 +1011,80 @@
 [
 169,
 "outage settle ok",
-25018,
-"a48c202b8974fd61"
+24998,
+"1fecc571eb3243bb"
 ],
 [
 170,
 "outage settings",
-24871,
-"d8a7c98c183d46c2"
+24851,
+"c994f35e33d52c3c"
 ],
 [
 171,
 "outage settle",
-24871,
-"b66d0952d4163a94"
+24851,
+"2331d6e08f94bf86"
 ],
 [
 172,
 "outage pending",
-24968,
-"f7ec37e8e28ec5f8"
+24948,
+"48c290fca5ba27a4"
 ],
 [
 173,
 "outage renew",
-24852,
-"8577b5e885c96b90"
+24832,
+"762149b416af57e4"
 ],
 [
 174,
 "outage renew recovers",
-52192,
-"95b6b6b3d65a12ad"
+52126,
+"d7b1424d8a404ea7"
 ],
 [
 175,
 "outage recovered",
-52321,
-"1c76803baaf06f11"
+52255,
+"d5eae76371552e49"
 ],
 [
 176,
 "outage claim",
-56297,
-"7e148ac5df056b8f"
+56243,
+"494c3f1190778a53"
 ],
 [
 177,
 "lease lost settle",
-55942,
-"46eb23ad83a56fa7"
+55889,
+"9e4d6c6c91a7e546"
 ],
 [
 178,
 "lease lost equip",
-55950,
-"b7dcb47f0dd45269"
+55897,
+"b8c3d0ceb9a01804"
 ],
 [
 179,
 "lease lost renew",
-55924,
-"97e0a4dd7f55e917"
+55871,
+"71717ad045abc39e"
 ],
 [
 180,
 "lease lost kicked",
-55972,
-"999aa4e176d4c73b"
+55919,
+"c463a904760f6b8a"
 ],
 [
 181,
 "lease lost release",
-49656,
-"d7d1e93cbfa26628"
+49608,
+"8f5b8fe67484c776"
 ]
 ]
 }

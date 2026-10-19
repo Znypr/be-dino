@@ -55,8 +55,8 @@ def render(rows):
     for pid,n,r,w in g('PATTERN'): k=tiers.setdefault(r,[0,0.0]);k[0]+=1;k[1]+=float(w)
     for r in ('Common','Uncommon','Rare','Epic','Legendary','Mythic'):
         if r in tiers: L.append(f'| {r} | {tiers[r][0]} | {pct(tiers[r][1])}% |')
-    L.append('\n## Colors (9, tiers of the ladder)\n')
-    L.append('Each egg has **two** color slots rolled independently. Tier chances come from the ladder (six tiers, renormalised) and split EQUALLY inside a tier (BD-1036). The colour rarity a dino shows is the **rarer of its two colours**; run `python tools/simulate_colour_timing.py` for the waiting times.\n')
+    L.append(f"\n## Colors ({len(list(g('COLOR')))}, tiers of the ladder)\n")
+    L.append('Each egg has **two** color slots rolled independently. Tier chances come from the ladder (six tiers, renormalised) and split EQUALLY inside a tier (BD-1036); 16 colours since BD-1037 (docs/210). The colour rarity a dino shows is the **rarer of its two colours**; run `python tools/simulate_colour_timing.py` for the waiting times.\n')
     L.append('| # | Color | Tier | % per slot | Both slots this color |\n|---:|---|---|---:|---:|')
     for i,(n,r,w) in enumerate(g('COLOR'),1):
         w=float(w);both=(w/100)**2
