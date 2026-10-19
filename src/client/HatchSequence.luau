@@ -26,6 +26,8 @@ local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + p
 local ModalClose = require(script.Parent.ModalClose) -- BD-1019: the tap catcher that never covers X, the end buttons or the backdrop
 local CloseRules = require(Shared.ModalCloseRules)
 local Chip = require(Shared.ChipStyle) -- BD-1070: the one chip style of the whole game (chunky tag: rounded rectangle, 3 px outline, palette fill)
+local TagFit = require(Shared.TagFit) -- BD-1107: ribbons, the stop tag and the class badge are measured before they are drawn
+local TagLayout = require(Shared.HatchTagLayout) -- BD-1107: where they go (stacked down the side columns, never over each other)
 local NewFinds = require(Shared.PatternColourIndex) -- BD-1039: "New pattern!" / "New colour!" ribbons (flag Config.PatternColourIndexEnabled)
 local PrivateState = require(script.Parent.PrivateState)
 local HttpService = game:GetService("HttpService")
@@ -315,11 +317,12 @@ local function hideLabel(label: TextLabel)
     if stroke then stroke.Transparency = 1 end
 end
 
--- Tilted ribbon tag with a diamond icon and a glowing outline (not a button).
-local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number, cy: number, w: number, tilt: number): (Frame, UIScale, UIStroke)
+-- Tilted ribbon tag with a diamond icon and a glowing outline (not a button). BD-1107: its size, tilt and words come from HatchTagLayout (measured at the
+-- 14 px floor of this window): the word is a fixed size (never shrunk to fit, which cannot go under its minimum and ran out of the tag).
+local function ribbon(parent: GuiObject, color: Color3, p: TagLayout.Placed): (Frame, UIScale, UIStroke)
     local f = Instance.new("Frame")
-    f.Name, f.BackgroundColor3, f.AnchorPoint, f.Visible, f.Rotation = "Ribbon", WHITE, Vector2.new(.5, .5), false, tilt
-    f.Position, f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(cx, cy), UDim2.fromOffset(w, 44), parent.ZIndex + 6, parent
+    f.Name, f.BackgroundColor3, f.AnchorPoint, f.Visible, f.Rotation = "Ribbon", WHITE, Vector2.new(.5, .5), false, p.tilt
+    f.Position, f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(p.cx, p.cy), UDim2.fromOffset(p.w, p.h), parent.ZIndex + 6, parent
     local rc = Instance.new("UICorner") rc.CornerRadius = Chip.radius() rc.Parent = f -- BD-1070: the chunky tag corner, never a full-round pill
     local g = Instance.new("UIGradient")
     g.Rotation = 90
@@ -328,12 +331,12 @@ local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number
     local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = color:Lerp(WHITE, .6), 4, f
     local icon = Instance.new("Frame")
     icon.BackgroundColor3, icon.BorderSizePixel, icon.AnchorPoint, icon.Rotation = WHITE, 0, Vector2.new(.5, .5), 45
-    icon.Position, icon.Size, icon.ZIndex, icon.Parent = UDim2.fromOffset(24, 22), UDim2.fromOffset(16, 16), f.ZIndex + 1, f
+    icon.Position, icon.Size, icon.ZIndex, icon.Parent = UDim2.fromOffset(24, p.h / 2), UDim2.fromOffset(16, 16), f.ZIndex + 1, f
     local label = Instance.new("TextLabel")
-    label.BackgroundTransparency, label.Position, label.Size, label.Font, label.Text = 1, UDim2.fromOffset(42, 2), UDim2.new(1, -50, 1, -4), Enum.Font.FredokaOne, text
-    label.TextColor3, label.TextScaled, label.ZIndex, label.TextStrokeTransparency, label.TextStrokeColor3 = WHITE, true, f.ZIndex + 1, 0, Color3.new(0, 0, 0)
+    label.BackgroundTransparency, label.Position, label.Size, label.Font, label.Text = 1, UDim2.fromOffset(TagLayout.Ribbon.icon, 2), UDim2.new(1, -(TagLayout.Ribbon.icon + TagLayout.Ribbon.right), 1, -4), Enum.Font.FredokaOne, p.text
+    label.TextColor3, label.TextScaled, label.TextSize, label.ZIndex, label.TextStrokeTransparency, label.TextStrokeColor3 = WHITE, false, p.size, f.ZIndex + 1, 0, Color3.new(0, 0, 0)
+    label.TextWrapped, label.TextTruncate = false, Enum.TextTruncate.AtEnd -- the words were measured: the ellipsis is only a net under a font wider than the estimate
     label.Parent = f
-    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 14, label
     local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, f
     return f, scale, stroke
 end
@@ -371,6 +374,7 @@ function Seq.play(args: Args): Handle
     local home = BODY_HOME
     if bodyHomePos.X.Scale == 0 and bodyHomePos.Y.Scale == 0 and bodyHomeAnchor.X == 0 and bodyHomeAnchor.Y == 0 then home = Vector2.new(bodyHomePos.X.Offset, bodyHomePos.Y.Offset) end
     local fit = 1
+    local screenScale = 1 -- screen px per design px of the card (BD-1107: the 14 px text floor of the tags in design px)
     local oldFit = a.body:FindFirstChild("HatchBodyFit") -- a UIScale left by the egg before: measure the body at its own size
     if oldFit then oldFit:Destroy() end
     local holder = a.body.Parent
@@ -379,6 +383,7 @@ function Seq.play(args: Args): Handle
         local px = bodyPx.X / a.body.Size.X.Offset -- screen px per design px
         fit = math.min(1, (holder.AbsoluteSize.X - home.X * px) / bodyPx.X, (holder.AbsoluteSize.Y - home.Y * px) / bodyPx.Y)
         fit = math.clamp(fit, .5, 1)
+        screenScale = px * fit
     end
     local bodyCenter = home + (BODY_CENTER - BODY_HOME) * fit
     local fx = ensureLayers(a.panel)
@@ -416,6 +421,7 @@ function Seq.play(args: Args): Handle
     end
 
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
+    local nameBase = {pos = a.nameLabel.Position, size = a.nameLabel.Size, align = a.nameLabel.TextXAlignment} -- BD-1107: the box Bootstrap gave it (the class badge moves it)
     local classBadge: Frame? = nil -- built in applyResult, shown with the name
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
     local pill = Instance.new("Frame")
@@ -438,8 +444,8 @@ function Seq.play(args: Args): Handle
     -- Ribbons (Shiny / BIG / mutation, created once the result is known) and the tap hint.
     local badges: {{any}} = {}
     local pulseStrokes: {UIStroke} = {}
-    local function addRibbon(text: string, color: Color3, cx: number, cy: number, w: number, tilt: number)
-        local f, s, st = ribbon(a.body, text, color, cx, cy, w, tilt)
+    local function addRibbon(color: Color3, p: TagLayout.Placed)
+        local f, s, st = ribbon(a.body, color, p)
         table.insert(badges, {f, s}) table.insert(pulseStrokes, st)
     end
     local hint = Instance.new("TextLabel")
@@ -935,48 +941,80 @@ function Seq.play(args: Args): Handle
             a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
         end
         if classBadge then classBadge:Destroy() classBadge = nil end
+        -- BD-1107 / BD-1097: the name label goes back to its own box; with a class badge it is LEFT-aligned right of the badge (the old code centred the name and
+        -- put the badge left of its measured width, which the engine often answered too small, so the badge lay over the first letters).
+        a.nameLabel.Position, a.nameLabel.Size, a.nameLabel.TextXAlignment = nameBase.pos, nameBase.size, nameBase.align
         if not failed and type(r.speciesId) == "string" then
-            -- Left of the centred name text (label box 80..740 x 236..290 inside the body), vertically centred on it.
             local badgeSize = 40
-            local measured = a.nameLabel.TextBounds.X -- BD-1097: right after the text is set the engine may still answer 0: then the width is estimated, so the badge never lands on the name
-            local textWidth = math.min(if measured > 1 then measured else #a.nameLabel.Text * .55 * a.nameLabel.TextSize, a.nameLabel.AbsoluteSize.X)
             local badge = ClassBadge.create(a.body, r.speciesId, badgeSize, true)
-            badge.AnchorPoint = Vector2.new(1, .5)
-            badge.Position = UDim2.fromOffset(a.nameLabel.Position.X.Offset + a.nameLabel.Size.X.Offset / 2 - textWidth / 2 - 8, a.nameLabel.Position.Y.Offset + a.nameLabel.Size.Y.Offset / 2)
+            -- how wide the badge will be (it grows to the right with its word): the icon, a gap and the class word at its 14 px floor size, plus the fallback tag's padding
+            local word = badge:FindFirstChild("ClassWord")
+            local icon = badge:FindFirstChild("Icon")
+            local wordSize = if word and word:IsA("TextLabel") then math.max(word.TextSize, TagFit.floorSize(screenScale)) else 14
+            local badgeW = (if icon then badgeSize + 6 else 0) + (if word and word:IsA("TextLabel") then TagFit.width(word.Text, wordSize) + (if icon then 0 else 24) else 0) + 6
+            if not icon and not word then badgeW = badgeSize end
+            -- the name's width: the engine's answer when it has one, never under the estimate (the estimate is on the wide side)
+            local measured = a.nameLabel.TextBounds.X
+            local labelX, labelY, labelW, labelH = nameBase.pos.X.Offset, nameBase.pos.Y.Offset, nameBase.size.X.Offset, nameBase.size.Y.Offset
+            local nameW = math.max(if measured > 1 then measured else 0, TagFit.width(a.nameLabel.Text, a.nameLabel.TextSize))
+            nameW = math.min(nameW, labelW - badgeW - 12)
+            local gap = 10
+            local left = math.max(labelX, labelX + labelW / 2 - (badgeW + gap + nameW) / 2)
+            badge.AnchorPoint = Vector2.new(0, .5)
+            badge.Position = UDim2.fromOffset(left, labelY + labelH / 2)
+            a.nameLabel.Position = UDim2.fromOffset(left + badgeW + gap, labelY)
+            a.nameLabel.Size = UDim2.fromOffset(math.max(60, labelX + labelW - (left + badgeW + gap)), labelH)
+            a.nameLabel.TextXAlignment = Enum.TextXAlignment.Left
             badge.ZIndex, badge.Visible = a.nameLabel.ZIndex + 1, false
             for _, d in badge:GetDescendants() do if d:IsA("GuiObject") then d.ZIndex = badge.ZIndex end end
             classBadge = badge
         end
         pill.BackgroundColor3 = glow:Lerp(Color3.new(0, 0, 0), .4)
-        do -- BD-1073: why "Skip the rest" stops on this egg
+        do -- BD-1107: the ribbons (Shiny, mutation, BIG, New pattern! / New colour!) and the BD-1073 tag "why Skip stops" are MEASURED and STACKED down the card's two sides
+            local items: {TagLayout.Item} = {}
+            local fills: {Color3} = {}
+            local function add(item: TagLayout.Item, fill: Color3) table.insert(items, item) table.insert(fills, fill) end
             local why = Timeline.stopReason({conditionId = if r.genes then r.genes.conditionId else nil, shiny = r.shiny, big = r.big, mutationName = r.mutationName, failed = failed})
+            if r.shiny then add({kind = "ribbon", side = "left", text = "SHINY", minW = 170, tilt = -7}, Theme.Colors.gold) end
+            if r.mutationName then add({kind = "ribbon", side = "left", text = string.upper(r.mutationName), minW = 210, tilt = -4}, r.mutationColor or Theme.Colors.gold) end
             if why then
-                local tagRect = FxPlan.Card.stopTag
                 local fill = if r.genes and r.genes.conditionId == "rainbow" then Theme.Colors.purple elseif r.genes and r.genes.conditionId == "astra" then Theme.Colors.blue
                     elseif r.mutationColor and not r.shiny and not r.big then r.mutationColor else Theme.Colors.gold
-                local tag, tagTitle = Chip.new(a.body, {name = "StopTag", fill = fill, size = UDim2.fromOffset(tagRect.w, tagRect.h), position = UDim2.fromOffset(tagRect.cx, tagRect.cy),
-                    anchor = Vector2.new(.5, .5), z = a.body.ZIndex + 6, textInset = 8})
-                tagTitle.Position, tagTitle.Size = UDim2.fromOffset(8, 1), UDim2.new(1, -16, 0, 27)
-                tagTitle.Text = why
-                local line = Instance.new("TextLabel")
-                line.Name, line.BackgroundTransparency, line.Position, line.Size, line.ZIndex = "StopLine", 1, UDim2.fromOffset(8, 29), UDim2.new(1, -16, 0, 19), tag.ZIndex + 1
-                line.Font, line.TextColor3, line.TextScaled, line.Text, line.Parent = Enum.Font.FredokaOne, WHITE, true, Timeline.StopLine, tag
-                line.TextStrokeTransparency, line.TextStrokeColor3 = 0, Theme.Colors.outline
-                local lineLimit = Instance.new("UITextSizeConstraint") lineLimit.MinTextSize, lineLimit.MaxTextSize, lineLimit.Parent = Chip.Spec.minText, 20, line
-                tag.Visible = false
-                table.insert(badges, {tag, (function() local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, tag return sc end)()})
+                add({kind = "stop", side = "left", text = why, line = Timeline.StopLine}, fill)
+            end
+            if r.big then add({kind = "ribbon", side = "right", text = "BIG", minW = 150, tilt = 7}, Theme.Colors.purple) end
+            if r.newFind and not failed then -- BD-436: a first-time colour, pattern or mutation. BD-1039 (flag): "New pattern!" and "New colour!" instead of one "NEW!"
+                local ok, fresh = pcall(function() return HttpService:JSONDecode(PrivateState.str("LastChestNewJson", "{}")) end)
+                local words = NewFinds.ribbons(if ok then fresh else nil, Config.PatternColourIndexEnabled)
+                if #words == 0 then words = {"NEW!"} end
+                for _, word in words do add({kind = "ribbon", side = "right", text = word, minW = if #word > 5 then 200 else 130, tilt = 5}, Theme.Colors.gold) end
+            end
+            local placed = TagLayout.plan(items, screenScale)
+            for i, spot in placed do
+                if spot.kind == "stop" then
+                    local tag, tagTitle = Chip.new(a.body, {name = "StopTag", fill = fills[i], size = UDim2.fromOffset(spot.w, spot.h), position = UDim2.fromOffset(spot.cx, spot.cy),
+                        anchor = Vector2.new(.5, .5), z = a.body.ZIndex + 6, textInset = 8})
+                    local titleH = math.ceil(spot.textLines * spot.size * TagFit.LineHeight)
+                    local lineSize = spot.lineSize or Chip.Spec.minText
+                    local lineH = math.ceil(spot.lineLines * lineSize * TagFit.LineHeight)
+                    tagTitle.Position, tagTitle.Size = UDim2.fromOffset(8, 3), UDim2.new(1, -16, 0, titleH)
+                    tagTitle.TextScaled, tagTitle.TextSize, tagTitle.TextTruncate = false, spot.size, Enum.TextTruncate.AtEnd -- measured (HatchTagLayout), never shrunk to fit
+                    local oldLimit = tagTitle:FindFirstChildOfClass("UITextSizeConstraint")
+                    if oldLimit then oldLimit:Destroy() end
+                    tagTitle.Text = spot.text
+                    local line = Instance.new("TextLabel")
+                    line.Name, line.BackgroundTransparency, line.Position, line.Size, line.ZIndex = "StopLine", 1, UDim2.fromOffset(8, 5 + titleH), UDim2.new(1, -16, 0, lineH), tag.ZIndex + 1
+                    line.Font, line.TextColor3, line.TextScaled, line.TextSize, line.Text, line.Parent = Enum.Font.FredokaOne, WHITE, false, lineSize, spot.line or "", tag
+                    line.TextWrapped, line.TextTruncate = false, Enum.TextTruncate.AtEnd
+                    line.TextStrokeTransparency, line.TextStrokeColor3 = 0, Theme.Colors.outline
+                    tag.Visible = false
+                    table.insert(badges, {tag, (function() local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, tag return sc end)()})
+                else
+                    addRibbon(fills[i], spot)
+                end
             end
         end
-        if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
-        if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
-        if r.newFind and not failed then -- BD-436: a first-time colour, pattern or mutation. BD-1039 (flag): "New pattern!" and "New colour!" instead of one "NEW!"
-            local ok, fresh = pcall(function() return HttpService:JSONDecode(PrivateState.str("LastChestNewJson", "{}")) end)
-            local words = NewFinds.ribbons(if ok then fresh else nil, Config.PatternColourIndexEnabled)
-            if #words == 0 then words = {"NEW!"} end
-            for k, word in words do addRibbon(word, Theme.Colors.gold, if #word > 5 then 708 else 724, (if r.big then 108 else 52) + (k - 1) * 56, if #word > 5 then 200 else 130, 5) end
-        end
         if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
-        if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
         do
             local i, n = Timeline.batchStep(batch, r.remaining, os.clock())

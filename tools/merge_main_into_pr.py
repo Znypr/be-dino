@@ -603,7 +603,7 @@ def main(argv=None):
                     n = resolve_worklog_jsonl(wt, full)
                     say("  %s: union of both sides (append-only log), %d line(s) taken from the PR" % (path, n))
                     needs_render = True
-                elif path in APPEND_ONLY_DOCS or (path == KANBAN and cutover):  # the kanban page is text only after the cutover
+                elif path in APPEND_ONLY_DOCS or fnmatch.fnmatchcase(path, ".github/workflows/*.yml") or (path == KANBAN and cutover):  # the kanban page is text only after the cutover
                     n = resolve_append_only_doc(full)
                     say("  %s: append-only log, both sides added text: %d hunk(s) kept from both sides (main first)" % (path, n))
                 elif path.startswith("docs/catalog/"):

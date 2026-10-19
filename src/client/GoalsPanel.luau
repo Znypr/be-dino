@@ -76,13 +76,14 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         root.Size = UDim2.fromOffset(state.width, if folded then HEADER_H else HEADER_H + 2 + #rows * 56)
         header.Text = Rules.Title .. (if folded then "  (tap)" else "")
     end
+    local elapsed = 0
     header.Activated:Connect(function()
         folded = not folded
         gui:SetAttribute(Stack.Attribute, Stack.after(gui:GetAttribute(Stack.Attribute), Stack.Goals, not folded)) -- BD-1095: opening Goals folds the Tasks panel
         render()
+        elapsed = 0.5 -- BD-1108: place it (under the rail when it would cover it) on the next frame, not after the half-second tick
     end)
 
-    local elapsed = 0
     gui:GetAttributeChangedSignal(Stack.Attribute):Connect(function() -- BD-1095: the Tasks panel opened: fold at once, and re-place on the next frame
         if not folded and Stack.mustFold(gui:GetAttribute(Stack.Attribute), Stack.Goals) then folded = true render() end
         elapsed = 0.5
@@ -120,6 +121,15 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         local top = root.Position.Y.Offset
         local mine = Rect.new(right - foldedW, top, right, top + HEADER_H * scale.Scale)
         if gui:GetAttribute("GoalsFoldedRect") ~= mine then gui:SetAttribute("GoalsFoldedRect", mine) end
+        -- BD-1108: the OPEN card keeps off the HUD rail (RailRect, from HudV2.layout: two buttons in a run, six at home): it opens under the rail when it would cover it.
+        local openRect: Rect? = nil
+        if not folded then
+            local o: Stack.R = {x = right - state.width * scale.Scale, y = top, w = state.width * scale.Scale, h = root.Size.Y.Offset * scale.Scale}
+            local dy = Stack.clearRail(o, Stack.fromRect(gui:GetAttribute("RailRect")), gui.AbsoluteSize.Y)
+            if dy > 0 then root.Position = root.Position + UDim2.fromOffset(0, dy) end
+            openRect = Rect.new(o.x, o.y + dy, o.x + o.w, o.y + dy + o.h)
+        end
+        if gui:GetAttribute("GoalsOpenRect") ~= openRect then gui:SetAttribute("GoalsOpenRect", openRect) end -- the Tasks panel hides if it lies under it
         root.Visible = not Stack.hidden(Stack.Goals, gui:GetAttribute(Stack.Attribute), Stack.fromRect(mine), Stack.fromRect(gui:GetAttribute("ObjectivesOpenRect")))
         if state.dirty then
             state.dirty = false
