@@ -177,3 +177,5 @@ P1 (rows added to the board): R1 rail with words and bigger buttons; R2 window t
 
 ## 7. Follow-ups and board rows
 Parent row BD-1115 (P2) and the rows it lists are in the board. Items that need a person: phone pictures of both games (R15); a real look at the Steal An Egg hatch reveal (not captured here); a Blender study of mutation materials (R13).
+
+**Update 2026-10-19 (BD-1116):** R1 is built behind `HudRailWordsEnabled`: five word buttons at home, Settings as a gear, words 16 px (desktop) or 14 px (phone), see [212](212-hud-rail-with-words.md). Offline evidence only; the Studio look is BD-1143.

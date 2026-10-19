@@ -68,7 +68,8 @@ local canvases = {
  {760, 360}, {800, 302}, {800, 600}, {1024, 768}, {1156, 793}, {1156, 841}, {1280, 720}, {1366, 768}, {1445, 841}, {1920, 1080}, {2400, 1080},
 }
 -- the two rails the layout gets: HUB = the six buttons at home, RUN = POTIONS and SETTINGS only (RailRun, BD-1105)
-local RAILS = {{name = "hub", count = 6}, {name = "run", count = 2}}
+-- BD-1116: and the rail with words (HudRailWordsEnabled): five word buttons + the gear at home, one + the gear in a run (the gear is inside the rail rect)
+local RAILS = {{name = "hub", count = 6}, {name = "run", count = 2}, {name = "words hub", count = 5, words = true}, {name = "words run", count = 1, words = true}}
 local probeOverlaps, states, checked, railProbe, railMoved = 0, 0, 0, 0, 0
 local noRoom = {}
 local function railOf(layout) local r = layout.rail return {x = r.x, y = r.y, w = r.w * r.scale, h = r.h * r.scale} end -- what HudV2.layout publishes as RailRect
@@ -90,7 +91,7 @@ for _, v in canvases do
     for _, touch in {true, false} do
         for _, railKind in RAILS do
             local w, h = v[1], v[2]
-            local layout = TouchLayout.compute({width = w, height = h, touch = touch, navCount = railKind.count, goals = true, objectives = true})
+            local layout = TouchLayout.compute({width = w, height = h, touch = touch, navCount = railKind.count, goals = true, objectives = true, railWords = railKind.words})
             local goalsFolded, goalsOpen0, tasksFolded, tasksOpen0 = visibleRects(layout)
             local rail = railOf(layout)
             local label = string.format("%dx%d %s, %s rail", w, h, if layout.touch then "phone layout" else "desktop layout", railKind.name)
@@ -142,7 +143,7 @@ end
 assert(probeOverlaps > 0, "probe lost sensitivity: without the rule no canvas has an open panel over the other one")
 assert(railProbe > 0 and railMoved > 0, "probe lost sensitivity: without the rail rule no canvas has an open panel over the rail")
 table.sort(noRoom)
-print(string.format("Hud panel stack passed: %d states on %d canvases x 2 rails (touch and mouse; six-button rail at home, two-button rail in a run); without the stack rule %d of them draw one panel over the other, without the rail rule %d layouts have an open panel over the rail, %d of those open under it; no room under the rail (left where it was): %d (%s)",
+print(string.format("Hud panel stack passed: %d states on %d canvases x 4 rails (touch and mouse; six-button rail at home, two-button rail in a run, and with HudRailWordsEnabled five word buttons + the gear at home, one + the gear in a run); without the stack rule %d of them draw one panel over the other, without the rail rule %d layouts have an open panel over the rail, %d of those open under it; no room under the rail (left where it was): %d (%s)",
     checked, #canvases * 2, probeOverlaps, railProbe, railMoved, #noRoom, table.concat(noRoom, "; ")))
 '''
 

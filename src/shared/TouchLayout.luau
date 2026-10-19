@@ -60,6 +60,13 @@ end
 -- is 240 x 48, `bottom` px above the screen bottom (HubTravelClientRules.ChipBottom, asserted equal by tools/verify_movement_mobile.py).
 TouchLayout.SIZEBAR = {w = 250, h = 34, hintW = 360, hintH = 28, hintDy = 38, gap = 4}
 TouchLayout.CHIP = {w = 240, h = 48, bottom = 96, gap = 4}
+-- BD-1116 (docs/202 R1, docs/212; behind Config.HudRailWordsEnabled): the rail with a WORD on every button and at most five buttons. At home: Dinos, Eggs,
+-- Fusion, Shop, Potions; Settings is folded into a small gear (the "gear cell", not counted as a button) that sits at the end of the rail. In a run: Potions + the gear.
+-- Desktop: cells of cellW x cellH design px (icon left, word right at `text` design px) and the rail never scales under minScale, so the word renders >= 16 px.
+-- Phone / short window: cells at least wordW px wide (the word is NEVER hidden: no icon-only cell), taller than the old ones (phoneBh), the gear takes the next grid slot.
+-- When the rail with words does not fit a window without touching another HUD piece (a very narrow window), TouchLayout.compute answers with the OLD rail (Settings an
+-- ordinary sixth button, `railWordsFallback = true`): never two pieces on top of each other. `top` = the y a desktop rail never goes above (under the Admin button).
+TouchLayout.RAILWORDS = {cellW = 176, cellH = 56, gap = 4, icon = 44, text = 20, minScale = 0.8, gearMin = 48, wordW = 60, phoneBh = 52, top = 64}
 
 -- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
 -- the stack is TOAST.w wide, centred, and used to sit at y = 80 (y = 4 with a menu open), which covers both on any canvas
@@ -169,6 +176,13 @@ local function railButtons(count: number, columns: number, bw: number, bh: numbe
     return positions
 end
 
+-- BD-333: too narrow for a 14 px label (SETTINGS needs ~64 px): icon-only. BD-1116: also the gear cell of the rail with words.
+local function iconOnlyContent(bw: number, bh: number)
+    local icon = math.min(bw - 8, bh - 8)
+    return {iconX = (bw - icon) / 2, iconY = (bh - icon) / 2, icon = icon, labelX = 0, labelY = 0, labelW = 0, labelH = 0,
+        textSize = PhoneScale.MinText, iconOnly = true}
+end
+
 local function buttonContent(bw: number, bh: number)
     if bw >= 120 then
         -- Wide tablets: icon left, label right (desktop style).
@@ -177,10 +191,7 @@ local function buttonContent(bw: number, bh: number)
             labelW = bw - icon - 10, labelH = bh, textSize = clamp(math.floor((bw - icon - 10) / 4.8), PhoneScale.MinText, 17)}
     end
     if bw < PhoneScale.RailLabelW then
-        -- BD-333: too narrow for a 14 px label (SETTINGS needs ~64 px): icon-only button, the label is hidden by Bootstrap.
-        local icon = math.min(bw - 8, bh - 8)
-        return {iconX = (bw - icon) / 2, iconY = (bh - icon) / 2, icon = icon, labelX = 0, labelY = 0, labelW = 0, labelH = 0,
-            textSize = PhoneScale.MinText, iconOnly = true}
+        return iconOnlyContent(bw, bh) -- the label is hidden by RailRun.place
     end
     -- Phones: icon above a short label.
     local icon = math.min(math.floor(bh * 0.5), bw - 12)
@@ -267,7 +278,21 @@ local function adminDesktopRect(layout, width: number, height: number): Rect
     return default
 end
 
-local function desktop(width: number, height: number, count: number, objectives: boolean?)
+-- BD-1116: the desktop rail with words (see TouchLayout.RAILWORDS). Returns the pieces of the `rail` table (the caller adds x and y).
+local function railWordsDesktop(count: number, small: number)
+    local R = TouchLayout.RAILWORDS
+    local scale = clamp(small, R.minScale, 1)
+    local gearSide = math.max(R.gearMin, math.ceil(R.gearMin / scale)) -- renders >= 48 px
+    local gearY = R.gap + count * (R.cellH + R.gap)
+    return {scale = scale, w = R.cellW + 2 * R.gap, h = gearY + gearSide + R.gap, positions = railButtons(count, 1, R.cellW, R.cellH, R.gap) :: any,
+        gear = {x = R.gap, y = gearY}, rows = count + 1,
+        button = {w = R.cellW, h = R.cellH, iconX = 6, iconY = (R.cellH - R.icon) / 2, icon = R.icon, labelX = R.icon + 12, labelY = 0,
+            labelW = R.cellW - R.icon - 18, labelH = R.cellH, textSize = R.text} :: any,
+        gearCell = {w = gearSide, h = gearSide, iconX = 6, iconY = 6, icon = gearSide - 12, labelX = 0, labelY = 0, labelW = 0, labelH = 0,
+            textSize = PhoneScale.MinText, iconOnly = true} :: any}
+end
+
+local function desktop(width: number, height: number, count: number, objectives: boolean?, words: boolean?)
     local small = clamp(math.min(width / 1000, height / 800), 0.3, 1)
     local crystalScale = math.max(0.65, small)
     local hud = {x = 18, y = height - 18 - TouchLayout.HUD.h * small, scale = small, w = TouchLayout.HUD.w, h = TouchLayout.HUD.h}
@@ -285,7 +310,7 @@ local function desktop(width: number, height: number, count: number, objectives:
         hud = hud,
         rail = {x = 14, y = height / 2 - railH * small / 2, scale = small, w = 186, h = railH,
             button = {w = 172, h = 54, iconX = 5, iconY = 6, icon = 40, labelX = 52, labelY = 0, labelW = 114, labelH = 54, textSize = 19},
-            positions = railButtons(count, 1, 172, 54, 7) :: any},
+            positions = railButtons(count, 1, 172, 54, 7) :: any} :: any,
         timers = {x = width - 20 - TouchLayout.TIMERS_W * small, y = height - 22 - 220 * small, scale = small, w = TouchLayout.TIMERS_W, h = 220,
             leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true,
             leapText = PhoneScale.floorText(22, small), weatherText = PhoneScale.floorText(20, small), buffsText = PhoneScale.floorText(16, small)}, -- BD-376: >= 14 px rendered
@@ -294,12 +319,21 @@ local function desktop(width: number, height: number, count: number, objectives:
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
         toastScale = math.min(1, (width - 20) / 440),
     }
+    if words then -- BD-1116
+        local r = railWordsDesktop(count, small)
+        local bottom = hud.y - TouchLayout.FEEDBACK.h - 2 * TouchLayout.FEEDBACK.gap -- Tell us! sits above the egg plate
+        r.x, r.y = 14, math.max(TouchLayout.RAILWORDS.top, math.min(height / 2 - r.h * r.scale / 2, bottom - r.h * r.scale))
+        result.rail = r :: any
+        -- the toast stack (440 design px wide) may sit right of the rail instead of under it in a narrow window: it shrinks a little to fit (never under 0.7)
+        result.toastScale = math.min(result.toastScale, math.max(0.7, (width - (r.x + r.w * r.scale) - 8 - TouchLayout.TOAST.gap - 12) / TouchLayout.TOAST.w))
+    end
+    local railScale: number = result.rail.scale
     result.feedback = feedbackRect(result, width, height) -- BD-507
     if objectives then -- BD-075: left of the hub Goals panel, same top edge, clear of the rail and of the OPEN Goals panel
         local O = TouchLayout.OBJECTIVES
         local g, gOpen = TouchLayout.goalsDesktop(result.crystal)
         result.goalsPanel, result.goalsPanelOpen = g, gOpen
-        local railRight = result.rail.x + result.rail.w * small
+        local railRight = result.rail.x + result.rail.w * railScale
         local right = g.x - O.deskGap
         local x = math.max(right - O.w, railRight + O.deskGap)
         local y = g.y
@@ -318,10 +352,10 @@ end
 
 -- `goals` (BD-531): true while the hub Goals header is on screen (out of a run, after the first egg); the right-hand column then starts under it.
 -- `objectives` (BD-075): true while the objectives pill is on screen (same condition as `goals`, and Config.ObjectivesEnabled); nil/false = nothing changes.
-function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?, objectives: boolean?})
+local function build(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?, objectives: boolean?}, words: boolean)
     local width, height, count = params.width, params.height, params.navCount
     -- BD-333: a short canvas (phone landscape) always gets the phone layout, even when Studio/PC reports a mouse.
-    if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count, params.objectives) end
+    if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count, params.objectives, words) end
     local target, m = Config.TouchMinTargetPx, Config.TouchSafeMargin
     local s = clamp(math.min(width / 1000, height / 560), 0.55, 1)
     local thumb, corner = TouchLayout.reservedZones(width, height, params.thumb, params.jump)
@@ -329,7 +363,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     -- Top-left status HUD: stays above the thumbstick zone.
     local hudScale = math.min(1, math.max(s, Config.TouchMinHudScale), (thumb.y - 2 * m) / TouchLayout.HUD.h)
     local crystalScale = math.max(0.65, s)
-    local hud, crystal, rail
+    local hud, crystal, rail: any
     for attempt = 1, 2 do
         if attempt == 2 then
             -- Narrow phones: compact status widgets to their floor before shrinking buttons.
@@ -341,6 +375,31 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         local left = hud.x + hud.w * hudScale + m
         local available = crystal.x - m - left
         local gap = 4
+        -- BD-1116: the rail with words: the buttons (count) and the gear take the slots of one row, else of a grid of 2 rows; a cell is never narrower than a word.
+        if words then
+            local R = TouchLayout.RAILWORDS
+            local cells = count + 1
+            -- one row, else two rows of 52 px, else two rows of 44 px with a 2 px gap (a 339 px tall phone window)
+            for _, shape in {{1, math.max(target + 8, math.round(56 * s)), gap}, {2, math.max(target, R.phoneBh), gap}, {2, target, 2}} do
+                local rows, bh, gap = shape[1], shape[2], shape[3]
+                local columns = math.ceil(cells / rows)
+                local bw = math.min(132, math.floor((available - (columns + 1) * gap) / columns))
+                local railW = columns * bw + (columns + 1) * gap
+                local railH = rows * bh + (rows + 1) * gap
+                if bw >= R.wordW and m + railH <= thumb.y then
+                    local all = railButtons(cells, columns, bw, bh, gap)
+                    local positions = {}
+                    for i = 1, count do positions[i] = all[i] end
+                    rail = {x = left + (available - railW) / 2, y = m, scale = 1, w = railW, h = railH,
+                        button = buttonContent(bw, bh), positions = positions :: any, rows = rows, gear = all[cells], gearCell = iconOnlyContent(bw, bh)}
+                    rail.button.w, rail.button.h = bw, bh
+                    rail.gearCell.w, rail.gearCell.h = bw, bh
+                    break
+                end
+            end
+            if rail then break end
+            continue
+        end
         -- One row of navigation buttons between HUD and wallet, else a 2-row grid.
         for _, rows in {1, 2} do
             local columns = math.ceil(count / rows)
@@ -357,6 +416,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         end
         if rail then break end
     end
+    if not rail and words then return nil end -- BD-1116: no room for a word in every cell: TouchLayout.compute answers with the old rail
     if not rail then
         -- Last resort (very narrow canvas): minimum-size grid, verified by tests not to be hit.
         local columns = math.ceil(count / 2)
@@ -461,6 +521,39 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     result.sizeBar, result.sizeHint = sizeBarRects(width, rail.y + rail.h * rail.scale + 4, clamp(rail.scale, 0.7, 1), column)
     result.chip = chipRect(width, height, blockers, {result.feedback, result.admin})
     return result
+end
+
+-- BD-1116: does the rail with words sit on the canvas without touching another HUD piece (the egg plate, the wallet and its goal line, the Goals header, the objectives
+-- pill, the weather / LEAP column, Home / Explore, the build badge, the Studio notice, the chip, Tell us!, Admin, the SIZE bar and its hint)?
+function TouchLayout.railFits(layout, width: number, height: number): boolean
+    local rail = TouchLayout.rendered(layout.rail)
+    if rail.x < -1e-6 or rail.y < -1e-6 or rail.x + rail.w > width + 1e-6 or rail.y + rail.h > height + 1e-6 then return false end
+    local t, c = layout.timers, layout.crystal
+    local others: {Rect?} = {TouchLayout.rendered(layout.hud), TouchLayout.rendered(c), TouchLayout.rendered(layout.action), TouchLayout.rendered(layout.badge),
+        TouchLayout.rendered(layout.notice), layout.goals, layout.objectives, layout.goalsPanel, layout.chip, layout.feedback, layout.admin,
+        {x = c.x, y = c.y + c.h * c.scale + TouchLayout.GOAL_GAP, w = c.w * c.scale, h = TouchLayout.GOAL_H * c.scale},
+        {x = t.x, y = t.y + t.leapY * t.scale, w = t.w * t.scale, h = TouchLayout.LEAP_H * t.scale}}
+    if t.weatherVisible then table.insert(others, {x = t.x, y = t.y + t.weatherY * t.scale, w = t.w * t.scale, h = TouchLayout.WEATHER_H * t.scale}) end
+    if t.buffsVisible then table.insert(others, {x = t.x, y = t.y + t.buffsY * t.scale, w = t.w * t.scale, h = t.buffsH * t.scale}) end
+    if layout.sizeBar then table.insert(others, TouchLayout.rendered(layout.sizeBar)) end
+    if layout.sizeHint then table.insert(others, TouchLayout.rendered(layout.sizeHint)) end
+    for _, piece in others do
+        if piece and TouchLayout.overlaps(rail, piece) then return false end
+    end
+    return true
+end
+
+-- `railWords` (BD-1116, Config.HudRailWordsEnabled): the rail with a word on every button (see TouchLayout.RAILWORDS). `navCount` is then the number of WORD buttons (the gear for
+-- Settings is extra). When the words do not fit this window the answer is the old rail with navCount + 1 buttons and `railWordsFallback = true`. nil / false = the rail as before.
+function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?, objectives: boolean?, railWords: boolean?})
+    if params.railWords ~= true then return build(params, false) end
+    local result = build(params, true)
+    if result ~= nil and TouchLayout.railFits(result, params.width, params.height) then return result end
+    local old = table.clone(params)
+    old.navCount = params.navCount + 1
+    local fallback = build(old, false)
+    fallback.railWordsFallback = true
+    return fallback
 end
 
 -- BD-570 (docs/134 s13): where the gift popup (GiftPopup.client, behind Config.GiftClaimEnabled) goes. It shows in the cave hub only, as real pixels

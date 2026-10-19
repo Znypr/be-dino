@@ -11,6 +11,7 @@
 -- @@PREFIX@@
 
 local sources = MODULE_SOURCES
+local RAIL_WORDS = false -- BD-1116: tools/verify_menu_layout.py flips this to true for a second run with Config.HudRailWordsEnabled on
 local loaded, stubs = {}, {}
 local failures = 0
 local function check(ok, message)
@@ -105,7 +106,7 @@ local RailRun
 local function buildWorld(viewW, viewH, touch, runState)
     loaded.ModalCompact = nil
     ModalCompact = requireModule(ClientFolder.ModalCompact)
-    if ConfigHub == nil then ConfigHub = table.clone(ConfigReal) ConfigHub.CaveHub = true end
+    if ConfigHub == nil then ConfigHub = table.clone(ConfigReal) ConfigHub.CaveHub = true ConfigHub.HudRailWordsEnabled = RAIL_WORDS end
     loaded.RailRun, loaded.Config = nil, ConfigHub
     RailRun = requireModule(ClientFolder.RailRun)
     loaded.Config = ConfigReal
@@ -122,15 +123,20 @@ local function buildWorld(viewW, viewH, touch, runState)
         b:SetAttribute("Destination", dest)
         buttons[i] = b
     end
-    local layout = TouchLayout.compute({width = viewW, height = viewH, touch = touch, navCount = RailRun.count(buttons), goals = true})
+    local layout = TouchLayout.compute({width = viewW, height = viewH, touch = touch, navCount = RailRun.count(buttons), goals = true, railWords = RAIL_WORDS})
     local r = layout.rail
     rail0.Position, rail0.Size = UDim2.fromOffset(r.x, r.y), UDim2.fromOffset(r.w, r.h)
     rail0:FindFirstChild("Scale").Scale = r.scale
     local rail = rail0
+    if RAIL_WORDS then
+        RailRun.place(buttons, layout) -- BD-1116: the gear takes its own slot
+        for _, b in buttons do b.Visible = not RailRun.hidden(b) end
+    else
     for i, b in buttons do
         local pos = RailRun.position(buttons, i, r.positions)
         b.Position, b.Size = UDim2.fromOffset(pos.x, pos.y), UDim2.fromOffset(r.button.w, r.button.h)
         b.Visible = not RailRun.hidden(b)
+    end
     end
     local wallet = inst("Frame", "Crystals", gui, {Position = UDim2.fromOffset(layout.crystal.x, layout.crystal.y), Size = UDim2.fromOffset(layout.crystal.w, layout.crystal.h), ZIndex = 5})
     inst("UIScale", "Scale", wallet, {Scale = layout.crystal.scale})
@@ -414,6 +420,7 @@ for _, where in {"above", "below", "edge"} do print("  toast place " .. where ..
 local HOME_ONLY = {collection = true, eggs = true, fusion = true, auras = true}
 for _, touch in {false, true} do
     for _, size in SIZES do
+        if RAIL_WORDS then break end -- the six-button rail of BD-1105; the rail with words is checked by tools/rail_words_smoke.luau
         local w, h = size[1], size[2]
         local tag = string.format("Rail %dx%d%s", w, h, if touch then " touch" else "")
         local hub = buildWorld(w, h, touch, "Sanctuary")

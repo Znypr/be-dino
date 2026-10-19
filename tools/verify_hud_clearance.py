@@ -76,6 +76,8 @@ local function pieces(l)
     for i, p in l.rail.positions do
         list[#list + 1] = {name = "nav" .. i, r = {x = l.rail.x + p.x * l.rail.scale, y = l.rail.y + p.y * l.rail.scale, w = l.rail.button.w * l.rail.scale, h = l.rail.button.h * l.rail.scale}}
     end
+    local g = l.rail.gear -- BD-1116: the gear of the rail with words
+    if g then list[#list + 1] = {name = "gear", r = {x = l.rail.x + g.x * l.rail.scale, y = l.rail.y + g.y * l.rail.scale, w = l.rail.gearCell.w * l.rail.scale, h = l.rail.gearCell.h * l.rail.scale}} end
     return list
 end
 
@@ -86,7 +88,9 @@ for _, w in widths do
     for _, h in heights do
         for _, touch in {true, false} do
             for _, mode in {"run", "hub", "hub+objectives"} do
-                local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = mode ~= "run", objectives = mode == "hub+objectives"})
+              -- BD-1116: every canvas twice, the old six-button rail and the rail with words (five word buttons + the gear at home, one + the gear in a run)
+              for _, words in {false, true} do
+                local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = if words then (if mode == "run" then 1 else 5) else 6, goals = mode ~= "run", objectives = mode == "hub+objectives", railWords = words})
                 local label = string.format("%dx%d %s %s", w, h, if l.touch then "phone layout" else "desktop layout", mode)
                 local fb, ad = l.feedback, l.admin
                 for _, pair in {{"Tell us!", fb}, {"Admin", ad}} do
@@ -102,6 +106,7 @@ for _, w in widths do
                 if l.touch then
                     if ad.y < fb.y then stacked += 1 elseif ad.w < TouchLayout.ADMIN.w then shrunk += 1 else beside += 1 end
                 end
+              end
             end
         end
     end

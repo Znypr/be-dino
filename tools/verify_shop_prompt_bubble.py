@@ -243,7 +243,7 @@ for _, w in widths do
     for _, h in heights do
         for _, touch in {true, false} do
             for _, mode in {"run", "hub", "hub+objectives"} do
-                local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = mode ~= "run", objectives = mode == "hub+objectives"})
+                local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = if WORDS then (if mode == "run" then 1 else 5) else 6, railWords = WORDS, goals = mode ~= "run", objectives = mode == "hub+objectives"})
                 -- what the bubble is told to avoid comes from the rule's own name lists (the attributes the HUD publishes); what must stay clear is fixed here
                 local byName = {RailRect = rectOf(l.rail), TimersRect = rectOf(l.timers), ActionRect = rectOf(l.action), HudRect = rectOf(l.hud),
                     WalletBlockRect = TouchLayout.walletPlates(l), FeedbackRect = l.feedback, AdminRect = l.admin, BadgeRect = rectOf(l.badge), NoticeRect = rectOf(l.notice), ChipRect = l.chip}
@@ -306,7 +306,7 @@ local function slotCheck()
             for _, touch in {true, false} do
                 for _, mode in {"run", "hub", "hub+objectives"} do
                     if w >= 500 then
-                        local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = mode ~= "run", objectives = mode == "hub+objectives"})
+                        local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = if WORDS then (if mode == "run" then 1 else 5) else 6, railWords = WORDS, goals = mode ~= "run", objectives = mode == "hub+objectives"})
                         for _, bar in {0, 36, 58} do
                             local screenH = h + bar
                             local byName = {RailRect = TouchLayout.rendered(l.rail), TimersRect = TouchLayout.rendered(l.timers), ActionRect = TouchLayout.rendered(l.action), HudRect = TouchLayout.rendered(l.hud),
@@ -347,8 +347,8 @@ print("shop prompt bubble passed: words, keys, fit, which and when, where (" .. 
 '''
 
 
-def prefix(replacements, fast=False):
-    return ('local FAST = ' + ('true' if fast else 'false') + chr(10) + 'local mods={}\n'
+def prefix(replacements, fast=False, words=False):
+    return ('local FAST = ' + ('true' if fast else 'false') + chr(10) + 'local WORDS = ' + ('true' if words else 'false') + chr(10) + 'local mods={}\n'
             + 'local script={Parent={CaveHubLayout="CaveHubLayout",HubTravelClientRules="HubTravelClientRules",HubSignCopy="HubSignCopy",HubWalkUpRules="HubWalkUpRules",Config="Config",PhoneScale="PhoneScale"}}\n'
             + 'local require=function(name) return mods[name] end\n'
             + 'local CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau') + '\nmods.CaveHubLayout=CaveHubLayout\n'
@@ -363,8 +363,9 @@ def prefix(replacements, fast=False):
             + 'local HubPromptBubbleRules=' + wrapped('src/shared/HubPromptBubbleRules.luau', replacements.get('HubPromptBubbleRules', ())) + '\n')
 
 
-def script(replacements=None, fast=False):
-    return prefix(replacements or {}, fast) + LUAU
+def script(replacements=None, fast=False, words=False):
+    """words = True: the sweep runs with the rail with words (BD-1116, Config.HudRailWordsEnabled): five word buttons + the gear at home, one + the gear in a run."""
+    return prefix(replacements or {}, fast, words) + LUAU
 
 
 def client_script(replacements=None):
@@ -518,6 +519,11 @@ def main():
     check_sources()
     result = run(args.runner, script())
     print(result.stdout, end='')
+    if result.returncode or 'passed' not in result.stdout:
+        print(result.stderr)
+        sys.exit(result.returncode or 1)
+    result = run(args.runner, script(words=True))  # BD-1116: the same sweep with the rail with words
+    print('[rail with words] ' + result.stdout, end='')
     if result.returncode or 'passed' not in result.stdout:
         print(result.stderr)
         sys.exit(result.returncode or 1)
