@@ -122,6 +122,11 @@ return table.freeze({
     -- rule (the four home buttons hidden in a run), the glow trail and the first-run MENU chip are unchanged. false = the six small buttons exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157).
     HudRailWordsEnabled = false,
+    -- BD-1118 / BD-1144 (docs/202 R3, docs/213): true = an Aura or Trail shop card is picture, name and ONE wide button with the PRICE written on it ("35 Crystals");
+    -- details sit behind an Info word button on a read-only page; sold out and locked are a grey button. The price button still opens the same confirm page
+    -- (auraConfirm) and nothing is bought before BUY there. false = the Build 020 card (two chips, price caption, BUY). Pinned off in the default profile, ON in
+    -- the playtest profile (docs/157). Free, no Robux.
+    ShopCardPriceButtonEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

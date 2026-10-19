@@ -55,4 +55,34 @@ function P.auraCard(item, growthText: string?, info)
         buttonText = look.buttonText, tone = if info.equipped then "equipped" else look.tone,
     }
 end
+
+-- BD-1118 / BD-1144 (docs/202 R3, docs/213): the card with the PRICE ON THE BUTTON. data = what P.trailCard / P.auraCard returned for the same item.
+-- The one button says the price ("35 Crystals") while the item can be bought, EQUIP / UNEQUIP when owned, LEVEL n when locked, SOLD OUT when sold out.
+-- tone: buy | equip | unequip | locked | soldOut (the client picks the colour: green for buy and equip, the card colour for unequip, grey for the rest).
+-- Details (rarity, level, odds) are NOT on the card: they sit behind the Info word (P.InfoWord) on the read-only page of P.infoLines.
+P.InfoWord = "Info"
+function P.priceCard(data, item, isTrail: boolean)
+    local button
+    if data.equipped then button = {text = "UNEQUIP", tone = "unequip", active = true}
+    elseif data.kind == State.Owned then button = {text = "EQUIP", tone = "equip", active = true}
+    elseif data.kind == State.Locked then button = {text = data.buttonText, tone = "locked", active = true} -- a tap says why (the level note), like the old card
+    elseif data.kind == State.SoldOut then button = {text = "SOLD OUT", tone = "soldOut", active = false}
+    else button = {text = item.price .. " Crystals", tone = "buy", active = true} end
+    return {
+        name = item.name, rarity = item.rarity or "Common", benefit = if isTrail then data.speedText else data.growthText,
+        button = button, equipped = data.equipped == true, dim = data.dim == true, look = data.look, info = P.InfoWord,
+    }
+end
+
+-- The lines of the read-only details page behind Info: benefit, rarity (the tier word, coloured by the client), the level a trail needs, then
+-- what the player has: on the dino, owned, or the price. Short words for a child (docs/72); no odds (auras and trails have none).
+function P.infoLines(item, isTrail: boolean, info, growthText: string?): {string}
+    local lines = {if isTrail then P.speedWords(item.speed) else (growthText or "Growth")}
+    table.insert(lines, (item.rarity or "Common") .. (if isTrail then " trail" else " aura"))
+    if isTrail then table.insert(lines, if item.level > 1 then "Needs level " .. item.level else "Starter trail") end
+    if info.equipped then table.insert(lines, "On your dino now")
+    elseif info.owned then table.insert(lines, "You own this")
+    else table.insert(lines, item.price .. " Crystals") end
+    return lines
+end
 return P

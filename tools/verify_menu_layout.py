@@ -50,11 +50,14 @@ MODULES.update({
 })
 
 
-def build(replacements=None, words=False):
+def build(replacements=None, words=False, price=False):
     source = sw.build_script(replacements, HARNESS, MODULES)
     if words:  # BD-1116: the same world with Config.HudRailWordsEnabled on (the six-button rail checks of section 5 are skipped: tools/verify_rail_words.py has the word rail's own)
         assert 'local RAIL_WORDS = false' in source
         source = source.replace('local RAIL_WORDS = false', 'local RAIL_WORDS = true', 1)
+    if price:  # BD-1144: the same world with Config.ShopCardPriceButtonEnabled on (the shop card with the price on the button; its own checks are in tools/verify_shop_card_price.py)
+        assert 'local PRICE_BUTTON = false' in source
+        source = source.replace('local PRICE_BUTTON = false', 'local PRICE_BUTTON = true', 1)
     return source
 
 
@@ -162,9 +165,9 @@ def main():
     parser.add_argument('--runner', required=True)
     parser.add_argument('--no-mutants', action='store_true')
     args = parser.parse_args()
-    for words in (False, True):
-        result = sw.run(args.runner, build(words=words))
-        print(('[rail with words] ' if words else '') + result.stdout, end='')
+    for words, price in ((False, False), (True, False), (False, True)):
+        result = sw.run(args.runner, build(words=words, price=price))
+        print(('[rail with words] ' if words else '[price on the button] ' if price else '') + result.stdout, end='')
         if result.returncode != 0 or 'passed' not in result.stdout:
             print(result.stderr)
             sys.exit(result.returncode or 1)

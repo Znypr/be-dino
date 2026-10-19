@@ -60,10 +60,13 @@ def allow_literal(entries):
     return '{' + ', '.join(rows) + '}'
 
 
-def build(replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None):
+def build(replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None, price=False):
     menu = read('tools/menu_layout_smoke.luau')
     assert HEAD_END in menu, 'menu_layout_smoke.luau lost the marker the text-floor smoke is spliced behind'
     head = menu[:menu.index(HEAD_END)]
+    if price:  # BD-1144: the same pages with Config.ShopCardPriceButtonEnabled on (the shop card with the price on the button)
+        assert 'local PRICE_BUTTON = false' in head
+        head = head.replace('local PRICE_BUTTON = false', 'local PRICE_BUTTON = true', 1)
     body = read(body_path)
     assert PREFIX_NOTE in body
     body = body.replace(PREFIX_NOTE, '').replace('@@ALLOW@@', allow_literal(allow or []))
@@ -84,8 +87,8 @@ def build(replacements=None, allow=None, body_path='tools/text_floor_smoke.luau'
     return combined.replace('local sources = MODULE_SOURCES', 'local sources = {\n' + ''.join(parts) + '}')
 
 
-def run_smoke(runner, replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None):
-    result = sw.run(runner, build(replacements, allow, body_path, extra_modules))
+def run_smoke(runner, replacements=None, allow=None, body_path='tools/text_floor_smoke.luau', extra_modules=None, price=False):
+    result = sw.run(runner, build(replacements, allow, body_path, extra_modules, price))
     return result.returncode == 0 and 'passed' in result.stdout, result.stdout + result.stderr
 
 

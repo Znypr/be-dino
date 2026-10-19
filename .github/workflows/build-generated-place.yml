@@ -155,6 +155,7 @@ jobs:
           python tools/verify_small_window.py --runner /tmp/luau/luau
           python tools/verify_menu_layout.py --runner /tmp/luau/luau
           python tools/verify_rail_words.py --runner /tmp/luau/luau
+          python tools/verify_shop_card_price.py --runner /tmp/luau/luau
           python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
           python tools/verify_tag_fit.py --runner /tmp/luau/luau
           python tools/verify_hud_clearance.py --runner /tmp/luau/luau
