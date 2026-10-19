@@ -407,7 +407,7 @@ render=function(name: string)
                 -- BD-170: the egg starts opening this very frame; the server answer is handed to the screen when it arrives.
                 if (hatchState.next :: any)() then open("hatch") end
             end,
-            openSettings=function() open("settings") end,
+            openSettings=function(tab) if tab then require(script.Parent.SettingsMenu).setTab(tab) end open("settings") end, -- BD-1132: the AUTO button opens the Help tab (where the auto-open toggles are)
             autoOpenText=autoOpenText,
             -- BD-369: the empty card is a way out, not a dead end; the cracked hint needs the dino count.
             explore=function()

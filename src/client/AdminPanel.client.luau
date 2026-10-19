@@ -277,19 +277,15 @@ local function setOpen(open: boolean)
 end
 toggle.Activated:Connect(function() setOpen(not panel.Visible) end)
 -- BD-304: the Admin button sat on top of every menu's corner. Hide it while a game menu is open (unless the panel itself is open).
-task.spawn(function()
-    local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
-    local scrim = main and main:WaitForChild("ModalScrim", 30)
-    if not scrim or not scrim:IsA("GuiObject") then return end
-    -- BD-1103: the Fusion menu is its own ScreenGui (BeDinoFusionUI), so the Admin button lay over its bottom edge (docs/199 picture 379): it hides for that menu too
-    local fusion = player.PlayerGui:FindFirstChild("BeDinoFusionUI") or player.PlayerGui:WaitForChild("BeDinoFusionUI", 30)
-    local function fusionOpen(): boolean return fusion ~= nil and fusion:IsA("ScreenGui") and fusion.Enabled end
-    local function sync() toggle.Visible = panel.Visible or not (scrim.Visible or fusionOpen()) end
-    scrim:GetPropertyChangedSignal("Visible"):Connect(sync)
+-- BD-1130: MenuWatch sees the Fusion menu too. It is a ScreenGui made on first use, so the old one-time look-up (30 s wait, which also held the scrim
+-- hook back) never hid the button for it (docs/205 picture 440).
+do
+    local watch: any = nil
+    local function sync() toggle.Visible = panel.Visible or not (watch ~= nil and watch.anyOpen()) end
+    watch = require(script.Parent:WaitForChild("MenuWatch")).watch(player:WaitForChild("PlayerGui"), sync)
     panel:GetPropertyChangedSignal("Visible"):Connect(sync)
-    if fusion and fusion:IsA("ScreenGui") then fusion:GetPropertyChangedSignal("Enabled"):Connect(sync) end
     sync()
-end)
+end
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.F2 then setOpen(not panel.Visible) end
 end)

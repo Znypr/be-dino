@@ -57,7 +57,7 @@ stubs.PotionArt = {icon = function() return nil end}
 stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end, readyIds = function() return {} end}
 stubs.PrivateState = {get = function() return nil end, str = function(_, fallback) return fallback or "" end}
 stubs.HudSettings = nil
-local clientNames = {ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
+local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
@@ -94,7 +94,7 @@ local function centerOf(o) local r = rectOf(o) return r.x + r.w / 2, r.y + r.h /
 local function isGuiObject(o) return o:IsA("GuiObject") end
 
 local SIZES = {
-    {848, 423}, {848, 481}, {844, 390}, {844, 354}, {667, 375}, {667, 339}, {500, 465}, {500, 400}, {740, 340}, {1156, 793}, {1445, 841},
+    {516, 481}, {848, 423}, {848, 481}, {844, 390}, {844, 354}, {667, 375}, {667, 339}, {500, 465}, {500, 400}, {740, 340}, {1156, 793}, {1445, 841},
 }
 local NAV = {"collection", "eggs", "fusion", "auras", "potions", "settings"} -- the rail, in Bootstrap's order (each button has a Destination attribute)
 local ConfigHub = nil -- a copy of Config with the Cave hub on (RailRun and the rail rules only act with it)
@@ -596,6 +596,40 @@ for _, touch in {false, true} do
 end
 
 
+-- ===== 3b. BD-1132: the Settings tabs (Look, Controls) at the small sizes =====
+-- Studio round 8 (docs/205 picture 438) at 516 x 481: the Look tab's tab row touched the Effects row and the Calm motion button touched Fast mode.
+local function mountSettings(world, tab)
+    loaded.SettingsMenu = nil
+    Services.UserInputService.TouchEnabled = false
+    local Settings = requireModule(ClientFolder.SettingsMenu)
+    Settings.setTab(tab)
+    world.body:ClearAllChildren()
+    Settings.build(world.body, {label = uiLabel, button = uiButton, open = function() end, notify = function() end, cameraReset = function() end})
+    ModalCompact.enforce()
+    return Settings
+end
+for _, touch in {false, true} do
+    for _, size in SIZES do
+        for _, tab in {"look", "controls"} do
+            local world = buildWorld(size[1], size[2], touch)
+            showMenu(world)
+            mountSettings(world, tab)
+            pageChecks(world, string.format("Settings/%s %dx%d%s", tab, size[1], size[2], if touch then " touch" else ""))
+            local vis = visibleBox(world)
+            local tabs = 0
+            for _, d in world.body:GetChildren() do
+                if string.sub(d.Name, 1, 4) == "Tab_" then
+                    tabs += 1
+                    local r = rectOf(d)
+                    check(r.y >= vis.y - .75 and r.h >= 43.5, string.format("Settings/%s %dx%d: the tab '%s' (%s) is cut at the top of the body (%s) or under 44 px", tab, size[1], size[2], d.Text, describe(r), describe(vis)))
+                end
+            end
+            check(tabs == 4, "Settings: four tabs")
+            world.gui:Destroy()
+        end
+    end
+end
+
 -- ===== 4. a desktop window keeps the old design numbers (nothing above changes it) =====
 for _, size in {{1156, 793}, {1445, 841}} do
     local tag = string.format("Desktop %dx%d", size[1], size[2])
@@ -623,6 +657,14 @@ for _, size in {{1156, 793}, {1445, 841}} do
     world, shop = fresh("potionConfirm")
     cancel = byText(world.body, "CANCEL")
     check(cancel ~= nil and cancel.Position.Y.Offset == 339 and cancel.Size.Y.Offset == 44, tag .. ": the potion CANCEL button is at 339, 44 high")
+    world.gui:Destroy()
+    -- BD-1132: the Settings Look tab keeps its old numbers on a desktop window (48 px controls, 56 px pitch, first row at 64)
+    world = buildWorld(size[1], size[2], false)
+    showMenu(world)
+    mountSettings(world, "look")
+    local calm, tabLook = byText(world.body, "Calm motion"), byText(world.body, "LOOK")
+    check(calm ~= nil and calm.Position.Y.Offset == 64 + 2 * 56 and calm.Size.Y.Offset == 48, tag .. ": Settings Look rows are 56 apart from y 64, 48 high")
+    check(tabLook ~= nil and tabLook.Size.Y.Offset == 48 and tabLook.Position.Y.Offset == 0, tag .. ": the Settings tab row is 48 high at y 0")
     world.gui:Destroy()
     world, shop = fresh("potions")
     local scroller = world.body:FindFirstChild("PotionScroll")

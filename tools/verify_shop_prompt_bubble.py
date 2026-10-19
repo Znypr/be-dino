@@ -13,12 +13,20 @@ Luau runtime:
    the whole bubble is at least 96 px wide and 44 px tall, and the rows do not overlap.
 4. WHICH AND WHEN: one bubble, the nearest; nothing outside the walk-up range; hidden while a window is open (and for a moment after it
    closes), while the stall cannot open, and for a moment after a press.
-5. CLIENT SMOKE (tools/shop_prompt_bubble_smoke.luau): the REAL src/client/HubPromptBubble.luau runs against a tiny mock Roblox: what it builds (name,
+5. WHERE (BD-1128, docs/205 picture 421): the bubble is a screen layer ABOVE the HUD, placed clear of every HUD rectangle (HubPromptBubbleRules.place /
+   layoutFor, on the REAL TouchLayout rectangles at 20 widths x 16 heights x mouse and touch x run / hub / hub with objectives): on the screen, no hard HUD piece
+   covered (rail, weather column, Home, egg plate, Crystals block, Tell us!, Admin), the small bubble tried when the big one has no room; the few tight windows
+   are listed, not hidden.
+   BD-1132 (docs/205 picture 447): the soft weather title line (WeatherTitleSlot) slides clear of the same HUD pieces at the same window sizes.
+6. CLIENT SMOKE (tools/shop_prompt_bubble_smoke.luau): the REAL src/client/HubPromptBubble.luau runs against a tiny mock Roblox: what it builds (name,
    line, key cap, "Open"), one bubble at a time, the key press (sunk, nearest prompt, one soft click, hidden for a moment), a tap on the bubble,
-   hidden while a window is open (the key still works), hidden when the stall cannot open, phone / gamepad / short-screen versions, Reduce Motion.
-6. SOURCE GUARDS: nothing opens by walking near (no Heartbeat / padAt / Touched in the client files, one InputHoldBegin, from a tap or the key),
+   hidden while a window is open (the key still works), hidden when the stall cannot open, phone / gamepad / short-screen versions, Reduce Motion;
+   BD-1128: a screen layer above the HUD (DisplayOrder 10, no billboard), centred on the projected stall point, clear of the HUD rectangles, offset by the
+   layer origin, back on the screen when the stall is off to the side, hidden behind the camera, glides (jumps with Reduce Motion), one per-frame update only
+   while it shows.
+7. SOURCE GUARDS: nothing opens by walking near (no Heartbeat / padAt / Touched in the client files, one InputHoldBegin, from a tap or the key),
    the old round button stays for the flag-off path, the Heart prompt is flag-gated, Bootstrap is untouched, the flag is pinned in every profile.
-7. MUTANTS: the checks must FAIL when a rule is broken (window ignored, no return delay, farthest wins, range ignored, phone shows a key, flag
+8. MUTANTS: the checks must FAIL when a rule is broken (window ignored, no return delay, farthest wins, range ignored, phone shows a key, flag
    key stays G, always the big layout, long or numbered copy, no hide after a press, fit check always true).
 
 Not Studio evidence: nobody saw the bubble, pressed E or tapped it on a phone here. Usage: python tools/verify_shop_prompt_bubble.py --runner luau.exe
@@ -66,12 +74,14 @@ for _, id in ids do
     assert(line:sub(-1) == "!", id .. " is a warm line")
     assert(not seenLines[line], id .. " has its own line")
     seenLines[line] = true
+    -- BD-1129: a stall opens a window ("Open"); the Heart shows your dino off ("Show off"), it never says Open (docs/205 picture 432)
+    local go, goTouch = if id == "heart" then "Show off" else "Open", if id == "heart" then "Tap to show off" else "Tap to open"
     local k = R.words(id, "Keyboard", "E", "E")
-    assert(k and k.title == title and k.line == line and k.keyLabel == "E" and k.buttonText == "Open", id .. " keyboard words")
+    assert(k and k.title == title and k.line == line and k.keyLabel == "E" and k.buttonText == go, id .. " keyboard words")
     local t = R.words(id, "Touch", "E", "E")
-    assert(t and t.keyLabel == nil and t.buttonText == "Tap to open", id .. " phone words: no key, tap to open")
+    assert(t and t.keyLabel == nil and t.buttonText == goTouch, id .. " phone words: no key, tap to " .. goTouch)
     local g = R.words(id, "Gamepad", "ButtonX", "E")
-    assert(g and g.keyLabel == "X" and g.buttonText == "Open", id .. " gamepad words: the X button")
+    assert(g and g.keyLabel == "X" and g.buttonText == go, id .. " gamepad words: the X button")
 end
 for _, bad in {"settings", "gate", "fame", "", 5, false} do
     assert(R.words(bad, "Keyboard", "E", "E") == nil, "no bubble for " .. tostring(bad))
@@ -155,23 +165,206 @@ local s2 = R.newState()
 assert(R.step(s2, input({windowOpen = true}), 1) == nil and R.step(s2, input(), 1.1) == nil and R.step(s2, input({windowOpen = true}), 1.2) == nil)
 assert(R.step(s2, input(), 1.3) == nil and R.step(s2, input(), 1.7) == "nests")
 
-print("shop prompt bubble passed: words, keys, fit, which and when")
+-- ---- 5. where on the screen (BD-1128)
+local function ov(a, b) return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h end
+local function boxOf(p, size) return {x = p.x, y = p.y, w = size.w, h = size.h} end
+local size = {w = 248, h = 116}
+-- no HUD: centred on the point; slid onto the screen when the point is near or past an edge
+local p0 = R.place({w = 1000, h = 700, point = {x = 500, y = 350}, size = size, blockers = {}})
+assert(p0.clear and p0.x == 376 and p0.y == 292, "centred on the point")
+local pe = R.place({w = 1000, h = 700, point = {x = -300, y = 900}, size = size, blockers = {}})
+assert(pe.x == R.Edge and pe.y == 700 - R.Edge - 116, "slid onto the screen: " .. pe.x .. ", " .. pe.y)
+-- a HUD rectangle where the bubble would be: the bubble goes to the nearest free spot, a gap away
+local rail = {x = 380, y = 240, w = 300, h = 120}
+local pr = R.place({w = 1000, h = 700, point = {x = 540, y = 315}, size = size, blockers = {rail}})
+assert(pr.clear and not ov(boxOf(pr, size), {x = rail.x - R.Gap, y = rail.y - R.Gap, w = rail.w + 2 * R.Gap, h = rail.h + 2 * R.Gap}), "off the rail with a gap")
+local pr2 = R.place({w = 1000, h = 700, point = {x = 540, y = 315}, size = size, blockers = {{x = 0, y = 0, w = 1000, h = 250}}})
+assert(pr2.clear and pr2.y >= 256, "below a wide block")
+-- the nearest free spot, not a far one
+local pn = R.place({w = 1000, h = 700, point = {x = 540, y = 315}, size = size, blockers = {rail}})
+assert(math.abs(pn.y - 366) < 1e-6 or math.abs(pn.y - 118) < 1e-6 or math.abs(pn.x - 126) < 1e-6 or math.abs(pn.x - 686) < 1e-6, "a spot beside the rail")
+local pfar = R.place({w = 1000, h = 700, point = {x = 540, y = 315}, size = size, blockers = {rail}})
+assert((pfar.x - 416) ^ 2 + (pfar.y - 257) ^ 2 <= 110 ^ 2 + 1, "the nearest free spot (109 px away), not the farthest")
+-- soft pieces: avoided while a spot exists that also clears the hard ones; covered rather than a hard piece
+local softBox = {x = 380, y = 240, w = 300, h = 120}
+local ps = R.place({w = 1000, h = 700, point = {x = 540, y = 315}, size = size, blockers = {}, soft = {softBox}})
+assert(ps.clear and not ps.softCovered and not ov(boxOf(ps, size), softBox), "a soft piece is avoided when there is room")
+local wall = {x = 0, y = 0, w = 1000, h = 700}
+local pw = R.place({w = 1000, h = 700, point = {x = 500, y = 350}, size = size, blockers = {}, soft = {wall}})
+assert(pw.clear and pw.softCovered, "only soft pieces left: covering a soft piece counts as clear")
+local ph = R.place({w = 1000, h = 700, point = {x = 500, y = 350}, size = size, blockers = {wall}, soft = {}})
+assert(not ph.clear, "no free spot at all: not clear")
+-- junk is survived
+for _, junk in {{}, {w = 0 / 0}, {w = 100, h = 100, point = "x", size = 5, blockers = "x"}, {w = 1000, h = 700, size = size, blockers = {5, "x", {x = 1}, {x = 0, y = 0, w = -4, h = 5}}}} do
+    local r = R.place(junk)
+    assert(r.x == r.x and r.y == r.y, "no NaN from junk")
+end
+assert(R.place(nil).x == R.place(nil).x)
+-- layoutFor: the small bubble when the big one has no room; the big one when it has
+local tallWall = {x = 0, y = 0, w = 1000, h = 590}
+local lf, lfClear = R.layoutFor(1000, 700, {tallWall}, {})
+assert(lf.small == true and lfClear == true, "110 px of room: the small bubble (100 px) fits, the big one (116 px) does not")
+local lf2, clear2 = R.layoutFor(1000, 700, {}, {})
+assert(lf2.small == false and clear2 == true, "room: the big bubble")
+local lf3, clear3 = R.layoutFor(1000, 700, {{x = 0, y = 0, w = 1000, h = 640}}, {})
+assert(lf3.small == true and clear3 == false, "no room even for the small one")
+assert(select(1, R.layoutFor(1000, 400, {}, {})).small == true, "a short screen keeps the small bubble")
+assert(select(1, R.layoutFor(nil, nil, nil, nil)) ~= nil and select(2, R.layoutFor(0, 0, {}, {})) == true, "unknown canvas: still a layout")
+-- rectOf: a Roblox Rect or a table with Min and Max; junk is nil
+local rr = R.rectOf({Min = {X = 10, Y = 20}, Max = {X = 110, Y = 60}})
+assert(rr and rr.x == 10 and rr.y == 20 and rr.w == 100 and rr.h == 40)
+assert(R.rectOf(nil) == nil and R.rectOf(5) == nil and R.rectOf({}) == nil and R.rectOf({Min = {X = 5, Y = 5}, Max = {X = 5, Y = 9}}) == nil and R.rectOf({Min = {X = 0 / 0, Y = 0}, Max = {X = 5, Y = 9}}) == nil)
+-- follow: Reduce Motion jumps; motion eases and never overshoots
+local jumped = R.follow({x = 0, y = 0}, {x = 100, y = 50}, 1 / 60, false)
+assert(jumped.x == 100 and jumped.y == 50, "Reduce Motion: at once")
+local eased = R.follow({x = 0, y = 0}, {x = 100, y = 50}, 1 / 60, true)
+assert(eased.x > 0 and eased.x < 100 and eased.y > 0 and eased.y < 50, "motion: part of the way")
+assert(R.follow(nil, {x = 7, y = 8}, 1 / 60, true).x == 7, "the first spot is taken at once")
+assert(R.follow({x = 0, y = 0}, {x = 100, y = 0}, 100, true).x <= 100, "a long frame never overshoots")
+assert(R.follow({x = 0, y = 0}, {x = 100, y = 0}, 0 / 0, true).x == 100, "a junk frame time jumps")
+for _, name in R.HardRects do assert(type(name) == "string") end
+local attrs = {}
+for _, n in R.HardRects do attrs[n] = true end
+for _, n in R.SoftRects do assert(not attrs[n], "a piece is hard or soft, not both") end
+-- the attributes the bubble reads are the ones the HUD publishes: HudV2.layout publishes TouchLayout.hudRects, Bootstrap the tester buttons and the chip
+local published = {RailRect = true, FeedbackRect = true, AdminRect = true, ChipRect = true}
+for name in TouchLayout.hudRects(TouchLayout.compute({width = 800, height = 600, touch = false, navCount = 6})) do published[name] = true end
+for _, n in R.HardRects do assert(published[n], "nobody publishes " .. n) end
+for _, n in R.SoftRects do assert(published[n], "nobody publishes " .. n) end
+
+-- the real HUD rectangles at every window size
+local function rectOf(e) return TouchLayout.rendered(e) end
+-- the full sweep (FAST = false) is the check; the mutant runs use a short list of the same kind of windows (500 to 1156 wide, 339 to 841 high) to stay quick
+local widths = if FAST then {500, 516, 667, 848, 1156} else {440, 480, 500, 516, 600, 667, 740, 800, 848, 915, 1156, 1445, 1920}
+local heights = if FAST then {339, 423, 481, 600, 841} else {339, 375, 400, 423, 465, 481, 500, 600, 793, 841, 1080}
+local TIGHT = {["500x500"] = true, ["500x560"] = true, ["516x500"] = true, ["600x500"] = true} -- desktop layout + objectives pill, about 500 to 600 px wide: no free spot
+local canvases, spots, softCovered, tight, tightSeen, visited = 0, 0, 0, 0, {}, {}
+for _, w in widths do
+    for _, h in heights do
+        for _, touch in {true, false} do
+            for _, mode in {"run", "hub", "hub+objectives"} do
+                local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = mode ~= "run", objectives = mode == "hub+objectives"})
+                -- what the bubble is told to avoid comes from the rule's own name lists (the attributes the HUD publishes); what must stay clear is fixed here
+                local byName = {RailRect = rectOf(l.rail), TimersRect = rectOf(l.timers), ActionRect = rectOf(l.action), HudRect = rectOf(l.hud),
+                    WalletBlockRect = TouchLayout.walletPlates(l), FeedbackRect = l.feedback, AdminRect = l.admin, BadgeRect = rectOf(l.badge), NoticeRect = rectOf(l.notice), ChipRect = l.chip}
+                local hard, softs = {}, {}
+                for _, n in R.HardRects do table.insert(hard, byName[n]) end
+                for _, n in R.SoftRects do table.insert(softs, byName[n]) end
+                local mustClear = {byName.RailRect, byName.TimersRect, byName.ActionRect, byName.HudRect, byName.WalletBlockRect, byName.FeedbackRect, byName.AdminRect}
+                local label = string.format("%dx%d %s %s", w, h, if l.touch then "phone layout" else "desktop layout", mode)
+                local layout, clear = R.layoutFor(w, h, hard, softs)
+                canvases += 1
+                if w >= 500 then
+                    local key = w .. "x" .. h
+                    visited[key] = true
+                    if not clear then
+                        assert(TIGHT[key] and not l.touch and mode == "hub+objectives", label .. ": no free spot for the bubble")
+                        tight += 1
+                        tightSeen[key] = true
+                    end
+                    for ix, fx in (if FAST then {-0.1, 0.5, 1.1} else {-0.1, 0, 0.3, 0.5, 0.8, 1.1}) do
+                        for iy, fy in (if FAST then {-0.1, 0.5, 1.1} else {-0.1, 0, 0.3, 0.6, 1, 1.1}) do
+                            -- half of the points are placed with the soft pieces, half without them (then only the hard pieces keep the bubble off Home and the rail)
+                            local withSoft = (ix + iy) % 2 == 0
+                            local r = R.place({w = w, h = h, point = {x = w * fx, y = h * fy}, size = {w = layout.w, h = layout.h}, blockers = hard, soft = if withSoft then softs else {}})
+                            spots += 1
+                            assert(r.x >= R.Edge - 1e-6 and r.y >= R.Edge - 1e-6 and r.x + layout.w <= w - R.Edge + 1e-6 and r.y + layout.h <= h - R.Edge + 1e-6, label .. ": the bubble leaves the screen")
+                            if clear then
+                                assert(r.clear, label .. ": free spots exist but place did not find one")
+                                for _, b in mustClear do
+                                    assert(not ov({x = r.x - R.Gap + 1e-6, y = r.y - R.Gap + 1e-6, w = layout.w + 2 * R.Gap - 2e-6, h = layout.h + 2 * R.Gap - 2e-6}, b), label .. ": the bubble touches a HUD piece")
+                                end
+                                if r.softCovered then softCovered += 1 elseif withSoft then
+                                    for _, b in softs do assert(not ov(boxOf(r, layout), b), label .. ": the bubble covers a soft piece") end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+for key in TIGHT do assert(not visited[key] or tightSeen[key], "probe lost sensitivity: " .. key .. " is no longer tight (shrink the TIGHT list)") end
+
+-- ---- 5b. the soft weather title (BD-1132, picture 447): the box of the small line never lies over a HUD piece
+local function slotCheck()
+    local Slot, WL = WeatherTitleSlot, WeatherLooks
+    -- pure basics
+    assert(Slot.centreY({w = 1000, h = 700, boxW = 240, boxH = 24, wantY = 217, blockers = {}}) == 217, "nothing in the way: it keeps its place")
+    local down = Slot.centreY({w = 1000, h = 700, boxW = 240, boxH = 24, wantY = 240, blockers = {{x = 300, y = 190, w = 400, h = 60}}})
+    assert(down - 12 >= 250 + Slot.Gap and math.abs(down - 240) < 40, "slides to the nearest free place, below the block: " .. down)
+    local up = Slot.centreY({w = 1000, h = 700, boxW = 240, boxH = 24, wantY = 240, blockers = {{x = 300, y = 190, w = 400, h = 60}, {x = 300, y = 250, w = 400, h = 200}}})
+    assert(up < 190 - Slot.Gap, "the way down is blocked: it goes above: " .. up)
+    assert(Slot.centreY({w = 1000, h = 700, boxW = 240, boxH = 24, wantY = 217, blockers = {{x = 0, y = 0, w = 1000, h = 700}}}) == 217, "no free place: the old spot")
+    assert(Slot.centreY({w = 1000, h = 700, boxW = 240, boxH = 24, wantY = 217, blockers = {{x = 700, y = 0, w = 100, h = 700}}}) == 217, "a block beside the title does not matter")
+    assert(Slot.centreY(nil) == 0 and Slot.centreY({wantY = 5}) == 5 and Slot.centreY({w = 1, h = 1, boxW = 1, boxH = 1, wantY = 3, blockers = {5, {x = 1}}}) == 3, "junk is survived")
+    -- every window: the real HUD rectangles, offset by a top bar of 0 / 36 / 58 px (the HUD canvas starts below it, the title layer does not)
+    local rects, checked, moved = 0, 0, 0
+    for _, w in widths do
+        for _, h in heights do
+            for _, touch in {true, false} do
+                for _, mode in {"run", "hub", "hub+objectives"} do
+                    if w >= 500 then
+                        local l = TouchLayout.compute({width = w, height = h, touch = touch, navCount = 6, goals = mode ~= "run", objectives = mode == "hub+objectives"})
+                        for _, bar in {0, 36, 58} do
+                            local screenH = h + bar
+                            local byName = {RailRect = TouchLayout.rendered(l.rail), TimersRect = TouchLayout.rendered(l.timers), ActionRect = TouchLayout.rendered(l.action), HudRect = TouchLayout.rendered(l.hud),
+                                WalletBlockRect = TouchLayout.walletPlates(l), FeedbackRect = l.feedback, AdminRect = l.admin}
+                            local hard = {}
+                            for _, n in R.HardRects do
+                                local r = byName[n]
+                                table.insert(hard, {x = r.x, y = r.y + bar, w = r.w, h = r.h})
+                            end
+                            local boxW, boxH = w * WL.Title.width * 0.4, screenH * WL.Title.height * 0.4
+                            local want = screenH * WL.Title.y
+                            local cy = Slot.centreY({w = w, h = screenH, boxW = boxW, boxH = boxH, wantY = want, blockers = hard})
+                            checked += 1
+                            if cy ~= want then moved += 1 end
+                            local box = {x = w / 2 - boxW / 2, y = cy - boxH / 2, w = boxW, h = boxH}
+                            -- the check is on a fixed list of HUD pieces (not the rule's own list)
+                            local clearOfAll = true
+                            for _, n in {"RailRect", "TimersRect", "ActionRect", "HudRect", "WalletBlockRect", "FeedbackRect", "AdminRect"} do
+                                local r = byName[n]
+                                if ov(box, {x = r.x, y = r.y + bar, w = r.w, h = r.h}) then clearOfAll = false end
+                            end
+                            -- the soft title only appears at home (hub); in a run the big card is used and is not moved
+                            if mode ~= "run" then
+                                assert(clearOfAll, string.format("%dx%d %s %s: the soft weather title lies over a HUD piece (centre %d of %d)", w, h, if touch then "touch" else "mouse", mode, cy, screenH))
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    assert(moved > 0, "probe lost sensitivity: the title never had to move")
+    return checked, moved
+end
+local titleChecked, titleMoved = slotCheck()
+
+print("shop prompt bubble passed: words, keys, fit, which and when, where (" .. canvases .. " canvases, " .. spots .. " stall positions, " .. softCovered .. " over a soft piece, " .. tight .. " tight; soft title " .. titleMoved .. " of " .. titleChecked .. " moved)")
 '''
 
 
-def prefix(replacements):
-    return ('local mods={}\n'
-            + 'local script={Parent={CaveHubLayout="CaveHubLayout",HubTravelClientRules="HubTravelClientRules",HubSignCopy="HubSignCopy",HubWalkUpRules="HubWalkUpRules"}}\n'
+def prefix(replacements, fast=False):
+    return ('local FAST = ' + ('true' if fast else 'false') + chr(10) + 'local mods={}\n'
+            + 'local script={Parent={CaveHubLayout="CaveHubLayout",HubTravelClientRules="HubTravelClientRules",HubSignCopy="HubSignCopy",HubWalkUpRules="HubWalkUpRules",Config="Config",PhoneScale="PhoneScale"}}\n'
             + 'local require=function(name) return mods[name] end\n'
             + 'local CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau') + '\nmods.CaveHubLayout=CaveHubLayout\n'
             + 'local HubTravelClientRules=' + wrapped('src/shared/HubTravelClientRules.luau') + '\nmods.HubTravelClientRules=HubTravelClientRules\n'
             + 'local HubSignCopy=' + wrapped('src/shared/HubSignCopy.luau', replacements.get('HubSignCopy', ())) + '\nmods.HubSignCopy=HubSignCopy\n'
             + 'local HubWalkUpRules=' + wrapped('src/shared/HubWalkUpRules.luau', replacements.get('HubWalkUpRules', ())) + '\nmods.HubWalkUpRules=HubWalkUpRules\n'
+            + 'local Config=' + wrapped('src/shared/Config.luau') + '\nmods.Config=Config\n'
+            + 'local PhoneScale=' + wrapped('src/shared/PhoneScale.luau') + '\nmods.PhoneScale=PhoneScale\n'
+            + 'local TouchLayout=' + wrapped('src/shared/TouchLayout.luau', replacements.get('TouchLayout', ())) + '\nmods.TouchLayout=TouchLayout\n'
+            + 'local WeatherLooks=' + wrapped('src/shared/WeatherLooks.luau') + '\nmods.WeatherLooks=WeatherLooks\n'
+            + 'local WeatherTitleSlot=' + wrapped('src/shared/WeatherTitleSlot.luau', replacements.get('WeatherTitleSlot', ())) + '\nmods.WeatherTitleSlot=WeatherTitleSlot\n'
             + 'local HubPromptBubbleRules=' + wrapped('src/shared/HubPromptBubbleRules.luau', replacements.get('HubPromptBubbleRules', ())) + '\n')
 
 
-def script(replacements=None):
-    return prefix(replacements or {}) + LUAU
+def script(replacements=None, fast=False):
+    return prefix(replacements or {}, fast) + LUAU
 
 
 def client_script(replacements=None):
@@ -202,7 +395,8 @@ MUTANTS = {
     'the last stall in range wins instead of the nearest': {RULES: [('and (c.distance :: number) < bestDistance then', 'then')]},
     'the range is ignored': {RULES: [('if (c.distance :: number) <= (range :: number) + Rules.RangeSlack and', 'if true and')]},
     'a phone shows a key chip': {RULES: [('    if kind == "Touch" then return nil end\n', '')]},
-    'a phone says Open instead of Tap to open': {RULES: [('buttonText = if k == "Touch" then "Tap to open" else "Open"', 'buttonText = "Open"')]},
+    'a phone says Open instead of Tap to open': {RULES: [('return if touch then "Tap to open" else "Open"', 'return "Open"')]},
+    'the Heart button says Open instead of Show off (picture 432)': {RULES: [('    if station == "heart" then return if touch then "Tap to show off" else "Show off" end\n', '')]},
     'a gamepad shows no button name': {RULES: [('return if typeof(keyName) == "string" and GAMEPAD_LABELS[keyName] then GAMEPAD_LABELS[keyName] else GAMEPAD_LABELS[Walk.PromptGamepadBubble]', 'return nil')]},
     'the flag-on key stays G': {'HubWalkUpRules': [('return if bubbleOn == true then HubWalkUpRules.PromptKeyBubble else HubWalkUpRules.PromptKey', 'return HubWalkUpRules.PromptKey')]},
     'the flag-off key becomes E': {'HubWalkUpRules': [('return if bubbleOn == true then HubWalkUpRules.PromptKeyBubble else HubWalkUpRules.PromptKey', 'return HubWalkUpRules.PromptKeyBubble')]},
@@ -212,6 +406,23 @@ MUTANTS = {
     'a stall line has a number': {'HubSignCopy': [('potions = "Fresh potions here!"', 'potions = "Fresh potions 4 you!"')]},
     'a stall line uses a jargon word': {'HubSignCopy': [('index = "Meet all your dinos!"', 'index = "Open the menu here!"')]},
     'the Heart has no words': {'HubSignCopy': [('    heart = "Let everyone see you!",\n', '')]},
+    # BD-1128: where the bubble goes
+    'place ignores the HUD pieces (the bubble lies over the rail again)': {RULES: [('total += overlapArea(r, b)', 'total += 0')]},
+    'place does not keep the bubble on the screen': {RULES: [('local function clampX(x: number): number return math.max(edge, math.min(maxX, x)) end', 'local function clampX(x: number): number return x end')]},
+    'place takes a far free spot instead of the nearest': {RULES: [('(math.abs(touch - bestTouch) <= 1e-6 and d < bestDistance)', '(math.abs(touch - bestTouch) <= 1e-6 and d > bestDistance)')]},
+    'place never gives up a soft piece (no room means no spot)': {RULES: [('    if #soft > 0 then\n        x, y, touch = search(hard)', '    if false then\n        x, y, touch = search(hard)')]},
+    'place ignores the soft pieces': {RULES: [('    for _, s in soft do table.insert(all, s) end\n', '')]},
+    'the small bubble is never tried when the big one has no room': {RULES: [('    if not big.small then\n        local small = Rules.layout(0)', '    if false then\n        local small = Rules.layout(0)')]},
+    'follow ignores Reduce Motion': {RULES: [('if motion ~= true or typeof(current)', 'if false or typeof(current)')]},
+    'rectOf takes an empty rectangle': {RULES: [('    if hi.X <= lo.X or hi.Y <= lo.Y then return nil end\n', '')]},
+    'the rail is not a hard piece': {RULES: [('Rules.HardRects = {"RailRect", ', 'Rules.HardRects = {')]},
+    'Home and Explore are not a hard piece': {RULES: [('"TimersRect", "ActionRect", ', '"TimersRect", ')]},
+    'the weather column is not a hard piece': {RULES: [('"RailRect", "TimersRect", ', '"RailRect", ')]},
+    'the Crystals block is not a hard piece': {RULES: [('"WalletBlockRect", ', '')]},
+    # BD-1132: the soft weather title
+    'the soft weather title never moves (it lies over the Potions button again)': {'WeatherTitleSlot': [('    if free(boxAt(want), blockers) then return want end', '    if true then return want end')]},
+    'the soft weather title moves to a place that is not free': {'WeatherTitleSlot': [('if onScreen(cy) and free(boxAt(cy), blockers) and', 'if onScreen(cy) and')]},
+    'the soft weather title may leave the screen': {'WeatherTitleSlot': [('if onScreen(cy) and free(boxAt(cy), blockers) and', 'if free(boxAt(cy), blockers) and')]},
 }
 
 
@@ -230,6 +441,14 @@ CLIENT_MUTANTS = {
     'client: a press does not hide the bubble': {CLIENT: [('        Rules.pressed(state, os.clock())\n', '')]},
     'client: a tap on the bubble does nothing': {CLIENT: [('        button.Activated:Connect(function()\n            press(prompt)\n        end)', '        button.Activated:Connect(function() end)')]},
     'client: a phone still shows the key chip': {CLIENT: [('if words.keyLabel then', 'if true then')]},
+    'client: the bubble is a world billboard again (drawn under the HUD)': {CLIENT: [('local board = Instance.new("Frame")', 'local board = Instance.new("BillboardGui")')]},
+    'client: the bubble layer is under the HUD': {CLIENT: [('local LAYER = 10', 'local LAYER = -1')]},
+    'client: the bubble is not placed clear of the HUD': {CLIENT: [('                blockers = hard, soft = soft})\n            mine.pos', '                blockers = {}, soft = {}})\n            mine.pos')]},
+    'client: the layer origin (the top bar) is ignored': {CLIENT: [('y = projected.Y - origin.Y}', 'y = projected.Y}')]},
+    'client: the bubble shows when the stall is behind the camera': {CLIENT: [('if projected.Z <= 0 then board.Visible = false return end', 'if false then board.Visible = false return end')]},
+    'client: the per-frame update keeps running after the bubble is hidden': {CLIENT: [('        if s.step then s.step:Disconnect() end\n', '')]},
+    'client: Reduce Motion is ignored (it always glides)': {CLIENT: [('Rules.follow(mine.pos, spot, dt, Theme.MotionEnabled)', 'Rules.follow(mine.pos, spot, dt, true)')]},
+    'client: it never glides': {CLIENT: [('Rules.follow(mine.pos, spot, dt, Theme.MotionEnabled)', 'Rules.follow(mine.pos, spot, dt, false)')]},
     'client: a prompt of a stranger gets a bubble': {CLIENT: [('if typeof(prompt:GetAttribute("BubbleStation")) ~= "string" or active[prompt] then return end', 'if active[prompt] then return end')]},
 }
 
@@ -268,6 +487,12 @@ def check_sources():
         assert banned not in bc, 'the bubble module has no ' + banned
     assert 'Rules.pressed(' in bc, 'a press hides the bubble for a moment'
     assert 'Instance.new("ImageLabel")' not in bc and 'Instance.new("ImageButton")' not in bc, 'no pictures, no code-drawn art'
+    assert 'BillboardGui' not in bc and 'AlwaysOnTop' not in bc, 'BD-1128: no world billboard (it is drawn under the HUD)'
+    assert 'RenderStepped:Connect(' in bc and 'Rules.place(' in bc and 'Rules.layoutFor(' in bc and 'WorldToViewportPoint' in bc, 'BD-1128: placed each frame by the pure rule'
+    title = code_only(read('src/client/WeatherTitle.luau'))
+    assert 'Slot.centreY(' in title and title.count('softY()') >= 3 and 'pcall(' in title, 'BD-1132: the soft weather title is placed by WeatherTitleSlot, with a fallback to the old spot'
+    hud = read('src/client/HudV2.luau')
+    assert 'TouchLayout.hudRects(layout)' in code_only(hud) and 'canvas:SetAttribute(name' in code_only(hud), 'BD-1128: HudV2.layout publishes the HUD rectangles the bubble reads'
 
     show = read('src/server/CaveShowOff.luau')
     sc = code_only(show)
@@ -306,7 +531,7 @@ def main():
             assert run(args.runner, client_script(replacements)).returncode != 0, 'MUTANT SURVIVED: ' + name
             print('  mutant caught: ' + name)
         for name, replacements in MUTANTS.items():
-            assert run(args.runner, script(replacements)).returncode != 0, 'MUTANT SURVIVED: ' + name
+            assert run(args.runner, script(replacements, True)).returncode != 0, 'MUTANT SURVIVED: ' + name
             print('  mutant caught: ' + name)
     print('Shop prompt bubble passed: source guards, rules, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS) + len(CLIENT_MUTANTS)))
 
