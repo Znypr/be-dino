@@ -50,13 +50,20 @@ stubs.FusionSelection = {eggSlotLook = function() return "plain" end}
 stubs.ChipStyle = nil
 local clientNames = {IndexTabs = true, PatternColourCards = true, PatternColourDetail = true, ModalCompact = true, EggsScreen = true, EggPicture = true, ConditionStage = true, HatchSequence = true, ModalClose = true, InspectView = true,
     HatchFx = true, MutationReveal = true, HatchEggV2 = true, PrivateState = true}
-stubs.ClassBadge = {create = function(parent) return inst("Frame", "ClassBadge", parent) end}
+-- BD-1107: a class badge like the real one: an icon and the class word (the real root grows to the right with its word, anchored by its left edge here)
+stubs.ClassBadge = {create = function(parent, _, size)
+    local root = inst("Frame", "ClassBadge", parent, {Size = UDim2.fromOffset(size, size)})
+    inst("ImageLabel", "Icon", root, {Size = UDim2.fromOffset(size, size)})
+    inst("TextLabel", "ClassWord", root, {Text = "Ground", TextSize = math.max(14, math.floor(size * .5)), Size = UDim2.fromOffset(0, size)})
+    return root
+end}
+local NEW_WORDS = {} -- BD-1107: the "New pattern!" / "New colour!" ribbon words of the stage being played
 stubs.Sfx = {play = function() end, playLayers = function() end, playCue = function() end, revealName = function() return "hatch_reveal" end}
 stubs.SfxRules = {hatchCues = function(cues) return cues end}
 stubs.InspectView = {attach = function() return {destroy = function() end, wasDrag = function() return false end} end}
 stubs.HatchFx = {ensure = function() return {} end, begin = function() return {} end, update = function() end, hide = function() end, style = function() end, rainbow = function() end,
     splash = function() end, paintStyle = function() end}
-stubs.PatternColourIndex = {ribbons = function() return {} end, Tabs = {"dinos", "patterns", "colours"}, TabNames = {dinos = "Dinos", patterns = "Patterns", colours = "Colours"},
+stubs.PatternColourIndex = {ribbons = function() return NEW_WORDS end, Tabs = {"dinos", "patterns", "colours"}, TabNames = {dinos = "Dinos", patterns = "Patterns", colours = "Colours"},
     validTab = function(t) return t end, foundSets = function() return {patterns = {}, colours = {}} end, foundTotal = function() return 0 end, dotVisible = function() return false end,
     seenBaseline = function() return 0 end, cards = function() return {} end, header = function() return {text = ""} end}
 stubs.PrivateState = {str = function(_, fallback) return fallback or "" end, isReady = function() return true end, onChanged = function() end}
@@ -336,6 +343,7 @@ local function playHatch(modal, motion, result)
     local eggView = inst("Frame", "EggView", body, {Size = UDim2.fromOffset(304, 260)})
     local function label(name, y, h) return inst("TextLabel", name, body, {Position = UDim2.fromOffset(80, y), Size = UDim2.fromOffset(660, h), ZIndex = 30, TextSize = 24}) end
     local nameLabel, oddsLabel, detailLabel = label("Reward", 236, 54), label("Odds", 288, 28), label("Detail", 316, 28)
+    nameLabel.Text, nameLabel.TextWrapped = result.name or "Dimorphodon", true -- BD-1107: Bootstrap sets the dinosaur's name before the sequence starts
     local dino = inst("ViewportFrame", "Dino", body, {Position = UDim2.fromOffset(160, -12), Size = UDim2.fromOffset(504, 260), Visible = false})
     inst("WorldModel", "WorldModel", dino)
     local paint = setmetatable({}, {__index = function() return function() end end})
@@ -348,7 +356,9 @@ local function playHatch(modal, motion, result)
     local handle = Hatch.play(args)
     frames(2)
     local res = {dino = dino, rarity = result.rarity or 1, color = color(.3, .8, .3), failed = result.failed == true, shiny = result.shiny == true, big = result.big == true,
-        speciesId = "compy", remaining = result.remaining or 0, paintColors = {color(1, 1, 1), color(1, 1, 1)}}
+        speciesId = "compy", remaining = result.remaining or 0, paintColors = {color(1, 1, 1), color(1, 1, 1)},
+        mutationName = result.mutationName, mutationId = result.mutationId, mutationColor = if result.mutationName then color(.9, .3, .4) else nil, newFind = result.newFind}
+    NEW_WORDS = result.newWords or {}
     if result.genes then
         res.genes = result.genes
         res.colorReveal = {name = "Cream", tier = 1, tierName = "Common", rgb = {247, 234, 196}, id = "white"}
@@ -357,6 +367,74 @@ local function playHatch(modal, motion, result)
     end
     handle.supply(res)
     return handle, args, dino
+end
+-- BD-1107 (docs/200 picture 416): the ribbons, the "why Skip stops" tag and the class badge of the reveal card. They are children of the card body, so they are
+-- judged in the card's own design px (824 x 402). Text cannot be measured in the mock, so a word is estimated the way the other layout checks do it: 0.5 em
+-- per character, one line = 1.05 em. The estimate used by the game (TagFit) is wider, so a layout that passes there passes here with room to spare.
+local function designRect(o)
+    local p = rawget(o, "__p")
+    local w, h = p.Size.X.Offset, p.Size.Y.Offset
+    return {x = p.Position.X.Offset - p.AnchorPoint.X * w, y = p.Position.Y.Offset - p.AnchorPoint.Y * h, w = w, h = h}
+end
+local function turned(r, degrees) -- the box a rectangle turned by `degrees` around its centre covers
+    local a = math.rad(math.abs(degrees or 0))
+    local w, h = r.w * math.cos(a) + r.h * math.sin(a), r.w * math.sin(a) + r.h * math.cos(a)
+    return {x = r.x + r.w / 2 - w / 2, y = r.y + r.h / 2 - h / 2, w = w, h = h}
+end
+local function flatWidth(text, size) return (utf8.len(text) or #text) * 0.5 * size end
+local TAG_MARGIN, NAME_TOP = 4, 236
+local function tagChecks(modal, args, tag, stage)
+    local body = modal.body
+    local items = {}
+    for _, d in body:GetChildren() do
+        if isGui(d) and d.Visible and (d.Name == "Ribbon" or d.Name == "StopTag") then
+            local r = turned(designRect(d), rawget(d, "__p").Rotation)
+            table.insert(items, {o = d, r = r, name = d.Name .. " '" .. tostring((d:FindFirstChildOfClass("TextLabel") or {Text = ""}).Text):gsub("\n", " ") .. "'"})
+        end
+    end
+    check(#items >= (stage.tagCount or 1), string.format("%s: %d ribbons / tags drawn, expected at least %d", tag, #items, stage.tagCount or 1))
+    local k = scaleAt(body)
+    for _, it in items do
+        -- inside the card (never cut at the left or right edge) and above the dinosaur's name
+        check(it.r.x >= TAG_MARGIN - .01 and it.r.x + it.r.w <= 824 - TAG_MARGIN + .01 and it.r.y >= 0 and it.r.y + it.r.h <= NAME_TOP - 2,
+            string.format("%s: %s %s leaves the card (824 wide, the name starts at %d)", tag, it.name, describe(it.r), NAME_TOP))
+        -- every word of it fits its box, at a size that is at least 14 px on screen
+        for _, d in it.o:GetDescendants() do
+            if d.ClassName == "TextLabel" and d.Text ~= "" then
+                local kk = scaleAt(d)
+                local dw, dh = d.AbsoluteSize.X / kk, d.AbsoluteSize.Y / kk
+                local lines = 0
+                for line in string.gmatch(d.Text .. "\n", "(.-)\n") do
+                    lines += 1
+                    check(not d.TextScaled and flatWidth(line, d.TextSize) <= dw + .01,
+                        string.format("%s: '%s' (%d px) needs about %d px of its %d px box in %s", tag, line, d.TextSize, flatWidth(line, d.TextSize), dw, it.name))
+                end
+                check(not string.find(d.Text, "...", 1, true), string.format("%s: the words '%s' were cut short in %s", tag, d.Text, it.name))
+                check(lines * d.TextSize * 1.05 <= dh + 2, string.format("%s: '%s' has %d line(s) at %d px but its box is %d high in %s", tag, d.Text, lines, d.TextSize, dh, it.name))
+                check(d.TextSize * kk >= 14 - .01, string.format("%s: '%s' is %.1f px on screen in %s", tag, d.Text, d.TextSize * kk, it.name))
+            end
+        end
+    end
+    -- two of them never share a spot
+    for i = 1, #items do
+        for j = i + 1, #items do
+            check(not overlaps(items[i].r, items[j].r), string.format("%s: %s %s overlaps %s %s", tag, items[i].name, describe(items[i].r), items[j].name, describe(items[j].r)))
+        end
+    end
+    -- the class badge sits left of the name, which starts right of it (the name is left-aligned there), and neither reaches into a ribbon
+    local badge = body:FindFirstChild("ClassBadge")
+    local nameBox = designRect(args.nameLabel)
+    if badge and badge.Visible then
+        local word = badge:FindFirstChild("ClassWord")
+        local b = designRect(badge)
+        local wordSize = math.max(word.TextSize, math.ceil(14 / k - 1e-9))
+        b.w = b.w + 6 + flatWidth(word.Text, wordSize) + 6
+        check(string.find(tostring(args.nameLabel.TextXAlignment), "Left", 1, true) ~= nil, tag .. ": the name is not left-aligned beside the class badge")
+        check(b.x + b.w <= nameBox.x - 2, string.format("%s: the class badge %s reaches the name text, which starts at %d", tag, describe(b), nameBox.x))
+        check(flatWidth(args.nameLabel.Text, args.nameLabel.TextSize) <= nameBox.w + .01, string.format("%s: the name '%s' needs %d px of its %d px box", tag, args.nameLabel.Text, flatWidth(args.nameLabel.Text, args.nameLabel.TextSize), nameBox.w))
+        check(b.x >= 0 and nameBox.x + nameBox.w <= 824, tag .. ": the badge and the name leave the card")
+        for _, it in items do check(not overlaps(it.r, b), string.format("%s: %s lies over the class badge", tag, it.name)) end
+    end
 end
 local HATCH_NAMES = {"TapHint", "EndButtons", "EggCounter", "PaintChip1", "PaintChip2", "PatternChip", "ConditionChip", "RarityPill", "StopTag", "Ribbon", "TierBadge"}
 local function hatchChecks(w, h, motion, stage)
@@ -388,6 +466,7 @@ local function hatchChecks(w, h, motion, stage)
                 string.format("%s: the effect layer %s is not over the card %s", tag, describe(layerRect), describe(body)))
         end
     end
+    if stage.tags then tagChecks(modal, args, tag, stage) end
     local skip = modal.gui:FindFirstChild("SkipAll", true)
     if skip and skip.Visible then check(inside(rectOf(skip), gui), string.format("%s: Skip the rest %s is outside the window", tag, describe(rectOf(skip)))) end
     handle.cancel()
@@ -397,6 +476,13 @@ local HATCH_STAGES = {
     {name = "egg and colour chips", seconds = 2.6, zoom = 18, result = {rarity = 2, remaining = 5, genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
     {name = "dino shown, tap line", seconds = 8, align = true, result = {rarity = 2, remaining = 5, big = true, shiny = true, genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
     {name = "last egg, buttons", seconds = 9, result = {rarity = 1, remaining = 0}},
+    -- BD-1107: Studio round 7 picture 416. Two or more tags at once, the longest words, and the class badge beside the name
+    {name = "Rainbow egg and BIG", seconds = 8, tags = true, tagCount = 2, result = {rarity = 2, remaining = 3, big = true, genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
+    {name = "Rainbow, Shiny, BIG, a mutation and two New ribbons at once", seconds = 8, tags = true, tagCount = 6, result = {rarity = 3, remaining = 3, big = true, shiny = true, mutationName = "Blood Moon", mutationId = "bloodmoon", newFind = true,
+        newWords = {"New pattern!", "New colour!"}, name = "Parasaurolophus", genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
+    {name = "New pattern, New colour and the stop tag", seconds = 8, tags = true, tagCount = 3, result = {rarity = 2, remaining = 3, newFind = true, newWords = {"New pattern!", "New colour!"}, genes = {conditionId = "astra", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
+    {name = "the longest words (a long mutation name, two lines)", seconds = 8, tags = true, tagCount = 3, result = {rarity = 4, remaining = 3, shiny = true, mutationName = "Blood Moon Rising", mutationId = "bloodmoon", name = "Pachycephalosaurus"}},
+    {name = "a lone Rainbow egg", seconds = 8, tags = true, tagCount = 1, result = {rarity = 1, remaining = 3, genes = {conditionId = "rainbow", primaryColorId = "white", secondaryColorId = "blue", blend = 50, patternId = "03_round_spots", hatchSuccess = true}}},
     {name = "cracked egg splat", seconds = 9, result = {rarity = 1, remaining = 0, failed = true}},
 }
 for _, stage in HATCH_STAGES do
