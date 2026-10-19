@@ -86,9 +86,11 @@ end
 -- player who already has eggs/dinos from before (foundEgg) and is not in a run right now.
 -- BD-538: on a phone-landscape canvas (compact) the button sat on the lower-left of every open menu (over the egg card's rarity and condition
 -- chips), so it is hidden while a menu is open there (menuOpen and compact). Desktop menus are centred and leave the corner free: unchanged.
+-- BD-1130: the Fusion menu (a screen of its own) hides it at every size.
 function PlaytestFeedback.showButton(info: any): boolean
     if type(info) ~= "table" then return false end
     if info.menuOpen == true and info.compact == true then return false end
+    if info.fusionOpen == true then return false end -- BD-1130: the Fusion menu fills the screen at every size (picture 440)
     if info.sawRunEnd == true then return true end
     return info.foundEgg == true and info.runActive ~= true
 end

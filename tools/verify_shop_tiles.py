@@ -229,8 +229,8 @@ assert(P.tileLayout(5).height <= 402 - 40, "five tiles leave room for the hint l
 assert(P.tileLayout(4).height <= 402 - 40)
 -- subtitles: kid words, never empty
 assert(P.countOwned({a = true, b = true, c = false}) == 2 and P.countOwned(nil) == 0 and P.countOwned({}) == 0)
-assert(P.subtitle("auras", {auras = 0}) == "Glow around you" and P.subtitle("auras", {auras = 2}) == "2 yours")
-assert(P.subtitle("trails", {trails = 0}) == "Leave a trail" and P.subtitle("trails", {trails = 3}) == "3 yours")
+assert(P.subtitle("auras", {auras = 0}) == "Glow around you" and P.subtitle("auras", {auras = 2}) == "You have 2")
+assert(P.subtitle("trails", {trails = 0}) == "Leave a trail" and P.subtitle("trails", {trails = 3}) == "You have 3")
 assert(P.subtitle("eggs", {eggPrice = 100}) == "100 Crystals" and P.subtitle("conditions", {}) == "Better eggs")
 assert(P.subtitle("crystals", {crystals = 40}) == "You have 40")
 for _, tab in P.Tabs do assert(#P.subtitle(tab, {}) > 0, tab) end

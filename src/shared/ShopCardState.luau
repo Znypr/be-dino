@@ -13,6 +13,7 @@ function State.kind(info): string
     return State.Normal
 end
 
+-- BD-1129: the sold-out caption is "Back later!" (the button already says SOLD OUT); "Sold out. Back later!" was cut after "Back" on a potion card at 516 px (docs/205 picture 437).
 -- priceText: e.g. "30 Crystals". Returns look = {kind, dim, caption, buttonText, active, tone}
 -- tone: "price" (gold) | "calm" (soft grey)
 function State.look(info, priceText: string)
@@ -20,7 +21,7 @@ function State.look(info, priceText: string)
     if kind == State.Owned then
         return {kind = kind, dim = false, caption = "Owned", buttonText = info.ownedButton or "OWNED", active = info.ownedActive == true, tone = "calm"}
     elseif kind == State.SoldOut then
-        return {kind = kind, dim = true, caption = "Sold out. Back later!", buttonText = "SOLD OUT", active = false, tone = "calm"}
+        return {kind = kind, dim = true, caption = "Back later!", buttonText = "SOLD OUT", active = false, tone = "calm"}
     elseif kind == State.Locked then
         return {kind = kind, dim = true, caption = "Level " .. tostring(info.levelNeeded), buttonText = "LEVEL " .. tostring(info.levelNeeded), active = true, tone = "calm"}
     end

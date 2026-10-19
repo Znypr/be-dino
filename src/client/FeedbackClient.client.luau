@@ -130,9 +130,13 @@ style(close, "CLOSE", CARD, 24)
 
 -- BD-538: on a phone-landscape canvas the button is hidden while a game menu is open (the ModalScrim of BeDinoUI, like the Admin button), because it
 -- covered the lower-left of the menu (the egg card's chips). Both inputs re-run refresh() below when they change.
-local menuScrim: GuiObject? = nil
+-- BD-1130: MenuWatch also sees the Fusion menu (its own ScreenGui, made on first use), which the old one-time scrim look-up never did (picture 440).
+local menuWatch: any = nil
 local function menuOpen(): boolean
-    return menuScrim ~= nil and (menuScrim :: GuiObject).Visible
+    return menuWatch ~= nil and menuWatch.scrimOpen()
+end
+local function fusionOpen(): boolean
+    return menuWatch ~= nil and menuWatch.fusionOpen()
 end
 local function compactCanvas(): boolean
     local height = if uiRoot then (uiRoot :: any).AbsoluteSize.Y else 0
@@ -151,7 +155,7 @@ do
         local okJson, decoded = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.str("CollectionJson", "{}")) end)
         local found = Ftue.hasFoundEgg({activeEggs = PrivateState.get("ActiveChestCount"), waitingEggs = PrivateState.get("QueuedEggsWaiting"),
             lastRunEggs = PrivateState.get("LastRunEggCount"), copies = Ftue.collectionCopies(if okJson then decoded else {})})
-        open.Visible = Rules.showButton({sawRunEnd = sawRunEnd, foundEgg = found, runActive = active, menuOpen = menuOpen(), compact = compactCanvas()})
+        open.Visible = Rules.showButton({sawRunEnd = sawRunEnd, foundEgg = found, runActive = active, menuOpen = menuOpen(), compact = compactCanvas(), fusionOpen = fusionOpen()})
         if not open.Visible then panel.Visible = false end
     end
     local function watch(c: Model)
@@ -162,12 +166,10 @@ do
     if player.Character then watch(player.Character) end
     for _, name in {"CollectionJson", "ActiveChestCount", "QueuedEggsWaiting", "LastRunEggCount"} do PrivateState.onChanged(name, refresh) end
     refresh()
+    menuWatch = require(script.Parent:WaitForChild("MenuWatch")).watch(player:WaitForChild("PlayerGui"), refresh)
     task.spawn(function()
         local ui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
-        local scrim = if ui then ui:WaitForChild("ModalScrim", 30) else nil
-        if not ui or not scrim or not scrim:IsA("GuiObject") then return end
-        menuScrim = scrim
-        scrim:GetPropertyChangedSignal("Visible"):Connect(refresh)
+        if not ui then return end
         local root: any = ui
         root:GetPropertyChangedSignal("AbsoluteSize"):Connect(refresh)
         refresh()
