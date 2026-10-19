@@ -33,7 +33,7 @@ PLAYERS = 12  # EffectsLod.MaxDinos.full: effect dinos in one view
 
 CLIENT_FILES = ['HatchSequence', 'MutationReveal', 'RareHatchClient', 'CosmeticVisuals.client', 'WeatherVisuals.client',
                 'CaveAtmosphere', 'FxRig', 'HatchFx', 'HatchEggV2']
-SHARED_FILES = ['FxUi', 'FxRecipes', 'CosmeticEffects', 'MutationEffects', 'ShinyEffects', 'EffectsLod']
+SHARED_FILES = ['FxUi', 'FxRecipes', 'CosmeticEffects', 'MutationEffects', 'ShinyEffects', 'EffectsLod', 'LowPolyDinos']
 CLASSES = ['ParticleEmitter', 'Beam', 'Trail', 'PointLight', 'SpotLight', 'SurfaceLight', 'Highlight']
 
 
@@ -78,6 +78,11 @@ for _, dev in DEVICES do
     end
     row("DEVCAP", dev, R.Devices[dev].alive, R.Devices[dev].fullDinos)
 end
+for _, lite in {false, true} do -- fused-tier sparkle (LowPolyDinos): worst tier, particles alive per fused dino
+    local worst = 0
+    for _, id in TierLook.Order do worst = math.max(worst, TierLook.sparkleAlive(TierLook.get(id), lite)) end
+    row("TIERSPARK", if lite then "lite" else "full", worst)
+end
 for _, mode in {"full", "lite", "off"} do row("LOD", mode, Lod.MaxDinos[mode], Lod.CullRange[mode]) end
 for id in W.Rigs do local c, big = W.concurrent(id) row("WEATHER", id, c, big) end
 for _, dev in DEVICES do
@@ -98,7 +103,8 @@ def run_model(runner):
     s += 'local R = ' + module('src/shared/FxRecipes.luau') + '\n'
     s += 'local Lod = ' + module('src/shared/EffectsLod.luau') + '\n'
     s += 'local W = ' + module('src/shared/WeatherLooks.luau') + '\n'
-    s += 'local MP = ' + module('src/shared/MutationRevealPlan.luau') + '\n' + LUA
+    s += 'local MP = ' + module('src/shared/MutationRevealPlan.luau') + '\n'
+    s += 'local TierLook = ' + module('src/shared/LowPolyTier.luau') + '\n' + LUA
     with tempfile.NamedTemporaryFile('w', suffix='.luau', delete=False, encoding='utf-8') as f:
         f.write(s)
     r = subprocess.run([runner, f.name], capture_output=True, text=True)
@@ -115,12 +121,13 @@ def run_model(runner):
 
 
 def moments(rows, phone_density=None):
-    dino, devcap, lod, weather, ui, hatch_ui = {}, {}, {}, {}, {}, 0
+    dino, devcap, lod, weather, ui, hatch_ui, tier_spark = {}, {}, {}, {}, {}, 0, {}
     keys = ['alive', 'beams', 'trails', 'lights', 'burst']
     for r in rows:
         k = r[0]
         if k == 'DINO': dino[(r[1], r[2], r[3])] = dict(zip(keys, map(float, r[4:9])))
         elif k == 'DEVCAP': devcap[r[1]] = int(r[3])
+        elif k == 'TIERSPARK': tier_spark[r[1]] = float(r[2])
         elif k == 'LOD': lod[r[1]] = int(r[2])
         elif k == 'WEATHER': weather[r[1]] = (float(r[2]), float(r[3]))
         elif k == 'HATCHUI': hatch_ui = sum(int(x) for x in r[1:6])
@@ -134,6 +141,7 @@ def moments(rows, phone_density=None):
         liteN = min(PLAYERS, lod['full']) - fullN
         stack = lambda d: {k: sum(dino[(dev, d, kind)][k] for kind in ('aura', 'trail', 'mutation')) for k in keys}
         sf, sl = stack('full'), stack('lite')
+        sf['alive'] += tier_spark['full']; sl['alive'] += tier_spark['lite']  # worst case: every dino is also a fused Diamond with its tier sparkle
         everyone = {k: sf[k] * fullN + sl[k] * liteN for k in keys}
         base = {'live3d': everyone['alive'] + everyone['burst'], 'big': 0, 'beams': everyone['beams'],
                 'trails': everyone['trails'], 'lights': everyone['lights'], 'ui': 0}
