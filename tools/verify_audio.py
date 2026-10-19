@@ -149,7 +149,7 @@ def static_checks():
         text = path.read_text(encoding='utf-8')
         if 'Instance.new("Sound")' in text and 'attach(' not in text:
             errors.append('%s creates a Sound without AudioMixer.attach' % path.relative_to(ROOT))
-    boot = read('src/client/Bootstrap.client.luau')
+    boot = read('src/client/Bootstrap.client.luau') + read('src/client/SmallScreens.luau')  # BD-1110: the Settings screen moved
     sfx_src = read('src/shared/Sfx.luau')
     for needle in ('R.limit(active', 'R.duck(', 'R.jitter(', 'R.deduped(', 'Sfx.playAlias'):
         if needle not in sfx_src:

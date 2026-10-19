@@ -383,7 +383,7 @@ def check_wiring():
     assert 'EggCounter' in seq and 'Timeline.batchStep' in seq and 'Timeline.session' in seq and 'Timeline.SkipText' in seq and 'UDim2.fromOffset(176, 48)' in seq, 'BD-444 counter + skip button (>= 44 px)'
     assert 'finishBatch()' in boot and 'EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue"' in boot, 'only the end of the batch leaves'
     assert 'open("eggs") end -- never leave an egg wobbling forever' in boot, 'a lost answer never strands the player'
-    hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif name=="exit" then')]
+    hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif SmallScreens.names[name] then')]
     assert 'HatchPresentation.add(body,nil,' in hatch_block, 'the egg is built without genes: plain and colourless at the start'
     assert hatch_block.index('HatchPresentation.add') < hatch_block.index('Preview.add(body,id'), 'no dinosaur view before the answer exists'
     assert 'condition.name' not in hatch_block and 'conditionId' not in hatch_block, 'BD-174: no condition text on the dinosaur reveal'
