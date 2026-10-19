@@ -95,6 +95,55 @@ function R.sweepAt(age: number): (number, number)
     return eased, alpha
 end
 
+-- BD-1121 (docs/202 R6, flag Config.RareFindBannerEnabled): the announcement other players see, as TWO lines and no panel:
+--   a huge outlined title "RARE FIND!" ("SECRET FIND!" for a secret) and one sentence "A Legendary Compy was found!" with the rarity word in its colour.
+-- NO player name (the old strip said "Sam hatched ..."); a secret keeps its species name out of it, as before (BD-606 SS9). The rate limits above are untouched: this only
+-- changes the words and the look. The server sends the tier number and the species display name next to the old text; the client validates them again.
+R.FindTitle = "RARE FIND!"
+R.SecretFindTitle = "SECRET FIND!"
+R.MaxSpecies = 24 -- letters, digits, spaces, - ' . only (a species display name)
+R.FindKinds = table.freeze({legendary = true, shiny = true, mutation = true, secret = true})
+R.FindFade = table.freeze({fadeIn = 0.3, hold = 3.6, fadeOut = 0.6}) -- seconds; Reduce Motion: no fades, the same hold
+
+function R.findTitle(kind: any): string
+    return if kind == "secret" then R.SecretFindTitle else R.FindTitle
+end
+
+-- "A Legendary Compy was found!", "An Epic Shiny Mutant Raptor was found!", "A secret dino was found!". tierName and speciesName are plain words (RarityWord colours the tier).
+function R.findLine(info: {kind: any?, shiny: boolean?, mutation: boolean?, secret: boolean?}, tierName: string?, speciesName: string?): string?
+    if info.secret == true or info.kind == "secret" then return "A secret dino was found!" end
+    if type(tierName) ~= "string" or type(speciesName) ~= "string" or tierName == "" or speciesName == "" then return nil end
+    local article = if string.find(tierName, "^[AEIOUaeiou]") then "An" else "A"
+    local mods = (if info.shiny == true then " Shiny" else "") .. (if info.mutation == true then " Mutant" else "")
+    return string.format("%s %s%s %s was found!", article, tierName, mods, speciesName)
+end
+
+-- The fades for the Reduce Motion setting (calm = true): no fade, the same time on screen.
+function R.findPlan(calm: boolean): {fadeIn: number, hold: number, fadeOut: number}
+    if calm then return {fadeIn = 0, hold = R.FindFade.hold, fadeOut = 0} end
+    return {fadeIn = R.FindFade.fadeIn, hold = R.FindFade.hold, fadeOut = R.FindFade.fadeOut}
+end
+
+-- The client checks what the server sent: a known kind, a tier number that exists, a clean species name. Anything else -> nil (the client then shows the old text banner).
+-- tierNames = the tier words by rank (RarityWord.Names). Returns {title, line}.
+function R.findFromPayload(data: any, tierNames: {string}): {title: string, line: string}?
+    if type(data) ~= "table" or type(data.kind) ~= "string" or R.FindKinds[data.kind] ~= true then return nil end
+    local info = {kind = data.kind, shiny = data.shiny == true, mutation = data.mutation == true, secret = data.kind == "secret"}
+    local tierName: string? = nil
+    local species: string? = nil
+    if data.kind ~= "secret" then
+        local tier = data.tier
+        if type(tier) ~= "number" or tier ~= math.floor(tier) or tier < 1 or tier > #tierNames then return nil end
+        tierName = tierNames[tier]
+        local name = data.species
+        if type(name) ~= "string" or #name < 1 or #name > R.MaxSpecies or not string.find(name, "^[%w][%w %-'%.]*$") then return nil end
+        species = name
+    end
+    local line = R.findLine(info, tierName, species)
+    if line == nil then return nil end
+    return {title = R.findTitle(data.kind), line = line}
+end
+
 export type State = {
     pending: {[number]: {score: number, info: any, text: string, flushAt: number}},
     quietUntil: {[number]: number},

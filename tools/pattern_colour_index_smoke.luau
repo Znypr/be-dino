@@ -165,6 +165,7 @@ local Theme = {MotionEnabled = true, Colors = {panel = color(0, 0, 0), card = co
 Theme.RarityColors = {color(.5, .55, .6), color(.1, .9, .1), color(.2, .8, 1), color(.8, .3, 1), color(1, .8, .2), color(.9, .2, .2)}
 for i, n in {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"} do Theme.RarityColors[n] = Theme.RarityColors[i] end
 Theme.TextStyle = {apply = function(label) label.TextStrokeTransparency = 1 local stroke = Instance.new("UIStroke") stroke.Parent = label return stroke end}
+Theme.TextStyle.outlined = function(label) return Theme.TextStyle.apply(label) end -- BD-1119
 function Theme.decorate(object) Instance.new("UIStroke").Parent = object Instance.new("UICorner").Parent = object end
 function Theme.icon() return nil end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
@@ -195,7 +196,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "GeneBoost", "PatternColourIndex", "AssetSlots", "UITheme", "SecretSpeciesConfig", "NavigationArtwork", "SettingsModel"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "GeneBoost", "PatternColourIndex", "AssetSlots", "UITheme", "SecretSpeciesConfig", "NavigationArtwork", "SettingsModel", "RarityWord"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"IndexTabs", "PatternColourCards", "PatternColourDetail", "PrivateState", "ModalCompact"} do

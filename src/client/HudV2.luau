@@ -32,7 +32,7 @@ local function text(parent: Instance, name: string, size: number, color: Color3,
     t.Name, t.BackgroundTransparency, t.Font, t.TextSize, t.TextColor3 = name, 1, Enum.Font.FredokaOne, size, color
     t.TextXAlignment, t.ZIndex = Enum.TextXAlignment.Left, 6
     t.Position, t.Size, t.Parent = UDim2.new(0, x, 0, 0), UDim2.new(1, -x - 6, 1, 0), parent
-    Theme.TextStyle.apply(t) -- BD-390
+    Theme.TextStyle.outlined(t, "card") -- BD-390 / BD-1119: the one outlined style
     return t
 end
 
@@ -86,7 +86,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     local hint = Instance.new("TextLabel")
     hint.Name, hint.BackgroundTransparency, hint.Font, hint.TextSize, hint.TextColor3 = "GoalHint", 1, Enum.Font.FredokaOne, 20, C.text
     hint.TextWrapped, hint.Visible, hint.ZIndex = true, false, 6
-    Theme.TextStyle.apply(hint) -- BD-390
+    Theme.TextStyle.outlined(hint, "card") -- BD-390 / BD-1119
     hint.AnchorPoint, hint.Position, hint.Size, hint.Parent = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 102), UDim2.fromOffset(360, 28), gui
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10

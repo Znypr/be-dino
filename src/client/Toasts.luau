@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local NotifyQueue = require(Shared.NotifyQueue)
+local RarityWord = require(Shared.RarityWord) -- BD-1120: a toast that names a rarity shows the word in its colour
 local ToastSlot = require(Shared.ToastSlot) -- BD-1102: where the stack goes (clear of the rail, the Crystals plate and, with a menu open, the top of the menu)
 local C = Theme.Colors
 
@@ -33,7 +34,7 @@ drawToasts=function()
         if entry then
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
             slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
-            slot.title.Text,slot.detail.Text=entry.text,entry.body or ""
+            RarityWord.set(slot.title,entry.text) RarityWord.set(slot.detail,entry.body or "")
             slot.plate.Visible=entry.icon~=nil -- BD-304: no empty icon box
             local textX=if entry.icon then 68 else 22
             slot.title.Position,slot.detail.Position=UDim2.fromOffset(textX,if entry.body then 3 else 3),UDim2.fromOffset(textX,30)
@@ -121,7 +122,7 @@ function Toasts.attach(d: any)
         local plate=box(card,16,6,44,44,C.panel,51)
         Theme.decorate(plate,22)
         local title=label(card,"",68,3,330,30,21)
-        local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235))
+        local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235)) detail:SetAttribute("TextKind","note") -- BD-1119: the second toast line is fine print (14 px note floor)
         local count=label(card,"",392,6,44,44,20,C.gold)
         for _,t in {title,detail} do t.TextXAlignment=Enum.TextXAlignment.Left t.TextTruncate=Enum.TextTruncate.AtEnd end
         local tap=Instance.new("TextButton")

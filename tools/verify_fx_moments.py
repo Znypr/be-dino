@@ -479,6 +479,7 @@ local function scenario(effects, calm, bound, own)
     MODS.SettingsModel = {get = function() return {effects = effects, calm = calm} end}
     MODS.Sfx = {play = function() end}
     MODS.HatchTimeline = {durations = function() return {revealAt = 0.5} end}
+    MODS.Config = {RareFindBannerEnabled = false} -- BD-1121: the two-line announcement is off here
     local remote = {OnClientEvent = {Connect = function(_, fn) handler = fn return {Disconnect = function() end} end}}
     local screen = nil
     local player = {Character = "OWN_CHARACTER", WaitForChild = function() return inst("PlayerGui") end}
@@ -787,7 +788,7 @@ def scan():
     for needle in ['Assets.isRealUi("shaftGradient")', 'plan.sweep > 0', 'Rare.sweepAt(s.age)', 'MomentRim.play']:
         assert needle in rare, 'RareHatchClient must contain ' + needle
     # the sweep call sits inside the OWN celebration only: the "all" branch calls banner() and nothing else
-    assert re.search(r'elseif data\.k == "all" then banner\(data\.text, false\) end', rare), 'the others\' banner path must stay a plain banner'
+    assert re.search(r'elseif data\.k == "all" then\s+(?:--[^\n]*\n\s+)?if not \(Config\.RareFindBannerEnabled == true and FindBanner\.show\(gui, data, Settings\.get\(\)\.calm\)\) then banner\(data\.text, false\) end', rare), 'the others\' banner path must stay a plain banner (BD-1121: unless the two-line look is on and passes its checks)'
     assert rare.count('sweep(label, width, height)') == 1, 'exactly one sweep call site'
     cosmetic = src('src/client/CosmeticVisuals.client.luau')
     for needle in ['MomentRim.play', 'lastOwnMutation']:
