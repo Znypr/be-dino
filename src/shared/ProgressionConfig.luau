@@ -50,19 +50,31 @@ return table.freeze({
         {400,1500,5200,1900,1000},
     },
     -- BD-184 / docs/88: colour weights out of EggColorWeightScale (10,000,000 = 100%): tier chances 80/16/3.2/0.64/0.128/0.0256
-    -- (RarityCurve, six tiers renormalised). BD-1036 (docs/186 s5): split EQUALLY inside a tier (Cream = Blue, Pink = Teal, Red =
-    -- Black), the old unequal split is gone. Ids, rgb, names and rarity strings are unchanged, so every stored colour id is valid.
-    -- Per slot: Common 80.005%, Uncommon 16.001%, Rare 3.200%, Epic 0.640%, Legendary 0.128%, Mythic 0.0256%.
-    -- Verified by tools/verify_rarity.py (strictly decreasing, adjacent tier ratio in band, equal split, total = scale).
+    -- (RarityCurve, six tiers renormalised). BD-1036 (docs/186 s5): split EQUALLY inside a tier. BD-1037 (docs/210): seven plain
+    -- colours added (Stone, Clay, Lime, Sky, Lilac, Navy, Wine), so 16 colours: Common 4, Uncommon 3, Rare 3, Epic 2, Legendary 2,
+    -- Mythic 2. The seven were picked by tools/colour_distinct.py (CIEDE2000 distance, colour-blind simulation, 50/50 mixes), not by
+    -- eye. The nine older rows keep their ids, names, tiers and rgb (a stored dino keeps its colours); only their weights moved with the
+    -- bigger tiers. Per slot: Common 80.005% (20.001% each), Uncommon 16.001% (5.334% each), Rare 3.200% (1.067% each), Epic 0.640%
+    -- (0.320% each), Legendary 0.128% (0.064% each), Mythic 0.0256% (0.0128% each). Rows are listed in tier order.
+    -- Verified by tools/verify_rarity.py (strictly decreasing, adjacent tier ratio in band, equal split, 2 to 4 per tier, total = scale)
+    -- and tools/verify_colour_distinct.py (no new pair closer than the documented limits). Build 020 does not know the seven new ids
+    -- and fails closed on a profile that holds a dino of such a colour (docs/111).
     EggColorWeightScale=10000000,
     EggColors={
-        {id="white",name="Cream",rarity="Common",weight=4000256,rgb={247,234,196}},
-        {id="blue",name="Blue",rarity="Common",weight=4000256,rgb={36,132,211}},
-        {id="green",name="Green",rarity="Uncommon",weight=1600103,rgb={29,175,75}},
-        {id="teal",name="Teal",rarity="Rare",weight=160010,rgb={22,170,151}},
-        {id="pink",name="Pink",rarity="Rare",weight=160010,rgb={215,72,147}},
-        {id="gold",name="Amber",rarity="Epic",weight=64004,rgb={241,160,36}},
-        {id="violet",name="Purple",rarity="Legendary",weight=12801,rgb={158,80,203}},
+        {id="white",name="Cream",rarity="Common",weight=2000134,rgb={247,234,196}},
+        {id="blue",name="Blue",rarity="Common",weight=2000134,rgb={36,132,211}},
+        {id="stone",name="Stone",rarity="Common",weight=2000134,rgb={90,108,105}},
+        {id="clay",name="Clay",rarity="Common",weight=2000134,rgb={146,108,86}},
+        {id="green",name="Green",rarity="Uncommon",weight=533364,rgb={29,175,75}},
+        {id="lime",name="Lime",rarity="Uncommon",weight=533364,rgb={196,241,128}},
+        {id="sky",name="Sky",rarity="Uncommon",weight=533364,rgb={162,229,238}},
+        {id="teal",name="Teal",rarity="Rare",weight=106670,rgb={22,170,151}},
+        {id="pink",name="Pink",rarity="Rare",weight=106670,rgb={215,72,147}},
+        {id="lilac",name="Lilac",rarity="Rare",weight=106670,rgb={205,169,249}},
+        {id="gold",name="Amber",rarity="Epic",weight=32001,rgb={241,160,36}},
+        {id="navy",name="Navy",rarity="Epic",weight=32001,rgb={15,73,149}},
+        {id="violet",name="Purple",rarity="Legendary",weight=6400,rgb={158,80,203}},
+        {id="wine",name="Wine",rarity="Legendary",weight=6400,rgb={135,29,46}},
         {id="red",name="Red",rarity="Mythic",weight=1280,rgb={237,44,33}},
         {id="black",name="Black",rarity="Mythic",weight=1280,rgb={29,34,41}},
     },

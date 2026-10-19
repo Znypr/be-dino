@@ -10,11 +10,11 @@ Status: **PROVISIONAL numbers**, code in review. Owner example: black = 5%, doub
 
 | Colours | Bonus |
 | --- | ---: |
-| Cream, Blue (Common) | +0% |
-| Green (Uncommon) | +1% (+2% for two greens) |
-| Teal, Pink (Rare) | +2% each |
-| Amber (Epic) | +3% |
-| Purple (Legendary) | +4% |
+| Cream, Blue, Stone, Clay (Common) | +0% |
+| Green, Lime, Sky (Uncommon) | +1% (+2% for two of them) |
+| Teal, Pink, Lilac (Rare) | +2% each |
+| Amber, Navy (Epic) | +3% each |
+| Purple, Wine (Legendary) | +4% each |
 | Red, Black (Mythic) | +5% each |
 | Black + Black | +10% (cap) |
 | Red + Black | +10% (cap) |
