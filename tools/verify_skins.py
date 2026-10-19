@@ -696,6 +696,8 @@ def fill(text: str) -> str:
         ('@@PICKER@@', module('src/shared/SkinPickerModel.luau')),
     ):
         text = text.replace(token, value)
+    # BD-1037: RB1 lets the frozen Build 020 reader open a profile this harness wrote, so the writer has the nine colours Build 020 knows (docs/111, docs/210)
+    text = text.replace('@@PROGRESSION_CONFIG@@', profile_sources.drill_progression_module())
     return verify_gifts.fill(text)
 
 

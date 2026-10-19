@@ -53,9 +53,11 @@ local colorChances={} for i=1,6 do colorChances[i]=colorTier[i]/scale end
 ladder("EggColors tiers",colorChances)
 -- BD-1036: EQUAL split inside a tier, strictly less weight per colour in a rarer tier, tier membership as in docs/88, the shared helper agrees.
 do
- local members={Common={"white","blue"},Uncommon={"green"},Rare={"pink","teal"},Epic={"gold"},Legendary={"violet"},Mythic={"red","black"}}
+ local members={Common={"white","blue","stone","clay"},Uncommon={"green","lime","sky"},Rare={"teal","pink","lilac"},Epic={"gold","navy"},Legendary={"violet","wine"},Mythic={"red","black"}}
  local weightOf={} local rarityOf={} for _,c in Progression.EggColors do weightOf[c.id]=c.weight rarityOf[c.id]=c.rarity end
- assert(#Progression.EggColors==9,"9 colours (new colours are BD-1037)")
+ assert(#Progression.EggColors==16,"16 colours (9 before BD-1037 plus 7 plain ones, docs/210)")
+ for _,ids in members do for _,id in ids do assert(weightOf[id]~=nil,"member "..id.." exists") end end
+ local seenId=0 for _,ids in members do seenId+=#ids end assert(seenId==#Progression.EggColors,"every colour is in exactly one tier list")
  for tierName,ids in members do
   for _,id in ids do assert(rarityOf[id]==tierName,id.." must be "..tierName) assert(weightOf[id]==weightOf[ids[1]],"equal split inside "..tierName) end
  end
@@ -65,9 +67,31 @@ do
  for k=1,6 do near(totals[k],colorTier[k]/scale,1e-12) end
 end
 assert(Progression.EggColors[1].rarity=="Common")
-local tierOfLast=-1 for _,c in {"white","blue","green","pink","teal","gold","violet","red","black"} do
+local tierOfLast=-1 for _,c in {"white","blue","stone","clay","green","lime","sky","teal","pink","lilac","gold","navy","violet","wine","red","black"} do
  local row for _,r in Progression.EggColors do if r.id==c then row=r end end
  local t=Curve.index(row.rarity) :: number assert(t>=tierOfLast) tierOfLast=t
+end
+-- 4a. BD-1037: 2 to 4 colours per tier (Legendary 1 to 2), names are short kid words, and a colour added after Build 020 is unknown to the
+-- frozen Build 020 reader (docs/111: that reader FAILS CLOSED on such a profile, the same known lock-out class as Epic species).
+do
+ local per={} local names={} local rgbs={}
+ for _,c in Progression.EggColors do
+  per[c.rarity]=(per[c.rarity] or 0)+1
+  assert(not names[c.name] and #c.name>=3 and #c.name<=8 and not string.find(c.name,"[^%a]"),"kid colour name "..c.name) names[c.name]=true
+  local key=table.concat(c.rgb,",") assert(not rgbs[key],"unique rgb "..c.id) rgbs[key]=true
+ end
+ local limits={Common={2,4},Uncommon={2,3},Rare={2,3},Epic={2,2},Legendary={1,2},Mythic={2,2}}
+ for tier,range in limits do assert(per[tier]>=range[1] and per[tier]<=range[2],tier.." colours "..tostring(per[tier])) end
+ local legacy={white=true,blue=true,green=true,teal=true,pink=true,gold=true,violet=true,red=true,black=true}
+ local function genes(id) return {conditionId="normal",hatchSuccess=true,primaryColorId=id,secondaryColorId="white",blend=50,patternId="01_blank"} end
+ local added=0
+ for _,c in Progression.EggColors do
+  assert(CurrentGenetics.valid(genes(c.id)),"current reader knows "..c.id)
+  if legacy[c.id] then assert(Build020Genetics.valid(genes(c.id)),"Build 020 reader knows "..c.id)
+  else assert(not Build020Genetics.valid(genes(c.id)),"Build 020 reader does NOT know "..c.id) added+=1 end
+ end
+ assert(added==7,"seven colours were added after Build 020")
+ for id in legacy do assert(Build020Progression.EggColors and #Build020Progression.EggColors==9,"Build 020 has exactly nine colours") end
 end
 -- 4b. BD-1033 patterns (docs/186 s4): one table, a tier per pattern, five ladder tiers renormalised, equal split inside a tier,
 -- short kid names (docs/72: no ids, no digits), integer weights that total the scale, strictly less weight per rarer tier.
@@ -147,8 +171,14 @@ local auroraP=byId.aurora.weight/wt
 print(string.format("Rarity passed: ladder %.4f/%.4f/%.4f/%.4f/%.4f/%.4f%%; colours, BIG/Shiny, potion odds and prices, auras, trails follow it; weather is a documented exception",w6[1]*100,w6[2]*100,w6[3]*100,w6[4]*100,w6[5]*100,w6[6]*100))
 print(string.format("Weather cadence: cycle %ds = %.2f events/hour; 30 min = %.1f events, 60 min = %.1f; Aurora every %.0f hours (%.4f%% per event), Blood Moon every %.0f h, Volcano every %.1f h",cycle,perHour,perHour/2,perHour,1/(perHour*auroraP),auroraP*100,1/(perHour*byId.bloodmoon.weight/wt),1/(perHour*byId.volcano.weight/wt)))
 '''
+def old_module(path):
+ # a frozen Build 020 file: its own require(script.Parent.ProgressionConfig) gets the frozen Build 020 table
+ return '(function()\nlocal script={Parent={ProgressionConfig=Build020Progression}}\nlocal require=function() return Build020Progression end\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
  s='local Curve='+module('src/shared/RarityCurve.luau')+'\nlocal Config='+module('src/shared/Config.luau')+'\nlocal Progression='+module('src/shared/ProgressionConfig.luau')+'\n'
+ # BD-1037: the frozen Build 020 reader and the current one, to prove a colour added later is unknown to Build 020 (docs/111)
+ s+='local Build020Progression='+module('tools/fixtures/build020/ProgressionConfig.luau')+'\nlocal Build020Genetics='+old_module('tools/fixtures/build020/EggGenetics.luau')+'\n'
+ s+='local CurrentGenetics=(function()\nlocal script={Parent={ProgressionConfig=Progression}}\nlocal require=function() return Progression end\n'+(ROOT/'src/shared/EggGenetics.luau').read_text()+'\nend)()\n'
  return s+BODY
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()

@@ -333,9 +333,9 @@ Slots.Images["pattern_03_round_spots"] = ""
 -- ===== 5. Colours tab: the real rgb, main AND accent colour count =====
 tabs = tabButtons()
 press(tabs.colours)
-assert(Tabs.lastTab() == "colours" and textOf(body, "IndexHeader") == "Colours 4 / 9", textOf(body, "IndexHeader")) -- blue, red (accent), white, black (log)
+assert(Tabs.lastTab() == "colours" and textOf(body, "IndexHeader") == "Colours 4 / 16", textOf(body, "IndexHeader")) -- blue, red (accent), white, black (log)
 local colourCards = cardMap()
-assert(#PC.EggColors == 9)
+assert(#PC.EggColors == 16)
 assert(colourCards["red"]:GetAttribute("Found") == true and textOf(colourCards["red"], "Name") == "Red" and textOf(colourCards["red"], "Line") == "Found on Compy", "the accent colour counts")
 assert(colourCards["blue"]:GetAttribute("Found") == true and textOf(colourCards["blue"], "Line") == "Found on 2 dinos")
 assert(colourCards["black"]:GetAttribute("Found") == true and textOf(colourCards["black"], "Line") == "Found before")
@@ -438,7 +438,7 @@ assert(textOf(red, "Tier") == "Mythic" and textOf(red, "Boost") == "Boost 5 of 5
 press(byName(popup(), "Close"))
 -- the card button covers ONE card only (never the screen, the header or X)
 local hits = allNamed(byName(body, "IndexGrid"), "CardHit")
-assert(#hits == 9, "one card button per colour card")
+assert(#hits == 16, "one card button per colour card")
 for _, hit in hits do
     assert(string.sub(hit.Parent.Name, 1, 5) == "Card_" and hit.Size.X.Scale == 1 and hit.Size.Y.Scale == 1 and hit.BackgroundTransparency == 1, "a card button sits inside its own card")
 end

@@ -100,7 +100,7 @@ assert(#pe == 9 and pe[#pe].id == "09_new" and pe[#pe].pips == 5 and pe[#pe].rar
 assert(Index.displayName("patterns", {id = "x"}) == "Pattern" and Index.displayName("colours", {id = "x"}) == "Colour" and Index.displayName("colours", {id = "x", name = "Sky"}) == "Sky")
 -- colours: same, with the real rgb
 local cc = Index.cards("colours", C, f2, names)
-assert(#cc == 9 and cc[1].tier == 0 and cc[#cc].tier == 5)
+assert(#cc == 16 and cc[1].tier == 0 and cc[#cc].tier == 5)
 local cById = {}
 for _, card in cc do cById[card.id] = card end
 assert(cById.blue.rgb[1] == 36 and cById.blue.rgb[2] == 132 and cById.blue.rgb[3] == 211, "the real colour")
@@ -119,7 +119,7 @@ assert(Index.foundOnText({"a", "b", "c"}, nil) == "a, b +1", "no name function: 
 
 -- 4. header counts and pips
 assert(Index.header("patterns", pcNone).text == "Patterns 0 / 8" and Index.header("patterns", pc).text == "Patterns 4 / 8")
-assert(Index.header("colours", cc).text == "Colours 5 / 9", Index.header("colours", cc).text) -- blue, red, white, green + black (log)
+assert(Index.header("colours", cc).text == "Colours 5 / 16", Index.header("colours", cc).text) -- blue, red, white, green + black (log)
 assert(Index.header("colours", nil).text == "Colours 0 / 0" and Index.header("patterns", {}).text == "Patterns 0 / 0")
 local want = {Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5}
 for _, card in pc do assert(card.pips == want[card.rarity], card.id .. " pips") end

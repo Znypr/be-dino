@@ -1,0 +1,442 @@
+{
+ "seamless-checks-1": {
+  "H": 0.98,
+  "V": 0.82,
+  "edge_H": 0.98,
+  "edge_V": 0.82,
+  "ctx_H": 0.74,
+  "ctx_V": 0.89,
+  "H_best": 0.98,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.82,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-checks-2": {
+  "H": 1.11,
+  "V": 0.65,
+  "edge_H": 1.11,
+  "edge_V": 0.55,
+  "ctx_H": 1.33,
+  "ctx_V": 1.31,
+  "H_best": 1.11,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.65,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-diamonds-1": {
+  "H": 0.45,
+  "V": 0.47,
+  "edge_H": 0.13,
+  "edge_V": 0.13,
+  "ctx_H": 0.9,
+  "ctx_V": 0.94,
+  "H_best": 0.45,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.47,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-diamonds-2": {
+  "H": 0.5,
+  "V": 0.39,
+  "edge_H": 0.31,
+  "edge_V": 0.18,
+  "ctx_H": 0.99,
+  "ctx_V": 0.78,
+  "H_best": 0.5,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.39,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-dots-1": {
+  "H": 0.48,
+  "V": 0.47,
+  "edge_H": 0.06,
+  "edge_V": 0.05,
+  "ctx_H": 0.96,
+  "ctx_V": 0.94,
+  "H_best": 0.48,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.47,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-dots-2": {
+  "H": 0.46,
+  "V": 0.53,
+  "edge_H": 0.05,
+  "edge_V": 0.05,
+  "ctx_H": 0.91,
+  "ctx_V": 1.05,
+  "H_best": 0.46,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.43,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-giraffe-1": {
+  "H": 0.52,
+  "V": 0.47,
+  "edge_H": 0.47,
+  "edge_V": 0.47,
+  "ctx_H": 1.04,
+  "ctx_V": 0.91,
+  "H_best": 0.52,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.47,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-hearts-1": {
+  "H": 0.48,
+  "V": 0.47,
+  "edge_H": 0.06,
+  "edge_V": 0.04,
+  "ctx_H": 0.95,
+  "ctx_V": 0.94,
+  "H_best": 0.48,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.47,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-hearts-2": {
+  "H": 0.51,
+  "V": 0.43,
+  "edge_H": 0.06,
+  "edge_V": 0.03,
+  "ctx_H": 1.02,
+  "ctx_V": 0.86,
+  "H_best": 0.51,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.43,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-leaves-1": {
+  "H": 0.75,
+  "V": 0.49,
+  "edge_H": 0.04,
+  "edge_V": 0.04,
+  "ctx_H": 1.49,
+  "ctx_V": 0.98,
+  "H_best": 0.65,
+  "H_trim": [
+   0,
+   1
+  ],
+  "V_best": 0.49,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-leaves-2": {
+  "H": 0.4,
+  "V": 0.78,
+  "edge_H": 0.03,
+  "edge_V": 0.04,
+  "ctx_H": 0.8,
+  "ctx_V": 1.55,
+  "H_best": 0.4,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.77,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-paws-1": {
+  "H": 1.17,
+  "V": 0.63,
+  "edge_H": 0.04,
+  "edge_V": 0.04,
+  "ctx_H": 2.34,
+  "ctx_V": 1.26,
+  "H_best": 0.95,
+  "H_trim": [
+   0,
+   1
+  ],
+  "V_best": 0.4,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-paws-2": {
+  "H": 0.49,
+  "V": 0.73,
+  "edge_H": 0.27,
+  "edge_V": 0.04,
+  "ctx_H": 0.97,
+  "ctx_V": 1.47,
+  "H_best": 0.49,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.44,
+  "V_trim": [
+   0,
+   1
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-plus-1": {
+  "H": 0.47,
+  "V": 0.7,
+  "edge_H": 0.02,
+  "edge_V": 0.02,
+  "ctx_H": 0.94,
+  "ctx_V": 1.4,
+  "H_best": 0.47,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.41,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-plus-2": {
+  "H": 0.77,
+  "V": 0.62,
+  "edge_H": 0.03,
+  "edge_V": 0.03,
+  "ctx_H": 1.55,
+  "ctx_V": 1.25,
+  "H_best": 0.52,
+  "H_trim": [
+   1,
+   2
+  ],
+  "V_best": 0.5,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-speckles-1": {
+  "H": 0.43,
+  "V": 0.49,
+  "edge_H": 0.11,
+  "edge_V": 0.28,
+  "ctx_H": 0.85,
+  "ctx_V": 0.99,
+  "H_best": 0.43,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.48,
+  "V_trim": [
+   2,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-speckles-2": {
+  "H": 0.4,
+  "V": 0.81,
+  "edge_H": 0.13,
+  "edge_V": 0.81,
+  "ctx_H": 0.79,
+  "ctx_V": 0.96,
+  "H_best": 0.4,
+  "H_trim": [
+   0,
+   2
+  ],
+  "V_best": 0.81,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-stars-1": {
+  "H": 0.64,
+  "V": 0.38,
+  "edge_H": 0.06,
+  "edge_V": 0.05,
+  "ctx_H": 1.29,
+  "ctx_V": 0.76,
+  "H_best": 0.64,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.38,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-stars-2": {
+  "H": 0.7,
+  "V": 0.56,
+  "edge_H": 0.06,
+  "edge_V": 0.04,
+  "ctx_H": 1.41,
+  "ctx_V": 1.11,
+  "H_best": 0.66,
+  "H_trim": [
+   1,
+   0
+  ],
+  "V_best": 0.33,
+  "V_trim": [
+   1,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-stars-3": {
+  "H": 0.39,
+  "V": 0.41,
+  "edge_H": 0.08,
+  "edge_V": 0.06,
+  "ctx_H": 0.78,
+  "ctx_V": 0.82,
+  "H_best": 0.39,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.41,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-triangles-1": {
+  "H": 0.51,
+  "V": 0.68,
+  "edge_H": 0.2,
+  "edge_V": 0.01,
+  "ctx_H": 1.01,
+  "ctx_V": 1.36,
+  "H_best": 0.51,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.68,
+  "V_trim": [
+   0,
+   0
+  ],
+  "status": "PASS",
+  "repair": null
+ },
+ "seamless-triangles-2": {
+  "H": 0.27,
+  "V": 0.58,
+  "edge_H": 0.27,
+  "edge_V": 0.02,
+  "ctx_H": 0.49,
+  "ctx_V": 1.16,
+  "H_best": 0.27,
+  "H_trim": [
+   0,
+   0
+  ],
+  "V_best": 0.43,
+  "V_trim": [
+   0,
+   1
+  ],
+  "status": "PASS",
+  "repair": null
+ }
+}

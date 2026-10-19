@@ -25,9 +25,12 @@ for tier, n in want do assert(B.TierPoints[Curve.index(tier) + 1] == n, tier) en
 assert(B.MainColourWeight == 0.7 and B.AccentColourWeight == 1.0 and B.GrowthPerPoint == 0.01 and B.GrowthCap == 0.15 and B.WalkPerPoint == 0.005 and B.WalkCap == 0.07)
 for _, row in P do assert(B.patternPoints(P, row.id) == want[row.rarity], row.id) end
 for _, row in C do assert(B.colourPoints(C, row.id) == want[row.rarity], row.id) end
--- Real tables: Plain/Dots/Freckles 0, Patches/Bands 1, Waves 2, Islands 4, Diamonds 6; Cream/Blue 0, Green 1, Pink/Teal 2, Amber 4, Purple 6, Red/Black 10.
+-- Real tables: Plain/Dots/Freckles 0, Patches/Bands 1, Waves 2, Islands 4, Diamonds 6; Cream/Blue/Stone/Clay 0, Green/Lime/Sky 1, Teal/Pink/Lilac 2, Amber/Navy 4, Purple/Wine 6, Red/Black 10.
 assert(B.patternPoints(P, "01_blank") == 0 and B.patternPoints(P, "04_bold_patches") == 1 and B.patternPoints(P, "06_wavy_stripes") == 2
     and B.patternPoints(P, "02_emerald_islands") == 4 and B.patternPoints(P, "07_diamond_scales") == 6)
+-- BD-1037: the seven plain colours added later take their tier's points (Stone/Clay 0, Lime/Sky 1, Lilac 2, Navy 4, Wine 6).
+assert(B.colourPoints(C, "stone") == 0 and B.colourPoints(C, "clay") == 0 and B.colourPoints(C, "lime") == 1 and B.colourPoints(C, "sky") == 1
+    and B.colourPoints(C, "lilac") == 2 and B.colourPoints(C, "navy") == 4 and B.colourPoints(C, "wine") == 6)
 -- 2. pattern + 0.7 main + 1.0 accent.
 near(pts("01_blank", "white", "white"), 0)
 near(pts("06_wavy_stripes", "green", "gold"), 2 + 0.7 * 1 + 1.0 * 4) -- 6.7

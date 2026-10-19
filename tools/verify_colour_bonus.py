@@ -38,6 +38,9 @@ for _,a in Progression.EggColors do for _,b in Progression.EggColors do -- never
   local r,r2=R(a.id,b.id),R(b.id,a.id) assert(r==r2,"symmetric")
   assert(Curve.index(r)>=Curve.index(a.rarity) and Curve.index(r)>=Curve.index(b.rarity) and (r==a.rarity or r==b.rarity))
 end end
+-- BD-1037: the seven plain colours added later follow their tier the same way (Common 0 .. Legendary 4, percent per tier).
+assert(P("stone","clay")==0 and P("lime","white")==1 and P("sky","sky")==2 and P("lilac","white")==2 and P("navy","white")==3 and P("wine","white")==4 and P("wine","wine")==8)
+assert(R("stone","clay")=="Common" and R("lime","stone")=="Uncommon" and R("lilac","sky")=="Rare" and R("navy","white")=="Epic" and R("wine","navy")=="Legendary" and R("wine","black")=="Mythic")
 print("Colour bonus passed: Common 0 .. Mythic 5 per colour, sum of two, cap 10, max multiplier 1.10; displayed colour rarity = the rarer of two")
 '''
 def script():
