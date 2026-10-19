@@ -130,7 +130,7 @@ After your task the lead logs it with `python tools/retro_log.py add ...` ([168]
 
 | Ceiling | Where | Value after BD-1088 |
 | --- | --- | --- |
-| Size of Bootstrap (bytes, LF) | `KNOWN_OVER` in `tools/verify_server_module_size.py` | 73,200 (was 123,680; 79,000 before the small screens moved, 89,450 before the Index screens) |
+| Size of Bootstrap (bytes, LF) | `KNOWN_OVER` in `tools/verify_server_module_size.py` | 72,300 (was 123,680; 79,000 before the small screens moved, 89,450 before the Index screens) |
 | Top-level `local` lines in Bootstrap (every verifier that counts them) | `MAX_TOP_LOCALS` in `tools/bootstrap_sources.py` | 165 (was 193 to 195 in nine places; 167 before the small screens moved, 170 before the Index screens) |
 | Live locals of the main chunk | `SCOPE_CEILINGS` in `tools/verify_local_budget.py` | 118 (was 142 of 200; 120 before the small screens moved, 124 before the Index screens) |
 
