@@ -34,7 +34,7 @@ GENERATED_MAX_LINES = 5
 GENERATED_NAMES = {"IconRaster.luau", "ResourceGeometry.luau", "IconTiles.luau"}
 GENERATED_DIRS = ("CreatureGenes/Chunks/", "CreatureData/Chunks/")
 # path under src/ -> ceiling in bytes (LF). Bootstrap was over LIMIT_BYTES on 2026-10-18 (126,160); its ceiling now sits just above its real size so freed room cannot be spent again (BD-1088).
-KNOWN_OVER = {"client/Bootstrap.client.luau": 79_000}  # was 127,000, 123,900 (BD-617), 123,680 (BD-1019); BD-1088 moved the shop screens to ShopScreens.luau (94,500) and the toast stack to Toasts.luau: 89,478; BD-1110 moved the Dino Index and details to DinoIndexScreens.luau: 78,790. A ratchet below the limit too: lower it when code moves out
+KNOWN_OVER = {"client/Bootstrap.client.luau": 73_200}  # was 127,000, 123,900 (BD-617), 123,680 (BD-1019); BD-1088 moved the shop screens to ShopScreens.luau (94,500) and the toast stack to Toasts.luau: 89,478; BD-1110 moved the Dino Index and details to DinoIndexScreens.luau: 78,790; BD-1110 block 4 moved the small screens to SmallScreens.luau: 72,965; two hook lines from the UI rounds that merged meanwhile (text style, bubble, tester buttons): 73,161 -> ceiling 73,200. A ratchet below the limit too: lower it when code moves out
 
 
 def size_of(path: Path) -> int:

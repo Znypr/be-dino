@@ -44,7 +44,7 @@ def script():
 
 
 def check_wiring():
-    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8') + (ROOT / 'src/client/SmallScreens.luau').read_text(encoding='utf-8')  # BD-1110: tutorial and Go home? moved
     for needle in ('FtueCopy).tutorialSteps', 'FtueCopy).homeConfirmLine', 'FtueCopy).homeConfirmTotals'):
         assert needle in boot, 'Bootstrap does not use ' + needle
     rc = (ROOT / 'src/client/RunComplete.luau').read_text(encoding='utf-8')
