@@ -64,6 +64,7 @@ assert(State.kind({left=2})=="normal" and State.kind({levelNeeded=6,level=3})=="
 assert(State.kind({owned=true,left=0})=="owned")
 local sold=State.look({left=0},"30 Crystals")
 assert(sold.dim and not sold.active and sold.buttonText=="SOLD OUT" and sold.tone=="calm" and not sold.caption:find("!!"))
+assert(sold.caption=="Back later!" and #sold.caption<=12,"BD-1129: the sold-out caption is short (it was cut on a potion card at 516 px)")
 local owned=State.look({owned=true},"30 Crystals") assert(owned.caption=="Owned" and owned.tone=="calm")
 local normal=State.look({left=3},"30 Crystals") assert(normal.active and normal.caption=="30 Crystals  3 left" and normal.tone=="price")
 assert(State.look({levelNeeded=6,level=2},"x").buttonText=="LEVEL 6")
