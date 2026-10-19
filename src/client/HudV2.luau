@@ -14,6 +14,7 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Ftue = require(Shared:WaitForChild("FtueRules"))
 local Copy = require(Shared:WaitForChild("FtueP1"))
 local ProgressionConfig = require(Shared:WaitForChild("ProgressionConfig"))
+local TouchLayout = require(Shared:WaitForChild("TouchLayout"))
 local ProgressionRules = require(Shared:WaitForChild("ProgressionRules"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
@@ -212,6 +213,9 @@ function Hud.layout(layout: any)
     local r = layout.rail
     if canvas and r then -- BD-1102: the toast stack keeps clear of the rail (Toasts reads this attribute)
         canvas:SetAttribute("RailRect", Rect.new(r.x, r.y, r.x + r.w * r.scale, r.y + r.h * r.scale))
+        for name, piece in TouchLayout.hudRects(layout) do -- BD-1128: the stall bubble keeps clear of every HUD piece (it reads these)
+            canvas:SetAttribute(name, Rect.new(piece.x, piece.y, piece.x + piece.w, piece.y + piece.h))
+        end
     end
     bar.AnchorPoint, bar.Position = Vector2.zero, UDim2.fromOffset(b.x, b.y)
     local uiScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
