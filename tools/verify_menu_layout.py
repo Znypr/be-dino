@@ -50,8 +50,12 @@ MODULES.update({
 })
 
 
-def build(replacements=None):
-    return sw.build_script(replacements, HARNESS, MODULES)
+def build(replacements=None, words=False):
+    source = sw.build_script(replacements, HARNESS, MODULES)
+    if words:  # BD-1116: the same world with Config.HudRailWordsEnabled on (the six-button rail checks of section 5 are skipped: tools/verify_rail_words.py has the word rail's own)
+        assert 'local RAIL_WORDS = false' in source
+        source = source.replace('local RAIL_WORDS = false', 'local RAIL_WORDS = true', 1)
+    return source
 
 
 MUTANTS = {
@@ -148,7 +152,7 @@ MUTANTS = {
         'RailRun': [('return positions[math.max(rank, 1)]', 'return positions[i]')],
     },
     'the rail is laid out for six buttons in a run': {
-        'RailRun': [('if not M.hidden(b) then n += 1 end', 'n += 1')],
+        'RailRun': [('if not M.hidden(b) and not M.isGear(b) then n += 1 end', 'n += 1')],
     },
 }
 
@@ -158,11 +162,12 @@ def main():
     parser.add_argument('--runner', required=True)
     parser.add_argument('--no-mutants', action='store_true')
     args = parser.parse_args()
-    result = sw.run(args.runner, build())
-    print(result.stdout, end='')
-    if result.returncode != 0 or 'passed' not in result.stdout:
-        print(result.stderr)
-        sys.exit(result.returncode or 1)
+    for words in (False, True):
+        result = sw.run(args.runner, build(words=words))
+        print(('[rail with words] ' if words else '') + result.stdout, end='')
+        if result.returncode != 0 or 'passed' not in result.stdout:
+            print(result.stderr)
+            sys.exit(result.returncode or 1)
     if not args.no_mutants:
         from concurrent.futures import ThreadPoolExecutor  # each mutant is its own luau process: run them side by side
         names = list(MUTANTS)

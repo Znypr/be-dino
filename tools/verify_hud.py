@@ -93,7 +93,7 @@ def static_checks():
     # BD-075: the objectives pill is a layout piece like the Goals header: both layouts return its rects when `objectives` is set (and nothing when it is not;
     # tools/verify_movement_mobile.py asserts zero overlap with every HUD piece at 8 phone, 6 tablet, 7 desktop and the 836 x 390 / 667 x 375 canvases, folded
     # and open), Bootstrap passes the flag and publishes the rects only under it, and GoalHud attaches the panel only behind Config.ObjectivesEnabled.
-    assert 'return desktop(width, height, count, params.objectives)' in touch and 'objectives = objectives,' in touch and 'result.objectives = {x = x, y = y, w = w, h = O.h}' in touch, 'both layouts place the objectives pill'
+    assert 'return desktop(width, height, count, params.objectives, words)' in touch and 'objectives = objectives,' in touch and 'result.objectives = {x = x, y = y, w = w, h = O.h}' in touch, 'both layouts place the objectives pill'
     assert 'objectives=Config.ObjectivesEnabled==true and goalHUD.Visible' in boot, 'Bootstrap only asks for the pill while the flag is on'
     import verify_objectives_panel
     problems = verify_objectives_panel.static_errors()

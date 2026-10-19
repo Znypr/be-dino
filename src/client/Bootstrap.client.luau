@@ -824,7 +824,7 @@ local function scales()
     if size.X<=0 or size.Y<=0 then return end
     local touch=touchMode()
     local railRun=require(script.Parent.RailRun)
-    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=railRun.count(navigationButtons),
+    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=railRun.count(navigationButtons),railWords=Config.HudRailWordsEnabled==true, -- BD-1116: the rail with words
         thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
         jump=if touch then coreTouchRect("JumpButton") else nil,
         goals=goalHUD.Visible and (player.Character==nil or player.Character:GetAttribute("RunState")~="Active"), -- BD-531: the hub Goals header takes space under the goal line
@@ -847,22 +847,7 @@ local function scales()
     place(rail,railScale,layout.rail)
     place(timers,timerScale,layout.timers)
     place(action,actionScale,layout.action)
-    local cell=layout.rail.button
-    for i,b in navigationButtons do
-        local cellPosition=railRun.position(navigationButtons,i,layout.rail.positions)
-        b.Position,b.Size=UDim2.fromOffset(cellPosition.x,cellPosition.y),UDim2.fromOffset(cell.w,cell.h)
-        for _,child in b:GetChildren() do
-            if child:IsA("TextLabel") then
-                child.Position,child.Size,child.TextSize=UDim2.fromOffset(cell.labelX,cell.labelY),UDim2.fromOffset(cell.labelW,cell.labelH),cell.textSize
-                child.Visible=not cell.iconOnly -- BD-333: narrow phones show the icon only
-                child.TextScaled=not layout.touch -- BD-333: phones: real >= 14 px, no shrink
-                local limit=child:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
-                limit.MaxTextSize,limit.Parent=cell.textSize,child
-            elseif child:IsA("GuiObject") and child.Name~="ActiveTab" and child.Name~="IndexDot" then
-                child.Position,child.Size=UDim2.fromOffset(cell.iconX,cell.iconY),UDim2.fromOffset(cell.icon,cell.icon)
-            end
-        end
-    end
+    railRun.place(navigationButtons,layout) -- BD-333/BD-1116: each rail button gets its slot, icon and word (the loop moved to RailRun)
     local t=layout.timers
     leapButton.Position=UDim2.fromOffset(0,t.leapY)
     weatherTile.Position,weatherTile.Visible=UDim2.fromOffset(0,t.weatherY),t.weatherVisible

@@ -222,7 +222,7 @@ Code against docs, found while building the table (the code value is in the tabl
 - Dino door: `CaveHubLayout.Kinds.hub_gate_arch` is 24 x 24 x 8.7 and `CaveHubProps` records a final size of 16 x 15.9 x 5.8, but no station places that prop any more; the door is the terrain mouth 30 x 20 (`CaveTerrainRules.GateHeight`) with the `cave_gate_frame` mesh 39.79 x 25.79 x 9.77 (docs/140 gives the opening as 29.2 x 19.6).
 - Only Compy, Gallimimus and Tyrannosaurus heights are Studio-measured (the `LowPolyDinoAssets` comment still mentions the old 1.2 x 3.4 x 4.0 Gallimimus at scale 2.0). The other 19 are ESTIMATES until BD-471.
 ### 8.2 Any UI screen
-Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-copy-and-asset-standards.md); checked on phone landscape (844x390) and desktop; one idea per screen; final art is an asset task, not code drawing; shared `TextStyle`; lead screenshots it before merge.
+Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-copy-and-asset-standards.md); checked on phone landscape (844x390) and desktop; one idea per screen; final art is an asset task, not code drawing; shared `TextStyle`; lead screenshots it before merge. HUD rail (BD-1116, `HudRailWordsEnabled`, [212](212-hud-rail-with-words.md)): a word on every button, at most five buttons, Settings a gear.
 ### 8.3 Any FX
 Calm and soft (no flicker, no full-screen flash); never hides dino, food or controls; particle/part budget stated; phone rate about half; Reduce Motion variant; colours from the palette; at most 8 dinos with FX, nearest first ([93](93-anime-fx-direction.md), [92](92-mutation-fx-brief.md)).
 

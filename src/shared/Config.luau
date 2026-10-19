@@ -117,6 +117,11 @@ return table.freeze({
     -- decides and rate-limits exactly as before (RareHatch.luau); only the look and the words change. false = the dark strip with "Sam hatched a Legendary Compy!"
     -- exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157).
     RareFindBannerEnabled = false,
+    -- BD-1116 (docs/202 R1, docs/212): true = the HUD rail has a WORD under or beside the icon on every button, bigger buttons, and at most five of them: at home
+    -- Dinos, Eggs, Fusion, Shop, Potions; Settings is a small gear at the end of the rail (not counted); in a run Potions + the gear. Keys C / B / G, the "At home"
+    -- rule (the four home buttons hidden in a run), the glow trail and the first-run MENU chip are unchanged. false = the six small buttons exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157).
+    HudRailWordsEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
