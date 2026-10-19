@@ -2,7 +2,7 @@
  "about": "Kid-text problems that existed when this file was written (BD-655, docs/162). CI fails only on problems NOT listed here. Fix a text, then re-run: python tools/lint_kid_text.py --write-baseline. Never add new problems to it by hand.",
  "total": 5,
  "counts": {
-  "src/client/Bootstrap.client.luau|LONG_TEXT|Eat 500 food for %d eggs. Weather can add more!": 1,
+  "src/client/SmallScreens.luau|LONG_TEXT|Eat 500 food for %d eggs. Weather can add more!": 1,
   "src/client/FusionMenu.luau|LONG_TEXT|Your last fusion did not finish. Check result is safe: it never fuses twice.": 1,
   "src/shared/HatchTimeline.luau|LONG_TEXT|Oops! Splat!": 1,
   "src/shared/OddsCopy.luau|LONG_TEXT|A tiny chance of a secret dino in free eggs": 1,
