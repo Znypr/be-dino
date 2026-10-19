@@ -64,7 +64,7 @@ ColorSequence = {new = function() return {} end}
 ColorSequenceKeypoint = {new = function() return {} end}
 NumberSequence = {new = function() return {} end}
 NumberSequenceKeypoint = {new = function() return {} end}
-TweenInfo = {new = function() return {} end}
+TweenInfo = {new = function(time) return {Time = time or 0} end} -- BD-1153: the pop-in tests step a tween over its duration
 Enum = setmetatable({}, {__index = function(_, k) return setmetatable({}, {__index = function(_, v) return k .. "." .. v end}) end})
 
 -- ===== instances with geometry =====
@@ -137,6 +137,7 @@ imt.__newindex = function(self, key, value)
         if value then table.insert(rawget(value, "__kids"), self) end
         return
     end
+    if key == "TextSize" and type(value) == "number" then value = math.clamp(value, 1, 100) end -- the engine clamps TextSize to 1 .. 100 (BD-1153: Studio saw 100 where 229112335 was asked)
     p[key] = value
 end
 function methods.IsA(self, class)

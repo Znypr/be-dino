@@ -642,8 +642,22 @@ function Seq.play(args: Args): Handle
         if not reveal then return end
         local chip = kit.chips[i]
         kit.chipLabels[i].Text = reveal.name
-        kit.chipBadgeLabels[i].Text = string.upper(reveal.tierName)
+        local tierWord = string.upper(reveal.tierName)
+        kit.chipBadgeLabels[i].Text = tierWord
         kit.chipBadges[i].BackgroundColor3 = TIER_COLORS[reveal.tier] or WHITE
+        -- BD-1154: the colour name and the tier tag share the chip by measure (name first), never one over the other
+        local plan = TagLayout.chipPlan(reveal.name, tierWord, screenScale)
+        local nameLabel, badge, badgeLabel = kit.chipLabels[i], kit.chipBadges[i], kit.chipBadgeLabels[i]
+        chip.Size = UDim2.fromOffset(plan.w, plan.h)
+        nameLabel.TextScaled, nameLabel.TextWrapped, nameLabel.TextTruncate, nameLabel.TextXAlignment = false, false, Enum.TextTruncate.AtEnd, Enum.TextXAlignment.Left
+        nameLabel.TextSize, nameLabel.Position, nameLabel.Size = plan.nameSize, UDim2.fromOffset(plan.nameX, plan.nameY), UDim2.fromOffset(plan.nameW, plan.nameH)
+        badge.AnchorPoint = Vector2.new(if plan.tierRight then 1 else 0, 0)
+        badge.Position, badge.Size = UDim2.fromOffset(plan.tierX, plan.tierY), UDim2.fromOffset(plan.tierW, plan.tierH)
+        badgeLabel.TextScaled, badgeLabel.TextWrapped, badgeLabel.TextSize = false, false, plan.tierSize
+        for _, l in {nameLabel, badgeLabel} do
+            local oldLimit = l:FindFirstChildOfClass("UITextSizeConstraint")
+            if oldLimit then oldLimit:Destroy() end -- a size limit only acts on shrink-to-fit text
+        end
         -- BD-1069: the swatch is the named colour's own palette rgb (EggColors), never the shell tint or a blend (a Cream chip showed a green dot)
         local rgb = Timeline.revealRgb(reveal)
         kit.chipSwatches[i].BackgroundColor3 = if rgb then Chip.color(rgb) else paintColors[i]
