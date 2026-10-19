@@ -38,7 +38,7 @@ def cell_id(prefix: str, col: int, row: int, ids: Optional[List[str]]) -> str:
     return "%s-%s%d" % (prefix, letter, row + 1)
 
 
-def flood_background(rgb: np.ndarray, tol: float = 26.0):
+def flood_background(rgb: np.ndarray, tol: float = 14.0):
     """Return (bg_mask, info). bg_mask True = background reached from the cell edges."""
     h, w, _ = rgb.shape
     ring = np.concatenate([rgb[0, :], rgb[-1, :], rgb[:, 0], rgb[:, -1]]).astype(np.float32)
@@ -161,6 +161,60 @@ def process_sheet(sheet: str, out_dir: str, prefix: str, cols: int, rows: int, s
             gap_flag[(int(xs.mean() * 2), int(ys.mean() * 2))] = len(ys) * 4
     sheet_clean = binfo["ring_spread"] <= 30 and bgmask.mean() > 0.3
     boxes, note = find_objects(~bgmask, cols, rows) if sheet_clean else (None, "sheet background not flat")
+    cell_masks = None
+    if boxes is None and sheet_clean:
+        # art batch 2: swooshes, sparkles and glows split or touch, so the object count is not exact. Fall back to
+        # the equal grid: every drawn piece goes to the grid cell holding its centre, and a cell keeps ONLY its own
+        # pieces (no bleed from the neighbour next to it). Boxes are the pieces' bounds.
+        fg_all = ~bgmask
+        small = fg_all[::2, ::2]
+        # objects that touch their neighbour (coins stacked with a 3 px gap): cut the labelling at the quietest
+        # line near every grid line, then give those cut pixels back to the piece above / left of them.
+        cut = fg_all.copy()
+        cuts_y = [int(round(r * H / rows)) for r in range(1, rows)]
+        cuts_x = [int(round(c * W / cols)) for c in range(1, cols)]
+        ys_cut, xs_cut = [], []
+        for yb in cuts_y:
+            lo, hi = max(1, yb - 45), min(H - 2, yb + 45)
+            ys_cut.append(lo + int(np.argmin([fg_all[y].sum() for y in range(lo, hi)])))
+        for xb in cuts_x:
+            lo, hi = max(1, xb - 45), min(W - 2, xb + 45)
+            xs_cut.append(lo + int(np.argmin([fg_all[:, x].sum() for x in range(lo, hi)])))
+        for y in ys_cut:
+            cut[y - 1:y + 2, :] = False
+        for x in xs_cut:
+            cut[:, x - 1:x + 2] = False
+        small = cut[::2, ::2]
+        lab, n = _label(small)
+        cw, ch = W / cols, H / rows
+        cell_masks = {}
+        boxes = [None] * (rows * cols)
+        comps = []  # (label, area, bbox, centre)
+        for k in range(1, n + 1):
+            ys, xs = np.where((lab == k) & small)
+            if len(ys):
+                comps.append((k, len(ys) * 4, (xs.min() * 2, ys.min() * 2, xs.max() * 2, ys.max() * 2), (xs.mean() * 2, ys.mean() * 2)))
+        bigc = [c for c in comps if c[1] >= 6000]
+        for k, area, bb, (cx, cy) in comps:
+            if area < 6000 and bigc:  # a spark or leaf piece: goes with the nearest big piece
+                def dist(o):
+                    gx = max(o[2][0] - bb[2], bb[0] - o[2][2], 0)
+                    gy = max(o[2][1] - bb[3], bb[1] - o[2][3], 0)
+                    return gx * gx + gy * gy
+                cx, cy = min(bigc, key=dist)[3]
+            idx = min(rows - 1, int(cy // ch)) * cols + min(cols - 1, int(cx // cw))
+            cell_masks.setdefault(idx, []).append(k)
+        full_lab = np.kron(lab, np.ones((2, 2), np.int32))[:H, :W]
+        if full_lab.shape != (H, W):
+            full_lab = np.pad(full_lab, ((0, H - full_lab.shape[0]), (0, W - full_lab.shape[1])), mode="edge")
+        for idx in range(rows * cols):
+            ks = cell_masks.get(idx, [])
+            m = np.isin(full_lab, ks) & fg_all if ks else np.zeros((H, W), bool)
+            cell_masks[idx] = m
+            ys, xs = np.where(m)
+            r, c = divmod(idx, cols)
+            boxes[idx] = (int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())) if len(ys) else (int(c * cw), int(r * ch), int((c + 1) * cw) - 1, int((r + 1) * ch) - 1)
+        note += " (equal-grid fallback)"
     rgba_full = np.dstack([rgb, np.full((H, W), 255, np.uint8)])
     hsv = np.array(img.convert("HSV")).astype(np.float32)
     results: Dict[str, dict] = {}
@@ -182,8 +236,11 @@ def process_sheet(sheet: str, out_dir: str, prefix: str, cols: int, rows: int, s
             fgc = ~bgmask[Y0:Y1 + 1, X0:X1 + 1]
             if transparent:
                 # neighbouring objects inside this box: keep only this object's own pixels (inside its tight box)
-                keep = np.zeros_like(fgc)
-                keep[y0 - Y0:y1 - Y0 + 1, x0 - X0:x1 - X0 + 1] = True
+                if cell_masks is not None:
+                    keep = cell_masks[r * cols + c][Y0:Y1 + 1, X0:X1 + 1]
+                else:
+                    keep = np.zeros_like(fgc)
+                    keep[y0 - Y0:y1 - Y0 + 1, x0 - X0:x1 - X0 + 1] = True
                 solid = fgc & keep
                 pp = np.pad(solid, 1)  # shave 1 px: the edge pixels are part grey background (a light fringe)
                 solid = solid & pp[:-2, 1:-1] & pp[2:, 1:-1] & pp[1:-1, :-2] & pp[1:-1, 2:]
