@@ -391,7 +391,8 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         -- A view that cannot be fetched (server flag off, not loaded yet) keeps the panel hidden until the first answer.
         -- BD-1095: hidden while the Goals panel is open over this spot (the Goals panel publishes its folded rect; its open rect follows from it).
         local goalsFolded = Stack.fromRect(gui:GetAttribute("GoalsFoldedRect"))
-        local hiddenByGoals = Stack.hidden(Stack.Tasks, gui:GetAttribute(Stack.Attribute), Stack.fromRect(folded), if goalsFolded then Stack.goalsOpen(goalsFolded) else nil)
+        local goalsOpen = Stack.fromRect(gui:GetAttribute("GoalsOpenRect")) or (if goalsFolded then Stack.goalsOpen(goalsFolded) else nil) -- BD-1108: the open Goals card may sit under the rail
+        local hiddenByGoals = Stack.hidden(Stack.Tasks, gui:GetAttribute(Stack.Attribute), Stack.fromRect(folded), goalsOpen)
         local visible = hub and typeof(folded) == "Rect" and state.view ~= nil and not hiddenByGoals
         root.Visible = visible
         if not hub then
@@ -404,12 +405,14 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         end
         if not visible then return end
         local rect: Rect = if open and typeof(openRect) == "Rect" then openRect else folded
-        local key = tostring(rect) .. tostring(open)
+        -- BD-1108: an open sheet keeps off the HUD rail too (it opens under it when it would cover it; the touch layout already starts it under the rail)
+        local railDy = if open then Stack.clearRail(Stack.fromRect(rect) :: Stack.R, Stack.fromRect(gui:GetAttribute("RailRect")), gui.AbsoluteSize.Y) else 0
+        local key = tostring(rect) .. tostring(open) .. tostring(railDy)
         if key ~= lastRects then
             lastRects = key
             local height = if open then rect.Height else HEADER_H
             panelWidth = rect.Width
-            root.Position = UDim2.fromOffset(rect.Min.X, rect.Min.Y)
+            root.Position = UDim2.fromOffset(rect.Min.X, rect.Min.Y + railDy)
             Theme.animate(root, 0.15, {Size = UDim2.fromOffset(rect.Width, height)})
             body.CanvasSize = UDim2.fromOffset(0, CANVAS_H)
             render()
