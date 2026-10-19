@@ -19,6 +19,7 @@ local ProgressionConfig = require(Shared.ProgressionConfig)
 local EggGenetics = require(Shared.EggGenetics)
 local Theme = require(Shared.UITheme)
 local Chip = require(Shared.ChipStyle)
+local TagFit = require(Shared.TagFit) -- BD-1103: tab words are measured before they are drawn
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local Sfx = require(Shared.Sfx)
@@ -484,18 +485,31 @@ local function renderBrowse()
     local active = Sel.stage(state.targetStage)
     setTitle(if active then "Make " .. Sel.article(active.name) .. " " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
     local root = body :: Frame
-    local left = Instance.new("Frame")
-    left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.38, -6, 1, 0), root
-    local centre = W.box(root, UDim2.new(.28, -6, 1, 0), UDim2.new(.38, 3, 0, 0), C.card, 10)
-    centre.Name = "Ingredients"
-    local right = Instance.new("Frame")
-    right.Name, right.BackgroundTransparency, right.Size, right.Position, right.Parent = "ResultColumn", 1, UDim2.new(.34, -6, 1, 0), UDim2.new(.66, 6, 0, 0), root
-    -- Row 1: three big tier tabs.
+    -- BD-1103: the three tier tabs ("GOLD 6 Base", "EMERALD 3 Gold", "DIAMOND 2 Emerald") are sized by what their words need at 14 px (TagFit), never by a
+    -- third of the column: at 500 px wide a third is 54 px and "EMERA" / "DIAMO" were cut. When the words do not fit above the dino list, the tab row takes the
+    -- whole width of the screen and the three columns start under it (a wide row of the same two-line tabs).
     local tabHeight = T + 12
+    local items: {{title: string, sub: string}} = {}
     for i, s in Sel.Stages do
         local words = Sel.tabText(s.id)
+        items[i] = {title = words.title, sub = words.sub}
+    end
+    local tabs = TagFit.fusionTabs(items, panelWidth(), .38, {gap = 4, pad = 6, titleMax = 22, subMax = 16})
+    local wide = tabs.wide
+    local under = if wide then tabHeight + 6 else 0 -- the three columns start under a wide tab row
+    local left = Instance.new("Frame")
+    left.Name, left.BackgroundTransparency, left.Size, left.Position, left.Parent = "Browse", 1, UDim2.new(.38, -6, 1, -under), UDim2.fromOffset(0, under), root
+    local centre = W.box(root, UDim2.new(.28, -6, 1, -under), UDim2.new(.38, 3, 0, under), C.card, 10)
+    centre.Name = "Ingredients"
+    local right = Instance.new("Frame")
+    right.Name, right.BackgroundTransparency, right.Size, right.Position, right.Parent = "ResultColumn", 1, UDim2.new(.34, -6, 1, -under), UDim2.new(.66, 6, 0, under), root
+    -- Row 1: three big tier tabs.
+    local rowW = tabs.rowW
+    for i, s in Sel.Stages do
+        local words = Sel.tabText(s.id)
+        local slot = tabs.tabs[i]
         local on = state.targetStage == s.id
-        local b = W.button(left, "", UDim2.new(1 / 3, -4, 0, tabHeight), UDim2.new((i - 1) / 3, 0, 0, 0),
+        local b = W.button(if wide then root else left, "", UDim2.new(slot.w / rowW, 0, 0, tabHeight), UDim2.new(slot.x / rowW, 0, 0, 0),
             if on then (W.StageColors[s.id] or C.gold) else C.card, function()
                 if state.targetStage == s.id then return end
                 state.targetStage = s.id
@@ -505,11 +519,11 @@ local function renderBrowse()
                 scheduleQuote()
             end)
         b.Name = "Stage_" .. s.id
-        W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), 22, if on then C.outline else C.text)
-        W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), 16, if on then C.outline else Dim)
+        W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), slot.titleSize, if on then C.outline else C.text)
+        W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), slot.subSize, if on then C.outline else Dim)
     end
     -- Row 2: goal sentence + one Filter button.
-    local y = tabHeight + 6
+    local y = if wide then 0 else tabHeight + 6
     column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 20, C.gold, true)
     column.goal.Name = "Goal"
     local filterOn = state.filtersOpen or next(state.filters) ~= nil

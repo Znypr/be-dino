@@ -120,15 +120,21 @@ local _, late = P.rainbowBand(3, 6, 0, 1, nil)
 assert(early == 0 and late > .3, "it fades in with the build-up and is clearly readable (not pale) at the end")
 
 -- 6. BD-1073: the reveal card layout.
-local dino, tag = P.cardRect("dino"), P.cardRect("stopTag")
+local dino = P.cardRect("dino")
 assert(dino[2] >= 0, "the dinosaur view starts at the top of the card (it used to start 12 px above)")
 assert(dino[4] <= P.Card.nameTop, "the dinosaur view ends where the name starts")
 assert(P.Card.baseZoom <= 1.2, "the zoom no longer cuts the head")
-assert(tag[1] >= 0 and tag[3] <= 824 and tag[2] >= 0 and tag[4] <= 402 and P.Card.stopTag.h >= 44, "the stop tag is on the card and tall enough to read two lines")
-assert(not P.overlaps(tag, {212, 0, 612, 262}) or tag[3] <= 216, "the stop tag stays in the left margin, out of the dinosaur")
-assert(not P.overlaps(tag, {11, 26, 221, 132}), "the stop tag is under the Shiny / mutation ribbons")
-assert(not P.overlaps(tag, {649, 36, 799, 130}), "and far from the BIG / NEW ribbons")
-assert(P.inKeepOut(116, 160), "the foreground sparkles keep out of the stop tag")
+-- BD-1107: the ribbons and the stop tag are stacked in two side columns (Shared/HatchTagLayout); the plan's column numbers must be the layout's own
+local cols = P.Card.tagColumns
+assert(cols.left[1] == 8 and cols.left[1] >= 0 and cols.right[3] <= 824 and cols.left[4] <= P.Card.nameTop and cols.right[4] <= P.Card.nameTop, "the tag columns are on the card, above the name")
+assert(not P.overlaps(cols.left, cols.right), "the two tag columns never touch")
+assert(P.inKeepOut(116, 160) and P.inKeepOut(116, 220) and P.inKeepOut(700, 120), "the foreground sparkles keep out of both tag columns")
+for i = 1, 8 do
+    for t = 0, 60, 3 do
+        local _, y = P.fgSpark(i, 8, t * .37)
+        assert(y >= cols.left[4], "a foreground sparkle starts below the tag columns")
+    end
+end
 print("Hatch polish pure checks passed")
 '''
 
@@ -184,7 +190,7 @@ MUTANTS = {
         'HatchSequence': [('if traitBadge and traitBadge:IsA("GuiObject") then traitBadge.Visible = false end', '')],
     },
     'Skip stops without saying why (BD-1073)': {
-        'HatchSequence': [('            if why then\n                local tagRect', '            if false then\n                local tagRect')],
+        'HatchSequence': [('            if why then\n                local fill', '            if false then\n                local fill')],
     },
 }
 
