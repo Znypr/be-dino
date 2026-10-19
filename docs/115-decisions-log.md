@@ -631,3 +631,6 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **To overturn.** Card floor on small windows: `tools/text_style_allow.json` (`compact`) and `PhoneScale.MinText`. X: `PhoneScale.MinClose`. Chip palette: restore `ShopPreview.RarityColors` and the colour line in `ShopCards`. Banner: set `RareFindBannerEnabled` to false in the playtest rule of `tools/release_profiles.py` (one line).
 - **Evidence.** Offline only: `tools/verify_text_style.py` (17 mutants), `verify_rarity_words.py` (11), `verify_rare_find_banner.py` (12), `verify_rare_hatch.py`, `verify_close_paths.py` (8), small-window and menu-layout checks at 11 sizes. No Studio, phone or screenshot: Studio re-check row on the board.
 
+
+## OWNER decision 2026-10-19 (BD-1138): playtest switches for friends
+- Asked with the readiness audit (docs/209): the five switches that need the owner's OK (Combat, Secret dinos, Fusion identity + preview, Per-dino cosmetics, Movement guard). **Owner: "don't turn off anything"; Movement guard: keep on.** All five stay ON in the playtest profile; nothing else changes. Anything that must stay off (crystal packs, paid random, gifting, test grants, harnesses) is untouched.
