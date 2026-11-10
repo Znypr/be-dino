@@ -650,6 +650,7 @@ local function startServices(server, options)
     try("HubTravelService", function() load("src/server/HubTravelService").start() end)
     try("FeedbackService", function() load("src/server/FeedbackService").start() end)
     try("TelemetryService", function() load("src/server/TelemetryService").start() end)
+    try("FunnelService", function() load("src/server/FunnelService").start() end) -- BD-1166
     try("QaService", function() load("src/server/QaService").start() end)
     try("ClassMovementService", function() load("src/server/ClassMovementService").start() end)
     try("CombatService", function() server.combat = load("src/server/CombatService").start(server.RL, server.dino) end)

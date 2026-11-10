@@ -15,7 +15,22 @@ RunTelemetry.MaxCountLinesPerMinute = 20
 RunTelemetry.MaxCountLinesPerServer = 300
 RunTelemetry.RollupSeconds = 300
 RunTelemetry.CountNames = {movement_rejects = true, rate_limited = true, script_errors = true, shop_purchases = true, hatches = true, fusions = true}
-RunTelemetry.FunnelSteps = {run = "first_run_s", food = "first_food_s", egg = "first_egg_s", hatch = "first_hatch_s", shop = "first_shop_s"}
+RunTelemetry.FunnelSteps = {run = "first_run_s", food = "first_food_s", egg = "first_egg_s", hatch = "first_hatch_s", shop = "first_shop_s",
+    -- BD-1166 first-session funnel: the first run that ENDED (settled), the first time a shop screen and the Index were opened.
+    run_end = "first_run_end_s", shop_open = "first_shop_open_s", index_open = "first_index_open_s"}
+-- BD-1166: where the player was when they left (`quit` in session_end). Hub and InRun come from the server's own Location attribute;
+-- the others come from the client's screen beat (a whitelisted word, nothing else). An unknown word is refused, never logged.
+RunTelemetry.QuitPoints = {Hub = true, InRun = true, HatchScreen = true, Results = true, Shop = true, Index = true, Menu = true}
+RunTelemetry.Beats = {Closed = true, HatchScreen = true, Results = true, Shop = true, Index = true, Menu = true}
+RunTelemetry.MaxBeatsPerSession = 600 -- a child flipping through menus for an hour stays under it; a spammer stops being heard
+RunTelemetry.MinBeatGapSeconds = 0.1
+RunTelemetry.BounceSeconds = {60, 180} -- the two Roblox bounce windows (docs/221 section 4)
+RunTelemetry.MaxFriendChecks = 12 -- at most this many "is this player my friend?" look-ups per join
+-- Client screen name (Bootstrap's `active`) -> beat. Anything not listed is a plain Menu; "" is Closed.
+local SCREEN_BEATS = {hatch = "HatchScreen", results = "Results", batchSummary = "Results", crystalReveal = "Results",
+    auras = "Shop", auraConfirm = "Shop", auraInfo = "Shop", potions = "Shop", potionConfirm = "Shop", potionReplace = "Shop",
+    eggPurchase = "Shop", eggOdds = "Shop", eggOutcomes = "Shop", oddsSimple = "Shop", conditionConfirm = "Shop",
+    collection = "Index", detail = "Index"}
 RunTelemetry.MaxCounterKeys = 40 -- distinct name+service pairs waiting for a flush
 RunTelemetry.MaxErrorTexts = 12 -- distinct script-error texts logged per server; later ones are only counted
 RunTelemetry.MaxErrorTextLength = 100
@@ -118,7 +133,76 @@ end
 function RunTelemetry.moved(session: {[string]: any}, now: number, newLocation: string)
     local dt = math.max(0, now - session.lastAt)
     if session.location == "Island" then session.runSeconds += dt else session.hubSeconds += dt end
+    if newLocation ~= session.location then session.screen, session.actedAt = nil, now end -- BD-1166: a run started or ended: no menu is open any more
     session.lastAt, session.location = now, newLocation
+end
+
+-- BD-1166: the client screen name -> the beat word it may send. Pure, so the client and the tests share one table.
+function RunTelemetry.screenBeat(name: any): string
+    if typeof(name) ~= "string" or name == "" then return "Closed" end
+    return SCREEN_BEATS[name] or "Menu"
+end
+
+-- BD-1166: a screen beat from the client. Returns false (and changes nothing) for anything but a whitelisted word, for a beat that
+-- comes too soon after the last one and after MaxBeatsPerSession. Memory only; sets the first shop / Index open step once.
+function RunTelemetry.beat(session: {[string]: any}, word: any, now: number): boolean
+    if typeof(word) ~= "string" or RunTelemetry.Beats[word] == nil then return false end
+    if typeof(now) ~= "number" or now ~= now then return false end
+    local count = session.beats or 0
+    if count >= RunTelemetry.MaxBeatsPerSession then return false end
+    if session.beatAt ~= nil and now - session.beatAt < RunTelemetry.MinBeatGapSeconds then return false end
+    session.beats, session.beatAt, session.actedAt = count + 1, now, now
+    session.screen = if word == "Closed" then nil else word
+    if word == "Shop" then RunTelemetry.noteStep(session, "shop_open", now)
+    elseif word == "Index" then RunTelemetry.noteStep(session, "index_open", now) end
+    return true
+end
+
+-- BD-1166: the quit point right now: the open screen if the client reported one, else in a run or in the hub.
+function RunTelemetry.place(session: {[string]: any}): string
+    local screen = session.screen
+    if typeof(screen) == "string" and RunTelemetry.QuitPoints[screen] then return screen end
+    return if session.location == "Island" then "InRun" else "Hub"
+end
+
+-- BD-1166: something the player did (ate, hatched, bought); only moves the "last action" clock used for idle_s.
+function RunTelemetry.acted(session: {[string]: any}, now: number)
+    if typeof(now) == "number" and now == now then session.actedAt = now end
+end
+
+-- BD-1166 return signal. dayNumber: whole days since 1970 (UTC) of a unix time. daysSince: days between the previous visit's day and
+-- today. returnBucket: one of four words; nil (field absent) when it is not known (a new save, or a save from before the field existed).
+function RunTelemetry.dayNumber(unix: any): number?
+    if typeof(unix) ~= "number" or unix ~= unix or unix < 0 or unix > 4294967295 then return nil end
+    return math.floor(unix / 86400)
+end
+
+function RunTelemetry.daysSince(previousDay: any, today: any): number?
+    if typeof(previousDay) ~= "number" or typeof(today) ~= "number" or previousDay ~= previousDay or today ~= today then return nil end
+    if previousDay % 1 ~= 0 or previousDay < 0 or previousDay > 100000 then return nil end
+    return math.max(0, today - previousDay) -- a clock that went backwards counts as the same day
+end
+
+function RunTelemetry.returnBucket(days: any): string?
+    if typeof(days) ~= "number" or days ~= days or days < 0 then return nil end
+    if days < 1 then return "0" elseif days < 2 then return "1" elseif days < 8 then return "2-7" end
+    return "8+"
+end
+
+-- What the profile load told us: a brand-new save or not, and the days since the previous visit. Both optional; set once.
+function RunTelemetry.profileNoted(session: {[string]: any}, isNew: any, days: any)
+    if session.newProfile == nil and typeof(isNew) == "boolean" then session.newProfile = isNew end
+    if session.returnDays == nil then session.returnDays = RunTelemetry.returnBucket(days) end
+end
+
+-- Friends in the same server at join: a small number, never who.
+function RunTelemetry.friendsNoted(session: {[string]: any}, count: any)
+    if typeof(count) == "number" and count == count then session.friends = whole(count, RunTelemetry.MaxFriendChecks) end
+end
+
+-- join: logged once the save is loaded (the `visit` line is written earlier, before the save is known).
+function RunTelemetry.joinEvent(session: {[string]: any}, serverId: any): {[string]: any}
+    return {event = "join", server = RunTelemetry.cleanId(serverId), new_profile = session.newProfile, return_days = session.returnDays}
 end
 
 function RunTelemetry.runFinished(session: {[string]: any}) session.runs += 1 end
@@ -138,6 +222,14 @@ function RunTelemetry.sessionEnd(session: {[string]: any}, now: number, meta: {[
         event.at = if typeof(meta.at) == "number" then whole(meta.at, 4294967295) else nil
     end
     for step, key in RunTelemetry.FunnelSteps do event[key] = session.first[step] end
+    -- BD-1166: quit point, the two bounce windows, idle seconds before leaving, new save, return bucket, friends at join.
+    event.quit = RunTelemetry.place(session)
+    event.bounce_60 = event.total_s < RunTelemetry.BounceSeconds[1]
+    event.bounce_180 = event.total_s < RunTelemetry.BounceSeconds[2]
+    event.idle_s = whole(now - (session.actedAt or session.startedAt), 86400)
+    event.new_profile = session.newProfile
+    event.return_days = session.returnDays
+    event.friends = session.friends
     return event
 end
 
@@ -265,7 +357,8 @@ function RunTelemetry.allow(limiter: {[string]: any}, session: {[string]: any}?,
 end
 
 local ORDER = {"event", "duration_s", "reason", "food", "food_is_estimate", "food_raw", "eggs_food", "weather_s", "eggs", "nests", "crystals", "total_s", "runs", "hub_s", "run_s",
-    "first_run_s", "first_food_s", "first_egg_s", "first_hatch_s", "first_shop_s", "server", "at", "name", "service", "value", "script", "text"}
+    "first_run_s", "first_food_s", "first_egg_s", "first_hatch_s", "first_shop_s", "first_run_end_s", "first_shop_open_s", "first_index_open_s",
+    "quit", "bounce_60", "bounce_180", "idle_s", "new_profile", "return_days", "friends", "server", "at", "name", "service", "value", "script", "text"}
 -- One stable JSON line (no HttpService needed, so it can be tested offline).
 function RunTelemetry.line(event: {[string]: any}): string
     local parts = {}

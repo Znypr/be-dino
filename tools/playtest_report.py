@@ -5,7 +5,7 @@
 Input files (any mix, docs/167 section 7):
   * server logs exported from Studio Output or Creator Hub (lines with "[BD-TELEMETRY] {json}" and "[BD-FEEDBACK] {json}"; all other
     lines are ignored), or
-  * JSON lines: one JSON object per line, with an "event" (run_end, session_end, visit, count, script_error, feedback, funnel, meta), or
+  * JSON lines: one JSON object per line, with an "event" (run_end, session_end, visit, join, count, script_error, feedback, funnel, meta), or
   * a .csv with the header `name,value[,note]` for numbers the game does not record yet (script_errors, crashes, ...).
 It builds on tools/telemetry_report.py and tools/feedback_report.py (same numbers, same 15-eggs-per-5-minutes target) and adds the
 checks those two do not have: traffic lights, drop-off, plain-word problems, and a list of what the game still does not record.
@@ -68,7 +68,12 @@ GAPS = {
 GAME_COUNTED = ("movement_rejects", "rate_limited", "script_errors", "shop_purchases", "hatches", "fusions")
 COUNT_NAMES = tuple(n for n in GAPS if n != "funnel")
 STEPS = (("first_run_s", "Started a run"), ("first_food_s", "Ate food"), ("first_egg_s", "Earned an egg"),
-         ("first_hatch_s", "Hatched an egg"), ("first_shop_s", "Bought in a shop"))
+         ("first_hatch_s", "Hatched an egg"), ("first_shop_s", "Bought in a shop"),
+         # BD-1166: the first run that ENDED, the first shop screen and the first Index screen (from the client's screen beat)
+         ("first_run_end_s", "Finished a run"), ("first_shop_open_s", "Opened a shop"), ("first_index_open_s", "Opened the Index"))
+QUIT_WORDS = {"Hub": "in the cave (hub)", "InRun": "in a run", "HatchScreen": "on the hatch screen", "Results": "on the run results",
+              "Shop": "in a shop", "Index": "in the Index", "Menu": "in another menu"}
+RETURN_BUCKETS = ("0", "1", "2-7", "8+")
 MAX_ERROR_TEXTS = 50
 
 
@@ -108,7 +113,8 @@ def _normalise_session(e):
 
 def new_data():
     return {"runs": [], "sessions": [], "feedback": [], "counts": {}, "counts_by": {}, "funnel": [], "meta": {}, "bad_lines": 0,
-            "unknown_events": 0, "visits": 0, "servers": set(), "errors": []}
+            "unknown_events": 0, "visits": 0, "servers": set(), "errors": [],
+            "joins": {"new": 0, "returning": 0, "unknown": 0}, "return_days": {}}      # BD-1166: the `join` lines
 
 
 def _take(data, event):
@@ -139,6 +145,14 @@ def _take(data, event):
             data["bad_lines"] += 1
     elif kind == "visit":                      # BD-653: logged when a player joins
         data["visits"] += 1
+        if isinstance(event.get("server"), str):
+            data["servers"].add(event["server"])
+    elif kind == "join":                       # BD-1166: logged once the save is loaded: new save or not, days since the last visit
+        new = event.get("new_profile")
+        data["joins"]["new" if new is True else "returning" if new is False else "unknown"] += 1
+        bucket = event.get("return_days")
+        if bucket in RETURN_BUCKETS:
+            data["return_days"][bucket] = data["return_days"].get(bucket, 0) + 1
         if isinstance(event.get("server"), str):
             data["servers"].add(event["server"])
     elif kind == "script_error":               # BD-651: scrubbed text, one line per distinct error per server
@@ -430,15 +444,48 @@ def analyse(data, rate=None, limits=None):
     problems.sort(key=lambda c: ORDER[c["status"]])
     gaps = [c for c in checks if c["status"] == GREY and c["gap"]]
     has_steps = any(x.get(key) is not None for x in sessions for key, _ in STEPS)
+    shop_open_seen = any(x.get("first_shop_open_s") is not None for x in sessions)   # BD-1166: the first shop open is recorded
     gaps_open = sorted({(GAPS[k][0], GAPS[k][1]) for k in GAPS
-                        if k not in counts and (k != "funnel" or not (data["funnel"] or has_steps))})
+                        if k not in counts and (k != "funnel" or not (data["funnel"] or has_steps))
+                        and not (k == "shop_opens" and shop_open_seen)})
     comments = [c for c in feedback["comments"]]
     return {"checks": checks, "summary": summary, "feedback": feedback, "funnel": funnel, "worst_drop": drop, "problems": problems,
             "gaps": gaps_open, "comments": comments, "sessions": n_sessions, "rate": rate, "visits": data["visits"],
             "servers": len(data["servers"]), "leave_lines": len(sessions), "errors": data["errors"], "game_recorded": game_recorded,
-            "counts_by": counts_by, "step_times": step_times(sessions),
+            "counts_by": counts_by, "step_times": step_times(sessions), "first_session": first_session(data, sessions),
             "small_sample": bool(n_sessions) and n_sessions < L["min_sessions"], "bad_lines": data["bad_lines"],
             "unknown_events": data["unknown_events"], "meta": data["meta"], "overall": overall(checks)}
+
+
+def first_session(data, sessions):
+    """BD-1166: where players were when they left, the two Roblox bounce windows, new and returning saves, friends at join.
+    Only visits whose leave line carries the field are counted; None when no line has any of it (an older log)."""
+    have = [x for x in sessions if isinstance(x.get("quit"), str)]
+    joins = data.get("joins") or {"new": 0, "returning": 0, "unknown": 0}
+    if not have and not (joins["new"] or joins["returning"]):
+        return None
+    quit_points = {}
+    for x in have:
+        quit_points[x["quit"]] = quit_points.get(x["quit"], 0) + 1
+    if joins["new"] or joins["returning"]:      # the join lines also cover visits without a leave line
+        new, returning, buckets = joins["new"], joins["returning"], dict(data.get("return_days") or {})
+    else:
+        new = sum(1 for x in have if x.get("new_profile") is True)
+        returning = sum(1 for x in have if x.get("new_profile") is False)
+        buckets = {}
+        for x in have:
+            if x.get("return_days") in RETURN_BUCKETS:
+                buckets[x["return_days"]] = buckets.get(x["return_days"], 0) + 1
+    new_left = [x for x in have if x.get("new_profile") is True]
+    friends = [x["friends"] for x in have if isinstance(x.get("friends"), (int, float)) and not isinstance(x.get("friends"), bool)]
+    idle = [x["idle_s"] for x in have if isinstance(x.get("idle_s"), (int, float)) and not isinstance(x.get("idle_s"), bool)]
+    return {"visits": len(have), "quit": dict(sorted(quit_points.items())),
+            "bounce_60": sum(1 for x in have if x.get("bounce_60") is True), "bounce_180": sum(1 for x in have if x.get("bounce_180") is True),
+            "new": new, "returning": returning, "return_days": buckets,
+            "new_visits": len(new_left), "new_bounce_60": sum(1 for x in new_left if x.get("bounce_60") is True),
+            "new_bounce_180": sum(1 for x in new_left if x.get("bounce_180") is True),
+            "friends_known": len(friends), "with_friends": sum(1 for f in friends if f > 0),
+            "idle_median_s": statistics.median(idle) if idle else None}
 
 
 def step_times(sessions):
@@ -495,6 +542,25 @@ def render(report):
             lines += ["", f"Biggest loss: {drop[0] * 100:.0f}% of players are gone between \"{drop[1]}\" and \"{drop[2]}\"."]
     else:
         lines.append("No finished visits, so no funnel.")
+    fs = report.get("first_session")
+    if fs:
+        lines += ["", "## First visit and coming back", ""]
+        if fs["visits"]:
+            lines.append(f"- Left in the first minute: {fs['bounce_60']} of {fs['visits']} visits. Left in the first 3 minutes: {fs['bounce_180']} of {fs['visits']}.")
+            if fs["new_visits"]:
+                lines.append(f"- New players only: {fs['new_bounce_60']} of {fs['new_visits']} left in the first minute, "
+                             f"{fs['new_bounce_180']} of {fs['new_visits']} in the first 3 minutes.")
+            lines.append("- Where they were when they left: " + ", ".join(
+                f"{count} {QUIT_WORDS.get(place, place)}" for place, count in sorted(fs["quit"].items(), key=lambda kv: -kv[1])) + ".")
+            if fs["idle_median_s"] is not None:
+                lines.append(f"- The middle player did nothing for {fs['idle_median_s']:g} seconds before leaving.")
+        if fs["new"] or fs["returning"]:
+            lines.append(f"- New players: {fs['new']}. Players who had played before: {fs['returning']}.")
+        for bucket, words in (("0", "the same day"), ("1", "after 1 day"), ("2-7", "after 2-7 days"), ("8+", "after 8 days or more")):
+            if fs["return_days"].get(bucket):
+                lines.append(f"- Came back {words}: {fs['return_days'][bucket]}.")
+        if fs["friends_known"]:
+            lines.append(f"- With a friend in the server: {fs['with_friends']} of {fs['friends_known']} visits.")
     if report["step_times"]:
         lines += ["", "## How fast players got there (median, from joining)", ""]
         for item in report["step_times"]:
@@ -536,7 +602,7 @@ def render(report):
 
 def to_json(report):
     out = {k: report[k] for k in ("overall", "sessions", "funnel", "gaps", "small_sample", "bad_lines", "unknown_events", "meta",
-                                  "visits", "servers", "errors", "counts_by", "step_times", "game_recorded")}
+                                  "visits", "servers", "errors", "counts_by", "step_times", "game_recorded", "first_session")}
     out["checks"] = report["checks"]
     out["summary"] = {k: v for k, v in report["summary"].items() if k != "per_run"}
     out["feedback"] = report["feedback"]
