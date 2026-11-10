@@ -68,8 +68,8 @@ Roblox Home ranking reads bounce (under 60 s and under 180 s), play days, co-pla
 2. **Sprint 2, after the owner answers section 6:** BD-1163 first 3 minutes, BD-1164 hatch pacing, BD-1165 juice.
 3. **After the first real playtest:** re-rank everything on the data; then BD-1170, BD-1172, BD-1169, BD-1173, BD-1171.
 
-## 6. Owner questions (asked 2026-11-10)
+## 6. Owner questions (asked and answered 2026-11-10, see docs/115)
 
-1. Hatch pacing for big batches (BD-1164).
-2. Short, generous first run so a new player hatches a first egg in about 3 minutes (BD-1163).
+1. Hatch pacing (BD-1164): ANSWERED, fast commons, slow Rare and up.
+2. First run (BD-1163): ANSWERED, short and generous for the first run only.
 3. Still owner-only: publish the playtest build (BD-1021).
