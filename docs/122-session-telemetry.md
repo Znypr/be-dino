@@ -14,7 +14,7 @@ Status: **Review / test. CURRENT BUILD BEHAVIOR: off by default; on only in the 
 
 ## First-session funnel (BD-1166, 2026-11-10)
 
-Status: **Review / test. CURRENT BUILD: same flag (`RunTelemetryEnabled`), off by default, on only in the playtest profile. Offline tests only: not run in Studio, no real players yet.** It answers two questions of the first playtest (docs/221 sections 3 and 4, in PR #562 at the time of writing): where do new players drop off in the first minutes, and do they come back.
+Status: **Review / test. CURRENT BUILD: same flag (`RunTelemetryEnabled`), off by default, on only in the playtest profile. Offline tests only: not run in Studio, no real players yet.** It answers two questions of the first playtest ([docs/221](221-po-plan-team-and-research-2026-11-10.md) sections 3 and 4): where do new players drop off in the first minutes, and do they come back.
 
 New fields in `session_end` (a field that is not known is absent, never guessed):
 
