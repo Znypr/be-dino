@@ -665,3 +665,9 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **Flag.** `TimerChipsEnabled`: false in Config and in the default profile, true in the playtest profile (standing rule [157](157-playtest-profile-newest-features.md)), in the rehearsal list. Free, no Robux.
 - **To overturn.** Set the playtest rule of `TimerChipsEnabled` to false (one line in `tools/release_profiles.py`).
 - **Evidence.** Offline only: `tools/verify_timer_words.py` (pure rules, wiring, 16 mutants) and the HUD, shop and Index verifiers listed in docs/220. The Studio look is BD-1161.
+
+## 2026-11-10 OWNER decisions: hatch pacing and the first run (docs/221 section 6)
+
+- **Hatch pacing (BD-1164), OWNER.** Big batches stay one egg at a time in rising rarity, but Common and Uncommon reveals flash by in about 1 s each; Rare and up keep the full slow reveal. This changes the earlier "about five seconds each" rule for commons only. Exact timings PROVISIONAL.
+- **First run (BD-1163), OWNER.** Only the first run of a brand-new profile is short and generous: guided food nearby, it ends at about 2 to 3 minutes, a few guaranteed eggs, first hatch inside about 3 minutes of joining. From run 2 the normal economy applies. Numbers PROVISIONAL.
+- **Source.** Owner answers to the lead's questions, 2026-11-10; research in docs/research/2026-11-10-yt-and-game-design-research.md (C2, C4).
