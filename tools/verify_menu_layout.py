@@ -15,6 +15,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_small_window as sw  # noqa: E402
+import rehearsal_env  # noqa: E402
 
 HARNESS = 'tools/menu_layout_smoke.luau'
 MODULES = dict(sw.MODULES)
@@ -48,6 +49,8 @@ MODULES.update({
     'SettingsMenu': 'src/client/SettingsMenu.luau',
     'SettingsModel': 'src/shared/SettingsModel.luau',
     'AudioMixer': 'src/shared/AudioMixer.luau',
+    'GiftSettings': 'src/client/GiftSettings.luau',  # the Settings row "Gifts from" (drawn only with Config.GiftClaimEnabled: the switch-on rehearsal)
+    'GiftUiModel': 'src/shared/GiftUiModel.luau',
 })
 
 
@@ -59,6 +62,12 @@ def build(replacements=None, words=False, price=False):
     if price:  # BD-1144: the same world with Config.ShopCardPriceButtonEnabled on (the shop card with the price on the button; its own checks are in tools/verify_shop_card_price.py)
         assert 'local PRICE_BUTTON = false' in source
         source = source.replace('local PRICE_BUTTON = false', 'local PRICE_BUTTON = true', 1)
+    # docs/152 BD-626: the smoke has a run with the price card OFF (the Build 020 card and its chip) and one with it ON. Under the all-on
+    # rehearsal Config the off run puts THIS ONE flag off in its own copy of the Config (every other flag stays on), so both runs stay real.
+    source = rehearsal_env.pin(source,
+                               'if PRICE_BUTTON then ConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = true loaded.Config = ConfigReal end',
+                               'ConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = PRICE_BUTTON loaded.Config = ConfigReal',
+                               label='menu layout price-card flag')
     return source
 
 

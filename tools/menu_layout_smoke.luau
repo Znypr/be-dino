@@ -59,7 +59,11 @@ stubs.PotionArt = {icon = function() return nil end}
 stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end, readyIds = function() return {} end}
 stubs.PrivateState = {get = function() return nil end, str = function(_, fallback) return fallback or "" end}
 stubs.HudSettings = nil
-local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true}
+-- The Settings Controls tab asks HubTravelClient.ownsFastTravel() when Config.CaveHub and Config.FastTravelPerk are both on (SettingsMenu drawControls;
+-- the switch-on rehearsal of docs/152 has both on). The real module needs the hub world, so this stands in for it; section 3b runs both answers.
+local fastTravelOwned = false
+stubs.HubTravelClient = {ownsFastTravel = function() return fastTravelOwned end}
+local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
@@ -67,6 +71,10 @@ Services.HttpService = {JSONDecode = function() return {} end, GenerateGUID = fu
 Services.TweenService = {Create = function(_, target, _, goals) return {Play = function() for k, v in goals do target[k] = v end end, Cancel = function() end, Completed = signal()} end}
 local remotes = inst("Folder", "BeDinoRemotes", Replicated)
 inst("Folder", "ProgressionAction", remotes)
+-- The Settings Controls tab draws the row "Gifts from" (the REAL GiftSettings and GiftUiModel) when Config.GiftClaimEnabled is on and the server
+-- made the GiftAction remote. With the flag on (the switch-on rehearsal) the remote is here and answers like GiftService; with the flag off nothing asks.
+function methods.InvokeServer() return {ok = true, from = "everyone"} end
+local GIFT_REMOTE = nil
 inst("Folder", "ProgressionResult", remotes)
 local function register(name)
     local m = Instance.new("ModuleScript") m.Name = name
@@ -81,6 +89,7 @@ local function requireModule(m)
     return loaded[name]
 end
 local ConfigReal = requireModule(SharedFolder.Config)
+if ConfigReal.GiftClaimEnabled == true then GIFT_REMOTE = inst("RemoteFunction", "GiftAction", remotes) end
 if PRICE_BUTTON then ConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = true loaded.Config = ConfigReal end -- BD-1144: the real Config is frozen; every module reads this copy
 local PhoneScale = requireModule(SharedFolder.PhoneScale)
 local TouchLayout = requireModule(SharedFolder.TouchLayout)
@@ -619,11 +628,22 @@ local function mountSettings(world, tab)
 end
 for _, touch in {false, true} do
     for _, size in SIZES do
-        for _, tab in {"look", "controls"} do
+        local perkGate = ConfigReal.CaveHub == true and ConfigReal.FastTravelPerk == true -- the Fast travel row shows only for a player who owns the perk
+        for _, case in {{"look", false}, {"controls", false}, {"controls", true}} do
+            local tab = case[1]
+            if case[2] and not perkGate then continue end -- the same page as the case before: nothing asks for the perk
+            fastTravelOwned = case[2]
             local world = buildWorld(size[1], size[2], touch)
             showMenu(world)
             mountSettings(world, tab)
-            pageChecks(world, string.format("Settings/%s %dx%d%s", tab, size[1], size[2], if touch then " touch" else ""))
+            fastTravelOwned = false
+            if tab == "controls" then
+                check((world.body:FindFirstChild("Choice_Gifts from_everyone") ~= nil) == (GIFT_REMOTE ~= nil), string.format("Settings/controls %dx%d: the Gifts from row shows exactly when the gift flag is on", size[1], size[2]))
+            end
+            if perkGate and tab == "controls" then
+                check((world.body:FindFirstChild("Toggle_Fast travel") ~= nil) == case[2], string.format("Settings/controls %dx%d: the Fast travel row shows exactly when the perk is owned (owned %s)", size[1], size[2], tostring(case[2])))
+            end
+            pageChecks(world, string.format("Settings/%s%s %dx%d%s", tab, if case[2] then " (Fast travel owned)" else "", size[1], size[2], if touch then " touch" else ""))
             local vis = visibleBox(world)
             local tabs = 0
             for _, d in world.body:GetChildren() do

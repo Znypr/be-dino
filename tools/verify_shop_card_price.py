@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import text_style_floors as tf  # noqa: E402
+import rehearsal_env  # noqa: E402
 
 BODY = 'tools/shop_card_price_smoke.luau'
 EXTRA = {'RarityWord': 'src/shared/RarityWord.luau', 'UIFormat': 'src/shared/UIFormat.luau'}
@@ -72,8 +73,18 @@ def check_sources():
     assert 'price=True' in menu or '(False, True)' in menu, 'the menu-layout smoke runs with the flag on too'
 
 
+SOURCE_PIN_MUTANT = 'the flag is on in the source'
+
+
 def run(runner, replacements=None):
-    return tf.run_smoke(runner, replacements, [], BODY, EXTRA)
+    # docs/152 BD-626: under the all-on rehearsal Config the smoke puts THIS ONE flag off in its own copy of the Config (every other flag stays
+    # on), so section 1 (the Build 020 card) runs for real; withFlag(true) then switches to ConfigOn for the price card, as in CI.
+    source = rehearsal_env.pin(tf.build(replacements, [], BODY, EXTRA, False),
+                               'check(ConfigReal.ShopCardPriceButtonEnabled == false, "Config.ShopCardPriceButtonEnabled must be false in source")\n',
+                               'ConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = false loaded.Config = ConfigReal -- rehearsal: this one flag off in the copy\n',
+                               label='shop card price flag-off pin')
+    result = tf.sw.run(runner, source)
+    return result.returncode == 0 and 'passed' in result.stdout, result.stdout + result.stderr
 
 
 def main():
@@ -91,12 +102,15 @@ def main():
     if not args.no_mutants:
         from concurrent.futures import ThreadPoolExecutor  # each mutant is its own luau process: run them side by side
         names = list(MUTANTS)
+        if rehearsal_env.ACTIVE:  # the overlay sets the flag whatever the committed line says; check_sources() still pins that line
+            names.remove(SOURCE_PIN_MUTANT)
+            print('  mutant skipped under the rehearsal (check_sources pins the committed line): ' + SOURCE_PIN_MUTANT)
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(lambda n: run(args.runner, MUTANTS[n]), names))
         for name, (passed, _out) in zip(names, results):
             assert not passed, 'MUTANT SURVIVED (the smoke did not notice): ' + name
             print('  mutant caught: ' + name)
-    print('Shop card price passed: source guards, 12 sizes x mouse and touch x Auras and Trails, the tap paths, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS)))
+    print('Shop card price passed: source guards, 12 sizes x mouse and touch x Auras and Trails, the tap paths, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS) - (1 if rehearsal_env.ACTIVE else 0)))
 
 
 if __name__ == '__main__':
