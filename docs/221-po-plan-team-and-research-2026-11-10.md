@@ -35,7 +35,7 @@ Mapped against the board. "Exists" means a row already covers it; only the new o
 | --- | --- | --- | --- |
 | 1 | Real first-session playtest with 5 to 10 children, screen recorded | BD-1021, BD-575, BD-317 exist | **P0, top.** Owner publishes; lead prepares the watch sheet (BD-1162) |
 | 2 | First 3 minutes: play in 10 s, first hatch inside the bounce window | BD-440, BD-365 exist (partial) | New spec BD-1163. **Owner question** (short generous first run) |
-| 3 | Hatch pacing for 40 to 400 eggs | BD-1056 exists (Skip taps) | **Owner question:** fast cascade for commons, slow for Rare and up, still one at a time and rising rarity. Spec row BD-1164 |
+| 3 | Hatch pacing for big batches (research assumed 40 to 400 eggs at 5 s; CORRECTED 2026-11-11: the build has 12 to 120 eggs at 1 s, docs/115) | BD-1056 exists (Skip taps) | **Owner question:** fast cascade for commons, slow for Rare and up, still one at a time and rising rarity. Spec row BD-1164 |
 | 4 | Juice pass: bite, grow-up, egg crack (sound first) | BD-043 (UI only) | New BD-1165 (Blender effects only, art rule) |
 | 5 | Analytics events and Roblox signal map | BD-426, docs/122 telemetry exist (run counts only) | New BD-1166: funnel events + signal map. **Sprint 1 build** |
 | 6 | "Your nest is ready!" welcome-back opener | none | New BD-1168 |
