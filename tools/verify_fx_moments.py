@@ -450,7 +450,8 @@ do
     local character, visual = dino(false)
     visual:SetAttribute("LPTier", "emerald")
     assert(Rim.play(character, {mutationId = "nope"}) == true)
-    local tint = Color3.fromRGB(60, 220, 140)
+    local tt = MODS.LowPolyTier.get("emerald").tint -- read from the tier table, so a retuned tier colour does not break this case
+    local tint = Color3.fromRGB(tt[1], tt[2], tt[3])
     assert(math.abs(moment(visual).FillColor.G - tint.G) < 1e-6, "the tier tint when no mutation colour")
     runLife(visual)
     reset("full", false)
