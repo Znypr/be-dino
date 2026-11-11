@@ -83,6 +83,8 @@ The client is told with one owner-only value, `StarterRun` (1 while the save has
 
 `python tools/verify_starter_run.py --runner <luau.exe>` (in CI): the pure rules, the words, the telemetry field; the real `StarterRunService` on mocked services (flag off = nothing; once per join; bounded retries; never a veteran); the real `ProfileRepository` on the mocked DataStore (floor paid once across retry, outage, lost acknowledgement and reconnect; empty run; big run; run 2 normal; stale cached save; 40 saves x 3 starter eggs never Cracked while run 2 has the normal odds; flag off = old settlement, nothing set; same stored fields); the wiring; mutants.
 
+Also run on 2026-11-11: every `python tools/...` line of the CI workflow (189 commands, all pass, profile golden and rollback gates included), `python -m unittest discover -s tests` (742 tests, OK), both builds with `verify_release.py` (default and playtest), and the switch-on rehearsal `tools/run_rehearsal.py --profile all-on-rehearsal`. The rehearsal found two test harnesses that assumed "one catch = one egg on a fresh save" (`verify_progression.py`: a stubbed reward list for a 2-egg first run; the private-state scenario of `tools/multiplayer_cross_player.luau`: player i catches i + 1 eggs and the counts must differ). Both now pin `StarterRunEnabled` off with a comment; the starter run is tested by its own verifier. After that the rehearsal subset passes.
+
 ### 7.5 Not verified
 
 - **Studio:** the auto-start next to the loading screen (does the run begin before the child can see?), the card on screen, the button ending the run, Run Complete with one button, the toast, the cave-hub path.

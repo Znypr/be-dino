@@ -202,6 +202,7 @@ do
         local ids = crossIds(n, 5500 + n * 10)
         local sent, caches, players, markers, counts = {}, {}, {}, {}, {}
         local rejoined
+        SCENARIO_OVERRIDES = {StarterRunEnabled = false} -- BD-1163: player i catches i + 1 eggs on a fresh save and the counts must differ; the starter floor (own verifier) would lift 2 to 3
         local env, server = runScenario("private-state-" .. n, 1500, function(env, server)
             local Core = server.require(node("src/shared/PrivateStateCore"))
             server.workspace.GetAttribute = function(_, key) if key == "WeatherId" then return "rain" end return nil end -- every nest carries a weather
