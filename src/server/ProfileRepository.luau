@@ -852,6 +852,21 @@ function ProfileRepository.joinInfo(player: Player): any
     return joinInfos[player]
 end
 
+-- BD-1168 (docs/223): three facts about the nests at join for the welcome-back card, memory only, nothing stored: was the save brand
+-- new, how many nests were ready in the save as stored, and how many are ready after the queue moved to the join time. Only while
+-- Config.WelcomeBackEnabled is on. The rule (Shared/WelcomeBack.finishedAway) is applied by WelcomeBackService.
+local welcomeInfos: {[Player]: {isNew: boolean, readyBefore: number, readyAfter: number}} = setmetatable({}, {__mode = "k"}) :: any
+function ProfileRepository.welcomeInfo(player: Player): any
+    return welcomeInfos[player]
+end
+local function readyNests(profile: any): number
+    local count = 0
+    if typeof(profile.eggNests) == "table" then
+        for _, nest in profile.eggNests do if nest.state == "ready" then count += 1 end end
+    end
+    return count
+end
+
 function ProfileRepository.load(player: Player): boolean
     if profiles[player] then return true end
     local releaseWait = 0
@@ -868,6 +883,8 @@ function ProfileRepository.load(player: Player): boolean
     local now = os.time()
     local trackJoin = Config.RunTelemetryEnabled == true -- BD-1166
     local joinNew, joinPreviousDay = false, nil
+    local trackWelcome = Config.WelcomeBackEnabled == true -- BD-1168
+    local welcome = {isNew = true, readyBefore = 0, readyAfter = 0}
 
     local ok, updated = retry("profile load", function()
         return store:UpdateAsync(keyFor(player), function(current)
@@ -881,7 +898,9 @@ function ProfileRepository.load(player: Player): boolean
                 return nil
             end
             migrateLegacyNests(profileValue, now)
+            if trackWelcome then welcome.isNew, welcome.readyBefore = current == nil, readyNests(profileValue) end -- BD-1168: the save as stored (a retried transform reads it again)
             advanceNests(profileValue, now)
+            if trackWelcome then welcome.readyAfter = readyNests(profileValue) end
 
             local progress = ProgressionRules.upgrade(profileValue)
             ProgressionRules.backfillDiscovered(profileValue, Config.PatternColourIndexEnabled == true) -- BD-436: add-only, idempotent (BD-1039: with the Index flag the accent colours count too)
@@ -930,6 +949,7 @@ function ProfileRepository.load(player: Player): boolean
     end
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     if trackJoin then joinInfos[player] = {isNew = joinNew, previousDay = joinPreviousDay, today = now // 86400} end -- before "Loaded": FunnelService reads it on that signal
+    if trackWelcome then welcomeInfos[player] = welcome end -- BD-1168, before "Loaded": WelcomeBackService reads it on that signal
     player:SetAttribute("ProfileState", "Loaded")
     if profiles[player] then syncAttributes(player, profiles[player]) end
     return true

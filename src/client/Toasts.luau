@@ -30,6 +30,7 @@ drawToasts=function()
     if oneCard then shown={shown[#shown]} end -- the newest one, in the top slot of the stack
     for i,slot in toastCards do
         local entry=shown[i]
+        slot.entry=entry -- BD-1168: the card this slot shows (its tap action, if it has one)
         slot.frame.Visible=entry~=nil
         if entry then
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
@@ -100,11 +101,11 @@ local function pumpToasts()
     end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) or redraw then drawToasts() end
 end
--- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
+-- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format} and, BD-1168, {action,seconds}.
 local function notify(text: string,color: Color3?,opts: any?)
     local o=opts or {}
     local kind=o.kind or (if color==C.red then "warning" elseif color==C.gold or color==C.accent then "good" else "info")
-    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format,live=o.live})
+    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format,live=o.live,action=o.action,seconds=o.seconds})
     pumpToasts()
 end
 -- d: {gui, shade, box, label, art, motion = function() return the Calm-motion flag end}
@@ -127,7 +128,12 @@ function Toasts.attach(d: any)
         for _,t in {title,detail} do t.TextXAlignment=Enum.TextXAlignment.Left t.TextTruncate=Enum.TextTruncate.AtEnd end
         local tap=Instance.new("TextButton")
         tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="",1,UDim2.fromScale(1,1),55,card
-        tap.Activated:Connect(function() if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end end)
+        tap.Activated:Connect(function()
+            -- BD-1168: a card with a tap action (the welcome-back card opens the Nests screen) closes itself and runs it; every other card closes the newest one, as before
+            local entry=toastCards[i].entry
+            if entry and entry.action and NotifyQueue.dismiss(notifyQueue,entry) then drawToasts() task.spawn(entry.action) return end
+            if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end
+        end)
         toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0,tap=tap}
     end
     Toasts.layer, Toasts.scale = toastLayer, toastScale

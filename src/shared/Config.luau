@@ -131,6 +131,11 @@ return table.freeze({
     -- active-potion chip, "New in 25 s" in the Potion Shop and a big "Found 1/22" bar in the Index. false = the Build 020 sentences and the small bar.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     TimerChipsEnabled = false,
+    -- BD-1168 (docs/221 section 3 and 4, docs/223): true = when a player joins and an egg nest finished while they were away, the session opens with one
+    -- happy toast card "Your nest is ready!" ("2 nests are ready!"); a tap opens the Nests screen. The server counts (nest timers are server time), nothing
+    -- is stored, never in the first session of a new save, once per join. false = no card, no remote data, the join is exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    WelcomeBackEnabled = false,
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,

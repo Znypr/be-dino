@@ -38,6 +38,14 @@ failures, hatching stopped, hatch-batch summary.
 **Not yet:** fusion success (the fusion reveal already celebrates), "new dino discovered", potion expired,
 daily objectives (BD-072+). Sounds keep their existing hooks (BD-070 not needed for the playtest).
 
+## Welcome back card (BD-1168, 2026-11-11, [223](223-welcome-back.md))
+Behind `Config.WelcomeBackEnabled` (playtest profile only): when a nest finished while the player was away, the session opens with one
+gold card, "Your nest is ready!" / "2 nests are ready!" (second line "Welcome back! Tap to open", icon `egg_nest`, cue `level_up`).
+Two additions to the stack that any card may use, both optional and unused by every older card:
+- `action`: a function run when THAT card is tapped (the card closes first). Cards without it keep the old tap (close the newest card).
+- `seconds`: time on screen, 1 to `NotifyQueue.MaxSeconds` (10); without it the kind decides as before. The welcome card asks for 8 s.
+Checked by `tools/verify_welcome_back.py`. Not verified: Studio, phone, the sound.
+
 ## Evidence
 `python tools/verify_notify.py --runner <luau>` (added to CI) covers the cap, info throttle and expiry,
 warning priority, merging and counters, the key gap, waiting overflow, majors held while blocked and
