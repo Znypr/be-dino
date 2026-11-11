@@ -15,7 +15,7 @@ local C = Theme.Colors
 local rarityColors = Theme.RarityColors
 
 local Screens = {}
-Screens.names = {exit = true, crystalReveal = true, batchSummary = true, settings = true, food = true, tutorial = true}
+Screens.names = {exit = true, crystalReveal = true, batchSummary = true, settings = true, food = true, tutorial = true, starter = true}
 
 -- Bootstrap's screen helpers, set by attach.
 local body: any, heading: any, header: any, label: any, box: any, button: any, art: any
@@ -33,10 +33,14 @@ function Screens.attach(d: any)
     local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder
     endRun = remotes:WaitForChild("RequestEndRun")
     setSkipRemote = remotes:WaitForChild("SetRevealSkip")
+    d.endRun = endRun
+    require(script.Parent.StarterRunClient).attach(d, Screens) -- BD-1163 (docs/225): the starter run card; returns at once while Config.StarterRunEnabled is false
 end
 
 function Screens.render(name: string)
-    if name=="exit" then
+    Screens.shown = name
+    if name=="starter" then require(script.Parent.StarterRunClient).render() -- BD-1163: "You found 3 eggs!" with one button
+    elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Go home?",C.red
         -- BD-531: on a phone-landscape canvas the body is only ~270-330 px tall: a smaller picture, tighter lines and buttons at the bottom of the

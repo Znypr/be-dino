@@ -638,6 +638,8 @@ local function syncAttributes(player: Player, profile: any)
         PrivateState.set(player, "NextChestId", "")
         PrivateState.set(player, "NextChestReadyAt", 0)
     end
+    -- BD-1163 (docs/225): 1 while this save has no settled run, so the server auto-starts the starter run and the client shows its card. Flag off: never set.
+    if Config.StarterRunEnabled == true then PrivateState.set(player, "StarterRun", if FtueRules.starterQualifies(profile) then 1 else 0) end
 end
 
 -- BD-363 (docs/111 L4): the lease is gone (another server took the profile over). It used to be silent: the player kept running

@@ -136,6 +136,15 @@ return table.freeze({
     -- is stored, never in the first session of a new save, once per join. false = no card, no remote data, the join is exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     WelcomeBackEnabled = false,
+    -- BD-1163 (owner decision 2026-11-10, docs/115, docs/225): true = the FIRST run of a brand-new profile (zero settled runs, read from the save, nothing
+    -- new stored) is a short, generous starter run: it starts by itself, a happy card with one button ends it at StarterRunEggs eggs, it settles at least
+    -- StarterRunMinEggs eggs (exactly once, only when at least one egg was caught), its first StarterRunSafeEggs eggs are never Cracked, Run Complete shows
+    -- OPEN EGGS only. From run 2 the normal economy applies. false = every run is a normal run, nothing sent, nothing changed.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux. All three numbers are PROVISIONAL.
+    StarterRunEnabled = false,
+    StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
+    StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
+    StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
     SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
     SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
