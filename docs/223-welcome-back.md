@@ -54,6 +54,8 @@ Short, obvious words; one number at most; no time format, no rule text, no hidde
 
 `python tools/verify_welcome_back.py --runner <luau.exe>`: the pure rules with the real `NestQueue` (which nests count, the 3 h chain, brand-new save, bad input, singular and plural words, the show and tap rules), the toast stack additions, the real `WelcomeBackService` on mocked services (flag off = no connection and nothing sent; once per join), the real `ProfileRepository` on the mocked DataStore with a controllable clock (flag off = no facts; new save; back too early; back after 3 h; joined again without opening; several nests; nothing stored), the wiring, **37 mutants caught**.
 
+Also run on 2026-11-11: every `python tools/...` line of the CI workflow (all pass), `python -m unittest discover -s tests` (742 tests, OK), both builds with `verify_release.py` (default and playtest), and the switch-on rehearsal `tools/run_rehearsal.py --profile all-on-rehearsal`: 181 of 184 pass. The three that fail (`verify_menu_layout.py`, `verify_rail_words.py`, `verify_shop_card_price.py`) fail the same way on plain `origin/main` (commit 7c376528), so they are older than this change; the rehearsal is not part of CI.
+
 ## 6. Not verified
 
 - **Studio:** the card on screen at join, its place next to the loading screen fade, the tap opening the Eggs menu, the cave-hub path (`HubTravelClient.press("eggs", true)`), Reduce Motion.

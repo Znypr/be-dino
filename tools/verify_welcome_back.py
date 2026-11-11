@@ -204,7 +204,8 @@ local D=GameConfig.NestIncubationSeconds
 local function nests(u) return data[key(u)].eggNests or {} end
 local function run(u,id,catches,seconds) return Repository.commitRunSettlement(u,id,catches,nil,seconds) end
 local function away(u) local i=Repository.welcomeInfo(u) return W.finishedAway(i.isNew,i.readyBefore,i.readyAfter) end
--- flag off (the default build): no facts are kept
+-- flag off (the default build): no facts are kept. Set here so the section also runs for real in the switch-on rehearsal (all flags on).
+GameConfig.WelcomeBackEnabled=false
 local off=user(91680) assert(Repository.load(off))
 assert(Repository.welcomeInfo(off)==nil, "flag off: no join facts")
 Repository.release(off)
