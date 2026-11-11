@@ -115,6 +115,7 @@ local function templates(server, p)
         HubTravel = function() return {{station = "nests"}} end,
         AdminAction = function() return {"set", "foodMultiplier", 2} end,
         PlaytestFeedback = function() return {{fun = 3, level = 2, looks = 3, text = "hello"}} end,
+        FunnelBeat = function() return {"Shop"} end, -- BD-1166: one whitelisted word, memory only
         TestGrantChests = function() return {} end,
         TestGrantSpecies = function() return {} end,
         TestSetMutationCopies = function() return {50} end,
@@ -452,7 +453,7 @@ local function stormScenario(hostileCount, label)
         for _, p in hostile do pointsAtStart[p] = wealthPoints(server, p.UserId) end
         for _, p in hostile do
             task.spawn(function()
-                local names = {"ClaimChest", "ClaimNest", "EquipSpecies", "ProgressionAction", "SetSettings", "SetRevealSkip", "FusionAction", "PrivateState", "HubTravel", "PlaytestFeedback", "RequestLeap", "ClassDash", "ClassGlide", "RequestEndRun", "RequestStartRun"}
+                local names = {"ClaimChest", "ClaimNest", "EquipSpecies", "ProgressionAction", "SetSettings", "SetRevealSkip", "FusionAction", "PrivateState", "HubTravel", "PlaytestFeedback", "FunnelBeat", "RequestLeap", "ClassDash", "ClassGlide", "RequestEndRun", "RequestStartRun"}
                 local i = 0
                 while now < stormEnds do
                     i += 1

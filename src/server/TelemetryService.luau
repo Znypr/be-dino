@@ -40,6 +40,25 @@ local function emit(player: Player?, event: {[string]: any})
     end
 end
 
+-- BD-1166: a funnel step of this visit (set once). For a brand-new save the three onboarding steps also go to the Roblox
+-- onboarding funnel (Creator Hub > Analytics > Funnels), deferred and inside a pcall: a missing or failing API costs nothing.
+local ONBOARDING = {food = {2, "First bite"}, run_end = {3, "First run ended"}, hatch = {4, "First egg hatched"}}
+local function onboarding(player: Player, step: number, name: string)
+    pcall(task.defer, function()
+        pcall(function()
+            local analytics = game:GetService("AnalyticsService") :: any
+            analytics:LogOnboardingFunnelStepEvent(player, step, name)
+        end)
+    end)
+end
+
+local function markStep(player: Player, session: {[string]: any}, step: string)
+    if session.first[step] ~= nil then return end
+    RunTelemetry.noteStep(session, step, os.clock())
+    local entry = ONBOARDING[step]
+    if entry and session.newProfile == true then onboarding(player, entry[1], entry[2]) end
+end
+
 -- A line on the count budget (no per-player session cap, no Analytics call).
 local function emitCounted(event: {[string]: any})
     if not RunTelemetry.allow(countLimiter, nil, os.clock()) then return end
@@ -52,10 +71,39 @@ function TelemetryService.count(name: string, service: string?, player: Player?)
     if not enabled() then return end
     RunTelemetry.bump(counters, name, service, 1)
     local session = if player then sessions[player] else nil
-    if session then
-        if name == "hatches" then RunTelemetry.noteStep(session, "hatch", os.clock())
-        elseif name == "shop_purchases" then RunTelemetry.noteStep(session, "shop", os.clock()) end
+    if session and player then
+        RunTelemetry.acted(session, os.clock()) -- BD-1166: idle_s counts from the last thing the player did
+        if name == "hatches" then markStep(player, session, "hatch")
+        elseif name == "shop_purchases" then markStep(player, session, "shop") end
     end
+end
+
+-- BD-1166: a screen beat from the client, already checked to be a string by FunnelService; RunTelemetry.beat refuses anything that is
+-- not a whitelisted word and anything over the per-visit budget. Memory only: nothing is printed, stored or sent back.
+function TelemetryService.beat(player: Player, word: any): boolean
+    if not enabled() then return false end
+    local session = sessions[player]
+    if not session then return false end
+    return RunTelemetry.beat(session, word, os.clock())
+end
+
+-- BD-1166: what the save load knew: a brand-new save or not, and the days since the previous visit (nil = not known). Writes the
+-- `join` line once per visit. The caller passes two plain values; no profile, id or name ever reaches this module.
+function TelemetryService.profileLoaded(player: Player, isNew: any, days: any)
+    if not enabled() then return end
+    local session = sessions[player]
+    if not session or session.joinLogged then return end
+    session.joinLogged = true
+    RunTelemetry.profileNoted(session, isNew, days)
+    emit(player, RunTelemetry.joinEvent(session, serverId))
+    if session.newProfile == true then onboarding(player, 1, "Joined") end
+end
+
+-- BD-1166: how many friends were in this server when the player joined (a number from FunnelService, never who).
+function TelemetryService.friends(player: Player, count: any)
+    if not enabled() then return end
+    local session = sessions[player]
+    if session then RunTelemetry.friendsNoted(session, count) end
 end
 
 -- Writes the pending counters as one `count` line per name+service, then clears them. Called every RollupSeconds, when a player leaves
@@ -73,7 +121,10 @@ function TelemetryService.noteFood(player: Player, runId: any, rawPoints: number
     if not enabled() then return end
     local rid = if typeof(runId) == "string" then runId else nil
     local session = sessions[player]
-    if session and typeof(rawPoints) == "number" and rawPoints > 0 then RunTelemetry.noteStep(session, "food", os.clock()) end
+    if session and typeof(rawPoints) == "number" and rawPoints > 0 then
+        markStep(player, session, "food")
+        session.actedAt = os.clock() -- BD-1166: one write per food tick
+    end
     local stats = runStats[player]
     if not stats or stats.runId ~= rid then
         stats = RunTelemetry.newRunStats(rid)
@@ -86,7 +137,10 @@ end
 -- intervals, one print, one pcall'd Analytics call. It runs OFF the settle thread (see runSettled), never inside it.
 local function reportRunEnd(player: Player, reason: string, runSeconds: number, counts: {eggs: any, nests: any, crystals: any}, runId: any?, nowServer: number)
     local session = sessions[player]
-    if session then RunTelemetry.runFinished(session) end
+    if session then
+        RunTelemetry.runFinished(session)
+        markStep(player, session, "run_end") -- BD-1166: the first run that ended (settled), not the first that started
+    end
     local eggCount = counts.eggs
     if session and typeof(eggCount) == "number" and eggCount > 0 then RunTelemetry.noteStep(session, "egg", os.clock()) end
     local stats = runStats[player]

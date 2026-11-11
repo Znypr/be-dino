@@ -52,7 +52,7 @@ DOC = "docs/151-remote-audit-2026-10-17.md"
 # The reviewed remote inventory of a PUBLISHED playtest server. A new remote fails the "published-pins" check until it is reviewed,
 # added here and given a row in the audit document. ProgressionResult and RareHatch are server -> client only (no handler).
 EXPECTED_PLAYTEST_REMOTES = [
-    "AdminAction", "ClaimChest", "ClaimNest", "ClassDash", "ClassGlide", "ClientWorldReady", "EquipSpecies", "FusionAction", "HubTravel",
+    "AdminAction", "ClaimChest", "ClaimNest", "ClassDash", "ClassGlide", "ClientWorldReady", "EquipSpecies", "FunnelBeat", "FusionAction", "HubTravel",
     "PlaytestFeedback", "PrivateState", "ProgressionAction", "ProgressionResult", "RareHatch", "RequestEndRun",
     "RequestLeap", "RequestStartRun", "SetRevealSkip", "SetSettings",
     "CombatBite", "ObjectiveAction",  # docs/157: CombatEnabled and ObjectivesEnabled are ON in the playtest profile, so these two exist there now
@@ -69,7 +69,7 @@ REVIEWED_SITES = {
     ("FusionService.luau", "invoke"): 1, ("GiftService.luau", "invoke"): 1, ("HubTravelService.luau", "invoke"): 1,
     ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1,
     ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 1, ("CollectionService.luau", "event"): 2,
-    ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
+    ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("FunnelService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
     ("MutationService.luau", "event"): 1, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
     ("QaService.luau", "event"): 1, ("RunLifecycle.luau", "event"): 3, ("VisualTestService.luau", "event"): 1,
     ("CaveShowOff.luau", "prompt"): 1, ("Bootstrap.server.luau", "receipt"): 1,

@@ -843,6 +843,15 @@ function ProfileRepository.prepareEgg(player: Player,tag)
     return result
 end
 
+-- BD-1166 (docs/122): two facts about the save at join for the anonymous first-session funnel, memory only: was it brand new, and
+-- the day number of the previous visit. The ONE stored field is `lastSessionDay` (whole days since 1970, additive, lazily created,
+-- written inside the load transaction that already writes the lease, so no extra request). Only while Config.RunTelemetryEnabled
+-- is on: the default build never writes it. It is never validated on load (a bad value can not strand a save; readers ignore it).
+local joinInfos: {[Player]: {isNew: boolean, previousDay: any, today: number}} = setmetatable({}, {__mode = "k"}) :: any
+function ProfileRepository.joinInfo(player: Player): any
+    return joinInfos[player]
+end
+
 function ProfileRepository.load(player: Player): boolean
     if profiles[player] then return true end
     local releaseWait = 0
@@ -857,6 +866,8 @@ function ProfileRepository.load(player: Player): boolean
     local blockedByLease = false
     local invalidSchema = false
     local now = os.time()
+    local trackJoin = Config.RunTelemetryEnabled == true -- BD-1166
+    local joinNew, joinPreviousDay = false, nil
 
     local ok, updated = retry("profile load", function()
         return store:UpdateAsync(keyFor(player), function(current)
@@ -864,6 +875,7 @@ function ProfileRepository.load(player: Player): boolean
             if profileValue == nil then
                 profileValue = defaultProfile()
             end
+            if trackJoin then joinNew = current == nil end
             if not isValidProfile(profileValue) then
                 invalidSchema = true
                 return nil
@@ -889,6 +901,10 @@ function ProfileRepository.load(player: Player): boolean
                 expiresAt = now + Config.ProfileLeaseSeconds,
                 metricsAt = now,
             }
+            if trackJoin then -- BD-1166: read the previous visit's day, then stamp today's (a retried transform reads the stored value again)
+                joinPreviousDay = profileValue.lastSessionDay
+                profileValue.lastSessionDay = now // 86400
+            end
             profileValue.revision += 1
             return profileValue
         end)
@@ -913,6 +929,7 @@ function ProfileRepository.load(player: Player): boolean
         return false
     end
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    if trackJoin then joinInfos[player] = {isNew = joinNew, previousDay = joinPreviousDay, today = now // 86400} end -- before "Loaded": FunnelService reads it on that signal
     player:SetAttribute("ProfileState", "Loaded")
     if profiles[player] then syncAttributes(player, profiles[player]) end
     return true

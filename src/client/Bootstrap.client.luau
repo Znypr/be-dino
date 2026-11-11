@@ -266,7 +266,7 @@ local function open(name: string)
         body.AnchorPoint,body.Position=Vector2.zero,require(script.Parent.ModalCompact).place(true,motion)
     end
     render(name)
-    -- Animate the content as one layer, keeping large collections inexpensive.
+    -- The content moves as one layer.
     -- BD-519: not for the hatch. HatchSequence.play (inside render) already anchored the body at its centre (anchor .5, BODY_CENTER);
     -- a slide to the plain home position with that anchor drew the whole egg stage at the top-left corner for the first frames
     -- (long on the first OPEN of a session, when assets load). The hatch owns the body position itself.
@@ -574,6 +574,7 @@ for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gol
     marker.BackgroundColor3,marker.BorderSizePixel,marker.Visible,marker.ZIndex,marker.Parent=C.gold,0,false,b.ZIndex+3,b
 end
 updateNavigation=function()
+    gui:SetAttribute("Screen",active) -- BD-1166
     local destination=if active=="detail" then "collection" elseif active=="hatch" then "eggs" else active
     for _,b in navigationButtons do
         local marker=b:FindFirstChild("ActiveTab") :: Frame

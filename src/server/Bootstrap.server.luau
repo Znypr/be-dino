@@ -82,6 +82,7 @@ end)
 ProfileRepository.setSettlementRecoveredHook(function(player: Player) RunLifecycle.recoverAfterSettlement(player) end)
 require(script.Parent.FeedbackService).start() -- docs/126: no-op while Config.PlaytestFeedbackEnabled is false
 Telemetry.start() -- BD-426: no-op while Config.RunTelemetryEnabled is false
+require(script.Parent.FunnelService).start() -- BD-1166: first-session funnel inputs (screen beat, save facts, friends); no-op while the flag is false
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
