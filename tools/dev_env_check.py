@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ENABLE_SCRIPT = ROOT / "tools" / "blender" / "enable_mcp_addon.py"
-LUAU = "C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau.exe"
+LUAU = "C:/Users/znypr/.cache/be-dino/luau-0.741/luau.exe"
 FFMPEG_DIR = "C:/ffmpeg/bin"
 CLAUDE_EXTENSION_ID = "fcoeoabgfenejglbffodgkkbkcdhcgfn"
 BLENDER_PORT = 9876  # blender_mcp.py: BlenderMCPServer(host='localhost', port=9876), scene property blendermcp_port

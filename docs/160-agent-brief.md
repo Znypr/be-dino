@@ -54,10 +54,10 @@ python tools/kanban.py add --title "..." --priority P1                # new row 
 **Verifiers.** CI (`.github/workflows/build-generated-place.yml`) runs about 150 `python tools/verify_*.py` checks plus the bind checks. Run the ones your change touches (`ls tools | grep verify_`), and always for profile, save or flag work: `verify_rollback.py`, `verify_profile_golden.py`, `verify_switch_on.py`, `verify_robux_line.py --selftest`. Luau checks need the pinned runner on this PC:
 
 ```
-C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau.exe          # --runner for verify_*.py
-C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau-compile.exe  # --compiler
-C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau-ast.exe      # --ast
-python tools/verify_fusion.py --runner C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau.exe
+C:/Users/znypr/.cache/be-dino/luau-0.741/luau.exe          # --runner for verify_*.py
+C:/Users/znypr/.cache/be-dino/luau-0.741/luau-compile.exe  # --compiler
+C:/Users/znypr/.cache/be-dino/luau-0.741/luau-ast.exe      # --ast
+python tools/verify_fusion.py --runner C:/Users/znypr/.cache/be-dino/luau-0.741/luau.exe
 python tools/run_rehearsal.py --runner <luau.exe> --compiler <luau-compile.exe> --profile all-on-rehearsal   # about 90 s
 ```
 
