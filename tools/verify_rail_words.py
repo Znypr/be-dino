@@ -9,6 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_small_window as sw  # noqa: E402
+import rehearsal_env  # noqa: E402
 
 HARNESS = 'tools/rail_words_smoke.luau'
 MODULES = {
@@ -26,8 +27,16 @@ def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
 
 
+SOURCE_PIN_MUTANT = 'the flag is on in the source'
+
+
 def build(replacements=None):
-    return sw.build_script(replacements, HARNESS, MODULES)
+    # docs/152 BD-626: under the all-on rehearsal Config the smoke puts THIS ONE flag off in its own copy of the Config (every other flag stays
+    # on) instead of failing at the pin; the sections after it turn the rail words on themselves (buildRail, railWords = true), as in CI.
+    return rehearsal_env.pin(sw.build_script(replacements, HARNESS, MODULES),
+                             '    check(Config.HudRailWordsEnabled == false, "Config.HudRailWordsEnabled must be false in source")\n',
+                             '    Config = table.clone(Config) Config.HudRailWordsEnabled = false loaded.Config = Config -- rehearsal: this one flag off in the copy\n',
+                             label='rail words flag-off pin')
 
 
 MUTANTS = {
@@ -78,10 +87,13 @@ def main():
         sys.exit(result.returncode or 1)
     if not args.no_mutants:
         for name, replacements in MUTANTS.items():
+            if rehearsal_env.ACTIVE and name == SOURCE_PIN_MUTANT:  # the overlay sets the flag whatever the committed line says; check_sources() still pins that line
+                print('  mutant skipped under the rehearsal (check_sources pins the committed line): ' + name)
+                continue
             out = sw.run(args.runner, build(replacements))
             assert out.returncode != 0 or 'Rail words smoke passed' not in out.stdout, 'MUTANT SURVIVED: ' + name
             print('  mutant caught: ' + name)
-    print('Rail words passed: source guards, layout sweep, RailRun.place, panels, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS)))
+    print('Rail words passed: source guards, layout sweep, RailRun.place, panels, %d mutants caught' % (0 if args.no_mutants else len(MUTANTS) - (1 if rehearsal_env.ACTIVE else 0)))
 
 
 if __name__ == '__main__':

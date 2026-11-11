@@ -11,7 +11,7 @@ Owner, 2026-10-14: nests are an additional loot item at the end of a run, like c
 5. Visuals: v2 kit buttons/cards (`Theme.decorate`), green OPEN, native progress bar. The nest sprite is the v2 `egg-nest-v1.png` once bound; until then a code-drawn **PLACEHOLDER** (`egg_nest` in `UITheme`, BD-094).
 6. Icons: one (nest). Nav and cards share it. No invented asset ids.
 7. Animation: none new; bars/text update once a second; motion off changes nothing.
-8. Audio: `shop_buy` on open and on the drop toast, `level_up` when a nest opens. Silent while ids are empty.
+8. Audio: `shop_buy` when the player taps OPEN on a nest, `level_up` when the nest has opened. Silent while ids are empty. ~~`shop_buy` on the drop toast~~ (HISTORICAL: removed by BD-166 because it stacked with `run_end`; CURRENT BUILD: the "New Egg Nest!" toast plays no sound, corrected here 2026-11-11).
 9. Copy (docs/72): "Egg Nests", "Nest: 12 eggs", chips Ready / Incubating / Waiting, "Ready in 2 h", "New Egg Nest! Hatches in 3 h", "nest storage full". No requirement text anywhere.
 10. Server: authoritative, idempotent (`nestclaim:<nestId>` operation), additive `eggNests` field, a few hundred bytes (5 nests = 502 B tested), no extra UpdateAsync.
 11. Performance: at most 5 cards (migrated saves scroll), one 1 s text/size update loop that stops when the menu closes.
