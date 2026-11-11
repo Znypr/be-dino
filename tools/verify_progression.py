@@ -112,6 +112,7 @@ local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=f
 local mutableConfig=table.clone(GameConfig)
 mutableConfig.WriteBudgetEnabled=false -- BD-358: these offline tests run hundreds of claims in zero time; the write budget is proven in verify_multiplayer_sim
 mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
+mutableConfig.StarterRunEnabled=false -- BD-1163: these tests settle 2-egg first runs with a stubbed reward list; the starter floor has its own verifier (verify_starter_run)
 GameConfig=mutableConfig
 local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel",PaidRandomGate="PaidRandomGate"}}
 local datastores={GetDataStore=function()return store end}

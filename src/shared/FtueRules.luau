@@ -152,4 +152,57 @@ function Rules.goCueShown(state: any): boolean
     return state.runState == "Sanctuary" and state.runStarted ~= true and state.hasFoundEgg ~= true and state.menuOpen ~= true
 end
 
+-- BD-1163 (docs/225) STARTER RUN: only the first run of a brand-new profile is short and generous. Everything here is pure; the server
+-- applies it only while Config.StarterRunEnabled is true and passes the PROVISIONAL numbers in (Config.StarterRunEggs / MinEggs / SafeEggs).
+-- WHO: a profile with zero settled runs, read from data the profile already has (no new stored field): no settled run id, no run or hatch
+-- operation, no egg hatched or waiting, no nest, no account XP. Anything unreadable means "not new" (the normal economy).
+function Rules.starterQualifies(profile: any): boolean
+    if type(profile) ~= "table" then return false end
+    local checkpoint = profile.lastCheckpoint
+    if type(checkpoint) ~= "table" or checkpoint.lastSettledRunId ~= nil then return false end
+    if profile.settledRuns ~= nil and (type(profile.settledRuns) ~= "table" or #profile.settledRuns > 0) then return false end
+    if type(profile.recentOperations) ~= "table" then return false end
+    for _, op in profile.recentOperations do
+        if type(op) ~= "table" or op.kind == "run" or op.kind == "chest_claim" then return false end
+    end
+    if Rules.hatchedEggs(profile) > 0 or Rules.waitingEggs(profile) > 0 or count(profile.eggNests) > 0 then return false end
+    local progress = profile.progression
+    if progress ~= nil and (type(progress) ~= "table" or (type(progress.accountXP) == "number" and progress.accountXP > 0)) then return false end
+    return true
+end
+-- EGG FLOOR: a starter run that caught at least one egg settles at least `minEggs` eggs (the starter card shows at StarterRunEggs caught, so
+-- "reached the card" is covered by "caught one"). A run with no egg stays empty; a bigger run is never lowered. Bad input changes nothing.
+function Rules.starterEggFloor(eggs: any, minEggs: any): number
+    if type(eggs) ~= "number" or eggs ~= eggs then return 0 end
+    local whole = math.max(0, math.floor(eggs))
+    if whole < 1 or type(minEggs) ~= "number" or minEggs ~= minEggs then return whole end
+    return math.max(whole, math.floor(minEggs))
+end
+-- SAFE EGGS on the starter run: every guaranteed egg hatches, so the first `starterSafe` eggs are never Cracked (2 -> 3). Never fewer than
+-- the normal rule gives.
+function Rules.starterSafeEggs(safeLeft: number, starterSafe: any): number
+    if type(starterSafe) ~= "number" or starterSafe ~= starterSafe then return safeLeft end
+    return math.max(safeLeft, math.floor(starterSafe))
+end
+-- AUTO START (server): once per join, only for a starter whose dinosaur stands ready in the hub. `s`: enabled, starter, started, runState, attached.
+function Rules.starterAutoStart(s: any): boolean
+    if type(s) ~= "table" then return false end
+    return s.enabled == true and s.starter == true and s.started ~= true and s.runState == "Sanctuary" and s.attached == true
+end
+-- STARTER CARD (client): once per run, when the starter has caught `cardEggs` eggs in a running run. `s`: starter, runState, eggs, shown, cardEggs.
+function Rules.starterCardNow(s: any): boolean
+    if type(s) ~= "table" or s.starter ~= true or s.shown == true or s.runState ~= "Active" then return false end
+    return type(s.eggs) == "number" and type(s.cardEggs) == "number" and s.cardEggs >= 1 and s.eggs >= s.cardEggs
+end
+-- Run Complete of the starter run: OPEN EGGS is the only big button (when there are eggs to open; otherwise the usual Back home stays).
+function Rules.starterOnlyOpenEggs(starter: any, hasEggs: any): boolean
+    return starter == true and hasEggs == true
+end
+-- "Run again to find new dinos!" once, after the starter eggs were opened: nothing left to open and at least one new dinosaur beyond the starter Compy.
+-- `s`: starter, settled (the starter run was settled this session), shown, eggsLeft, copies.
+function Rules.starterRunAgainNow(s: any): boolean
+    if type(s) ~= "table" or s.starter ~= true or s.settled ~= true or s.shown == true then return false end
+    return type(s.eggsLeft) == "number" and s.eggsLeft <= 0 and type(s.copies) == "number" and s.copies > 1
+end
+
 return Rules

@@ -135,7 +135,7 @@ end
 
 -- The body of the run_end report. Bounded work only: a few table reads, at most RunTelemetry.MaxWeatherIntervals (64) weather
 -- intervals, one print, one pcall'd Analytics call. It runs OFF the settle thread (see runSettled), never inside it.
-local function reportRunEnd(player: Player, reason: string, runSeconds: number, counts: {eggs: any, nests: any, crystals: any}, runId: any?, nowServer: number)
+local function reportRunEnd(player: Player, reason: string, runSeconds: number, counts: {eggs: any, nests: any, crystals: any, starter: any}, runId: any?, nowServer: number)
     local session = sessions[player]
     if session then
         RunTelemetry.runFinished(session)
@@ -149,6 +149,7 @@ local function reportRunEnd(player: Player, reason: string, runSeconds: number, 
     emit(player, RunTelemetry.runEnd({
         runSeconds = runSeconds, reason = reason,
         eggs = eggCount, nests = counts.nests, crystals = counts.crystals,
+        starter = counts.starter, -- BD-1163: true only on a starter run (the first run of a brand-new save, docs/225)
         foodCatchRate = Config.FoodCatchRate,
         foodRaw = if stats then stats.foodRaw else 0, -- no food tick for this run = it really ate nothing
         eggsFood = if stats then stats.eggsFood else 0,
@@ -165,7 +166,7 @@ function TelemetryService.runSettled(player: Player, reason: string, runSeconds:
     local ok, err = pcall(function()
         if not enabled() then return end
         local o = if typeof(outcome) == "table" then outcome else {}
-        local counts = {eggs = o.eggCount or o.chestCount, nests = o.nestCount, crystals = o.crystals}
+        local counts = {eggs = o.eggCount or o.chestCount, nests = o.nestCount, crystals = o.crystals, starter = o.starter == true}
         local nowServer = workspace:GetServerTimeNow()
         task.defer(function()
             local reported, reportErr = pcall(reportRunEnd, player, reason, runSeconds, counts, runId, nowServer)

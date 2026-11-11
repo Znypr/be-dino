@@ -49,7 +49,7 @@ end
 -- multipliers inflate it), kept for comparison with older logs. BD-575: the real numbers are food_raw (raw food points eaten, summed from the
 -- server pickups), eggs_food (eggs the food alone earned at x1, before the weather and potion multipliers) and weather_s (seconds of the run
 -- spent in a weather event). They are absent (nil) when the caller did not track them, never guessed.
-function RunTelemetry.runEnd(input: {runSeconds: any, reason: any, eggs: any, nests: any, crystals: any, food: any?, foodCatchRate: number?, foodRaw: any?, eggsFood: any?, weatherSeconds: any?}): {[string]: any}
+function RunTelemetry.runEnd(input: {runSeconds: any, reason: any, eggs: any, nests: any, crystals: any, food: any?, foodCatchRate: number?, foodRaw: any?, eggsFood: any?, weatherSeconds: any?, starter: any?}): {[string]: any}
     local eggs = whole(input.eggs, 100000)
     local food = input.food
     local rate = input.foodCatchRate
@@ -68,6 +68,7 @@ function RunTelemetry.runEnd(input: {runSeconds: any, reason: any, eggs: any, ne
         eggs = eggs,
         nests = whole(input.nests, 1000),
         crystals = whole(input.crystals, 10000000),
+        starter = if input.starter == true then true else nil, -- BD-1163 (docs/225): only on the starter run of a brand-new save; absent on every other run
     }
 end
 
@@ -356,7 +357,7 @@ function RunTelemetry.allow(limiter: {[string]: any}, session: {[string]: any}?,
     return true
 end
 
-local ORDER = {"event", "duration_s", "reason", "food", "food_is_estimate", "food_raw", "eggs_food", "weather_s", "eggs", "nests", "crystals", "total_s", "runs", "hub_s", "run_s",
+local ORDER = {"event", "duration_s", "reason", "food", "food_is_estimate", "food_raw", "eggs_food", "weather_s", "eggs", "nests", "crystals", "starter", "total_s", "runs", "hub_s", "run_s",
     "first_run_s", "first_food_s", "first_egg_s", "first_hatch_s", "first_shop_s", "first_run_end_s", "first_shop_open_s", "first_index_open_s",
     "quit", "bounce_60", "bounce_180", "idle_s", "new_profile", "return_days", "friends", "server", "at", "name", "service", "value", "script", "text"}
 -- One stable JSON line (no HttpService needed, so it can be tested offline).

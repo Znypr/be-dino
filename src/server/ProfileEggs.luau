@@ -115,6 +115,15 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local nestsEarned = outcome.nestCount -- hidden qualification (server run time + server catches), committed below
     outcome.crystalBox = 0 -- retired random crystal box; kept for client/operation compatibility
     local eggCount = outcome.eggCount
+    -- BD-1163 (docs/225): the starter run (a save with zero settled runs, only while Config.StarterRunEnabled) settles at least StarterRunMinEggs eggs
+    -- when it caught one or more. Crystals, XP and nests stay those of the real catches. Decided from the cached save here and checked again against
+    -- the stored save inside the transaction; the run id makes the whole settlement exactly-once, so the floor can never be paid twice.
+    local caughtEggs = eggCount
+    local starter = Config.StarterRunEnabled == true and FtueRules.starterQualifies(cached)
+    if starter then
+        eggCount = math.min(Config.RunEggMaxPerRun, FtueRules.starterEggFloor(caughtEggs, Config.StarterRunMinEggs))
+        outcome.eggCount, outcome.starter = eggCount, true
+    end
     if eggEvents ~= nil then
         if typeof(eggEvents) ~= "table" or #eggEvents > eggCount then return false, nil, "invalid_egg_events" end
         for _, metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false, nil, "invalid_egg_events" end end
@@ -157,6 +166,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     -- BD-365: a new profile's first eggs are safe (never Cracked). Applied after the rarity sort so the FIRST eggs hatched
     -- are the safe ones; derived from the cached profile (hatched + already waiting eggs), no new persistent field.
     local safeLeft = FtueRules.safeEggsLeft(cached)
+    if starter then safeLeft = FtueRules.starterSafeEggs(safeLeft, Config.StarterRunSafeEggs) end -- BD-1163: every guaranteed starter egg hatches
     for i = 1, math.min(safeLeft, #runEggs) do
         local egg = runEggs[i]
         if egg.genes and egg.genes.conditionId == "cracked" then
@@ -200,8 +210,13 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             end
 
             -- Copies keep the prepared batch immutable across repeated transforms.
+            -- BD-1163: the starter floor holds only while the STORED save still has no settled run; otherwise only the eggs really caught are banked.
+            local floorHolds = not starter or FtueRules.starterQualifies(profileValue)
+            if starter then outcome.eggCount, outcome.starter = if floorHolds then eggCount else caughtEggs, if floorHolds then true else nil end
             local batch = table.create(#runEggs)
-            for _, egg in runEggs do table.insert(batch, DinosaurIdentity.copy(egg)) end
+            for _, egg in runEggs do
+                if floorHolds or egg.source.ordinal <= caughtEggs then table.insert(batch, DinosaurIdentity.copy(egg)) end
+            end
             bankEggs(profileValue, batch, now)
             -- BD-090: nest drop for qualified runs only; storage cap never blocks the settlement.
             profileValue.eggNests = profileValue.eggNests or {}
@@ -271,6 +286,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         PrivateState.set(player, "LastRunNestCount", committedOutcome.nestCount or 0)
         PrivateState.set(player, "LastRunNestFull", committedOutcome.nestFull == true)
         PrivateState.set(player, "LastRunNestCrystals", committedOutcome.nestCrystals or 0)
+        -- BD-1163: Run Complete reads the public LastRunCatchScore as "Eggs found"; on a floored starter run it must show the eggs really given
+        if committedOutcome.starter == true and (committedOutcome.eggCount or 0) > caughtEggs then player:SetAttribute("LastRunCatchScore", committedOutcome.eggCount) end
     end
     PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end

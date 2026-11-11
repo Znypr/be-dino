@@ -17,6 +17,7 @@ local PRIVATE = {
     -- egg and nest queues
     "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting", "BufferedRevealCount",
     "NextChestId", "NextChestReadyAt", "RunStartBlocked",
+    "StarterRun", -- BD-1163: 1 while this save has no settled run (the starter run applies), else 0; set only with Config.StarterRunEnabled
     "WelcomeBackNests", -- BD-1168: how many nests finished while the player was away (set once per join, only with Config.WelcomeBackEnabled)
     -- run and hatch summaries
     "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestNewJson", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",

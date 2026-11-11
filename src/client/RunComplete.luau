@@ -30,8 +30,10 @@ function RunComplete.build(d: any)
     end
     local level = d.label(body, "Level " .. d.num("AccountLevel"), 30, 282, 220, 36, 24, C.gold)
     level.TextXAlignment = Enum.TextXAlignment.Center
-    d.button(body, "Back home", if d.hasEggs then 30 else 212, 348, if d.hasEggs then 370 else 400, 48, C.accent, d.back)
-    if d.hasEggs then d.button(body, "OPEN EGGS", 424, 348, 370, 48, C.gold, d.openEggs) end
+    -- BD-1163 (docs/225): on the starter run OPEN EGGS is the only big button ("openOnly"); "wait" = its eggs are still being saved
+    local mode = require(script.Parent.StarterRunClient).resultsMode(d.hasEggs)
+    if mode == "normal" then d.button(body, "Back home", if d.hasEggs then 30 else 212, 348, if d.hasEggs then 370 else 400, 48, C.accent, d.back) end
+    if d.hasEggs then d.button(body, "OPEN EGGS", if mode == "normal" then 424 else 212, 348, if mode == "normal" then 370 else 400, 48, C.gold, d.openEggs) end
 end
 
 return RunComplete

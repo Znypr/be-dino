@@ -40,4 +40,13 @@ end
 Copy.sanctuaryTip1 = "Eat food to grow. Jump hills and avoid bigger dinos!"
 Copy.sanctuaryTip2 = "Tap HOME to save your eggs, then open them."
 
+-- BD-1163 (docs/225) starter run: the first run of a brand-new player. Short, obvious words (docs/72); the number comes from the rule, never typed by hand.
+function Copy.starterCardTitle(eggs: number): string
+    return string.format("You found %s!", plural(math.max(1, math.floor(eggs)), "egg", "eggs"))
+end
+Copy.starterCardButton = "Take them home!"
+Copy.starterCardHeading = "Great job!"
+Copy.starterRunAgain = "Run again to find new dinos!"
+Copy.starterTrailHint = "Follow the shiny food!" -- for the food trail (not built yet: BD-1175, docs/225 section 7)
+
 return Copy
