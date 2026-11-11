@@ -7,6 +7,8 @@ How to read it: Part A = tools, Part B = what each video actually says, Part C =
 
 ---
 
+> **Correction 2026-11-11 (lead):** this report used stale egg numbers (40 / 400 eggs per run, 5 s reveals). The current build gives 12 to 120 eggs per run (`FoodCatchRate` 12/500) with 1 s reveals (`HatchRevealSeconds`, since 2026-10-13). The "33 minutes" hatch estimate is wrong; see docs/115.
+
 ## 0. Method and what was not verified
 
 - **Transcripts were NOT blocked.** `youtube-transcript-api` 1.2.5 fetched 23 of 23 transcripts from this PC (Python 3.14, no login, no cookies). `yt-dlp` 2026.10.26 was used for search and metadata only (no video was downloaded).

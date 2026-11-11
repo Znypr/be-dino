@@ -669,6 +669,7 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 ## 2026-11-10 OWNER decisions: hatch pacing and the first run (docs/221 section 6)
 
 - **Hatch pacing (BD-1164), OWNER.** Big batches stay one egg at a time in rising rarity, but Common and Uncommon reveals flash by in about 1 s each; Rare and up keep the full slow reveal. This changes the earlier "about five seconds each" rule for commons only. Exact timings PROVISIONAL.
+- **CORRECTION 2026-11-11 (lead).** The question was asked on stale numbers: `HatchRevealSeconds` is already 1 s per egg since 2026-10-13 and a run gives 12 to 120 eggs (`FoodCatchRate` 12/500), not 40 to 400, so "33 minutes of reveals" was wrong. The current build already matches the fast part. What the decision still adds (BD-1164): Rare and up keep a longer, special reveal; measure the real batch time first (rattle build-up and taps included, BD-1056).
 - **First run (BD-1163), OWNER.** Only the first run of a brand-new profile is short and generous: guided food nearby, it ends at about 2 to 3 minutes, a few guaranteed eggs, first hatch inside about 3 minutes of joining. From run 2 the normal economy applies. Numbers PROVISIONAL.
 - **Source.** Owner answers to the lead's questions, 2026-11-10; research in docs/research/2026-11-10-yt-and-game-design-research.md (C2, C4).
 
