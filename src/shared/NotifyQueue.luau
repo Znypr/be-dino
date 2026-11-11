@@ -16,9 +16,10 @@ Q.Priority = {info = 1, good = 1, warning = 2, major = 3} :: {[string]: number}
 Q.MaxText = 30
 Q.MaxBody = 44
 Q.Duration = {info = 2.5, good = 3, warning = 4, major = 4.5} :: {[string]: number}
+Q.MaxSeconds = 10 -- BD-1168: the longest a card may ask to stay (`seconds`); without it the kind decides
 
 export type Card = {text: string, body: string?, kind: string, key: string?, icon: string?, tint: string?,
-    amount: number?, format: string?, live: boolean?, count: number, seq: number, shownAt: number?, expiresAt: number?}
+    amount: number?, format: string?, live: boolean?, action: (() -> ())?, seconds: number?, count: number, seq: number, shownAt: number?, expiresAt: number?}
 
 -- Merging into an existing card: counters (`amount` + `format`, e.g. "+%d Crystals") add up,
 -- anything else shows the newest text with an x2, x3 badge.
@@ -65,13 +66,14 @@ end
 function Q.push(q: State, now: number, input: any): string
     if typeof(input) ~= "table" or typeof(input.text) ~= "string" or input.text == "" then return "dropped" end
     input = {text = Q.clip(input.text, Q.MaxText), body = if typeof(input.body) == "string" then Q.clip(input.body, Q.MaxBody) else nil,
-        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format, live = input.live == true}
+        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format, live = input.live == true,
+        action = input.action, seconds = input.seconds}
     local kind = kindOf(input.kind)
     local key = if typeof(input.key) == "string" then input.key else nil
     local live = findKey(q.visible, key)
     if live then
         merge(live, input)
-        live.expiresAt = now + Q.Duration[live.kind]
+        live.expiresAt = now + (live.seconds or Q.Duration[live.kind])
         q.stats.merged += 1
         return "merged"
     end
@@ -88,7 +90,11 @@ function Q.push(q: State, now: number, input: any): string
     q.seq += 1
     table.insert(q.waiting, {text = input.text, body = input.body, kind = kind, key = key, icon = input.icon,
         tint = input.tint, amount = if typeof(input.amount) == "number" then input.amount else nil,
-        format = if typeof(input.format) == "string" then input.format else nil, live = input.live, count = 1, seq = q.seq})
+        format = if typeof(input.format) == "string" then input.format else nil, live = input.live,
+        -- BD-1168: an optional tap action (the client runs it when THIS card is tapped) and an optional time on screen, capped at MaxSeconds
+        action = if typeof(input.action) == "function" then input.action else nil,
+        seconds = if typeof(input.seconds) == "number" and input.seconds == input.seconds then math.clamp(input.seconds, 1, Q.MaxSeconds) else nil,
+        count = 1, seq = q.seq})
     if #q.waiting > Q.MaxWaiting then
         local worst = 1
         for i, card in q.waiting do
@@ -134,7 +140,7 @@ function Q.update(q: State, now: number, blocked: boolean?): boolean
             table.remove(q.visible, bump)
         end
         table.remove(q.waiting, index)
-        card.shownAt, card.expiresAt = now, now + Q.Duration[card.kind]
+        card.shownAt, card.expiresAt = now, now + (card.seconds or Q.Duration[card.kind])
         if priority == 1 then q.lastInfoAt = now end
         if card.key then q.keyShownAt[card.key] = now end
         table.insert(q.visible, card)
@@ -142,6 +148,14 @@ function Q.update(q: State, now: number, blocked: boolean?): boolean
         changed = true
     end
     return changed
+end
+
+-- BD-1168: dismiss ONE visible card (the card that was tapped). Returns true when it was showing.
+function Q.dismiss(q: State, card: any): boolean
+    local at = table.find(q.visible, card)
+    if at == nil then return false end
+    table.remove(q.visible, at)
+    return true
 end
 
 -- Tap: dismiss the newest visible card.

@@ -673,7 +673,8 @@ local weatherTile=box(timers,0,72,286,62,C.panel,2)
 local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
 local buffsText=label(timers,"",0,145,286,68,16,C.gold)
 require(script.Parent.PotionChips).attach(buffsText) -- BD-101: potion icons beside the active-potion timer lines
-require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num}) -- BD-1124: the weather and potion timer words (moved out: 200-local and size limits)
+require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num}) -- BD-1124 timer words
+require(script.Parent.WelcomeBackCue).attach(notify,open) -- BD-1168
 local function timerText(seconds) return UIFormat.duration(seconds) end
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
