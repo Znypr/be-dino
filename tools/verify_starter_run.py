@@ -199,8 +199,8 @@ do
     local before, t0 = #w.starts, w.clock()
     slow:spawn(w.character("Sanctuary", true))
     local tries = #w.starts - before
-    assert(tries >= 10 and tries <= w.Service.TrySeconds / w.Service.StepSeconds + 1, "bounded retries: " .. tries)
-    assert(w.clock() - t0 <= w.Service.TrySeconds + w.Service.StepSeconds, "gives up after TrySeconds")
+    assert(tries >= 10 and tries <= 181, "bounded retries (90 s, every half second): " .. tries)
+    assert(w.clock() - t0 <= 91, "gives up after 90 s")
     w.setAnswer(true)
     slow:spawn(w.character("Sanctuary", true))
     assert(#w.starts == before + tries + 1, "a refusal did not use up the one start")
@@ -398,11 +398,13 @@ MUTANTS = {
     'the service runs with the flag off': {SERVICE: [('    if not enabled() then return end\n', '')]},
     'the service starts a veteran': {SERVICE: [('        return PrivateState.get(player, "StarterRun") == 1\n', '        return true\n')]},
     'the service starts a run on every hub visit': {SERVICE: [('                        autoStarted[player] = true -- once per join', '                        -- once per join')]},
-    'the service asks forever': {SERVICE: [('StarterRunService.TrySeconds = 90', 'StarterRunService.TrySeconds = 1e9')]},
+    'the service asks forever': {SERVICE: [('StarterRunService.TrySeconds = 90', 'StarterRunService.TrySeconds = 3600')]},
     'a throwing run start kills the thread loudly': {SERVICE: [('local ok, began = pcall(RunLifecycle.requestStart, player)', 'local ok, began = true, RunLifecycle.requestStart(player)')]},
     'a refused start counts as started': {SERVICE: [('if ok and began == true then', 'if ok then')]},
     'the settlement gives the floor with the flag off': {EGGS: [('local starter = Config.StarterRunEnabled == true and FtueRules.starterQualifies(cached)', 'local starter = FtueRules.starterQualifies(cached)')]},
-    'the settlement gives the floor to every save': {EGGS: [('local starter = Config.StarterRunEnabled == true and FtueRules.starterQualifies(cached)', 'local starter = Config.StarterRunEnabled == true')]},
+    # two checks guard the floor (the cached save before the eggs are prepared, the stored save inside the transaction): only both removed gives a veteran the floor
+    'the settlement gives the floor to every save': {EGGS: [('local starter = Config.StarterRunEnabled == true and FtueRules.starterQualifies(cached)', 'local starter = Config.StarterRunEnabled == true'),
+                                                             ('local floorHolds = not starter or FtueRules.starterQualifies(profileValue)', 'local floorHolds = true')]},
     'the settlement never gives the floor': {EGGS: [('        eggCount = math.min(Config.RunEggMaxPerRun, FtueRules.starterEggFloor(caughtEggs, Config.StarterRunMinEggs))\n', '')]},
     'the stored save is not checked again': {EGGS: [('local floorHolds = not starter or FtueRules.starterQualifies(profileValue)', 'local floorHolds = true')]},
     'the starter eggs can be Cracked': {EGGS: [('    if starter then safeLeft = FtueRules.starterSafeEggs(safeLeft, Config.StarterRunSafeEggs) end', '')]},
@@ -509,14 +511,29 @@ def check_sources(overrides=None):
     return None
 
 
+def touched(name, replacements):
+    """A mutant only needs the parts that embed the file it changes (the rules are embedded in all three)."""
+    if not replacements:
+        return True
+    files = set(replacements)
+    if RULES in files:
+        return True
+    return {'rules': bool(files & {COPY, TELEMETRY}), 'service': SERVICE in files, 'repository': bool(files & {REPO, EGGS})}[name]
+
+
 def run(runner, replacements=None):
-    """Runs the three parts. Returns (all passed, output)."""
+    """Runs the three parts (for a mutant: the parts its file is embedded in). Returns (all passed, output)."""
     out = ''
     for name, build, marker in PARTS:
+        if not touched(name, replacements):
+            continue
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / ('starter_run_%s.luau' % name)
             path.write_text(build(replacements), encoding='utf-8')
-            result = subprocess.run([runner, str(path)], capture_output=True, text=True)
+            try:
+                result = subprocess.run([runner, str(path)], capture_output=True, text=True, timeout=300)
+            except subprocess.TimeoutExpired:
+                return False, out + 'TIMEOUT in part ' + name + '\n'
         out += result.stdout + result.stderr
         if result.returncode != 0 or marker not in result.stdout:
             return False, out

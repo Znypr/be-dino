@@ -16,6 +16,7 @@ local rarityColors = Theme.RarityColors
 
 local Screens = {}
 Screens.names = {exit = true, crystalReveal = true, batchSummary = true, settings = true, food = true, tutorial = true, starter = true}
+Screens.shown = "" -- BD-1163: the last screen drawn here (StarterRunClient closes a welcome lecture that opened before the save facts arrived)
 
 -- Bootstrap's screen helpers, set by attach.
 local body: any, heading: any, header: any, label: any, box: any, button: any, art: any

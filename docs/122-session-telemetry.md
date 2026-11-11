@@ -3,7 +3,7 @@
 Status: **Review / test. CURRENT BUILD BEHAVIOR: off by default; on only in the playtest profile.** Not owner-approved balance, only evidence gathering for the owner vision (short runs of about 5 minutes, a hatch party after each, several runs per session; about 15 eggs per 5 minutes, [docs/119](119-catch-rate-15-per-run.md) / BD-418). The BD-426 row is in PR #242 and is the tracker entry.
 
 ## What is logged (server only, anonymous)
-- `run_end`: `duration_s`, `reason` (Death, ManualExit, Disconnect, Predation, Other), `food`, `food_is_estimate`, `food_raw`, `eggs_food`, `weather_s`, `eggs`, `nests`, `crystals`.
+- `run_end`: `duration_s`, `reason` (Death, ManualExit, Disconnect, Predation, Other), `food`, `food_is_estimate`, `food_raw`, `eggs_food`, `weather_s`, `eggs`, `nests`, `crystals`, and `starter` (BD-1163, docs/225: `true` only on the starter run of a brand-new save, absent on every other run, so the report can compare the first run with the later ones).
 - `session_end` (when a player leaves): `total_s`, `runs`, `hub_s`, `run_s`. Hub time is every second the player's `Location` attribute is not `Island`.
 - No UserId, name, profile data or session id is logged or stored; sessions live in server memory only, nothing is written to a profile. Only whitelisted fields exist (`tools/verify_telemetry.py` asserts it).
 - **`food` is DERIVED** (`eggs / FoodCatchRate`, flagged `food_is_estimate`). Weather and potion multipliers raise eggs, so it overstates (the 2026-10-17 Studio run printed 4,125 for about 3,710 real food). It is kept for comparison with older logs only.
