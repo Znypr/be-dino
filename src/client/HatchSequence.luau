@@ -13,6 +13,7 @@ local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local SfxRules = require(Shared.SfxRules)
 local Timeline = require(Shared.HatchTimeline)
+local Pacing = require(Shared.HatchPacing) -- BD-1164 (docs/226): which egg of a batch takes the fast path (flag Config.HatchFastCommonsEnabled)
 local Copy = require(Shared.FtueP1)
 local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
@@ -409,6 +410,13 @@ function Seq.play(args: Args): Handle
     local connections: {RBXScriptConnection} = {}
     local finished = false
     local inspect: InspectView.Handle? = nil -- BD-149: drag to turn the revealed dino (never eats the continue tap)
+    -- BD-1164: fastEgg = short timings, autoNext = it moves on by itself, specialLine = the words of the "something special" lead-in.
+    local fastEgg, autoNext = false, false
+    local specialLine: TextLabel? = nil
+    if Config.HatchFastCommonsEnabled == true then -- the first egg of a party decides whether the save is brand-new (before its dinosaur is added)
+        local ok, collection = pcall(function() return HttpService:JSONDecode(PrivateState.str("CollectionJson", "{}")) end)
+        Pacing.begin(batch, if ok then require(Shared.FtueRules).collectionCopies(collection) else nil)
+    end
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
@@ -551,6 +559,7 @@ function Seq.play(args: Args): Handle
         table.clear(connections)
         if tweenHint then tweenHint:Cancel() tweenHint = nil end
         if inspect then inspect.destroy() inspect = nil end
+        if specialLine then specialLine:Destroy() specialLine = nil end
         restoreBody()
         HatchFx.hide(hx)
         MutationReveal.hide(mr)
@@ -814,7 +823,7 @@ function Seq.play(args: Args): Handle
         a.dino.Visible = true
         local view = a.dino :: any
         view.ImageTransparency = 0
-        if a.dino:IsA("ViewportFrame") and overlay.Parent then
+        if a.dino:IsA("ViewportFrame") and overlay.Parent and not autoNext then -- BD-1164: an egg that moves on by itself offers no drag
             -- Drags on the tap catcher turn the dino; a press that moves under 12 px is still a tap.
             inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = layer, baseZoom = FxPlan.Card.baseZoom, -- BD-262 / BD-1073: was 1.4, which cut the head at the top of the card
                 hintPosition = UDim2.fromScale(.17, .6), resetPosition = UDim2.fromScale(.72, .345)})
@@ -827,16 +836,17 @@ function Seq.play(args: Args): Handle
             for _, p in fx.podium do p.BackgroundTransparency = .6 end
         end
         local rise = if motion then 14 else 0
-        fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
+        local quick = fastEgg -- BD-1164: name, rarity chip and detail line come at once on the fast path (they are on screen for about half a second)
+        fadeLabel(a.nameLabel, if motion and not quick then .25 else 0, if quick then .12 else .3, rise)
         if classBadge then classBadge.Visible = true end -- appears with the name (no extra motion, so Reduce Motion needs nothing)
-        fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
-        fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
-        task.delay(if motion then .35 else .1, function()
+        fadeLabel(a.oddsLabel, if quick then .03 elseif motion then .4 else .1, if quick then .12 else .3, rise)
+        fadeLabel(a.detailLabel, if quick then .06 elseif motion then .55 else .2, if quick then .12 else .3, rise)
+        task.delay(if quick then .03 elseif motion then .35 else .1, function()
             if finished or not pill.Parent then return end
             pill.Visible = true
-            if motion then TweenService:Create(pillScale, TweenInfo.new(.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() else pillScale.Scale = 1 end
+            if motion then TweenService:Create(pillScale, TweenInfo.new(if quick then .15 else .3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() else pillScale.Scale = 1 end
         end)
-        if motion then
+        if motion and not quick then
             task.delay(.55, function()
                 if finished or not sweep.Parent then return end
                 sweep.Visible = true
@@ -848,7 +858,7 @@ function Seq.play(args: Args): Handle
         end
         for i, entry in badges do
             local frame, scale = entry[1], entry[2]
-            task.delay(if motion then .45 + i * .12 else .1, function()
+            task.delay(if quick then .08 elseif motion then .45 + i * .12 else .1, function()
                 if finished or not frame.Parent then return end
                 frame.Visible = true
                 if motion then TweenService:Create(scale, TweenInfo.new(.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() else scale.Scale = 1 end
@@ -910,7 +920,12 @@ function Seq.play(args: Args): Handle
         for k, v in r :: any do a[k] = v end
         rarity = math.clamp(r.rarity, 1, 5)
         failed = r.failed
-        Timeline.supply(state, rarity, failed)
+        -- BD-1164: flag off = the plan is always the full show and nothing below changes. The plan reads only what the server already committed.
+        local pace = Pacing.plan(Config.HatchFastCommonsEnabled == true, batch, {rarity = rarity, failed = failed, remaining = r.remaining,
+            outcome = {failed = failed, shiny = r.shiny, big = r.big, eventMutationId = r.mutationId, genes = r.genes,
+                secret = Config.HatchFastCommonsEnabled == true and require(Shared.SecretSpeciesConfig).isSecret(r.speciesId)}})
+        fastEgg = pace.fast
+        Timeline.supply(state, rarity, failed, pace.fast, if pace.special then Pacing.SpecialLead else nil)
         durs = state.durs
         esc = Timeline.escalation(rarity, motion)
         punchStart = 1 + esc.punch
@@ -1038,7 +1053,18 @@ function Seq.play(args: Args): Handle
         -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast >= 4.5:1); no dead end after a splat.
         local oldRow = a.body:FindFirstChild("EndButtons")
         if oldRow then oldRow:Destroy() end
-        local kinds = Copy.hatchButtons(failed, r.remaining)
+        autoNext = pace.auto
+        local kinds = if autoNext then {} else Copy.hatchButtons(failed, r.remaining) -- BD-1164: an egg that moves on by itself needs no NEXT EGG button
+        if pace.special and motion and state.lead > 0 then
+            -- "Something special is coming": the egg holds still, the rings swell in the rarity colour, one soft existing cue, one short line.
+            Sfx.play(Pacing.SpecialCue)
+            a.flash(glow, .1)
+            local line = Instance.new("TextLabel")
+            line.Name, line.BackgroundTransparency, line.Position, line.Size = "SpecialLine", 1, UDim2.fromOffset(152, 300), UDim2.fromOffset(520, 44)
+            line.Font, line.TextColor3, line.TextSize, line.Text, line.TextTransparency = Enum.Font.FredokaOne, WHITE, 32, Pacing.SpecialText, 1
+            line.TextStrokeTransparency, line.TextStrokeColor3, line.ZIndex, line.Parent = 1, glow:Lerp(Color3.new(0, 0, 0), .45), a.body.ZIndex + 6, a.body
+            specialLine = line
+        end
         if #kinds > 0 then
             local row = Instance.new("Frame")
             row.Name, row.BackgroundTransparency, row.Visible, row.ZIndex = "EndButtons", 1, false, a.body.ZIndex + 8
@@ -1102,6 +1128,7 @@ function Seq.play(args: Args): Handle
             paintColors = {base, if plain then base:Lerp(WHITE, .6) else accent}
             EggV2.setGenes(v2, g, a.eggId, base, accent, plain)
             if not motion then EggV2.finish(v2) end
+            if motion and fastEgg then EggV2.finish(v2) end -- BD-1164: a fast egg shows its paint at once
         end
         for i = 1, 2 do
             local reveal = if i == 1 then r.colorReveal else (r.secondReveal or r.colorReveal)
@@ -1121,7 +1148,7 @@ function Seq.play(args: Args): Handle
                 d.Size = UDim2.fromOffset(size, size)
             end
         end
-        if not motion then a.paint.finish() end
+        if not motion or fastEgg then a.paint.finish() end -- BD-1164: a fast egg shows its real colours and pattern at once (no buckets)
     end
 
     table.insert(connections, RunService.Heartbeat:Connect(function(dt)
@@ -1155,8 +1182,13 @@ function Seq.play(args: Args): Handle
                 a.animateEgg(Timeline.eggClock(durs, t))
                 if v2 then EggV2.update(v2, t, vt, if state.pending then nil else Timeline.paintState(durs, t), durs,
                     {rot = rot * esc.shakeScale, dx = dx * esc.shakeScale, dy = dy * esc.shakeScale, zoom = Timeline.zoom(bp)}) end
-                if not state.pending then updatePaint(t) end
-                local g = Timeline.glow(bp)
+                if not state.pending and not fastEgg then updatePaint(t) end
+                local lead = Timeline.leadGlow(state) -- BD-1164: 0 unless the "something special" lead-in is running
+                local g = math.max(Timeline.glow(bp), lead)
+                if specialLine then
+                    specialLine.TextTransparency, specialLine.TextStrokeTransparency = 1 - lead, 1 - lead
+                    if state.lead <= 0 then specialLine:Destroy() specialLine = nil end
+                end
                 HatchFx.update(hx, vt, bp, nil, false)
                 for n, ring in fx.rings do
                     ring.BackgroundTransparency = 1 - .16 * g * strength * (1 - (n - 1) / (RING_N + 2))
@@ -1189,7 +1221,7 @@ function Seq.play(args: Args): Handle
             local since = t - durs.build
             -- Wait (up to 2.5 s) for the real model instead of revealing an empty viewport.
             local modelReady = failed or a.dino:FindFirstChildOfClass("WorldModel") ~= nil or since > 2.5
-            if not revealStarted and modelReady and t >= durs.build + (if motion then .1 else 0) then revealT = since startReveal() end
+            if not revealStarted and modelReady and t >= durs.build + durs.revealLag then revealT = since startReveal() end
             if motion then
                 -- camera push-in releases with a short ease (stronger punch for rarer eggs)
                 if since < .45 then
@@ -1207,7 +1239,7 @@ function Seq.play(args: Args): Handle
                 HatchFx.update(hx, vt, 1, since, revealStarted)
                 MutationReveal.update(mr, if revealStarted then math.max(0, since - revealT) else nil)
                 if not failed then
-                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8, rarity) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / (if fastEgg then Timeline.FastPop else .8), rarity) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
@@ -1358,7 +1390,10 @@ function Seq.play(args: Args): Handle
             end
         end
         if not motion and not bodyRestored and not state.pending then bodyRestored = true restoreBody() end
-        if not readyShown and (revealStarted or failed) and not state.pending and t >= durs.readyAt + revealT then showHint() end
+        if not readyShown and (revealStarted or failed) and not state.pending then
+            local action = Timeline.readyAction(durs, t, revealT, autoNext)
+            if action == "advance" then advance() elseif action == "hint" then showHint() end -- BD-1164: a fast egg moves on by itself
+        end
     end))
 
     setCondition(a.eggCondition)
