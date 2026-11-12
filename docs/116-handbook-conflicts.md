@@ -185,3 +185,9 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | ID | Statement A | Statement B | Newer | Proposed resolution and OWNER QUESTION |
 |---|---|---|---|---|
 | C-53 | docs/114 s6.2 and docs/104 s8: a station menu opens only by pressing its prompt (G) or by Fast travel | `Bootstrap.client.luau` keys B (Eggs) and C (Collection) open those screens from anywhere at home; Run Complete OPEN EGGS used the rail rule and only drew a glow trail (BD-1055) | owner 2026-10-16 (station rule) | **LEAD decision (115): OPEN EGGS opens at once; the rail buttons keep the walk rule.** OWNER QUESTION (low priority, not a blocker): should the B and C keys also follow the walk rule, or should the rail buttons open anywhere too? Today the rail walks and the keys do not. |
+
+## N. Reveal seconds: config versus the hatch screen (BD-1164, 2026-11-12, [226](226-hatch-pacing.md))
+
+| # | Source A | Source B | Newest owner statement | Status |
+| --- | --- | --- | --- | --- |
+| C-56 | docs/09, docs/114 s11, the catalogue ("Each egg shows for 1 second") and docs/115 (correction 2026-11-11): `HatchRevealSeconds = 1`, "the build already reveals at 1 s per egg" | `src/client/HatchSequence.luau` and `HatchTimeline.luau` never read `HatchRevealSeconds`: an egg takes 5.1 s (Common) to 6.1 s (Legendary) plus a tap; only `tools/session1_smoke.luau`, `tools/verify_load.py` and the catalogue text use the value | owner 2026-11-10: Common and Uncommon about 1 s each, Rare and up the full slow reveal | **Partly resolved by BD-1164 (flag on: Common and Uncommon about 1 s).** OWNER QUESTION (low priority): keep `HatchRevealSeconds` as a load-test number only and reword docs/09 and docs/114, or remove it? The default build still reveals at 5 to 6 s per egg until the flag goes on for players. |

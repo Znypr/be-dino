@@ -14,6 +14,15 @@ T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
 -- A failed (Cracked) egg: same ~3 s build-up, then a SPLAT instead of a dinosaur (shell halves bounce, yolk plops into a puddle).
 T.Splat = {build = 3.6, burst = .7, settle = 1.0, tapGate = .5}
+-- BD-1164 (docs/226, flag Config.HatchFastCommonsEnabled): the FAST path of a Common or Uncommon egg in a batch (which egg takes it is
+-- decided by HatchPacing.plan). About 1 s from "on screen" to "next egg": a short wobble, the burst, the dinosaur with its name and
+-- rarity chip, then it moves on by itself. No paint buckets (the egg shows its real colours and pattern at once). PROVISIONAL timings.
+T.Fast = {build = .3, burst = .15, settle = .5, tapGate = .5}
+T.FastSplat = {build = .3, burst = .2, settle = .6, tapGate = .5} -- a cracked egg on the fast path: the same splat, short
+T.FastReduced = {build = 0, burst = 0, settle = .9, tapGate = .15} -- Reduce Motion: a short fade, then on
+T.RevealLag = .1 -- the dinosaur appears this long after the burst starts (full show); the tap hint waits the same time longer
+T.FastRevealLag = .05
+T.FastPop = .35 -- seconds of the dinosaur's pop on the fast path (the full show takes .8)
 T.CrumbMax = 10 -- tiny shell crumbs of the splat (pooled; they reuse the sparkle pool)
 T.MaxParticles = 28
 T.OrbitMax = 12 -- twinkling sparkles orbiting the dinosaur after the reveal
@@ -47,12 +56,23 @@ function T.anticipation(rarity: number?): number
 end
 -- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
 -- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
-function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
+function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?, fast: boolean?)
+    if fast == true then -- BD-1164: no anticipation, no Legendary hold, no paint plan (v1 and v2 alike)
+        local f = if not motion then T.FastReduced elseif failed then T.FastSplat else T.Fast
+        return {build = f.build, burst = f.burst, settle = f.settle, revealAt = f.build, readyAt = f.build + f.burst + f.settle,
+            tapGate = f.tapGate, paint = T.paintPlan(false), fast = true, revealLag = if motion then T.FastRevealLag else 0}
+    end
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) >= 5 then .5 else 0)
     local build = (if v2 and motion then V2.Build else d.build) + (if motion and not failed then T.anticipation(rarity) else 0)
     return {build = build, burst = d.burst, settle = settle, revealAt = build, readyAt = build + d.burst + settle,
-        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion)}
+        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion), fast = false, revealLag = if motion then T.RevealLag else 0}
+end
+-- BD-1164: what happens when the reveal has settled. "wait" = not yet; "advance" = a fast egg moves on by itself; "hint" = the tap hint
+-- (or the end buttons) and the player decides, exactly as before. `lag` = seconds after the burst when the dinosaur really appeared.
+function T.readyAction(durs, t: number, lag: number, auto: boolean?): string
+    if t < durs.readyAt + lag then return "wait" end
+    return if auto == true and durs.fast == true then "advance" else "hint"
 end
 
 function T.phase(durs, t: number): string
@@ -66,7 +86,7 @@ end
 -- pending = the server result (species, colours, pattern) has not arrived yet: the egg keeps wobbling (idle grows, t holds
 -- at the first bucket) so Open starts the animation at once without waiting for the network (BD-170).
 function T.new(motion: boolean, rarity: number?, failed: boolean?, pending: boolean?)
-    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion, v2 = false}
+    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion, v2 = false, lead = 0, leadTotal = 0}
 end
 -- BD-397: switch a fresh state to the v2 beat sheet (before any step). Keeps the pending hold and every rule.
 function T.useV2(state, on: boolean)
@@ -75,10 +95,19 @@ function T.useV2(state, on: boolean)
     return state
 end
 -- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
-function T.supply(state, rarity: number?, failed: boolean?)
-    state.durs = T.durations(state.motion, rarity, failed, state.v2)
+-- BD-1164: fast = the short path (HatchPacing.plan); lead = seconds the egg first holds still and glows ("something special is coming",
+-- full motion only): the clock of the build-up does not move during the lead, only the idle wobble does.
+function T.supply(state, rarity: number?, failed: boolean?, fast: boolean?, lead: number?)
+    state.durs = T.durations(state.motion, rarity, failed, state.v2, fast)
     state.pending = false
+    local hold = if state.motion and fast ~= true and type(lead) == "number" and lead > 0 then lead else 0
+    state.lead, state.leadTotal = hold, hold
     return state
+end
+-- Glow of the lead-in, 0..1: one soft swell up and down (0 when there is no lead or it is over).
+function T.leadGlow(state): number
+    if state.leadTotal <= 0 or state.lead <= 0 then return 0 end
+    return math.sin(math.pi * math.clamp(1 - state.lead / state.leadTotal, 0, 1))
 end
 function T.holdAt(state): number
     return if state.motion then state.durs.paint.leftStart else 0
@@ -91,6 +120,12 @@ function T.step(state, dt: number)
         state.t += math.min(dt, room)
         state.idle += dt - math.min(dt, room)
     else
+        if state.lead > 0 then -- BD-1164: the lead-in runs first; the build-up clock waits
+            local used = math.min(dt, state.lead)
+            state.lead -= used
+            state.idle += used
+            dt -= used
+        end
         state.t += dt
     end
     return state
@@ -108,7 +143,7 @@ end
 function T.tap(state): string
     local action = T.tapAction(state)
     if action == "fastforward" then
-        state.t, state.fastForwarded = state.durs.build, true
+        state.t, state.fastForwarded, state.lead = state.durs.build, true, 0
     elseif action == "advance" then
         state.done = true
     end
@@ -119,7 +154,7 @@ function T.skipAll(state): string
     if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "build" then
-        state.t, state.fastForwarded = state.durs.build, true
+        state.t, state.fastForwarded, state.lead = state.durs.build, true, 0
         return "fastforward"
     elseif phase == "ready" then
         state.done = true
@@ -143,9 +178,13 @@ end
 -- One session = the eggs of one hatch party (Open ... last egg / Skip the rest). Every claimed egg counts once, shown or skipped
 -- quickly; the copies of one egg never count. The session ends only through T.batchReset (end of party) or after IdleReset seconds.
 T.IdleReset = 90
-function T.newBatch() return {left = nil, index = 0, total = 0, at = nil} end
+-- BD-1164: shown / fastRun / fresh are the pacing facts of the party (HatchPacing); they end with the party.
+function T.newBatch() return {left = nil, index = 0, total = 0, at = nil, shown = 0, fastRun = 0, fresh = false} end
 T.session = T.newBatch()
-function T.batchReset(batch: any) batch.left, batch.index, batch.total, batch.at = nil, 0, 0, nil end
+function T.batchReset(batch: any)
+    batch.left, batch.index, batch.total, batch.at = nil, 0, 0, nil
+    batch.shown, batch.fastRun, batch.fresh = 0, 0, false
+end
 -- A claimed egg arrived with `remaining` eggs still to come. `now` (seconds, optional) only drops a forgotten old session.
 function T.batchStep(batch: any, remaining: number, now: number?): (number, number)
     if now and batch.at and now - batch.at > T.IdleReset then T.batchReset(batch) end
@@ -495,7 +534,7 @@ T.RattleBeats = {.1, .8, 1.4, 1.9, 2.35, 2.7, 2.9}
 function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
-    if build > 0 then
+    if build > 0 and durs.fast ~= true then -- BD-1164: a fast egg plays only the burst and its reveal cue (quiet cascade, docs/124)
         -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, primary splash = pickup, secondary splash = pickup_hi.
         local p = durs.paint
         if p.endsAt > 0 then

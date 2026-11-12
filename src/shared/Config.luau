@@ -136,6 +136,12 @@ return table.freeze({
     -- is stored, never in the first session of a new save, once per join. false = no card, no remote data, the join is exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     WelcomeBackEnabled = false,
+    -- BD-1164 (owner decision 2026-11-10, docs/115, docs/226): true = in a hatch party the Common and Uncommon eggs take a FAST path (about 1 s each:
+    -- short wobble, burst, name and rarity chip, then the next egg by itself), Rare and up keep the full slow show, and the first Rare+ egg after a
+    -- fast run gets a short "something special" lead-in. Still one egg at a time; Shiny, BIG, mutation, Rainbow, Astra and secret finds and the first
+    -- 3 eggs of a brand-new save always get the full show. Client presentation only: no server, odds or economy change. false = every egg exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    HatchFastCommonsEnabled = false,
     -- BD-1163 (owner decision 2026-11-10, docs/115, docs/225): true = the FIRST run of a brand-new profile (zero settled runs, read from the save, nothing
     -- new stored) is a short, generous starter run: it starts by itself, a happy card with one button ends it at StarterRunEggs eggs, it settles at least
     -- StarterRunMinEggs eggs (exactly once, only when at least one egg was caught), its first StarterRunSafeEggs eggs are never Cracked, Run Complete shows
