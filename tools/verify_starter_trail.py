@@ -170,6 +170,8 @@ stubs.ResourceModels = {clone = function(artId)
     return model
 end}
 stubs.RunLifecycle = {noteNestWeather = function() end}
+stubs.ObjectiveService = {record = function() end} -- only required while Config.ObjectivesEnabled (the switch-on rehearsal)
+stubs.TelemetryService = {noteFood = function() end} -- only required while Config.RunTelemetryEnabled
 '''
 
 TESTS = r'''
