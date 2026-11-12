@@ -161,6 +161,7 @@ jobs:
           python tools/verify_starter_run.py --runner /tmp/luau/luau
           python tools/verify_starter_trail.py --runner /tmp/luau/luau
           python tools/verify_dup_progress.py --runner /tmp/luau/luau
+          python tools/verify_hatch_pacing.py --runner /tmp/luau/luau
           python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
           python tools/verify_tag_fit.py --runner /tmp/luau/luau
           python tools/verify_hud_clearance.py --runner /tmp/luau/luau

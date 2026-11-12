@@ -58,7 +58,7 @@ def build_script(replacements=None, harness_path='tools/small_window_smoke.luau'
         for old, new in (replacements or {}).get(name, []):
             assert old in source, 'mutant target missing in %s: %s' % (name, old)
             source = source.replace(old, new)
-        parts.append(name + '=function(script, require)\n' + source + '\nend,\n')
+        parts.append(cp.module_part(name, source))  # BD-1164: the Config copy of the hatch smokes keeps the fast path off
     harness = harness.replace('-- @@PREFIX@@', prefix)
     return harness.replace('local sources = MODULE_SOURCES', 'local sources = {\n' + ''.join(parts) + '}')
 

@@ -26,6 +26,7 @@ MODULES = {
     'ModalCloseRules': 'src/shared/ModalCloseRules.luau',
     'HatchTimeline': 'src/shared/HatchTimeline.luau',
     'RevealSkip': 'src/shared/RevealSkip.luau',
+    'HatchPacing': 'src/shared/HatchPacing.luau',  # BD-1164: which egg of a batch takes the fast path (flag off in the smoke: every egg is the full show)
     'HatchV2Plan': 'src/shared/HatchV2Plan.luau',
     'FtueP1': 'src/shared/FtueP1.luau',
     'HatchFxPlan': 'src/shared/HatchFxPlan.luau',
@@ -58,6 +59,16 @@ FULL_SCREEN_REVIEWED = {
 }
 
 
+def module_part(name, source):
+    """One entry of the mock's module table. BD-1164: the hatch smokes check the close paths of the FULL show, so their copy of the
+    Config has Config.HatchFastCommonsEnabled off whatever the tree says (the all-on rehearsal included, docs/152); the fast path runs
+    in this same mock in tools/verify_hatch_pacing.py, which switches the flag on in that copy."""
+    if name == 'Config':
+        return ('Config=function(script, require)\nlocal real = (function()\n' + source + '\nend)()\n'
+                'local copy = table.clone(real) copy.HatchFastCommonsEnabled = false return copy\nend,\n')
+    return name + '=function(script, require)\n' + source + '\nend,\n'
+
+
 def build_script(replacements=None):
     parts = []
     for name, path in MODULES.items():
@@ -65,7 +76,7 @@ def build_script(replacements=None):
         for old, new in (replacements or {}).get(name, []):
             assert old in source, 'mutant target missing in %s: %s' % (name, old)
             source = source.replace(old, new)
-        parts.append(name + '=function(script, require)\n' + source + '\nend,\n')
+        parts.append(module_part(name, source))
     harness = (ROOT / 'tools/close_paths_smoke.luau').read_text(encoding='utf-8')
     assert harness.count('MODULE_SOURCES') == 2
     return harness.replace('local sources = MODULE_SOURCES', 'local sources = {\n' + ''.join(parts) + '}')
