@@ -148,6 +148,12 @@ return table.freeze({
     -- OPEN EGGS only. From run 2 the normal economy applies. false = every run is a normal run, nothing sent, nothing changed.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux. All three numbers are PROVISIONAL.
     StarterRunEnabled = false,
+    -- BD-1170 part A (docs/221 C1 #5 and C3 #2, docs/227): true = a duplicate shows progress toward the next fusion step: the hatch reveal of a dino the
+    -- player already has says "3 of 6 for Gold!" ("Ready for Gold!" at 6, counted after this hatch with the Fusion Menu's own rule), and the Index species
+    -- page shows a progress bar toward Gold (Emerald / Diamond once Gold / Emerald copies exist); a tap opens the Fusion Menu on that dino. Client words
+    -- only: nothing is stored, no reward, odds or recipe changes. false = the reveal and the Index page are exactly as before, no request is sent.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    DupProgressEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

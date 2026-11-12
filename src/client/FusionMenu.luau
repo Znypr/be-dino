@@ -1008,6 +1008,14 @@ render = function()
     else state.mode = "browse" renderBrowse() end
 end
 
+-- BD-1170 (docs/227): the Index progress bar opens the menu on one species and one step. Only sets what the tabs and the Dino
+-- filter chip set themselves (the chip shows the filter and clears it); an unknown or unapproved step changes nothing.
+function FusionMenu.preset(speciesId: string, stageId: string)
+    if type(speciesId) ~= "string" or Sel.donorCount(stageId) == nil then return end
+    local s: any = state
+    s.targetStage, s.filters, s.selection, s.visible, s.filtersOpen = stageId, {speciesId = speciesId}, {}, FusionMenu.CardBatch, false
+end
+
 function FusionMenu.open()
     ensureGui()
     state.open = true
