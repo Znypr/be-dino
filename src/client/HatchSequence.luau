@@ -424,7 +424,7 @@ function Seq.play(args: Args): Handle
     local nameBase = {pos = a.nameLabel.Position, size = a.nameLabel.Size, align = a.nameLabel.TextXAlignment} -- BD-1107: the box Bootstrap gave it (the class badge moves it)
     local classBadge: Frame? = nil -- built in applyResult, shown with the name
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
-    local dupLine = require(script.Parent.DupProgressClient).hatchPlay(a.body) -- BD-1170 (docs/227): "3 of 6 for Gold!" under the colour line; nil while Config.DupProgressEnabled is false
+    local dupLine = if (Config :: any).DupProgressEnabled == true then require(script.Parent.DupProgressClient).hatchPlay(a.body) else nil -- BD-1170 (docs/227): "3 of 6 for Gold!" under the colour line; flag off = the module is never even required
     local pill = Instance.new("Frame")
     pill.Name, pill.AnchorPoint, pill.Visible = "RarityPill", Vector2.new(.5, .5), false
     pill.Position, pill.Size, pill.ZIndex, pill.Parent = UDim2.fromOffset(412, 302), UDim2.fromOffset(380, 32), a.oddsLabel.ZIndex - 1, a.body

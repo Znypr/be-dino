@@ -61,10 +61,10 @@ BD-1164 (commons in about 0.5 s) is **not merged** at the time of this change (`
 
 ## 5. Flag, files, tests
 
-- `Config.DupProgressEnabled`: **false** in Config and in the default profile, **true** in the playtest profile (standing rule [157](157-playtest-profile-newest-features.md)), in the rehearsal list. Free, no Robux. Flag off: the client module returns before any Instance, thread or request; the reveal and the Index page are exactly as before.
+- `Config.DupProgressEnabled`: **false** in Config and in the default profile, **true** in the playtest profile (standing rule [157](157-playtest-profile-newest-features.md)), in the rehearsal list. Free, no Robux. Flag off: the client module is never required by the reveal or the Index (and returns before any Instance, thread or request if it is); the reveal and the Index page are exactly as before.
 - **No server change, nothing stored, no economy change, no new art, no sound.** Bootstrap is not touched (it has 7 bytes left under its ceiling); the hooks are three lines in `HatchSequence.luau`, one in `DinoIndexPanels.luau`, the row callback in `DinoIndexScreens.luau` and `FusionMenu.preset`.
 - Files: `src/shared/DupProgress.luau` (pure: count, words, hatch counting), `src/client/DupProgressClient.luau` (the line, the bars, the list read).
-- `python tools/verify_dup_progress.py --runner <luau.exe>` (in CI): the count equals the Fusion Menu's own selection rule on a mixed list, the words and states, the hatch counting, flag-off inertness, wiring, **32 mutants**.
+- `python tools/verify_dup_progress.py --runner <luau.exe>` (in CI): the count equals the Fusion Menu's own selection rule on a mixed list, the words and states, the hatch counting, flag-off inertness, wiring, **33 mutants**.
 
 ## 6. Not verified, and open points
 

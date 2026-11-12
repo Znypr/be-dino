@@ -48,7 +48,7 @@ function Screens.attach(d: any)
     body, heading, header, label, box, button = d.body, d.heading, d.header, d.label, d.box, d.button
     open, notify, viewportScale, num, str, decoded = d.open, d.notify, d.viewportScale, d.num, d.str, d.decoded
     openFusion, equip = d.openFusion, d.equip
-    require(script.Parent.DupProgressClient).start() -- BD-1170 (docs/227): reads the copy list for "3 of 6 for Gold!"; returns at once while Config.DupProgressEnabled is false
+    if (Config :: any).DupProgressEnabled==true then require(script.Parent.DupProgressClient).start() end -- BD-1170 (docs/227): reads the copy list for "3 of 6 for Gold!"; flag off = the module is never even required
     copies, bestMutation, eventMutation, ownedTraits, hero, speciesIndex, motionNow = d.copies, d.bestMutation, d.eventMutation, d.ownedTraits, d.hero, d.speciesIndex, d.motion
 end
 
