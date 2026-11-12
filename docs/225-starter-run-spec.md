@@ -44,7 +44,7 @@ Pure rule tests (who gets it, floor, never twice, flag off = old behaviour), a s
 
 ## 7. Implemented (BD-1163, 2026-11-11)
 
-Status: **Review / test**. Code and offline tests are done. **Not seen in Studio, not on a phone, no child has played it. The food trail is NOT built (BD-1175), so the 3-minute first hatch is not reached yet.**
+Status: **Review / test**. Code and offline tests are done. **Not seen in Studio, not on a phone, no child has played it.** The food trail was added on 2026-11-12 (BD-1175, section 7.6): built and tested offline, **never placed on the real terrain, and the 3-minute first hatch is not measured yet.**
 Labels: everything below is **CURRENT BUILD BEHAVIOR of the playtest profile only** (`StarterRunEnabled`). The default build is unchanged (flag off). Every number is **PROVISIONAL**.
 
 ### 7.1 What is built
@@ -67,6 +67,7 @@ The client is told with one owner-only value, `StarterRun` (1 while the save has
 
 ### 7.2 Not built
 
+- **UPDATE 2026-11-12: the food trail is built, see section 7.6 (BD-1175). The paragraph below is the 2026-11-11 state, kept as history.**
 - **The food trail (section 3, rows 0:00 to 1:30): kanban row BD-1175.** `FoodService` builds every pickup inside one `start()` closure as shared workspace parts with no owner, and no offline test runs its ground raycasts, so a per-player trail could not be proven safe without Studio. **Effect: without the trail a new player needs about 125 food points for the card (3 eggs at 12/500), which takes minutes.** The floor still helps (one egg caught and Home pressed gives 3 eggs), but the target "first hatch inside 3 minutes" needs the trail. The line "Follow the shiny food!" exists in `FtueCopy` and is not shown anywhere yet.
 - The soft arrow at spawn (needs an art asset; none registered).
 
@@ -91,3 +92,34 @@ Also run on 2026-11-11: every `python tools/...` line of the CI workflow (189 co
 - **Phone:** the card layout in landscape (the numbers are computed from the visible body height but were never drawn).
 - **A child:** nobody has played it; the watch sheet (docs/222) and the bot run (join to first hatch) are still to do.
 - **Real DataStore:** only the mocked store was run.
+
+### 7.6 The food trail (BD-1175, 2026-11-12)
+
+Status: **Review / test**. Label: **CURRENT BUILD BEHAVIOR of the playtest profile only** (`StarterRunEnabled`; the trail has no flag of its own). The default build behaves as before. Every number is **PROVISIONAL** (LEAD decision, docs/115).
+
+| Plan step (row BD-1175) | Built | Where |
+| --- | --- | --- |
+| 1. One place builds a pickup | The pickup creation moved out of the sector loop into `makePickup` (same code, the random stream is passed in). **The map did not move:** the fingerprint of all 3,600 foods in four modes (Legacy, Kit, designed food map, special food) is byte-identical before and after, and so is `tools/dump_food_layout.py`. | `src/server/FoodService.luau` |
+| 2. Owner-only food | `FoodService.addOwned(player, kind, x, z)`: only inside a run, only a known food, only on valid ground, at most 8 per player. **Only the owner can eat it** (checked in the server tick: another player standing on it gets nothing). It pays the normal points once, never respawns, and is removed when the run ends, the character changes or the player leaves. It draws from a different random stream than the map. | same |
+| 3. The trail | When the server starts the starter run it lays `StarterTrail.count` = **3 amber** (50 points each = one egg each at 12/500, so the trail alone reaches the 3-egg card) in front of the player: the first 14 studs out, then every 8 studs. Each spot must be outside the clear spawn circle and pass FoodService's own ground rule (terrain, water, slope, rocks); a blocked spot is tried 20, 40, 60 ... degrees to the side, then half a step further or nearer; a food with no valid spot is left out. | `src/shared/StarterTrail.luau` (pure), `StarterRunService` |
+| 4. Nobody sees food they cannot eat | The part carries the attribute `OwnerUserId`; every other client makes it invisible. A client that does not hide it gains nothing: the server check decides. | `StarterRunClient`, `FtueRules.starterTrailVisible` |
+| 5. Glow | The stock `Highlight` the special food already uses (one shared helper). No new art, nothing for the asset registry. | `FoodService` |
+| 6. Hint | One toast **"Follow the shiny food!"** when the player's own trail appears, never without a trail. | `StarterRunClient`, `FtueRules.starterTrailHintNow`, `FtueCopy.starterTrailHint` |
+| 7. Tuning in Studio with the bot, join to first hatch under 3:00 | **OPEN.** | BD-1175 stays in Review / test |
+
+Known edges (accepted, LEAD):
+
+- The hint is a toast (6 s). A toast cannot be taken back, so it can stay a few seconds after the last trail food was eaten. It is never shown without a trail.
+- The trail is laid only after a start the server made. A starter who presses EXPLORE in the half second before the auto-start, or whose auto-start gave up after 90 s, gets the starter run without a trail.
+- The trail points the way the dinosaur looks after the teleport (towards -Z from the spawn). Whether that is the way the camera looks is a Studio question.
+- The soft arrow at spawn is still not built (no art asset).
+- If the ground near the spawn is blocked, the trail is shorter and the card needs ordinary food for the missing eggs.
+
+Evidence (offline only): `python tools/verify_starter_trail.py --runner <luau.exe>` (in CI). It runs the REAL `FoodService`, `StarterRunService` and shared modules on engine stand-ins (flat test ground, mocked raycast hits, a logging random stream): the trail rule; the owner-only claim, no respawn and the three ways it is removed; refused requests; the seeded map stream and every map food identical with and without a trail (also after respawns, Legacy and Kit); the service lays it only for a server-made starter start; client rules, words, wiring; 52 mutants. `--dump-layout FILE [--food-source OLD.luau]` writes the map fingerprint used for the before/after comparison (sha256 `f00e15e4...41bdd` on both sides on 2026-11-12).
+
+**Not verified (needs Studio or a phone):**
+
+- **Placement on the real terrain:** the offline ground is flat and its raycast hits are mocked. Offline estimate only: the three default spots (0,16), (0,8), (0,0) are outside every pool (real `IslandLayout`) and no collider of the placement grammar is within 12 studs (`tools/world_colliders.py`, 2026-11-12). Whether the three spots in front of the real spawn are free of rocks, trunks and slopes, and whether the food sits on the ground, is not seen.
+- **Looks:** the glow on amber, and that other players really do not see the trail (replication and streaming of the attribute, one frame of flicker).
+- **Phone:** the toast and the trail on a small screen; the cost of the extra Highlights (3 per starter).
+- **Timing:** join to first hatch under 3:00 with the smart bot (docs/194) and with a child.

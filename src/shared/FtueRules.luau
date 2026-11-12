@@ -204,5 +204,16 @@ function Rules.starterRunAgainNow(s: any): boolean
     if type(s) ~= "table" or s.starter ~= true or s.settled ~= true or s.shown == true then return false end
     return type(s.eggsLeft) == "number" and s.eggsLeft <= 0 and type(s.copies) == "number" and s.copies > 1
 end
+-- BD-1175 FOOD TRAIL (client, docs/225 section 7). The server alone decides who may eat owner-only food; these two only decide what a client shows.
+-- A food with an owner is drawn only on its owner's screen (nobody sees food they cannot eat). Food without an owner is everybody's.
+function Rules.starterTrailVisible(ownerUserId: any, myUserId: any): boolean
+    if ownerUserId == nil then return true end
+    return type(ownerUserId) == "number" and ownerUserId == myUserId
+end
+-- "Follow the shiny food!" once per trail: only when a trail of this player's own food exists right now. `s`: mine (own trail foods in the world), shown.
+function Rules.starterTrailHintNow(s: any): boolean
+    if type(s) ~= "table" or s.shown == true then return false end
+    return type(s.mine) == "number" and s.mine >= 1
+end
 
 return Rules

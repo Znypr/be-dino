@@ -47,6 +47,6 @@ end
 Copy.starterCardButton = "Take them home!"
 Copy.starterCardHeading = "Great job!"
 Copy.starterRunAgain = "Run again to find new dinos!"
-Copy.starterTrailHint = "Follow the shiny food!" -- for the food trail (not built yet: BD-1175, docs/225 section 7)
+Copy.starterTrailHint = "Follow the shiny food!" -- BD-1175: one toast when the starter's own food trail appears (docs/225 section 7)
 
 return Copy

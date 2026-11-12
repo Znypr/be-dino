@@ -9,6 +9,9 @@
 --     who wants to keep playing is never trapped;
 --   * Run Complete of the starter run: OPEN EGGS is the only big button;
 --   * one toast "Run again to find new dinos!" after the starter eggs were opened.
+--   * BD-1175 food trail: food with an owner (attribute OwnerUserId, set by the server) is drawn only for its owner; every other client hides
+--     it. The server alone decides who can eat it, so a client that does not hide it gains nothing. One toast "Follow the shiny food!"
+--     when this player's own trail appears.
 -- All words are in Shared/FtueCopy, all decisions in the pure Shared/FtueRules (tools/verify_starter_run.py). No new art, no new sound.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,6 +31,8 @@ local latched = false -- this join began as a starter; stays true for the sessio
 local starterRunId: any = nil -- the run that ended the starter state (set when StarterRun goes back to 0)
 local cardShown: {[Model]: boolean} = setmetatable({}, {__mode = "k"}) :: any
 local againShown = false
+local trailMine: {[Instance]: boolean} = {} -- BD-1175: this player's own trail foods that are in the world right now
+local trailHintShown = false
 
 local function enabled(): boolean
     return Config.StarterRunEnabled == true
@@ -78,6 +83,44 @@ local function latch()
     checkCard()
 end
 
+-- BD-1175: owner-only food. Mine: counted (the hint shows once while a trail exists). Somebody else's: made invisible on this screen.
+local function hideFood(part: Instance)
+    for _, item in {part, table.unpack(part:GetDescendants())} do
+        if item:IsA("BasePart") then item.Transparency = 1
+        elseif item:IsA("Highlight") or item:IsA("BillboardGui") then (item :: any).Enabled = false end
+    end
+end
+local function trailHint()
+    local mine = 0
+    for _ in trailMine do mine += 1 end
+    if Rules.starterTrailHintNow({mine = mine, shown = trailHintShown}) then
+        trailHintShown = true -- once per trail
+        d.notify(Copy.starterTrailHint, Theme.Colors.gold, {kind = "major", key = "starter_trail", live = true, seconds = 6})
+    end
+end
+local function seeFood(part: Instance)
+    local owner = part:GetAttribute("OwnerUserId")
+    if owner == nil then return end -- ordinary food: everybody's, untouched
+    if Rules.starterTrailVisible(owner, player.UserId) then
+        trailMine[part] = true
+        trailHint()
+    else
+        hideFood(part)
+    end
+end
+local function watchFood()
+    local folder = workspace:WaitForChild("Food", 120) -- the server builds it at start; a bounded wait
+    if not folder then return end
+    folder.ChildAdded:Connect(seeFood)
+    folder.ChildRemoved:Connect(function(part)
+        if trailMine[part] then
+            trailMine[part] = nil
+            if next(trailMine) == nil then trailHintShown = false end -- the trail is gone; a new trail may say it again
+        end
+    end)
+    for _, part in folder:GetChildren() do seeFood(part) end
+end
+
 -- The starter card (screen name "starter", opened by checkCard, drawn through SmallScreens.render).
 function Starter.render()
     local body, C = d.body, Theme.Colors
@@ -123,6 +166,7 @@ function Starter.attach(helpers: any, owner: any)
         end)
     end)
     latch()
+    task.spawn(watchFood) -- BD-1175: for every client while the flag is on (a veteran must not see a starter's trail either)
 end
 
 return Starter

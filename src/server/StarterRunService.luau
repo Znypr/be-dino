@@ -6,10 +6,13 @@
 -- first run through the ONE run-start path, RunLifecycle.requestStart (same checks: save loaded, world ready, dinosaur attached, room
 -- for the eggs). Once per join, for a bounded time; a save that already settled a run is never touched.
 -- The egg floor and the safe eggs are part of the settlement (ProfileEggs.commitRunSettlement); nothing is paid, stored or sent here.
+-- BD-1175: right after that start the server lays a short trail of owner-only food in front of the player (FoodService.addOwned: only this
+-- player can eat it, no respawn, gone at run end or leave). Where it goes is the pure rule Shared/StarterTrail on FoodService's own ground check.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local FtueRules = require(ReplicatedStorage.Shared.FtueRules)
+local StarterTrail = require(ReplicatedStorage.Shared.StarterTrail)
 local PrivateState = require(script.Parent.PrivateState)
 
 local StarterRunService = {}
@@ -28,6 +31,20 @@ function StarterRunService.start()
     started = true
     local RunLifecycle = require(script.Parent.RunLifecycle) :: any
 
+    -- BD-1175: the trail of the run that just started. Any failure (no food yet, no ground) leaves a normal run without a trail.
+    local function layTrail(player: Player, character: Model): number
+        local root = character:FindFirstChild("HumanoidRootPart") :: any
+        if not root then return 0 end
+        local FoodService = require(script.Parent.FoodService) :: any
+        local position, look = root.Position, root.CFrame.LookVector
+        local spots = StarterTrail.place({originX = position.X, originZ = position.Z, dirX = look.X, dirZ = look.Z,
+            count = StarterTrail.count((Config :: any).StarterRunEggs, FoodService.kindPoints(StarterTrail.Kind), (Config :: any).FoodCatchRate)}, FoodService.groundOk)
+        local placed = 0
+        for _, spot in spots do
+            if FoodService.addOwned(player, StarterTrail.Kind, spot.x, spot.z) then placed += 1 end
+        end
+        return placed
+    end
     local function isStarter(player: Player): boolean
         return PrivateState.get(player, "StarterRun") == 1
     end
@@ -43,6 +60,7 @@ function StarterRunService.start()
                     local ok, began = pcall(RunLifecycle.requestStart, player)
                     if ok and began == true then
                         autoStarted[player] = true -- once per join: after a starter run that found nothing the child presses EXPLORE like everyone
+                        pcall(layTrail, player, character) -- BD-1175: only after a start the server itself made, so only inside the starter run
                         return
                     end
                 end
