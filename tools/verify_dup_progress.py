@@ -305,13 +305,13 @@ def static_checks(read):
     assert ccode.count('InvokeServer({action = "list"') == 1, 'one read-only request: the Fusion Menu list'
     assert 'if cursor ~= nil then return nil end' in ccode, 'a list that does not fit is not counted (no wrong number)'
     hatch = read(HATCH)
-    assert hatch.count('local dupLine = if (Config :: any).DupProgressEnabled == true then require(script.Parent.DupProgressClient).hatchPlay(a.body) else nil') == 1, 'the reveal makes the line, only with the flag on'
+    assert hatch.count('local dupLine = dupPlay(a.body)') == 1 and hatch.count('    if (Config :: any).DupProgressEnabled ~= true then return nil end\n    local ok, client = pcall(require, script.Parent.DupProgressClient)\n    return if ok and type(client) == "table" then client.hatchPlay(body) else nil') == 1, 'the reveal makes the line, only with the flag on'
     assert hatch.count('if dupLine then require(script.Parent.DupProgressClient).hatchResult(dupLine, r.speciesId, failed, a.nameLabel.Text, a.body:FindFirstChild("TapHint")) end') == 1, 'the result is counted'
     assert hatch.count('if dupLine then require(script.Parent.DupProgressClient).hatchReveal(dupLine,') == 1, 'the line shows with the reveal'
     screens = read(SCREENS)
     assert screens.count('dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height)') == 1 and 'end else nil,' in screens, 'flag off = the Index page gets no row'
-    assert screens.count('if (Config :: any).DupProgressEnabled==true then require(script.Parent.DupProgressClient).start() end') == 1, 'the copy list is read from start-up, only with the flag on'
-    assert '.openFusion(species,stage,openFusion)' in screens, 'the tap opens the Fusion Menu on this dino'
+    assert screens.count('if (Config :: any).DupProgressEnabled==true then pcall(function() require(script.Parent.DupProgressClient).start() end) end') == 1, 'the copy list is read from start-up, only with the flag on'
+    assert 'client.openFusion(species,stage,openFusion)' in screens, 'the tap opens the Fusion Menu on this dino'
     assert read(PANELS).count('if ctx.dupRow then top += ctx.dupRow(right, st.list, top, T) end') == 1, 'the row sits above the cards'
     menu = read(MENU)
     assert 'function FusionMenu.preset(speciesId: string, stageId: string)' in menu and 's.targetStage, s.filters, s.selection, s.visible, s.filtersOpen = stageId, {speciesId = speciesId}, {}, FusionMenu.CardBatch, false' in menu, 'preset = the tab and the Dino filter'
@@ -369,7 +369,7 @@ MUTANTS = {
     'the Index page passes the row with the flag off': (SCREENS, 'dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height)', 'dupRow=if true then function(parent,dinos,top,height)'),
     'a long list is counted partly': (CLIENT, '    if cursor ~= nil then return nil end\n', ''),
     'the reveal never counts the egg': (HATCH, '        if dupLine then require(script.Parent.DupProgressClient).hatchResult(dupLine, r.speciesId, failed, a.nameLabel.Text, a.body:FindFirstChild("TapHint")) end -- BD-1170: counts this egg\'s copies\n', ''),
-    'the reveal requires the module with the flag off': (HATCH, 'local dupLine = if (Config :: any).DupProgressEnabled == true then require(script.Parent.DupProgressClient).hatchPlay(a.body) else nil', 'local dupLine = require(script.Parent.DupProgressClient).hatchPlay(a.body)'),
+    'the reveal requires the module with the flag off': (HATCH, '    if (Config :: any).DupProgressEnabled ~= true then return nil end\n    local ok, client = pcall(require, script.Parent.DupProgressClient)', '    local ok, client = pcall(require, script.Parent.DupProgressClient)'),
     'the default profile does not pin the flag off': (PROFILES, '_flag_off("DupProgressEnabled",', '_flag_off("DupProgressEnabledX",'),
     'the playtest profile does not switch it on': (PROFILES, 'Rule("DupProgressEnabled", "set", True,', 'Rule("DupProgressEnabled", "set", False,'),
     'the flag is missing from the rehearsal list': (PROFILES, '("DupProgressEnabled", "BD-1170', '("DupProgressEnabledX", "BD-1170'),

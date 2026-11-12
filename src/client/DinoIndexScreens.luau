@@ -48,7 +48,7 @@ function Screens.attach(d: any)
     body, heading, header, label, box, button = d.body, d.heading, d.header, d.label, d.box, d.button
     open, notify, viewportScale, num, str, decoded = d.open, d.notify, d.viewportScale, d.num, d.str, d.decoded
     openFusion, equip = d.openFusion, d.equip
-    if (Config :: any).DupProgressEnabled==true then require(script.Parent.DupProgressClient).start() end -- BD-1170 (docs/227): reads the copy list for "3 of 6 for Gold!"; flag off = the module is never even required
+    if (Config :: any).DupProgressEnabled==true then pcall(function() require(script.Parent.DupProgressClient).start() end) end -- BD-1170 (docs/227): reads the copy list for "3 of 6 for Gold!"; flag off = the module is never even required
     copies, bestMutation, eventMutation, ownedTraits, hero, speciesIndex, motionNow = d.copies, d.bestMutation, d.eventMutation, d.ownedTraits, d.hero, d.speciesIndex, d.motion
 end
 
@@ -152,7 +152,9 @@ function Screens.render(name: string)
             -- BD-1170 (docs/227): with DupProgressEnabled a row of progress bars ("3 of 6 for Gold!"); a tap opens the Fusion Menu on this dino. Flag off = nil, the page is unchanged.
             dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height)
                 local species=selected
-                return require(script.Parent.DupProgressClient).indexRow(parent,dinos,species,top,height,function(stage) require(script.Parent.DupProgressClient).openFusion(species,stage,openFusion) end)
+                local ok,client=pcall(require,script.Parent.DupProgressClient) -- a module that cannot load never breaks the page
+                if not ok or type(client)~="table" then return 0 end
+                return client.indexRow(parent,dinos,species,top,height,function(stage) client.openFusion(species,stage,openFusion) end)
             end else nil,
             equipped=function()
                 local ok,genes=pcall(function() return Http:JSONDecode(str("EquippedGenesJson","null")) end)
