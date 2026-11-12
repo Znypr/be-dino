@@ -424,6 +424,7 @@ function Seq.play(args: Args): Handle
     local nameBase = {pos = a.nameLabel.Position, size = a.nameLabel.Size, align = a.nameLabel.TextXAlignment} -- BD-1107: the box Bootstrap gave it (the class badge moves it)
     local classBadge: Frame? = nil -- built in applyResult, shown with the name
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
+    local dupLine = require(script.Parent.DupProgressClient).hatchPlay(a.body) -- BD-1170 (docs/227): "3 of 6 for Gold!" under the colour line; nil while Config.DupProgressEnabled is false
     local pill = Instance.new("Frame")
     pill.Name, pill.AnchorPoint, pill.Visible = "RarityPill", Vector2.new(.5, .5), false
     pill.Position, pill.Size, pill.ZIndex, pill.Parent = UDim2.fromOffset(412, 302), UDim2.fromOffset(380, 32), a.oddsLabel.ZIndex - 1, a.body
@@ -831,6 +832,7 @@ function Seq.play(args: Args): Handle
         if classBadge then classBadge.Visible = true end -- appears with the name (no extra motion, so Reduce Motion needs nothing)
         fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
         fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
+        if dupLine then require(script.Parent.DupProgressClient).hatchReveal(dupLine, if motion then .7 else .3) end -- BD-1170: last of the lines, opacity only
         task.delay(if motion then .35 else .1, function()
             if finished or not pill.Parent then return end
             pill.Visible = true
@@ -911,6 +913,7 @@ function Seq.play(args: Args): Handle
         rarity = math.clamp(r.rarity, 1, 5)
         failed = r.failed
         Timeline.supply(state, rarity, failed)
+        if dupLine then require(script.Parent.DupProgressClient).hatchResult(dupLine, r.speciesId, failed, a.nameLabel.Text, a.body:FindFirstChild("TapHint")) end -- BD-1170: counts this egg's copies
         durs = state.durs
         esc = Timeline.escalation(rarity, motion)
         punchStart = 1 + esc.punch

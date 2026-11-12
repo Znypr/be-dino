@@ -183,7 +183,7 @@ local function eggPopup(host: GuiObject, details: any, loading: boolean)
 end
 
 -- ctx: body, speciesId, owned, color, fallbackStage, fallbackLine, scale(), equipped() -> attrs, equip(id, key),
--- notify(text, color?), onBack(), revision() -> number
+-- notify(text, color?), onBack(), revision() -> number; dupRow(parent, dinos, top, height) -> used height (optional, BD-1170)
 function Panels.species(ctx)
     local speciesId: string = ctx.speciesId
     local speciesName = Config.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId) -- BD-604
@@ -468,6 +468,7 @@ function Panels.species(ctx)
             end
             top = 48 + T + 8
         end
+        if ctx.dupRow then top += ctx.dupRow(right, st.list, top, T) end -- BD-1170: progress toward Gold / Emerald / Diamond (nil while Config.DupProgressEnabled is false)
         local g = W.scroll(right, UDim2.fromOffset(516, 402 - top), UDim2.fromOffset(0, top))
         g.Name = "DinoCards"
         local layout = Instance.new("UIGridLayout")
