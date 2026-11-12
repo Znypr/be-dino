@@ -59,7 +59,20 @@ local TYPES = {
     {id = "egg", weight = 7, points = 15, size = ScaleLadder.Food.egg.size, color = Color3.fromRGB(245, 230, 187)},
     {id = "amber", weight = 3, points = 50, size = ScaleLadder.Food.amber.size, color = Color3.fromRGB(255, 219, 139)},
 }
+-- BD-1175 (docs/225 section 7): owner-only food (the starter run's food trail). start() fills `owned`; before that every call says no.
+-- Only the owner can eat it (checked in the server tick), it never respawns, and it is removed when the owner's run ends or the owner leaves.
+local owned: any = nil
+FoodService.OwnedMaxPerPlayer = 8 -- a hard ceiling, far above the trail's 3
+function FoodService.kindPoints(kindId: string): number?
+    for _, kind in TYPES do if kind.id == kindId then return kind.points end end
+    return nil
+end
+function FoodService.groundOk(x: number, z: number): boolean return owned ~= nil and owned.ground(x, z) end
+function FoodService.addOwned(player: Player, kindId: string, x: number, z: number): boolean return owned ~= nil and owned.add(player, kindId, x, z) end
+function FoodService.clearOwned(player: Player) if owned ~= nil then owned.clear(player) end end
+function FoodService.ownedCount(player: Player): number return if owned ~= nil then owned.count(player) else 0 end
 function FoodService.start(dinosaur,repository)
+    owned = nil
     workspace:SetAttribute("FoodSpawnStatus", "Building")
     workspace:SetAttribute("FoodCount", 0)
     workspace:SetAttribute("FoodStartupError", "")
@@ -161,6 +174,97 @@ function FoodService.start(dinosaur,repository)
             food.part.Transparency = if visible then 0 else 1
         end
     end
+    local function addGlow(pickup: BasePart, color: Color3)
+        local glow = Instance.new("Highlight") -- tinted glow from a stock instance, not drawn art
+        glow.FillTransparency = 0.7
+        glow.FillColor, glow.OutlineColor = color, color
+        glow.Parent = pickup
+    end
+    -- BD-1175: ONE place builds a pickup (the part and, for a kit egg or amber, its model). It is not placed or parented here. `rng` is the seeded
+    -- food stream for the map and a different stream for owner-only food, so extra food never moves the map (tools/verify_starter_trail.py).
+    local function makePickup(kind: any, special: boolean, starter: boolean, sx: number, sz: number, itemIndex: number, rng: Random): (BasePart, any)
+        local kitMode = Config.FoodArtMode == "Kit"
+        local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+        -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
+        -- largest side equals the old ball diameter (same readability, points, attributes and validation).
+        local pickup: BasePart
+        local meshPickup = false
+        if kitMode then
+            local ok, model = pcall(Resources.clone, artId)
+            if not ok then model = nil end -- a clone that RAISES leaves the error string in `model`; never call :Destroy() on it (docs/152)
+            local mesh = if model then model:FindFirstChildWhichIsA("MeshPart") else nil
+            -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
+            -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
+            local drum = generated and generated:FindFirstChild("food_drumstick")
+            if (special or (kind.id == "fruit" and (sx + sz + itemIndex) % 2 == 1)) and drum and drum:IsA("MeshPart") then
+                if model then model:Destroy() end
+                model, mesh = nil, drum:Clone()
+                mesh:SetAttribute("Drumstick", true)
+            end
+            if mesh then
+                mesh.Parent = nil
+                mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then ScaleLadder.Food.drumstickScale else 1) * rng:NextNumber(ScaleLadder.Food.variety[1], ScaleLadder.Food.variety[2]) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
+                mesh.CFrame = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+                mesh.Name = kind.id
+                mesh.Color = Color3.new(1, 1, 1)
+                if not mesh:GetAttribute("Drumstick") then mesh.Material = Enum.Material.SmoothPlastic end
+                pickup, meshPickup = mesh, true
+            end
+            if model then model:Destroy() end
+        end
+        if not meshPickup then
+            local ball = Instance.new("Part")
+            ball.Name = kind.id
+            ball.Shape = Enum.PartType.Ball
+            ball.Size = Vector3.one * kind.size
+            ball.Color = kind.color
+            ball.Material = Enum.Material.SmoothPlastic
+            pickup = ball
+        end
+        pickup.Anchored = true
+        pickup.CanCollide = false
+        pickup.CanTouch = false
+        pickup.CanQuery = false
+        pickup:SetAttribute("Points", kind.points)
+        if special then
+            pickup:SetAttribute("SpecialFood", true)
+            addGlow(pickup, kind.color)
+        end
+        pickup:SetAttribute("StarterFood", starter)
+        pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
+        local visual = nil
+        -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
+        -- With the uploaded MeshParts every pickup (berry, fruit, egg, amber) is its own kit mesh. Only when a kit
+        -- mesh is missing does it fall back: berry/fruit keep the ball and native egg/amber models replace the
+        -- ball on a deterministic stride (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap (part budget, docs/68).
+        pickup:SetAttribute("ArtId", artId)
+        pickup:SetAttribute("KitMesh", meshPickup)
+        local useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup
+        if kitMode and useModel then
+            local stride = if kind.id == "amber" then 4 else 20
+            useModel = kitVisuals < Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
+        end
+        if useModel then
+            local ok, result = pcall(function()
+                local model = Resources.clone(artId)
+                if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
+                return model
+            end)
+            if ok and result and kitMode then kitVisuals += 1 end
+            if ok then visual = result end -- visible native pickup survives any art failure
+        end
+        return pickup, visual
+    end
+    local function showPlaced(pickup: BasePart, visual: any)
+        pickup.Parent = folder
+        if visual then
+            pickup.Transparency = 1 -- only while the kit model is the visible pickup; show() mirrors it
+            for _, item in visual:GetDescendants() do
+                if item:IsA("BasePart") then item.Anchored = true end
+            end
+            visual.Parent = pickup
+        end
+    end
     for sx = 0, Config.FoodSectorCount - 1 do
         for sz = 0, Config.FoodSectorCount - 1 do
             local minX, minZ = -extent + sx * sectorWidth, -extent + sz * sectorWidth
@@ -196,90 +300,11 @@ function FoodService.start(dinosaur,repository)
                     special = true
                     kind = {id = "golden_drumstick", points = SpecialFoods.points(), size = SpecialFoods.GOLDEN_DRUMSTICK.size, color = Color3.fromRGB(table.unpack(SpecialFoods.GOLDEN_DRUMSTICK.rgb))}
                 end
-                local kitMode = Config.FoodArtMode == "Kit"
-                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
-                -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
-                -- largest side equals the old ball diameter (same readability, points, attributes and validation).
-                local pickup: BasePart
-                local meshPickup = false
-                if kitMode then
-                    local ok, model = pcall(Resources.clone, artId)
-                    if not ok then model = nil end -- a clone that RAISES leaves the error string in `model`; never call :Destroy() on it (docs/152)
-                    local mesh = if model then model:FindFirstChildWhichIsA("MeshPart") else nil
-                    -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
-                    -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
-                    local drum = generated and generated:FindFirstChild("food_drumstick")
-                    if (special or (kind.id == "fruit" and (sx + sz + itemIndex) % 2 == 1)) and drum and drum:IsA("MeshPart") then
-                        if model then model:Destroy() end
-                        model, mesh = nil, drum:Clone()
-                        mesh:SetAttribute("Drumstick", true)
-                    end
-                    if mesh then
-                        mesh.Parent = nil
-                        mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then ScaleLadder.Food.drumstickScale else 1) * random:NextNumber(ScaleLadder.Food.variety[1], ScaleLadder.Food.variety[2]) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
-                        mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
-                        mesh.Name = kind.id
-                        mesh.Color = Color3.new(1, 1, 1)
-                        if not mesh:GetAttribute("Drumstick") then mesh.Material = Enum.Material.SmoothPlastic end
-                        pickup, meshPickup = mesh, true
-                    end
-                    if model then model:Destroy() end
-                end
-                if not meshPickup then
-                    local ball = Instance.new("Part")
-                    ball.Name = kind.id
-                    ball.Shape = Enum.PartType.Ball
-                    ball.Size = Vector3.one * kind.size
-                    ball.Color = kind.color
-                    ball.Material = Enum.Material.SmoothPlastic
-                    pickup = ball
-                end
-                pickup.Anchored = true
-                pickup.CanCollide = false
-                pickup.CanTouch = false
-                pickup.CanQuery = false
-                pickup:SetAttribute("Points", kind.points)
-                if special then
-                    pickup:SetAttribute("SpecialFood", true)
-                    local glow = Instance.new("Highlight") -- tinted glow from a stock instance, not drawn art
-                    glow.FillTransparency = 0.7
-                    glow.FillColor, glow.OutlineColor = kind.color, kind.color
-                    glow.Parent = pickup
-                end
-                pickup:SetAttribute("StarterFood", starter)
-                pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
-                local visual = nil
-                -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- With the uploaded MeshParts every pickup (berry, fruit, egg, amber) is its own kit mesh. Only when a kit
-                -- mesh is missing does it fall back: berry/fruit keep the ball and native egg/amber models replace the
-                -- ball on a deterministic stride (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap (part budget, docs/68).
-                pickup:SetAttribute("ArtId", artId)
-                pickup:SetAttribute("KitMesh", meshPickup)
-                local useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup
-                if kitMode and useModel then
-                    local stride = if kind.id == "amber" then 4 else 20
-                    useModel = kitVisuals < Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
-                end
-                if useModel then
-                    local ok, result = pcall(function()
-                        local model = Resources.clone(artId)
-                        if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
-                        return model
-                    end)
-                    if ok and result and kitMode then kitVisuals += 1 end
-                    if ok then visual = result end -- visible native pickup survives any art failure
-                end
+                local pickup, visual = makePickup(kind, special, starter, sx, sz, itemIndex, random)
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
                     center = center, minX = minX, maxX = minX + sectorWidth, minZ = minZ, maxZ = minZ + sectorWidth}
                 if (if planned then placeFromMap(food, planned) else relocate(food)) then
-                    pickup.Parent = folder
-                    if visual then
-                        pickup.Transparency = 1 -- only while the kit model is the visible pickup; show() mirrors it
-                        for _, item in visual:GetDescendants() do
-                            if item:IsA("BasePart") then item.Anchored = true end
-                        end
-                        visual.Parent = pickup
-                    end
+                    showPlaced(pickup, visual)
                     table.insert(foods, food)
                     workspace:SetAttribute("FoodCount", #foods)
                     -- Owner 2026-10-15: no floating point numbers over food (they cluttered the world).
@@ -305,7 +330,53 @@ function FoodService.start(dinosaur,repository)
     local grid = PointGrid.new(8)
     local hiddenFoods = {} -- foods waiting to respawn (small set), so the tick never walks all 2,400 just to look at readyAt
     for _, food in foods do local p = food.part.Position PointGrid.insert(grid, food, p.X, p.Z) end
-    Players.PlayerRemoving:Connect(function(player) previous[player] = nil AdminMutationScale.clear(adminMutationScales, player) windows[player] = nil end)
+    -- BD-1175: owner-only food. Empty unless StarterRunService asked for a trail (Config.StarterRunEnabled), so the default build never enters these loops.
+    local ownedFoods = {}
+    local function removeOwned(food)
+        ownedFoods[food] = nil
+        PointGrid.remove(grid, food)
+        food.part:Destroy() -- a kit model is a child of the part
+    end
+    local function ownedCount(player: Player): number
+        local n = 0
+        for food in ownedFoods do if food.owner == player then n += 1 end end
+        return n
+    end
+    local function ownedGround(x: number, z: number): Vector3?
+        if type(x) ~= "number" or type(z) ~= "number" or x ~= x or z ~= z or math.abs(x) > extent or math.abs(z) > extent then return nil end
+        return groundAt(x, z) -- the SAME ground, water, slope, clear-spawn and obstacle rule as every other food
+    end
+    owned = {
+        ground = function(x: number, z: number): boolean return ownedGround(x, z) ~= nil end,
+        count = ownedCount,
+        clear = function(player: Player)
+            for food in ownedFoods do if food.owner == player then removeOwned(food) end end
+        end,
+        add = function(player: Player, kindId: string, x: number, z: number): boolean
+            local character = player.Character
+            if not character or character:GetAttribute("RunState") ~= "Active" then return false end -- only inside a run: the run's end removes it
+            local kind = nil
+            for _, known in TYPES do if known.id == kindId then kind = known end end
+            if not kind then return false end
+            local count = ownedCount(player)
+            if count >= FoodService.OwnedMaxPerPlayer then return false end
+            local ground = ownedGround(x, z)
+            if not ground then return false end
+            local sx = math.clamp(math.floor((x + extent) / sectorWidth), 0, Config.FoodSectorCount - 1)
+            local sz = math.clamp(math.floor((z + extent) / sectorWidth), 0, Config.FoodSectorCount - 1)
+            local pickup, visual = makePickup(kind, false, false, sx, sz, count + 1, eventRandom) -- never the seeded map stream
+            pickup:SetAttribute("OwnerUserId", player.UserId) -- other clients hide it (StarterRunClient); the server check in the tick is what counts
+            addGlow(pickup, kind.color)
+            pickup.Position = ground + Vector3.new(0, pickup.Size.Y / 2 + 0.35, 0)
+            if visual then visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
+            showPlaced(pickup, visual)
+            local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind, fixed = true, owner = player, character = character}
+            ownedFoods[food] = true
+            PointGrid.insert(grid, food, pickup.Position.X, pickup.Position.Z)
+            return true
+        end,
+    }
+    Players.PlayerRemoving:Connect(function(player) previous[player] = nil AdminMutationScale.clear(adminMutationScales, player) windows[player] = nil owned.clear(player) end)
     task.spawn(function()
         while true do
             task.wait(Config.FoodTickSeconds)
@@ -351,6 +422,11 @@ function FoodService.start(dinosaur,repository)
                     hiddenFoods[food] = nil
                 end
             end
+            for food in ownedFoods do -- BD-1175: owner-only food goes when its owner left, got a new character or ended the run
+                local owner = food.owner
+                local character = owner.Character
+                if owner.Parent == nil or character ~= food.character or character:GetAttribute("RunState") ~= "Active" then removeOwned(food) end
+            end
             -- BD-361: each player looks only at foods in nearby grid cells (about 4 cells of 8 studs), then picks the nearest claimant per food.
             local claims = {}
             for _, candidate in candidates do
@@ -358,7 +434,7 @@ function FoodService.start(dinosaur,repository)
                 local headX, headZ = candidate.headX, candidate.headZ
                 local headPoint = Vector3.new(headX, position.Y, headZ) -- BD-515: reach and line of sight are measured from the mouth
                 PointGrid.query(grid, headX, headZ, candidate.radius, function(food)
-                    if food.hidden then return end
+                    if food.hidden or (food.owner ~= nil and food.owner ~= candidate.player) then return end -- BD-1175: owner-only food is nobody else's
                     local foodPosition = food.part.Position
                     local dx, dz = foodPosition.X - headX, foodPosition.Z - headZ
                     if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - position.Y) < MouthReach.VerticalLimit then
@@ -372,10 +448,14 @@ function FoodService.start(dinosaur,repository)
                 end)
             end
             for food, claim in claims do
-                food.readyAt = now + FoodRespawn.seconds(food.kind.id, respawnTiers, Config.FoodRespawnByKind, Config.FoodRespawnSeconds) -- BD-1081: one table lookup per eaten food, the hiddenFoods tick below is unchanged
-                food.hidden = true
-                hiddenFoods[food] = true
-                show(food, false)
+                if food.owner ~= nil then
+                    removeOwned(food) -- BD-1175: eaten once, never comes back
+                else
+                    food.readyAt = now + FoodRespawn.seconds(food.kind.id, respawnTiers, Config.FoodRespawnByKind, Config.FoodRespawnSeconds) -- BD-1081: one table lookup per eaten food, the hiddenFoods tick below is unchanged
+                    food.hidden = true
+                    hiddenFoods[food] = true
+                    show(food, false)
+                end
                 claim.candidate.gained += food.kind.points * adminFoodMultiplier
                 if trackTelemetry then claim.candidate.raw = (claim.candidate.raw or 0) + food.kind.points end -- BD-575: pickup value BEFORE the admin multiplier
                 if trackObjectives then claim.candidate.items += 1 end -- BD-074: pickups per player this tick (summed, not reported one by one)
