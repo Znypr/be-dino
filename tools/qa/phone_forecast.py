@@ -213,6 +213,9 @@ SPEC = {
     'paintGloss': (1024, 1024), 'paint_bucket': (1024, 1024), 'aura_': (1024, 1024), 'rarity_': (1024, 1024), 'tier_': (1024, 1024),
     'notify_': (1024, 1024), 'toast_body': (512, 128), 'frame_': (512, 512), 'hud_': (1024, 1024), 'crystals_': (1024, 1024),
     'station_': (1024, 1024), 'fame_plaque': (1024, 1024), 'golden_drumstick_icon': (1024, 1024), 'class_': (1024, 1024),
+    # BD-1177: the Toybox UI kit (resources/ui/v2/toybox/final, the real PNG sizes; tools/verify_toybox_ui.py checks them against the files)
+    'toybox_header_': (512, 128), 'toybox_button_': (256, 112), 'toybox_card_': (256, 320), 'toybox_close': (128, 128),
+    'toybox_panel_frame': (256, 256), 'toybox_studs_tile': (256, 256),
 }
 FILE_DIRS = ['resources/effects/fx-v2', 'resources/effects/fx-v3', 'resources/ui/v2/icons', 'resources/materials/meadow-grass-v2']
 # slots drawn with mips (3D / particle / material textures); everything else is a GUI image (1:1, no mips)

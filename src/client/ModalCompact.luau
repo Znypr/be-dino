@@ -55,9 +55,11 @@ local function ensureScroller(c: Ctx): ScrollingFrame
 end
 
 -- Re-lay the panel for the current canvas. Safe to call often (open, resize).
-function M.layout()
+-- BD-1177: `screen` is the name Bootstrap's open(name) shows (nil for a plain re-layout); the Toybox skin recolours the header by its place.
+function M.layout(screen: string?)
     local c = ctx
     if not c then return end
+    if screen and Theme.Toybox then Theme.Toybox.place(screen) end
     local m = M.model()
     model = m
     c.scale.Scale = m.scale
@@ -227,6 +229,7 @@ function M.attach(context: Ctx)
     ctx = context
     context.body.DescendantAdded:Connect(schedule)
     context.body.ChildAdded:Connect(schedule)
+    if Theme.Toybox then Theme.Toybox.window({panel = context.panel, header = context.header, heading = context.heading, closeButton = context.closeButton, scale = context.scale}) end -- BD-1177
     M.layout()
 end
 

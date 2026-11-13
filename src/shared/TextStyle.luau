@@ -8,6 +8,8 @@ TextStyle.MinContrast = 4.5
 TextStyle.Light = {255, 255, 255}
 TextStyle.Dark = {13, 15, 20}
 TextStyle.MinThickness, TextStyle.MaxThickness = 2, 3
+-- BD-1177: nil (the default) = the 2..3 px rule above. UITheme sets it to ToyboxKit.stroke (3..4 px) only while Config.ToyboxUIEnabled is true.
+TextStyle.SkinThickness = nil :: ((textSize: number) -> number)?
 TextStyle.DarkFill = 0.05 -- relative luminance at or under which a fill counts as dark text (the outline colour itself)
 
 local function channel(v: number): number
@@ -64,6 +66,7 @@ function TextStyle.apply(label: TextLabel | TextButton, fill: Color3?): UIStroke
     end
     stroke.ApplyStrokeMode, stroke.LineJoinMode = Enum.ApplyStrokeMode.Contextual, Enum.LineJoinMode.Round
     stroke.Color, stroke.Thickness, stroke.Transparency = Color3.fromRGB(s[1], s[2], s[3]), TextStyle.thickness(label.TextSize), 0
+    if TextStyle.SkinThickness then stroke.Thickness = TextStyle.SkinThickness(label.TextSize) end -- BD-1177
     return stroke
 end
 
@@ -102,6 +105,7 @@ function TextStyle.outlined(label: TextLabel | TextButton, kind: string, fill: C
     target:SetAttribute("TextKind", kind)
     local stroke = TextStyle.apply(label, fill)
     if kind == "title" and stroke.Parent == label then stroke.Thickness = TextStyle.thicknessFor(kind, label.TextSize) end
+    if TextStyle.SkinThickness and stroke.Parent == label then stroke.Thickness = TextStyle.SkinThickness(label.TextSize) end -- BD-1177
     return stroke
 end
 return TextStyle

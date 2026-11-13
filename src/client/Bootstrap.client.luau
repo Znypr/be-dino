@@ -250,7 +250,7 @@ local function open(name: string)
     active=name
     updateNavigation()
     body:ClearAllChildren()
-    require(script.Parent.ModalCompact).layout()
+    require(script.Parent.ModalCompact).layout(name)
     shade.Visible=true
     popSerial+=1 popLabel.Visible=false -- BD-379
     if not wasVisible then
