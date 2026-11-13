@@ -154,6 +154,11 @@ return table.freeze({
     -- only: nothing is stored, no reward, odds or recipe changes. false = the reveal and the Index page are exactly as before, no request is sent.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     DupProgressEnabled = false,
+    -- BD-1182 (docs/228 board 6, docs/229): true = the UI motion presets of Shared/UIMotion are used: a menu window opens in 0.3 s with a soft
+    -- overshoot to 103% and closes in 0.15 s; a pressed button sinks 5 px in 80 ms and pops to 103% on release. Reduce Motion gives the end
+    -- state at once. Client presentation only: nothing is stored, sent or decided. false = every window and button moves exactly as before
+    -- and src/client/MotionFx.luau is never required. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    MotionPresetsEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
