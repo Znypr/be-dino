@@ -850,7 +850,7 @@ RunService.RenderStepped:Connect(function(dt)
     else
         humanoid.AutoRotate=true
     end
-    -- BD-500: the aim lift follows the dinosaur's REAL height (the measured model box, Shared/CameraFraming), not only its growth step;
+    -- BD-500: aim lift follows the real model height (CameraFraming);
     -- a Compy gets exactly the old 2 x (scale - 1). cameraLift is in studs now.
     local target=require(script.Parent.CameraFit).lift(character :: Model)
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
@@ -938,7 +938,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
     local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
     local outcome={big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=PrivateState.get("LastChestFailed")==true}
-    -- BD-525: the decision (species read, rarity, notable rules) is EggsLogic's; an unreadable or unknown species is never skipped.
+    -- BD-525: EggsLogic decides; an unknown species is never skipped.
     local skip,parsed=EggsLogic.autoOpenDecision(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),str("LastChestRewardText"),Config.SpeciesRarities,outcome,skipAllReveals)
     local species=parsed or "compy"
     local rarity=speciesIndex(species)
@@ -949,7 +949,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
         task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() if autoHatching then (hatchState.next :: any)() end end) -- stay under the server claim cooldown; BD-1019: X / Escape stops the loop
         return
     end
-    -- BD-170: when Open (or Next egg) already put a waiting egg on screen, hand the answer to it; otherwise open the screen with the result.
+    -- BD-170: a waiting egg on screen gets the answer, else open the screen.
     local waiting=hatchState.pending
     if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then
         task.defer(waiting.supply)
@@ -1041,4 +1041,5 @@ Input.InputBegan:Connect(function(input,processed)
         if require(Shared.ModalCloseRules).keyAction(if shade.Visible then active else "",want)=="close" then close() else open(want) end -- BD-1074: key twice = closed
     end
 end)
+if RunService:IsStudio() then require(script.Parent.ScreenTour)(player,open,close,function() return active end) end -- BD-1191
 end mountHud() end

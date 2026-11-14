@@ -1,0 +1,30 @@
+{
+ "hud": {
+  "score": 5,
+  "one_line": "world looks good, HUD broken rail and mixed buttons"
+ },
+ "collection": {
+  "score": 4,
+  "one_line": "empty-looking, clipped bottom"
+ },
+ "eggs": {
+  "score": 4,
+  "one_line": "oversized button, three colours, unused right third"
+ },
+ "auras": {
+  "score": 5,
+  "one_line": "nice cards, price overlap, off-style art"
+ },
+ "potions": {
+  "score": 4,
+  "one_line": "missing icon, grey prices, clipped footer"
+ },
+ "fusion": {
+  "score": 1,
+  "one_line": "empty window with wrong title"
+ },
+ "settings": {
+  "score": 5,
+  "one_line": "works but plain and on studs"
+ }
+}
