@@ -16,6 +16,14 @@
     "src/client/HatchSequence.luau": {
       "count": 1,
       "reason": "The reveal tier badge is a chip filled with the tier colour (TIER_COLORS = Theme.RarityColors, BD-1070): white word on the tier fill."
+    },
+    "src/client/DinoIndexList.luau": {
+      "count": 1,
+      "reason": "BD-1194 Toybox Index card: the rarity chip is FILLED with the tier colour (ChipStyle.apply), the word sits on it in white, same as DinoIndexScreens."
+    },
+    "src/client/EggsPanels.luau": {
+      "count": 1,
+      "reason": "BD-1195 Toybox Eggs stage: the rarity pill is FILLED with the tier colour, the word sits on it in white, same as EggsScreen."
     }
   }
 }
