@@ -20,8 +20,6 @@ Screen scores (latest, 10 = top Roblox game): auras 4, collection 7, eggs 7, fus
 | ---: | --- | --- | --- | --- | --- |
 | 9 | P-d0e74b | all windows | Content uses only the left two thirds; right third is empty studs | Lay content out to the window width with the docs/232 helpers (grid columns grow, inset 16, gutter 12) or size the window to its content. | BD-1189 |
 | 9 | P-4a7f08 | all windows | The X hangs on the header corner | X fully inside the strip, centred, equal 8 px inset (in the BD-1189 pilot brief). | BD-1189 |
-| 9 | P-9283ac | auras | Price text overlaps the crystal icon | Measure icon + text and centre them as one group; shorter "3,700" with the icon only. | BD-1192 |
-| 9 | P-fac67e | auras | Price icon lands inside the word after the BD-1192 fix | Icon and skin word label from one centred group; skin-on case in verify_price_group.py. | BD-1201 |
 | 9 | P-da0e02 | game | No daily login reward or streak | Daily streak calendar in the lobby: crystals and an egg on day 3 / 7, PROVISIONAL amounts, server time, flag-gated. | BD-1197 |
 | 9 | P-e96b77 | game | No playtime rewards | Playtime gift track on the HUD (small chest with a timer), rewards PROVISIONAL, flag-gated. | BD-1198 |
 | 9 | P-639327 | game | Runs are about 5 minutes (under 6 min = low Day-1) | One-tap "Play again" after the hatch, a run-streak bonus, and lobby goals so a session holds 3+ runs. | BD-1199 |
@@ -43,6 +41,8 @@ Screen scores (latest, 10 = top Roblox game): auras 4, collection 7, eggs 7, fus
 | 4 | P-1b265a | potions | Footer text clipped and on studs | Move to a panel footer or a small info button. |  |
 | 4 | P-54d840 | settings | Rows sit on studs, values far right | Settings rows on one panel, slider + value together, hide SOUND LAB outside Studio/admin. |  |
 | 3 | P-9bc921 | eggs | "AUTO: OFF" and "Auto-open: off" say the same thing twice | Keep the toggle; replace the line with what auto-open does ("Opens eggs for you"). |  |
+| 2 | P-98c817 | auras | Long helper line for a kid | "Styling: Compy" with a small "Change" button. |  |
+| 2 | P-2ed51e | game | No player codes or group reward | Code box in Settings (server-validated list) and a one-time group bonus; flag-gated. |  |
 
-29 open, 4 fixed.
+27 open, 6 fixed.
 <!-- polish-loop:end -->

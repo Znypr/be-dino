@@ -172,10 +172,12 @@
   "kind": "bug",
   "needs_owner": false,
   "id": "P-9283ac",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
   "seen": 1,
-  "row": "BD-1192"
+  "row": "BD-1192",
+  "note": "PR #584 502893aa, seen in Studio 2026-11-14",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "auras",
@@ -424,10 +426,12 @@
   "reach": 3,
   "kind": "bug",
   "id": "P-fac67e",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
   "seen": 1,
-  "row": "BD-1201"
+  "row": "BD-1201",
+  "note": "PR #584 502893aa, seen in Studio 2026-11-14",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "eggs",
