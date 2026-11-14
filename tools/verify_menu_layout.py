@@ -107,7 +107,7 @@ MUTANTS = {
         'ShopCards': [('local rarityW = wide(data.chip.text, 104)', 'local rarityW = 104')],
     },
     'BUY and CANCEL touch on the aura confirm page': {
-        'ShopScreens': [('button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),', 'button(body,"CANCEL",290,337,510,45,')],
+        'ShopScreens': [('button(body,if toybox then toybox.cancel else "CANCEL",290,261+buyH+19,510,buttonH(45),', 'button(body,if toybox then toybox.cancel else "CANCEL",290,337,510,45,')],
     },
     'BUY and CANCEL touch on the potion confirm page': {
         'ShopScreens': [('button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),', 'button(body,"CANCEL",290,339,510,44,')],
