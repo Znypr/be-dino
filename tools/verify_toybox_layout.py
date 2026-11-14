@@ -49,49 +49,66 @@ local function texts(root, what)
     end)
     return n
 end
-assert(Kit.Detail.leftW + Kit.Gutter + Kit.Detail.rightW == 824, "two panels and a 12 px gutter fill the 824 px menu body")
-for _, scale in {1.38, 0.56} do
+local PhoneScale = require("PhoneScale")
+-- the windows: 1280x720 (desktop), 1274x481 (the lead's Studio viewport, compact), a small phone, full HD; body = what is really on screen (design px)
+local windows = {}
+for _, size in {{1280, 720}, {1274, 481}, {667, 375}, {1920, 1080}} do
+    local m = PhoneScale.modal(size[1], size[2], nil)
+    table.insert(windows, {name = size[1] .. "x" .. size[2], scale = m.effScale, w = math.floor(m.innerW), h = math.floor(m.innerH)})
+end
+table.insert(windows, {name = "824x402 at scale 0.56", scale = 0.56, w = 824, h = 402})
+for _, win in windows do
     for _, variant in {{0, false, false}, {48, true, true}, {83, false, true}} do
-        local tag = string.format("scale %g filters %d bars %s: ", scale, variant[1], tostring(variant[2]))
-        local lay = Kit.detailLayout(scale, variant[1], variant[2], variant[3])
+        local scale = win.scale
+        local tag = string.format("%s (body %dx%d, scale %.2f) filters %d bars %s: ", win.name, win.w, win.h, scale, variant[1], tostring(variant[2]))
+        local lay = Kit.detailLayout(scale, variant[1], variant[2], variant[3], win.w, win.h)
         local D = Kit.Detail
+        local BW, BH = lay.width, lay.height
+        assert(BW == math.max(win.w, 608) and BH == win.h, tag .. "the page uses the whole body")
         local big, small = Kit.buttonHeights(scale)
         assert(big >= 48 and small >= 40 and big * scale >= 44 - 1e-6 and small * scale >= 44 - 1e-6, tag .. "buttons 48 / 40 px, never under 44 px on screen")
-        assert(lay.rightPanel.x == lay.leftPanel.w + Kit.Gutter and lay.rightPanel.x + lay.rightPanel.w == 824, tag .. "panels 12 px apart, filling the body")
+        assert(lay.rightPanel.x == lay.leftPanel.w + Kit.Gutter and lay.rightPanel.x + lay.rightPanel.w == BW, tag .. "panels 12 px apart, filling the body width")
         -- left panel
-        for _, name in {"preview", "rows", "equip"} do inside(lay[name], D.leftW, D.height, Kit.PanelPad, tag .. name .. " inside the left panel with 12 px") end
+        for _, name in {"preview", "rows", "equip"} do inside(lay[name], D.leftW, BH, Kit.PanelPad, tag .. name .. " inside the left panel with 12 px") end
         assert(lay.preview.y + lay.preview.h + Kit.Gutter == lay.rows.y, tag .. "preview to rows is 12 px")
         assert(lay.rows.y + lay.rows.h + Kit.Gutter <= lay.equip.y, tag .. "rows to button at least 12 px")
-        assert(lay.equip.y + lay.equip.h + Kit.PanelPad == D.height and lay.equip.w == D.leftW - 2 * Kit.PanelPad, tag .. "one full-width button at the foot")
-        assert(lay.preview.h >= 120 and lay.rows.h == 6 * Kit.RowH, tag .. "preview stays big, six rows")
+        assert(lay.equip.y + lay.equip.h + Kit.PanelPad == BH and lay.equip.w == D.leftW - 2 * Kit.PanelPad, tag .. "one full-width button at the foot")
+        assert(lay.preview.h >= 120 and lay.rows.h >= 2 * Kit.RowH and lay.rows.h <= 6 * Kit.RowH, tag .. "preview stays big, rows keep at least two lines (and scroll)")
+        if BH >= 3 * Kit.PanelPad + Kit.Gutter + 120 + 6 * Kit.RowH + big then assert(lay.rows.h == 6 * Kit.RowH, tag .. "all six rows show when the body is tall enough") end
+        assert(lay.equip.y >= lay.rows.y + lay.rows.h and lay.equip.y + lay.equip.h <= BH, tag .. "EQUIP is always visible below the rows, inside the body")
         -- right panel
-        for _, name in {"heading", "sort", "back"} do inside(lay[name], D.rightW, D.height, Kit.PanelPad, tag .. name .. " inside the right panel with 12 px") end
-        inside(lay.grid, D.rightW, D.height, Kit.PanelPad, tag .. "grid inside the right panel", 8) -- the scroll bar sits in the right padding
-        assert(lay.grid.x + lay.grid.w <= D.rightW - 4, tag .. "grid never touches the panel edge")
-        assert(lay.heading.x + lay.heading.w + Kit.Gutter == lay.sort.x and lay.sort.x + lay.sort.w + Kit.Gutter == lay.back.x and lay.back.x + lay.back.w + Kit.PanelPad == D.rightW, tag .. "heading, SORT, BACK 12 px apart")
+        for _, name in {"heading", "sort", "back"} do inside(lay[name], lay.rightPanel.w, BH, Kit.PanelPad, tag .. name .. " inside the right panel with 12 px") end
+        inside(lay.grid, lay.rightPanel.w, BH, Kit.PanelPad, tag .. "grid inside the right panel", 8) -- the scroll bar sits in the right padding
+        assert(lay.grid.x + lay.grid.w <= lay.rightPanel.w - 4, tag .. "grid never touches the panel edge")
+        assert(lay.heading.x + lay.heading.w + Kit.Gutter == lay.sort.x and lay.sort.x + lay.sort.w + Kit.Gutter == lay.back.x and lay.back.x + lay.back.w + Kit.PanelPad == lay.rightPanel.w, tag .. "heading, SORT, BACK 12 px apart")
         assert(lay.heading.w >= 120, tag .. "the heading has room")
         local top = Kit.PanelPad + small + Kit.Gutter
         if variant[1] > 0 then
-            inside(lay.filters, D.rightW, D.height, Kit.PanelPad, tag .. "filters inside")
+            inside(lay.filters, lay.rightPanel.w, BH, Kit.PanelPad, tag .. "filters inside")
             assert(lay.filters.y == top and lay.grid.y == top + variant[1] + Kit.Gutter, tag .. "filters 12 px above the grid")
         else assert(lay.grid.y == top, tag .. "grid 12 px under the heading bar") end
         if variant[2] then
-            inside(lay.dup, D.rightW, D.height, Kit.PanelPad, tag .. "bars inside")
-            assert(lay.grid.y + lay.grid.h + Kit.Gutter == lay.dup.y and lay.dup.y + lay.dup.h + Kit.PanelPad == D.height, tag .. "bars 12 px under the grid and 12 px from the panel foot")
-        else assert(lay.grid.y + lay.grid.h + Kit.PanelPad == D.height, tag .. "grid ends 12 px from the panel foot") end
-        assert(lay.grid.h >= 60, tag .. "the grid shows part of a row and scrolls (many copies stay reachable)")
-        if variant[1] == 0 and not variant[2] then assert(lay.grid.h >= lay.cellH, tag .. "a whole row of cards is visible") end
-        local columns = Kit.Detail.columns
-        assert(lay.cellW * columns + (columns - 1) * Kit.Gutter <= D.rightW - 2 * Kit.PanelPad and lay.cellW * columns + (columns - 1) * Kit.Gutter >= D.rightW - 2 * Kit.PanelPad - columns, tag .. "equal cells fill the width")
+            inside(lay.dup, lay.rightPanel.w, BH, Kit.PanelPad, tag .. "bars inside")
+            assert(lay.grid.y + lay.grid.h + Kit.Gutter == lay.dup.y and lay.dup.y + lay.dup.h + Kit.PanelPad == BH, tag .. "bars 12 px under the grid and 12 px from the panel foot")
+        else assert(lay.grid.y + lay.grid.h + Kit.PanelPad == BH, tag .. "grid ends 12 px from the panel foot") end
+        assert(lay.grid.h >= 0 and lay.grid.y + lay.grid.h <= BH - Kit.PanelPad, tag .. "the grid stays inside its panel and scrolls (many copies stay reachable)")
+        if BH >= 400 and variant[1] == 0 and not variant[2] then assert(lay.grid.h >= 60, tag .. "the grid shows part of a row") end
+        local columns = lay.columns
+        local content = lay.rightPanel.w - 2 * Kit.PanelPad
+        assert(columns >= 4 and columns <= 6, tag .. "4 to 6 columns")
+        assert(columns == Kit.columnsFor(content), tag .. "as many columns as fit, up to 6")
+        assert(lay.cellW >= Kit.Detail.minCell or columns == 4, tag .. "cells never narrower than the card")
+        assert(lay.cellW * columns + (columns - 1) * Kit.Gutter <= content and lay.cellW * columns + (columns - 1) * Kit.Gutter >= content - columns, tag .. "equal cells fill the width")
+        if win.w >= 1200 then assert(lay.rightPanel.x + lay.rightPanel.w == win.w and columns >= 6, tag .. "a wide window: the page fills it, 6 columns") end
         -- the helpers build real instances at these rects
         local root = Instance.new("Frame")
         local left = Layout.panel(root, "Left", UDim2.fromOffset(lay.leftPanel.w, lay.leftPanel.h), UDim2.fromOffset(0, 0))
         local pv = Layout.preview(left, UDim2.fromOffset(lay.preview.w, lay.preview.h), UDim2.fromOffset(lay.preview.x, lay.preview.y))
         local host = Instance.new("Frame")
-        host.Size, host.Position, host.Parent = UDim2.fromOffset(lay.rows.w, lay.rows.h), UDim2.fromOffset(lay.rows.x, lay.rows.y), left
+        host.Size, host.Position, host.Parent = UDim2.fromOffset(lay.rows.w, 6 * Kit.RowH), UDim2.fromOffset(lay.rows.x, lay.rows.y), left
         for i, row in {{"Pattern", "Plain"}, {"Class", "Fast"}, {"Stage", "Base"}, {"Found in", "36% of eggs"}, {"Boost", "+3% growth"}, {"Special", "Shiny • BIG"}} do
             local r = Layout.row(host, i, lay.rows.w, row[1], row[2])
-            inside(rect(r), lay.rows.w, lay.rows.h, 0, tag .. "a row inside the rows box")
+            inside(rect(r), lay.rows.w, 6 * Kit.RowH, 0, tag .. "a row inside the rows box")
             local label, value = r:FindFirstChild("Label"), r:FindFirstChild("Value")
             assert(label.Position.X.Offset + label.Size.X.Offset + Kit.Gutter <= value.Position.X.Offset, tag .. "label and value never overlap")
             assert(value.Position.X.Offset + value.Size.X.Offset <= lay.rows.w, tag .. "the value stays inside its row")
@@ -120,7 +137,7 @@ for _, scale in {1.38, 0.56} do
     end
 end
 -- rows never clip: the longest values the page can show, at the 14 px floor (about 0.56 of the size per character)
-local lay = Kit.detailLayout(1, 0, false, false)
+local lay = Kit.detailLayout(1, 0, false, false, 824, 402)
 local valueWidth = lay.rows.w - math.floor(lay.rows.w * 0.3) - Kit.Gutter
 for _, value in {"Rainbow Zebra", "Found in", "0.004% of eggs", "36% of eggs", "+3% growth", "3 of 5", "Shiny • BIG • Aurora", "Diamond", "Unknown pattern"} do
     assert((utf8.len(value) :: number) * 0.56 * Kit.MinText <= valueWidth, "a row value would clip at 14 px: " .. value)
@@ -155,6 +172,12 @@ def static_checks(read):
     # no inline coloured words, no text on studs: the page only uses the Layout text (ink on cream), never W.label with a colour on the panel
     tb_part = code[code.index('local function buildLeftT'):code.index('buildLeft = function()')]
     assert 'W.label' not in tb_part, 'the new left panel draws no old outlined labels'
+    # BD-1189 studio review 2026-11-14: fills the body, hint pill below the model, dark ink on the egg chip, no empty colour bar
+    assert 'ctx.bodySize' in code and 'bodyW, bodyH = ctx.bodySize()' in code and 'UDim2.fromOffset(bodyW, bodyH)' in code, 'the page fills the body that is on screen (offsets, so a short body grows no scroll bar)'
+    assert 'UDim2.new(1, 0, 1, -34)' in code and 'uiParent = stage' in code, 'the Drag-to-turn pill sits in a band under the model, never over the head'
+    assert 'L.tone("card"), 0' in code and 'Theme.Toybox.Kit.Tone.value' in code, 'the egg badge is a cream chip with dark ink'
+    assert 'g.primaryColorId ~= nil' in code, 'a copy without colours draws no empty colour bar'
+    assert 'ScrollingFrame") -- a very short window' in panels, 'the facts list scrolls on a very short window'
     layout = U.code_only(read(LAYOUT))
     for number in re.findall(r'TextSize\s*=\s*(\d+)', layout):
         assert int(number) >= 14, 'no text under 14 px in the layout helpers'
@@ -172,6 +195,12 @@ MUTANTS = {
     'dashes poke out of the slot': (LAYOUT, 'bar(0, y, t, h) bar(width - t, y, t, h)', 'bar(0, y, t, h) bar(width, y, t, h)'),
     'a second coloured button': (PANELS, 'L.actionButton(panel, "BACK", UDim2.fromOffset(lay.back.w, lay.back.h), UDim2.fromOffset(lay.back.x, lay.back.y), GREY', 'L.actionButton(panel, "BACK", UDim2.fromOffset(lay.back.w, lay.back.h), UDim2.fromOffset(lay.back.x, lay.back.y), C.accent'),
     'the page requires the layout without the flag': (PANELS, 'local L: any = if TB then require(Shared.ToyboxLayout) else nil', 'local L: any = require(Shared.ToyboxLayout)'),
+    'the hint pill goes back over the head': (PANELS, 'UDim2.new(1, 0, 1, -34), UDim2.new()', 'UDim2.fromScale(1, 1), UDim2.new()'),
+    'the egg word is white again': (PANELS, 'Theme.Toybox.Kit.Tone.value', 'nil'),
+    'the empty colour bar comes back': (PANELS, 'if not TB or g.primaryColorId ~= nil then', 'if true then'),
+    'the page ignores the body size': (PANELS, 'if TB and ctx.bodySize then bodyW, bodyH = ctx.bodySize() end', ''),
+    'EQUIP can fall below the body': (U.KIT, 'layout.equip = {x = pad, y = H - pad - big, w = leftContent, h = big}', 'layout.equip = {x = pad, y = 402 - pad - big, w = leftContent, h = big}'),
+    'the grid stops at 4 columns': (U.KIT, 'math.min(D.maxColumns, math.floor((contentWidth + Kit.Gutter) / (D.minCell + Kit.Gutter)))', 'D.columns'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
 }
 
@@ -179,8 +208,8 @@ MUTANTS = {
 def run_all(runner, mutant=None):
     read = U.reader(mutant)
     static_checks(read)
-    source = U.SCENE.replace('    UIMotion = __MOTION__,', '    UIMotion = __MOTION__,\n    ToyboxLayout = __LAYOUT__,')
-    source = source.replace('__CHECKS__', CHECKS).replace('__LAYOUT__', U.wrap(read(LAYOUT)))
+    source = U.SCENE.replace('    UIMotion = __MOTION__,', '    UIMotion = __MOTION__,\n    ToyboxLayout = __LAYOUT__,\n    PhoneScale = __PHONE__,')
+    source = source.replace('__CHECKS__', CHECKS).replace('__LAYOUT__', U.wrap(read(LAYOUT))).replace('__PHONE__', U.wrap(read('src/shared/PhoneScale.luau')))
     for key, value in (('__FLAG__', 'true'), ('__BOUND__', 'all'), ('__KIT__', U.wrap(read(U.KIT))), ('__SKIN__', U.wrap(read(U.SKIN))),
                        ('__SLOTS__', U.wrap(read(U.SLOTS))), ('__STYLE__', U.wrap(read(U.STYLE))), ('__MOTION__', U.wrap(read(U.MOTION))),
                        ('__THEME__', U.wrap(read(U.THEME)))):

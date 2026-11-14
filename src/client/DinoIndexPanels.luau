@@ -139,7 +139,8 @@ local function paintEggButton(hit: GuiObject, details: any)
         if view and view.kind ~= "egg" and view.kind ~= "loading" then
             local tip = Instance.new("TextLabel")
             tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 14, Enum.Font.GothamBold
-            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 16), UDim2.fromOffset(0, 31), hit.ZIndex + 2, hit
+            local ink = if Theme.Toybox then Theme.Toybox.Kit.Tone.value else nil -- dark ink, no outline, on the cream egg chip
+            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = if ink then Color3.fromRGB(ink[1], ink[2], ink[3]) else C.text, UDim2.fromOffset(48, 16), UDim2.fromOffset(0, 31), hit.ZIndex + 2, hit
         end
     end
 end
@@ -197,6 +198,11 @@ function Panels.species(ctx)
     local GREY = Color3.fromRGB(128, 142, 158) -- the grey gloss button; the only coloured (green) button of the page is EQUIP
     local offColor = if TB then GREY else C.card
     local gridPad, gridCols = if TB then Kit.Gutter else 8, 4
+    local bodyW, bodyH = 824, 402 -- the body that is really on screen (wider / shorter on a compact window); the flag-off page keeps 824 x 402
+    if TB and ctx.bodySize then bodyW, bodyH = ctx.bodySize() end
+    local rightW = bodyW - 296 - 12
+    local rightContentW = rightW - 24
+    local gridCellW = if TB then Kit.cellWidth(rightContentW, gridCols, Kit.Gutter) else 0
     local oddsPercent: string? = nil
     if TB then
         local total, mine = 0, 0
@@ -204,15 +210,15 @@ function Panels.species(ctx)
         if mine > 0 and total > 0 then oddsPercent = Sel.pct(100 * mine / total) .. " of eggs" end
     end
     local root = Instance.new("Frame")
-    root.Name, root.Size, root.BackgroundTransparency = "DinoIndexSpecies", UDim2.fromScale(1, 1), 1
+    root.Name, root.Size, root.BackgroundTransparency = "DinoIndexSpecies", if TB then UDim2.fromOffset(bodyW, bodyH) else UDim2.fromScale(1, 1), 1 -- offsets, not scale: a short compact body never grows a scroll bar from it
     root.Parent = ctx.body
     local connections: {RBXScriptConnection} = {}
     root.Destroying:Once(function() for _, c in connections do c:Disconnect() end end)
 
     local left = Instance.new("Frame")
-    left.Name, left.Size, left.BackgroundTransparency, left.Parent = "Hero", UDim2.fromOffset(296, 402), 1, root
+    left.Name, left.Size, left.BackgroundTransparency, left.Parent = "Hero", UDim2.fromOffset(296, if TB then bodyH else 402), 1, root
     local right = Instance.new("Frame")
-    right.Name, right.Size, right.Position, right.BackgroundTransparency, right.Parent = "MyDinos", UDim2.fromOffset(516, 402), UDim2.fromOffset(308, 0), 1, root
+    right.Name, right.Size, right.Position, right.BackgroundTransparency, right.Parent = "MyDinos", UDim2.fromOffset(if TB then rightW else 516, if TB then bodyH else 402), UDim2.fromOffset(308, 0), 1, root
 
     local function backButton(position: UDim2, size: UDim2)
         W.button(left, "BACK", size, position, C.blue, function() ctx.onBack() end)
@@ -229,7 +235,7 @@ function Panels.species(ctx)
         L.text(panel, "Not discovered yet", UDim2.fromOffset(width, 32), UDim2.fromOffset(pad, pad + 196 + Kit.Gutter), Kit.Type.heading)
         local line = L.text(panel, "Hatch eggs to find " .. speciesName .. ".", UDim2.fromOffset(width, 48), UDim2.fromOffset(pad, pad + 196 + Kit.Gutter + 36), Kit.Type.body, "label")
         line.TextWrapped = true
-        L.actionButton(panel, "BACK", UDim2.fromOffset(width, bigH), UDim2.fromOffset(pad, 402 - pad - bigH), GREY, false, function() ctx.onBack() end).Name = "Back"
+        L.actionButton(panel, "BACK", UDim2.fromOffset(width, bigH), UDim2.fromOffset(pad, bodyH - pad - bigH), GREY, false, function() ctx.onBack() end).Name = "Back"
         return root
     end
     if not ctx.owned then
@@ -249,7 +255,7 @@ function Panels.species(ctx)
     local grid: ScrollingFrame? = nil
     local filterButton: TextButton? = nil
     local equipButton: TextButton? = nil
-    local rowsHost: Frame? = nil
+    local rowsHost: GuiObject? = nil
     local rightHost: GuiObject = right
     local traitsList: ScrollingFrame? = nil
     local eggHit: TextButton? = nil
@@ -359,27 +365,29 @@ function Panels.species(ctx)
         rowsHost, eggHit = nil, nil
         local d = if st.selected then st.byId[st.selected] else nil
         local stageName = if d then d.stage else ctx.fallbackStage
-        local lay = Kit.detailLayout(ctx.scale(), 0, false) -- the preview takes what the rows and the button leave
+        local lay = Kit.detailLayout(ctx.scale(), 0, false, false, bodyW, bodyH) -- the preview takes what the rows and the button leave
         local panel = L.panel(left, "Panel", UDim2.fromScale(1, 1), UDim2.new())
         local width, rowsH, rowsTop = lay.rows.w, lay.rows.h, lay.rows.y
         local stage = L.preview(panel, UDim2.fromOffset(lay.preview.w, lay.preview.h), UDim2.fromOffset(lay.preview.x, lay.preview.y))
         local view = Preview.add(stage, speciesId, if stageName == nil then "base" else stageName)
-        view.Size, view.Position = UDim2.fromScale(1, 1), UDim2.new()
+        view.Size, view.Position = UDim2.new(1, 0, 1, -34), UDim2.new() -- the model sits above a 34 px band; the "Drag to turn" pill lives in that band, never over the head
         PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil} else nil)
-        hero = InspectView.attach(view, {hintPosition = UDim2.new(.5, 0, 0, 34), resetPosition = UDim2.new(1, -6, 0, 6)})
+        hero = InspectView.attach(view, {uiParent = stage, hintPosition = UDim2.new(0, 76, 1, -4), resetPosition = UDim2.new(1, -6, 0, 6)})
         local pad = lay.rows.x
         if not d then
             local line = L.text(panel, ctx.fallbackLine, UDim2.fromOffset(width, rowsH), UDim2.fromOffset(pad, rowsTop), Kit.Type.body)
             line.TextWrapped, line.TextYAlignment = true, Enum.TextYAlignment.Top
         else
-            local host = Instance.new("Frame")
-            host.Name, host.BackgroundTransparency, host.Size, host.Position, host.ZIndex = "Facts", 1, UDim2.fromOffset(width, rowsH), UDim2.fromOffset(pad, rowsTop), panel.ZIndex + 1
+            local host = Instance.new("ScrollingFrame") -- a very short window shows fewer rows and scrolls; the button stays at the foot
+            host.Name, host.BackgroundTransparency, host.BorderSizePixel, host.Size, host.Position, host.ZIndex = "Facts", 1, 0, UDim2.fromOffset(width, rowsH), UDim2.fromOffset(pad, rowsTop), panel.ZIndex + 1
+            host.ScrollBarThickness, host.ScrollingDirection, host.AutomaticCanvasSize, host.CanvasSize = 4, Enum.ScrollingDirection.Y, Enum.AutomaticSize.Y, UDim2.new()
             host.Parent = panel
             rowsHost = host
             local hit = Instance.new("TextButton")
-            hit.Name, hit.Text, hit.BackgroundColor3, hit.BackgroundTransparency = "EggButton", "", C.card, .25
+            hit.Name, hit.Text, hit.BackgroundColor3, hit.BackgroundTransparency = "EggButton", "", L.tone("card"), 0 -- a cream chip with a dark outline: the dark "No egg" word reads on it
             hit.Size, hit.Position, hit.ZIndex, hit.Parent = UDim2.fromOffset(48, 48), UDim2.new(1, -54, 1, -54), stage.ZIndex + 6, stage
             local hitCorner = Instance.new("UICorner") hitCorner.CornerRadius = UDim.new(.5, 0) hitCorner.Parent = hit
+            local hitLine = Instance.new("UIStroke") hitLine.Color, hitLine.Thickness, hitLine.Parent = C.outline, Kit.PanelStroke, hit
             eggHit = hit
             paintEggButton(hit, if type(st.details[d.instanceId]) == "table" then st.details[d.instanceId] else nil)
             hit.Activated:Connect(function()
@@ -505,7 +513,9 @@ function Panels.species(ctx)
         if mutationId then MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, rows.chipY)) end -- BD-352: a real badge (own colour, 14 px word, dot)
         local nameLabel = W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, MyDinos.Card.labelH), UDim2.fromOffset(4, rows.labelY), 14)
         if TB then L.ink(nameLabel) end
-        W.swatch(button, g, UDim2.new(1, -16, 0, MyDinos.Card.swatchH), UDim2.fromOffset(8, rows.swatchY))
+        if not TB or g.primaryColorId ~= nil then -- Toybox: a copy with no colours draws no empty dark bar
+            W.swatch(button, g, UDim2.new(1, -16, 0, MyDinos.Card.swatchH), UDim2.fromOffset(8, rows.swatchY))
+        end
         local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, MyDinos.Card.tagH), UDim2.fromOffset(4, rows.tagY), C.outline)
         tag.Visible = d.instanceId == st.equippedId
         cards[d.instanceId] = {stroke = stroke, tag = tag, button = button, index = order, mount = mount, unmount = unmount, mounted = false}
@@ -530,9 +540,9 @@ function Panels.species(ctx)
         table.clear(cards)
         local view = viewList()
         if #view == 0 and TB then
-            local empty = L.text(rightHost, "No dinos match, clear filters", UDim2.fromOffset(492, 32), UDim2.fromOffset(12, 150), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
+            local empty = L.text(rightHost, "No dinos match, clear filters", UDim2.fromOffset(rightContentW, 32), UDim2.fromOffset(12, 150), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
             empty.Name = "EmptyState"
-            L.actionButton(rightHost, "Clear filters", UDim2.fromOffset(220, smallH), UDim2.fromOffset(148, 204), GREY, true, function()
+            L.actionButton(rightHost, "Clear filters", UDim2.fromOffset(220, smallH), UDim2.fromOffset((rightW - 220) // 2, 204), GREY, true, function()
                 st.chosen, st.sortKey = {}, "rarest"
                 empty:Destroy()
                 buildRight()
@@ -552,7 +562,7 @@ function Panels.species(ctx)
         local count, more = MyDinos.page(view, st.visible)
         for i = 1, count do buildCard(view[i], i, target) end
         if TB and more == 0 then -- empty slots finish the last row and give at least two rows, so the grid never looks unfinished
-            for k = 1, Kit.emptySlots(count, gridCols, 2) do L.emptySlot(target, Kit.cellWidth(492, gridCols, Kit.Gutter), Kit.Detail.cardH, count + k) end
+            for k = 1, Kit.emptySlots(count, gridCols, 2) do L.emptySlot(target, gridCellW, Kit.Detail.cardH, count + k) end
         end
         updateWindow()
         if more > 0 then
@@ -568,7 +578,7 @@ function Panels.species(ctx)
         right:ClearAllChildren()
         grid, filterButton = nil, nil
         local pad, gut = Kit.PanelPad, Kit.Gutter
-        local width = 516 - 2 * pad
+        local width = rightW - 2 * pad
         local panel = L.panel(right, "Panel", UDim2.fromScale(1, 1), UDim2.new())
         rightHost = panel
         if not st.loaded then
@@ -579,9 +589,10 @@ function Panels.species(ctx)
         local count = #active + (if st.sortKey ~= "rarest" then 1 else 0)
         local usedDup = false
         if ctx.dupRow then -- the "3 of 6 for Gold!" bars sit at the foot of the panel (BD-1170); the page only reserves the row when they show something
-            usedDup = ctx.dupRow(panel, st.list, Kit.Detail.height - pad - smallH, smallH, width, pad) > 0
+            usedDup = ctx.dupRow(panel, st.list, bodyH - pad - smallH, smallH, width, pad) > 0
         end
-        local lay = Kit.detailLayout(ctx.scale(), if #active > 0 then T + 4 else 0, usedDup, count > 0)
+        local lay = Kit.detailLayout(ctx.scale(), if #active > 0 then T + 4 else 0, usedDup, count > 0, bodyW, bodyH)
+        gridCols, gridCellW = lay.columns, lay.cellW -- 4 to 6 equal columns, by the width of the panel
         L.text(panel, Kit.copiesHeading(speciesName, #st.list), UDim2.fromOffset(lay.heading.w, lay.heading.h), UDim2.fromOffset(lay.heading.x, lay.heading.y), Kit.Type.heading).Name = "Header"
         L.actionButton(panel, "BACK", UDim2.fromOffset(lay.back.w, lay.back.h), UDim2.fromOffset(lay.back.x, lay.back.y), GREY, true, function() ctx.onBack() end).Name = "Back"
         local fb = L.actionButton(panel, if count > 0 then "SORT (" .. count .. ")" else "SORT", UDim2.fromOffset(lay.sort.w, lay.sort.h), UDim2.fromOffset(lay.sort.x, lay.sort.y), GREY, true, function() openSheet() end)
@@ -665,7 +676,7 @@ function Panels.species(ctx)
     openSheet = function()
         if right:FindFirstChild("FilterSheet") then return end
         local sheet = Instance.new("Frame")
-        sheet.Name, sheet.Size, sheet.BackgroundColor3, sheet.ZIndex = "FilterSheet", UDim2.fromOffset(516, 402), C.panel, 10
+        sheet.Name, sheet.Size, sheet.BackgroundColor3, sheet.ZIndex = "FilterSheet", UDim2.fromOffset(if TB then rightW else 516, if TB then bodyH else 402), C.panel, 10
         Theme.decorate(sheet, 12)
         sheet.Active = true
         sheet.Parent = right
@@ -739,8 +750,8 @@ function Panels.species(ctx)
         if not ok and TB then
             right:ClearAllChildren()
             local panel = L.panel(right, "Panel", UDim2.fromScale(1, 1), UDim2.new())
-            L.text(panel, "Could not load your dinos", UDim2.fromOffset(492, 32), UDim2.fromOffset(12, 140), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
-            L.actionButton(panel, "TRY AGAIN", UDim2.fromOffset(220, smallH), UDim2.fromOffset(148, 196), GREY, true, function()
+            L.text(panel, "Could not load your dinos", UDim2.fromOffset(rightContentW, 32), UDim2.fromOffset(12, 140), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
+            L.actionButton(panel, "TRY AGAIN", UDim2.fromOffset(220, smallH), UDim2.fromOffset((rightW - 220) // 2, 196), GREY, true, function()
                 cache.revision = -1
                 root:Destroy()
                 Panels.species(ctx)

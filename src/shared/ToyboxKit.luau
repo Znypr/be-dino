@@ -193,23 +193,32 @@ function Kit.emptySlots(count: number, columns: number, minRows: number): number
     return total - count
 end
 
--- The rects of the dino detail page (design px, inside the 824 x 402 menu body): a 296 px left panel, a 12 px gutter, a 516 px right panel.
--- `scale` = the window's UIScale (buttons never under 44 px on screen), `filterRowH` = height of the chosen-filter chips row (0 = none),
--- `dupRow` = whether the "3 of 6 for Gold!" bars are shown. One place for the numbers, so the page and tools/verify_toybox_layout.py agree.
-Kit.Detail = {leftW = 296, rightW = 516, height = 402, columns = 4, cardH = 160, rowCount = 6, backW = 96, sortW = 96, sortWFilter = 128}
-function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, sortActive: boolean?)
+-- The rects of the dino detail page (design px, inside the menu body: 824 x 402 on a desktop window, wider / shorter on a compact one):
+-- a fixed 296 px left panel, a 12 px gutter, a right panel that takes the rest. `scale` = the window's UIScale (buttons never under 44 px on
+-- screen), `filterRowH` = height of the chosen-filter chips row (0 = none), `dupRow` = whether the "3 of 6 for Gold!" bars are shown,
+-- bodyW / bodyH = the body that is really on screen (default 824 x 402). One place for the numbers, so the page and
+-- tools/verify_toybox_layout.py agree. Short body: the preview shrinks first (never under 120), then the rows box (never under 2 rows, it scrolls);
+-- the button stays at the foot. Wide body: the grid gets 4 to 6 equal columns.
+Kit.Detail = {leftW = 296, rightW = 516, height = 402, columns = 4, maxColumns = 6, minCell = 114, cardH = 160, rowCount = 6, minPreview = 120, backW = 96, sortW = 96, sortWFilter = 128}
+function Kit.columnsFor(contentWidth: number): number
     local D = Kit.Detail
+    return math.max(D.columns, math.min(D.maxColumns, math.floor((contentWidth + Kit.Gutter) / (D.minCell + Kit.Gutter))))
+end
+function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, sortActive: boolean?, bodyW: number?, bodyH: number?)
+    local D = Kit.Detail
+    local W, H = math.max(bodyW or 824, D.leftW + Kit.Gutter + 300), bodyH or D.height
     local big, small = Kit.buttonHeights(scale)
     local pad, gut = Kit.PanelPad, Kit.Gutter
-    local leftContent, rightContent = D.leftW - 2 * pad, D.rightW - 2 * pad
-    local rowsH = D.rowCount * Kit.RowH
-    local previewH = math.max(120, D.height - 3 * pad - gut - rowsH - big)
-    local layout: any = {big = big, small = small}
-    layout.leftPanel = {x = 0, y = 0, w = D.leftW, h = D.height}
+    local rightW = W - D.leftW - gut
+    local leftContent, rightContent = D.leftW - 2 * pad, rightW - 2 * pad
+    local rowsH = math.max(2 * Kit.RowH, math.min(D.rowCount * Kit.RowH, H - 3 * pad - gut - D.minPreview - big))
+    local previewH = math.max(D.minPreview, H - 3 * pad - gut - rowsH - big)
+    local layout: any = {big = big, small = small, height = H, width = W}
+    layout.leftPanel = {x = 0, y = 0, w = D.leftW, h = H}
     layout.preview = {x = pad, y = pad, w = leftContent, h = previewH}
     layout.rows = {x = pad, y = pad + previewH + gut, w = leftContent, h = rowsH}
-    layout.equip = {x = pad, y = D.height - pad - big, w = leftContent, h = big}
-    layout.rightPanel = {x = D.leftW + gut, y = 0, w = D.rightW, h = D.height}
+    layout.equip = {x = pad, y = H - pad - big, w = leftContent, h = big}
+    layout.rightPanel = {x = D.leftW + gut, y = 0, w = rightW, h = H}
     local sortW = if sortActive then D.sortWFilter else D.sortW
     local backX = pad + rightContent - D.backW
     layout.back = {x = backX, y = pad, w = D.backW, h = small}
@@ -220,13 +229,14 @@ function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, so
         layout.filters = {x = pad, y = top, w = rightContent, h = filterRowH}
         top += filterRowH + gut
     end
-    local bottom = D.height - pad
+    local bottom = H - pad
     if dupRow then
         layout.dup = {x = pad, y = bottom - small, w = rightContent, h = small}
         bottom -= small + gut
     end
-    layout.grid = {x = pad, y = top, w = rightContent + 8, h = bottom - top} -- 8 px wider: the scroll bar sits in the right padding
-    layout.cellW = Kit.cellWidth(rightContent, D.columns, gut)
+    layout.grid = {x = pad, y = top, w = rightContent + 8, h = math.max(bottom - top, 0)} -- 8 px wider: the scroll bar sits in the right padding
+    layout.columns = Kit.columnsFor(rightContent)
+    layout.cellW = Kit.cellWidth(rightContent, layout.columns, gut)
     layout.cellH = D.cardH
     return layout
 end
