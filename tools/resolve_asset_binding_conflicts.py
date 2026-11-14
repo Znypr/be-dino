@@ -5,7 +5,7 @@
     python tools/resolve_asset_binding_conflicts.py --check    # only say what it would do
 
   * src/shared/AssetSlots.luau: per slot line, the bound value wins over "" (two different ids for one slot = stop, a human decides).
-  * docs/77-asset-registry.md: both sides' lines are kept (ours first).
+  * docs/77-asset-registry.md and docs/115-decisions-log.md (append-only logs): both sides' lines are kept (ours first).
   * docs/evidence/roblox-uploads.json: union of both sides by assetId (fields merged).
 Any other conflicted file is left alone and named. Standard library only.
 """
@@ -18,6 +18,7 @@ import sys
 
 BLOCK = re.compile(r'<<<<<<< [^\n]*\n(.*?)=======\n(.*?)>>>>>>> [^\n]*\n', re.S)
 SLOTS, REG, UPLOADS = 'src/shared/AssetSlots.luau', 'docs/77-asset-registry.md', 'docs/evidence/roblox-uploads.json'
+APPEND_ONLY = {REG, 'docs/115-decisions-log.md'}  # logs where both branches only add lines: keep both, ours first
 
 
 def git(*args) -> str:
@@ -63,7 +64,7 @@ def main(argv=None) -> int:
     for path in conflicted:
         if path == SLOTS:
             new = slots(open(path, encoding='utf-8').read())
-        elif path == REG:
+        elif path in APPEND_ONLY:
             new = BLOCK.sub(lambda m: m.group(1) + m.group(2), open(path, encoding='utf-8').read())
         elif path == UPLOADS:
             new = uploads()
