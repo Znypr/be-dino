@@ -85,7 +85,9 @@
     "bytes": 28602,
     "sha256": "93a0e7f0884a69c4cdbb57efd96697ff58a062da824d4acd0079af7d34999cf5",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:09Z"
+    "uploaded": "2026-11-14T06:46:09Z",
+    "imageId": "97828214443082",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "104867054207455",
@@ -95,7 +97,9 @@
     "bytes": 29773,
     "sha256": "ab204cd7b070fe5a2e1a5c052b70892593c3a2137aa4c925fa5e610886fc35ae",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:14Z"
+    "uploaded": "2026-11-14T06:46:14Z",
+    "imageId": "106800324793782",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "119131095824482",
@@ -105,7 +109,9 @@
     "bytes": 28056,
     "sha256": "5ab443323a3b2fecce4846b328b598005fcd399a7d86fa40538ae602debf910c",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:20Z"
+    "uploaded": "2026-11-14T06:46:20Z",
+    "imageId": "78961933571794",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "117086583537497",
@@ -115,7 +121,9 @@
     "bytes": 28380,
     "sha256": "6ae1ccbe303e7d663aaa56130d3d3540abecf109a4dbea7e2cb6c1933ef3661b",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:26Z"
+    "uploaded": "2026-11-14T06:46:26Z",
+    "imageId": "109566008891205",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "72928087520626",
@@ -125,7 +133,9 @@
     "bytes": 29658,
     "sha256": "050ebcb4e4d107249ec505553784ebd7d098567774d87f3e1cb731699f6470df",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:31Z"
+    "uploaded": "2026-11-14T06:46:31Z",
+    "imageId": "87114495678967",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "72106731060028",
@@ -135,7 +145,9 @@
     "bytes": 28134,
     "sha256": "28f7c68de0e63c9d8a6bb04ffaeeb8e82ba72cbbe73350a66f6e525ff1d0fb54",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:34Z"
+    "uploaded": "2026-11-14T06:46:34Z",
+    "imageId": "116589493745136",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "101886691132503",
@@ -145,7 +157,9 @@
     "bytes": 28262,
     "sha256": "d95c33cb8e13e65053a444580b5200ae4a62db3180399d28cc75492521e3d138",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:40Z"
+    "uploaded": "2026-11-14T06:46:40Z",
+    "imageId": "115456970236735",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "83714670700518",
@@ -155,7 +169,9 @@
     "bytes": 88338,
     "sha256": "a643f72502166feb684a6672f3a7cd793d51ed0f30a2fbcea831c9adf4dd85ef",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:46Z"
+    "uploaded": "2026-11-14T06:46:46Z",
+    "imageId": "112112773498781",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "95163442639023",
@@ -165,7 +181,9 @@
     "bytes": 87167,
     "sha256": "ba9aaa8eb6f0a7a1cfcefb66dd616349ee998c1a0e00d2af6ec5bea201ad0e0c",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:52Z"
+    "uploaded": "2026-11-14T06:46:52Z",
+    "imageId": "135957480937538",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "120939456373726",
@@ -175,7 +193,9 @@
     "bytes": 86160,
     "sha256": "b9e204e99dfb565d1b6c96526964295f21f3d288d51757473dfaf5f1b525f839",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:46:58Z"
+    "uploaded": "2026-11-14T06:46:58Z",
+    "imageId": "97825459952578",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "103346689095169",
@@ -185,7 +205,9 @@
     "bytes": 88188,
     "sha256": "a947d86500ba8e6fd4e35ba860d34dbda4eba7d013056ef1049fcabce0fb59ed",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:01Z"
+    "uploaded": "2026-11-14T06:47:01Z",
+    "imageId": "101753126519705",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "137960277402829",
@@ -195,7 +217,9 @@
     "bytes": 86471,
     "sha256": "ff3f70a2e6de6a0e10270acd615c73a7f51711ac63d212fa3f9fccebd0d5165f",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:07Z"
+    "uploaded": "2026-11-14T06:47:07Z",
+    "imageId": "130603040916830",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "116947165592416",
@@ -205,7 +229,9 @@
     "bytes": 86730,
     "sha256": "08ad9c85970a39848939b3e68f1ea9fbfffc55317249883d76076cc55cf95fdb",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:15Z"
+    "uploaded": "2026-11-14T06:47:15Z",
+    "imageId": "86352450149994",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "135301631283228",
@@ -215,7 +241,9 @@
     "bytes": 21355,
     "sha256": "8db596d87957b06890da381d449ba945c1bf75e2cff1ba8bfb4d58c4bee4542c",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:20Z"
+    "uploaded": "2026-11-14T06:47:20Z",
+    "imageId": "105160485609143",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "72292165004612",
@@ -225,7 +253,9 @@
     "bytes": 63863,
     "sha256": "f6b6c68a48259131e2fe52bfdd06ad11f035d276d96fff30e47d20df51bcb66a",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:26Z"
+    "uploaded": "2026-11-14T06:47:26Z",
+    "imageId": "87841519422634",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "131439256682075",
@@ -235,7 +265,9 @@
     "bytes": 64561,
     "sha256": "3b1b65c35d756cf6c0fba0f6bde7908e09c48a97415f5c8b09c21310644bf083",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:31Z"
+    "uploaded": "2026-11-14T06:47:31Z",
+    "imageId": "138428834055756",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "87705890040369",
@@ -245,7 +277,9 @@
     "bytes": 65017,
     "sha256": "731db286058427f5fbc81a8f9c4f660fa2077c74ffba466a4cdda0b276f8ebf1",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:39Z"
+    "uploaded": "2026-11-14T06:47:39Z",
+    "imageId": "127347771714794",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "134276717957507",
@@ -255,7 +289,9 @@
     "bytes": 68974,
     "sha256": "b869328b31501cb27c2de3ed8fb756282a6584c9045936b7292dd0d02e8f63dd",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:45Z"
+    "uploaded": "2026-11-14T06:47:45Z",
+    "imageId": "81024863334668",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "92945023684286",
@@ -265,7 +301,9 @@
     "bytes": 64602,
     "sha256": "05d34415dcfc849a08918d5cd78f96623c5a3a3fbf624269cf31857b3abafbba",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:51Z"
+    "uploaded": "2026-11-14T06:47:51Z",
+    "imageId": "109012366281342",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "95826710989619",
@@ -275,7 +313,9 @@
     "bytes": 65358,
     "sha256": "6d7434e6e40267893c9530c8dbb49a5c7e97ae2decef1dab39e34214b58b6d29",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:47:56Z"
+    "uploaded": "2026-11-14T06:47:56Z",
+    "imageId": "88724974778159",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "75174049570681",
@@ -285,7 +325,9 @@
     "bytes": 65855,
     "sha256": "21fb388c48c9bd5c77389194236e1aa00e0bcb16bbc76903ddd1f18ae3c0c76a",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:48:02Z"
+    "uploaded": "2026-11-14T06:48:02Z",
+    "imageId": "125885286004267",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "127108360474511",
@@ -295,7 +337,9 @@
     "bytes": 66473,
     "sha256": "9b654054cc7665cf1e7d8a3230bd1c838cbd87269122d991ae2c2ffe45e534bd",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:48:08Z"
+    "uploaded": "2026-11-14T06:48:08Z",
+    "imageId": "138963766297159",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   },
   {
     "assetId": "99267962359686",
@@ -305,6 +349,8 @@
     "bytes": 77971,
     "sha256": "fb018ba273966b9bf7626a4595b1cf52619ab0e157b8957d0a98b8e6ca09747e",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T06:48:13Z"
+    "uploaded": "2026-11-14T06:48:13Z",
+    "imageId": "107955739740363",
+    "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
   }
 ]

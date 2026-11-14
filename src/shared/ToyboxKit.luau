@@ -8,7 +8,7 @@ local Kit = {}
 
 Kit.MinText = 14 -- docs/72 floor: no text under 14 px
 Kit.MinClose = 48 -- docs/202 R6 / BD-1117: the X is a square of at least 48 px on screen
-Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 4, 4, 28 -- owner 2026-11-14 (C-57): text outline 4 px at every size (was 3 px, 4 px from 28 px text up)
+Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 3, 28 -- owner 2026-11-14 (C-57): text outline 3 px at every size (picked 4 px, then after seeing it in Studio: "3px was better")
 Kit.DropPixels = 3 -- the dark copy of a title or button word sits this far under it
 Kit.Outline = {13, 15, 20} -- the same dark as Theme.Colors.outline / TextStyle.Dark
 

@@ -45,7 +45,7 @@ The pictures are in five groups: headers, buttons, X, window body (frame and stu
 
 ## 5b. Owner picks 2026-11-14
 
-Text outline 4 px at every size; gloss stays; the dino detail page header takes the rarity colour (`Kit.RarityHeader`: Common cream, Uncommon green, Rare blue, Epic purple, Legendary amber, Mythic red, PROVISIONAL LEAD mapping). The 23 pictures are uploaded (Decals, Approved); binding needs the image ids from Studio. Docs/115 2026-11-14.
+Text outline 3 px at every size (4 px was tried, the owner preferred 3 px); gloss stays; the dino detail page header takes the rarity colour (`Kit.RarityHeader`: Common cream, Uncommon green, Rare blue, Epic purple, Legendary amber, Mythic red, PROVISIONAL LEAD mapping). The 23 pictures are uploaded (Decals, Approved); binding needs the image ids from Studio. Docs/115 2026-11-14.
 
 ## 6. Open steps
 
