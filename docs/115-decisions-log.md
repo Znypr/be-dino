@@ -734,3 +734,5 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **Ids.** The 23 pictures are **not uploaded**; the slots `toybox_*` in `src/shared/AssetSlots.luau` are empty and no id was invented. Until they are bound the flag changes only the text outline (a picture group is used only when all its ids are bound).
 - **To overturn.** Set the playtest rule of `ToyboxUIEnabled` to false (one line in `tools/release_profiles.py`).
 - **Evidence.** Offline only: `tools/verify_toybox_ui.py` (57 mutants; the 23 PNGs measured against the slice rects), `tests/test_release.py`, `tests/test_rehearsal.py`. **No Studio, no phone, nobody has seen the skin in the game.**
+
+- **2026-11-14 Toybox panel tone (OWNER, BD-1189, docs/232):** "dark": every Toybox screen uses the B layout (dark slate inner panels, white text) on the docs/232 grid; A (cream panels) not picked.

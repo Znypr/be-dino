@@ -1,6 +1,6 @@
 # 232 Toybox layout rules (BD-1189), 2026-11-14
 
-Status: **draft rules + A/B mock, waiting for the owner's pick.** Nothing in the game has changed yet.
+Status: **rules set, owner picked B (dark panels) on 2026-11-14.** The pilot page is being built (flag-gated).
 
 Why: the owner saw the Toybox skin in Studio (BD-1177, docs/230) on the Compy detail page and said: "it really looks off, like the padding and buttons, the overall menu looks vibe coded not clean like other top tier roblox experiences". The skin changed the pictures, but every screen still had its old hand-placed layout. This page sets the layout rules every Toybox screen follows. Label: **OWNER TARGET** (clean like top Roblox games); the numbers below are **LEAD proposals (PROVISIONAL)** until the owner has seen them in Studio.
 
@@ -35,11 +35,11 @@ Why: the owner saw the Toybox skin in Studio (BD-1177, docs/230) on the Compy de
 - **A, cream panels, dark text:** warm, calm, closest to the docs/87 "matte warm" feel and the cream rarity header.
 - **B, dark panels, white text:** closer to many simulator games, stronger contrast for the dino colours.
 
-Same grid, same buttons, same content in both. The owner picks one panel tone (or a mix: for example A for shop / eggs, B for the Index).
+Same grid, same buttons, same content in both. **Owner pick 2026-11-14: "dark" = B on every Toybox screen.** Panel tone: dark slate panels (#2B3140), cards #3A4358, muted labels #B9C2D6, white values; the cream header stays for Common dinos.
 
 ## 4. Next steps
 
-1. Owner picks A or B.
+1. ~~Owner picks A or B.~~ Done: B (dark).
 2. Shared layout helpers in `ToyboxKit` / `ToyboxSkin` (inset, gutter, panel, row, button sizes) so screens stop placing things by hand.
 3. Pilot: the dino detail page in code, flag-gated, Studio pictures at 1280x720 and a phone size.
 4. Then Crystal Shop (PR #580), Eggs, Index list, Settings, Potions on the same rules.
