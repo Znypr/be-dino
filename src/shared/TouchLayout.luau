@@ -66,6 +66,7 @@ TouchLayout.CHIP = {w = 240, h = 48, bottom = 96, gap = 4}
 -- Phone / short window: cells at least wordW px wide (the word is NEVER hidden: no icon-only cell), taller than the old ones (phoneBh), the gear takes the next grid slot.
 -- When the rail with words does not fit a window without touching another HUD piece (a very narrow window), TouchLayout.compute answers with the OLD rail (Settings an
 -- ordinary sixth button, `railWordsFallback = true`): never two pieces on top of each other. `top` = the y a desktop rail never goes above (under the Admin button).
+TouchLayout.RAILCOLUMN = {minWidth = 900, cellW = 132, narrowW = 96, cellH = 44, gap = 3, bottomReserve = 64} -- BD-1193: the left column of a short, wide window (see build)
 TouchLayout.RAILWORDS = {cellW = 176, cellH = 56, gap = 4, icon = 44, text = 20, minScale = 0.8, gearMin = 48, wordW = 60, phoneBh = 52, top = 64}
 
 -- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
@@ -416,6 +417,36 @@ local function build(params: {width: number, height: number, touch: boolean, nav
         end
         if rail then break end
     end
+    -- BD-1193 (docs/234 P-3ccb6b): a SHORT but WIDE window with a mouse (Studio at 1274 x 481) gets the buttons as a column on the left edge, one under the other,
+    -- every cell 44 px or more, never the two or three buttons floating in the middle of the top over the SIZE bar. A touch phone keeps the top row (the thumb zone
+    -- owns the left edge there). It needs room under the egg plate and the badge rows and above Tell us! / Admin, else the old top row stays.
+    local leftColumn = false
+    if not params.touch and width >= TouchLayout.RAILCOLUMN.minWidth then
+        local R = TouchLayout.RAILCOLUMN
+        local cells = if words then count + 1 else count
+        local bh, gap = math.max(target, R.cellH), R.gap
+        local y0 = hud.y + hud.h * hud.scale + 2 + 20 + 22 + 2 -- under the egg plate, the build badge and the Studio notice
+        -- one column of wide cells (icon and word), else two columns of narrower ones (icon over the word, the phone cell) when six cells are too tall
+        for _, shape in {{1, R.cellW}, {2, R.narrowW}} do
+            local columns, bw = shape[1], shape[2]
+            local rows = math.ceil(cells / columns)
+            local railH = rows * (bh + gap) + gap
+            if y0 + railH <= height - m - R.bottomReserve then
+                local all = railButtons(cells, columns, bw, bh, gap)
+                local positions = {}
+                for i = 1, count do positions[i] = all[i] end
+                rail = {x = m, y = y0, scale = 1, w = columns * bw + (columns + 1) * gap, h = railH, button = buttonContent(bw, bh), positions = positions :: any, rows = rows, column = true}
+                rail.button.w, rail.button.h = bw, bh
+                if words then
+                    rail.gear = all[cells]
+                    rail.gearCell = iconOnlyContent(bw, bh)
+                    rail.gearCell.w, rail.gearCell.h = bw, bh
+                end
+                leftColumn = true
+                break
+            end
+        end
+    end
     if not rail and words then return nil end -- BD-1116: no room for a word in every cell: TouchLayout.compute answers with the old rail
     if not rail then
         -- Last resort (very narrow canvas): minimum-size grid, verified by tests not to be hit.
@@ -458,9 +489,9 @@ local function build(params: {width: number, height: number, touch: boolean, nav
     if params.objectives then
         local O = TouchLayout.OBJECTIVES
         local y0 = if goals then goals.y else crystal.y + crystal.h * crystal.scale + TouchLayout.GOAL_GAP + TouchLayout.GOAL_H * crystal.scale + m
-        y0 = math.max(y0, rail.y + rail.h * rail.scale + O.gap)
+        if not leftColumn then y0 = math.max(y0, rail.y + rail.h * rail.scale + O.gap) end -- BD-1193: a left column is passed on the right side instead
         local right = (if goals then goals.x else crystal.x) - O.gap
-        local left = m
+        local left = if leftColumn then rail.x + rail.w + O.gap else m
         if y0 + O.h > thumb.y then left = math.max(left, thumb.x + thumb.w + O.gap) end
         for _, b in {TouchLayout.rendered(hud), TouchLayout.rendered(badge), TouchLayout.rendered(notice)} do
             if b.y < y0 + O.h and y0 < b.y + b.h and b.x < right then left = math.max(left, b.x + b.w + O.gap) end
@@ -518,7 +549,7 @@ local function build(params: {width: number, height: number, touch: boolean, nav
     local blockers = {column}
     if goals then table.insert(blockers, goals) end
     -- BD-538: SIZE bar under the rail (HudV2 used to compute this itself, centred), clear of the weather column; the hub chip clear of column and Goals header
-    result.sizeBar, result.sizeHint = sizeBarRects(width, rail.y + rail.h * rail.scale + 4, clamp(rail.scale, 0.7, 1), column)
+    result.sizeBar, result.sizeHint = sizeBarRects(width, (if leftColumn then m else rail.y + rail.h * rail.scale + 4), clamp(rail.scale, 0.7, 1), column) -- BD-1193: a left column leaves the top centre to the SIZE bar
     result.chip = chipRect(width, height, blockers, {result.feedback, result.admin})
     return result
 end

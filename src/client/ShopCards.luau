@@ -11,6 +11,7 @@ local Config = require(Shared.ProgressionConfig)
 local MainConfig = require(Shared.Config)
 local P = require(Shared.ShopPreview)
 local UIFormat = require(Shared.UIFormat)
+local PriceGroup = require(Shared.PriceGroup)
 local Preview = require(Shared.DinosaurPreview)
 local ShopCard = require(script.Parent.ShopCard)
 local C = Theme.Colors
@@ -96,13 +97,23 @@ function Cards.buildPrice(ui, parent: GuiObject, spec)
     act.Active, act.AutoButtonColor = data.button.active, data.button.active
     if not data.button.active then act.TextTransparency = .25 end
     if tone == "buy" then
+        -- BD-1192: icon + price are ONE group measured from the text and centred on the button (the word "Crystals" and thousands commas stay in the text).
         local iconSize = math.clamp(spec.targetHeight - 12, 24, 40)
-        local icon = ui.art(act, "amber", 10, (spec.targetHeight - iconSize) / 2, iconSize) -- nil where the art is not bound (and in the mocks)
-        if icon then
-            icon.Name = "CrystalIcon"
-            local pad = Instance.new("UIPadding")
-            pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, iconSize + 14), act -- the price never touches the icon
+        act.Text = string.gsub(data.button.text, "^%d+", function(d: string) return UIFormat.number(tonumber(d) :: number) end) -- "3700 Crystals" -> "3,700 Crystals"
+        act.TextXAlignment = Enum.TextXAlignment.Left
+        local width = Cards.Width - 16
+        local function measure(size: number): number
+            local ok, bounds = pcall(function() return game:GetService("TextService"):GetTextSize(act.Text, size, act.Font, Vector2.new(10000, 200)).X end)
+            return if ok and typeof(bounds) == "number" then bounds else #act.Text * size * .6 -- the estimate leans wide: a group measured too wide only steps the text down
         end
+        local group = PriceGroup.layout(measure, math.max(act.TextSize, 14), 14, width, iconSize, 8, 8)
+        act.TextSize = group.size
+        local place = PriceGroup.placement(group) -- the padding below moves the icon too, so its own x is relative to the padded edge
+        local icon = ui.art(act, "amber", place.iconPos, (spec.targetHeight - iconSize) / 2, iconSize) -- nil where the art is not bound (and in the mocks)
+        if icon then icon.Name = "CrystalIcon" end
+        local pad = Instance.new("UIPadding")
+        pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, place.padLeft), act -- the price starts after the icon and never touches it
+        act:SetAttribute("PriceGroupW", group.groupW)
     end
     if data.equipped then equippedRing(card) end
     return card, data
