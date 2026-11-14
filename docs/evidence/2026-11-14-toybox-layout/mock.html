@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Toybox layout mock</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* BD-1189 layout mock (decision aid only, not game art). Real kit pictures from resources/ui/v2/toybox/final.
+   Grid: 8 px. Window inset 16, gutter 12, panel radius 14, button height 48, type scale 28 / 20 / 16 / 14. */
+:root{--k:'../../../resources/ui/v2/toybox/final/';}
+body{margin:0;background:#4c7a3a;font-family:Fredoka,system-ui,sans-serif;padding:24px;display:flex;flex-direction:column;gap:40px;align-items:center}
+.label{color:#fff;font-size:26px;font-weight:700;-webkit-text-stroke:5px #1d1d1d;paint-order:stroke fill;align-self:flex-start;margin-left:20px}
+.win{width:860px;height:520px;position:relative;box-sizing:border-box;
+  border:18px solid transparent;border-image:url('../../../resources/ui/v2/toybox/final/panel-frame.png') 36 fill / 18px round;
+  background:url('../../../resources/ui/v2/toybox/final/studs-tile.png') 0 0/64px 64px;background-clip:padding-box;border-radius:20px}
+.head{position:absolute;left:-6px;right:-6px;top:-6px;height:64px;box-sizing:border-box;
+  border-style:solid;border-width:14px 40px 14px 40px;border-image:url('../../../resources/ui/v2/toybox/final/header-cream.png') 30 288 30 150 fill / 15px 72px 15px 37px stretch;
+  display:flex;align-items:center;padding-left:4px}
+.title{font-size:28px;font-weight:700;color:#fff;-webkit-text-stroke:6px #1d1d1d;paint-order:stroke fill;line-height:1}
+.rar{margin-left:12px;font-size:14px;font-weight:700;color:#5b4a1f;background:#fff3c9;border:3px solid #1d1d1d;border-radius:999px;padding:2px 10px}
+.x{position:absolute;right:10px;top:6px;width:52px;height:52px;background:url('../../../resources/ui/v2/toybox/final/close.png') center/contain no-repeat}
+.body{position:absolute;left:0;right:0;top:66px;bottom:0;padding:16px;display:grid;grid-template-columns:300px 1fr;gap:12px;box-sizing:border-box}
+.panel{border-radius:14px;border:3px solid #1d1d1d;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:12px}
+.preview{border-radius:10px;height:200px;position:relative;display:flex;align-items:center;justify-content:center}
+.preview img{height:170px}
+.hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:600;padding:2px 10px;border-radius:999px}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:16px}
+.rows .k{font-weight:500}.rows .v{font-weight:700;text-align:right}
+.btnrow{display:flex;gap:12px;margin-top:auto}
+.btn{flex:1;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;-webkit-text-stroke:5px #1d1d1d;paint-order:stroke fill;
+  border-style:solid;border-width:10px 12px 12px 12px;box-sizing:border-box;border-image-slice:20 24 24 24 fill;border-image-width:10px 12px 12px 12px}
+.g{border-image-source:url('../../../resources/ui/v2/toybox/final/button-green.png')}
+.gr{border-image-source:url('../../../resources/ui/v2/toybox/final/button-grey.png')}
+.right{display:flex;flex-direction:column;gap:12px}
+.bar{display:flex;align-items:center;gap:12px}
+.bar h3{margin:0;font-size:20px;font-weight:700;flex:1}
+.small{flex:0 0 140px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{border-radius:12px;border:3px solid #1d1d1d;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 6px;box-sizing:border-box;font-size:14px;font-weight:700}
+.card img{height:72px}
+.tag{font-size:12px;padding:1px 8px;border-radius:999px;border:2px solid #1d1d1d}
+.empty{border-style:dashed;opacity:.45}
+/* A: cream panels, dark text */
+.A .panel{background:#fff7e3;color:#3a2f1e}.A .preview{background:linear-gradient(#ffe9b8,#f6d58c)}.A .hint{background:#3a2f1e;color:#fff}
+.A .card{background:#fffdf6;color:#3a2f1e}.A .tag.eq{background:#7ee35b}.A .tag.st{background:#e9e1cc}.A .rows .k{color:#7a6a4e}
+.A .right{background:#fff7e3;border-radius:14px;border:3px solid #1d1d1d;padding:12px;color:#3a2f1e}
+/* B: dark slate panels, white text */
+.B .panel{background:#2b3140;color:#fff}.B .preview{background:linear-gradient(#56627d,#3a4358)}.B .hint{background:#1d1d1d;color:#fff}
+.B .card{background:#3a4358;color:#fff}.B .tag.eq{background:#7ee35b;color:#1d1d1d}.B .tag.st{background:#56627d}.B .rows .k{color:#b9c2d6}
+.B .right{background:#2b3140;border-radius:14px;border:3px solid #1d1d1d;padding:12px;color:#fff}
+</style></head><body>
+<!-- one window per variant -->
+<script>
+const K='../../../resources/ui/v2/toybox/final/';
+function win(v,name){return `
+<div class="label">${name}</div>
+<div class="win ${v}">
+ <div class="head"><span class="title">Compy</span><span class="rar">Common</span></div>
+ <div class="x"></div>
+ <div class="body">
+  <div class="panel">
+   <div class="preview"><span class="hint">Drag to turn</span><img src="../../../resources/ui/v2/dinos/v3/compy.png"></div>
+   <div class="rows">
+    <span class="k">Pattern</span><span class="v">Unknown</span>
+    <span class="k">Class</span><span class="v">Ground</span>
+    <span class="k">Stage</span><span class="v">Base</span>
+    <span class="k">Found in</span><span class="v">36% of eggs</span>
+   </div>
+   <div class="btnrow"><div class="btn gr">EQUIPPED</div></div>
+  </div>
+  <div class="right">
+   <div class="bar"><h3>Your Compies (1)</h3><div class="btn gr small">SORT</div></div>
+   <div class="grid">
+    <div class="card"><span class="tag st">BASE</span><img src="../../../resources/ui/v2/dinos/v3/compy.png"><span>Plain</span><span class="tag eq">EQUIPPED</span></div>
+    <div class="card empty"></div><div class="card empty"></div><div class="card empty"></div>
+    <div class="card empty"></div><div class="card empty"></div><div class="card empty"></div><div class="card empty"></div>
+   </div>
+   <div style="margin-top:auto;font-size:14px;font-weight:600;text-align:center">1 of 6 for Gold!</div>
+  </div>
+ </div>
+</div>`}
+document.body.innerHTML = win('A','A  Cream panels, dark text') + win('B','B  Dark panels, white text');
+</script>
+</body></html>
