@@ -143,6 +143,172 @@ function Kit.closeSide(absW: number, absH: number, scale: number): number
     return math.max(short, Kit.MinClose) / s
 end
 
+-- BD-1189 (owner 2026-11-14): the X sits fully INSIDE the header strip, centred, with the same inset on the right, top and bottom (8 px, the 8 px
+-- grid), square, at least 48 px on screen. headerH = the strip height in design px. Returns side, inset (design px; the inset only drops under 8 on
+-- a strip so short that the 48 px X could not fit, then it is still equal on all three sides).
+Kit.CloseInset = 8
+function Kit.closeBox(headerH: number, scale: number): (number, number)
+    local s = if scale == scale and scale > 0.01 then scale else 1
+    local h = if headerH == headerH and headerH > 0 then headerH else 0
+    local side = math.max(h - 2 * Kit.CloseInset, Kit.MinClose / s)
+    return side, math.max((h - side) / 2, 0)
+end
+
+-- ---- BD-1189 (docs/232): layout numbers every Toybox screen shares (design px, multiples of 4). Screens place nothing by hand any more: they ask
+-- ToyboxSkin's helpers (panel, row, actionButton, emptySlot) that read these. OWNER TARGET (clean like top Roblox games); numbers PROVISIONAL (LEAD).
+Kit.Inset = 16 -- frame to content on every side (the menu body keeps its older 18 / 20 px until the window itself moves; recorded in docs/115)
+Kit.Gutter = 12 -- between panels, cards, buttons
+Kit.PanelPad = 12 -- inside a panel
+Kit.PanelCorner, Kit.PreviewCorner, Kit.CardCorner, Kit.PanelStroke = 14, 10, 12, 3
+Kit.ButtonH, Kit.ButtonSmallH = 48, 40
+Kit.RowH = 24 -- one label / value row (16 px text)
+Kit.Type = {title = 28, heading = 20, body = 16, small = 14} -- the type scale; 14 is the floor
+Kit.Tone = { -- bright cream (owner pick A, 2026-11-14), 0..255 rgb
+    panel = {255, 247, 227}, card = {255, 253, 246}, previewTop = {255, 233, 184}, previewBottom = {246, 213, 140},
+    label = {122, 106, 78}, value = {58, 47, 30}, slot = {235, 224, 196},
+    ready = {221, 243, 205}, busy = {255, 236, 190}, silhouette = {206, 190, 158}, -- BD-1195 / BD-1194: soft card tints (nest ready / growing, undiscovered dino)
+}
+Kit.CardStroke, Kit.ChipCorner = 2, 8
+Kit.DashLength, Kit.DashGap, Kit.DashThickness = 10, 8, 3 -- an empty slot: dashes round a rounded card
+-- Button heights for a window scaled by `scale`: the design size, but never under 44 px on screen (the touch rule, docs/72).
+function Kit.buttonHeights(scale: number): (number, number)
+    local s = if scale == scale and scale > 0.01 then scale else 1
+    local touch = math.ceil(44 / s)
+    return math.max(Kit.ButtonH, touch), math.max(Kit.ButtonSmallH, touch)
+end
+-- "Your Compies (3)": the heading of a copies list never repeats the window title (docs/232 rule "no repeats").
+function Kit.plural(name: string): string
+    if string.match(name, "[^aeiouAEIOU]y$") then return string.sub(name, 1, -2) .. "ies" end
+    if string.match(name, "[sxz]$") or string.match(name, "[cs]h$") then return name .. "es" end
+    return name .. "s"
+end
+function Kit.copiesHeading(name: string, count: number): string
+    return "Your " .. Kit.plural(name) .. " (" .. count .. ")"
+end
+-- Equal cells: the width of one of `columns` cells that fill `width` with `gutter` between them.
+function Kit.cellWidth(width: number, columns: number, gutter: number): number
+    return math.floor((width - gutter * (columns - 1)) / math.max(columns, 1))
+end
+-- Empty slots that finish the last row of a grid (and give it at least `minRows` rows), so a grid never looks unfinished.
+function Kit.emptySlots(count: number, columns: number, minRows: number): number
+    local total = math.max(math.ceil(count / columns), minRows) * columns
+    return total - count
+end
+
+-- The rects of the dino detail page (design px, inside the menu body: 824 x 402 on a desktop window, wider / shorter on a compact one):
+-- a fixed 296 px left panel, a 12 px gutter, a right panel that takes the rest. `scale` = the window's UIScale (buttons never under 44 px on
+-- screen), `filterRowH` = height of the chosen-filter chips row (0 = none), `dupRow` = whether the "3 of 6 for Gold!" bars are shown,
+-- bodyW / bodyH = the body that is really on screen (default 824 x 402). One place for the numbers, so the page and
+-- tools/verify_toybox_layout.py agree. Short body: the preview shrinks first (never under 120), then the rows box (never under 2 rows, it scrolls);
+-- the button stays at the foot. Wide body: the grid gets 4 to 6 equal columns.
+Kit.Detail = {leftW = 296, rightW = 516, height = 402, columns = 4, maxColumns = 6, minCell = 114, cardH = 160, rowCount = 6, minPreview = 120, backW = 96, sortW = 96, sortWFilter = 128}
+function Kit.columnsFor(contentWidth: number): number
+    local D = Kit.Detail
+    return math.max(D.columns, math.min(D.maxColumns, math.floor((contentWidth + Kit.Gutter) / (D.minCell + Kit.Gutter))))
+end
+function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, sortActive: boolean?, bodyW: number?, bodyH: number?)
+    local D = Kit.Detail
+    local W, H = math.max(bodyW or 824, D.leftW + Kit.Gutter + 300), bodyH or D.height
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local rightW = W - D.leftW - gut
+    local leftContent, rightContent = D.leftW - 2 * pad, rightW - 2 * pad
+    local rowsH = math.max(2 * Kit.RowH, math.min(D.rowCount * Kit.RowH, H - 3 * pad - gut - D.minPreview - big))
+    local previewH = math.max(D.minPreview, H - 3 * pad - gut - rowsH - big)
+    local layout: any = {big = big, small = small, height = H, width = W}
+    layout.leftPanel = {x = 0, y = 0, w = D.leftW, h = H}
+    layout.preview = {x = pad, y = pad, w = leftContent, h = previewH}
+    layout.rows = {x = pad, y = pad + previewH + gut, w = leftContent, h = rowsH}
+    layout.equip = {x = pad, y = H - pad - big, w = leftContent, h = big}
+    layout.rightPanel = {x = D.leftW + gut, y = 0, w = rightW, h = H}
+    local sortW = if sortActive then D.sortWFilter else D.sortW
+    local backX = pad + rightContent - D.backW
+    layout.back = {x = backX, y = pad, w = D.backW, h = small}
+    layout.sort = {x = backX - gut - sortW, y = pad, w = sortW, h = small}
+    layout.heading = {x = pad, y = pad, w = rightContent - D.backW - sortW - 2 * gut, h = small}
+    local top = pad + small + gut
+    if filterRowH > 0 then
+        layout.filters = {x = pad, y = top, w = rightContent, h = filterRowH}
+        top += filterRowH + gut
+    end
+    local bottom = H - pad
+    if dupRow then
+        layout.dup = {x = pad, y = bottom - small, w = rightContent, h = small}
+        bottom -= small + gut
+    end
+    layout.grid = {x = pad, y = top, w = rightContent + 8, h = math.max(bottom - top, 0)} -- 8 px wider: the scroll bar sits in the right padding
+    layout.columns = Kit.columnsFor(rightContent)
+    layout.cellW = Kit.cellWidth(rightContent, layout.columns, gut)
+    layout.cellH = D.cardH
+    return layout
+end
+
+-- BD-1195 (docs/232): the rects of the Eggs screen (design px inside the menu body: 824 x 402 desktop, wider / a little taller on a compact window).
+-- Top panel = the nests (heading, "Nests 0/5" chip, `capacity` equal cards); bottom row = the stage panel (egg picture) on the left and the info
+-- panel on the right (status line, up to two note lines, ONE 48 px button, the small AUTO toggle). `noteLines` = how many note lines show (0..2).
+-- One place for the numbers, so the screen and tools/verify_toybox_layout.py agree.
+Kit.Eggs = {headH = 28, chipW = 112, statusH = 28, noteH = 24, nestCardMax = 132, nestCardMin = 48, stageMaxW = 300, stageMinW = 200, infoMinW = 300, autoW = 150}
+function Kit.eggsLayout(scale: number, bodyW: number?, bodyH: number?, noteLines: number?, capacity: number?)
+    local E = Kit.Eggs
+    local W, H = bodyW or 824, bodyH or 402
+    local cap = capacity or 5
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local notes = math.clamp(noteLines or 0, 0, 2) * E.noteH
+    local infoMin = pad + E.statusH + notes + gut + big + gut + small + pad
+    local nestsH = math.max(pad + E.headH + gut + E.nestCardMin + pad, math.min(pad + E.headH + gut + E.nestCardMax + pad, H - gut - infoMin))
+    local bottomH = H - gut - nestsH
+    local layout: any = {big = big, small = small, width = W, height = H, capacity = cap}
+    layout.nests = {x = 0, y = 0, w = W, h = nestsH}
+    layout.nestHead = {x = pad, y = pad, w = W - 2 * pad - E.chipW - gut, h = E.headH}
+    layout.nestChip = {x = W - pad - E.chipW, y = pad, w = E.chipW, h = E.headH}
+    local cellW = Kit.cellWidth(W - 2 * pad, cap, gut)
+    local cardY = pad + E.headH + gut
+    layout.cellW, layout.cellH = cellW, nestsH - cardY - pad
+    layout.nestCards = {}
+    for i = 1, cap do table.insert(layout.nestCards, {x = pad + (i - 1) * (cellW + gut), y = cardY, w = cellW, h = layout.cellH}) end
+    local by = nestsH + gut
+    local stageW = math.clamp(math.floor(W * 0.38), E.stageMinW, E.stageMaxW)
+    layout.stagePanel = {x = 0, y = by, w = stageW + 2 * pad, h = bottomH}
+    layout.stage = {x = pad, y = pad, w = stageW, h = bottomH - 2 * pad} -- inside the stage panel
+    local infoX = stageW + 2 * pad + gut
+    local infoW = W - infoX
+    layout.infoPanel = {x = infoX, y = by, w = infoW, h = bottomH}
+    layout.status = {x = pad, y = pad, w = infoW - 2 * pad, h = E.statusH}
+    layout.notes = {x = pad, y = pad + E.statusH, w = infoW - 2 * pad, h = notes}
+    layout.action = {x = pad, y = bottomH - pad - small - gut - big, w = infoW - 2 * pad, h = big}
+    layout.auto = {x = pad, y = bottomH - pad - small, w = E.autoW, h = small}
+    layout.autoLine = {x = pad + E.autoW + gut, y = bottomH - pad - small, w = infoW - 2 * pad - E.autoW - gut, h = small}
+    return layout
+end
+
+-- BD-1194 (docs/232): the rects of the Dino Index list. The bottom bar (progress meter, page arrows, FUSION) is ALWAYS inside the body, one
+-- button high at its foot; the card grid above it scrolls and fills the body width in equal columns (the 8 px scroll-bar strip stays on the right).
+Kit.Index = {minCard = 190, maxColumns = 6, minColumns = 3, cardH = 176, fusionW = 140, arrowW = 48, pageW = 64, minMeter = 120, scrollBar = 8}
+function Kit.indexLayout(scale: number, bodyW: number?, bodyH: number?, paged: boolean?)
+    local I = Kit.Index
+    local W, H = bodyW or 824, bodyH or 402
+    local big = Kit.buttonHeights(scale)
+    local gut = Kit.Gutter
+    local layout: any = {big = big, width = W, height = H}
+    layout.bar = {x = 0, y = H - big, w = W, h = big}
+    layout.grid = {x = 0, y = 0, w = W, h = math.max(H - big - gut, 0)}
+    layout.fusion = {x = W - I.fusionW, y = H - big, w = I.fusionW, h = big}
+    local right = layout.fusion.x - gut
+    if paged then
+        layout.next = {x = right - I.arrowW, y = H - big, w = I.arrowW, h = big}
+        layout.page = {x = layout.next.x - gut - I.pageW, y = H - big, w = I.pageW, h = big}
+        layout.prev = {x = layout.page.x - gut - I.arrowW, y = H - big, w = I.arrowW, h = big}
+        right = layout.prev.x - gut
+    end
+    layout.meter = {x = 0, y = H - big, w = right, h = big}
+    local content = W - I.scrollBar
+    layout.columns = math.clamp(math.floor((content + gut) / (I.minCard + gut)), I.minColumns, I.maxColumns)
+    layout.cellW = Kit.cellWidth(content, layout.columns, gut)
+    layout.cellH = I.cardH
+    return layout
+end
+
 -- The slice scale of a picture drawn `width` x `height` px. A header never stretches up or down (scale = height / 128). The others use
 -- half size, less when the box is so small that the caps would not fit.
 function Kit.sliceScale(slot: string, width: number, height: number): number

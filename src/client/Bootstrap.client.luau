@@ -1039,4 +1039,10 @@ Input.InputBegan:Connect(function(input,processed)
         if require(Shared.ModalCloseRules).keyAction(if shade.Visible then active else "",want)=="close" then close() else open(want) end -- BD-1074: key twice = closed
     end
 end)
+-- BD-1191 polish loop (docs/234): Studio only, a screen tour for the lead's captures. Never exists in a live server.
+if RunService:IsStudio() then
+    local tour=Instance.new("BindableFunction") tour.Name="BeDinoScreenTour"
+    tour.OnInvoke=function(name) if name=="close" then close() else open(name) end return active end
+    tour.Parent=player
+end
 end mountHud() end

@@ -39,6 +39,11 @@ SLOTS = 'src/shared/AssetSlots.luau'
 MOTION = 'src/shared/UIMotion.luau'
 COMPACT = 'src/client/ModalCompact.luau'
 FUSION = 'src/client/FusionMenu.luau'
+LAYOUT = 'src/shared/ToyboxLayout.luau'  # BD-1189: panels, rows, buttons, empty slots
+PANELS = 'src/client/DinoIndexPanels.luau'  # BD-1189: the pilot page
+EGGSP = 'src/client/EggsPanels.luau'  # BD-1195: the Eggs screen on the layout rules
+INDEXL = 'src/client/DinoIndexList.luau'  # BD-1194: the Dino Index list on the layout rules
+EGGS = 'src/client/EggsScreen.luau'  # BD-1195: requires EggsPanels behind the flag
 INDEX = 'src/client/DinoIndexScreens.luau'  # owner 2026-11-14 (C-58): rarity-coloured detail header
 BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
@@ -114,7 +119,7 @@ def static_checks(read):
     for needle in ('game', 'Instance', 'TweenService', 'task.', 'os.', 'tick(', 'math.random', 'require(', 'Enum.', 'Color3', 'UDim'):
         assert needle not in kit, 'ToyboxKit is pure (no engine, clock or RNG): ' + needle
     skin = code_only(read(SKIN))
-    for needle in ('TweenService', 'FireServer', 'InvokeServer', 'task.', 'Config', 'UIGradient', 'Instance.new("Frame")'):
+    for needle in ('TweenService', 'FireServer', 'InvokeServer', 'task.delay', 'task.wait', 'Config', 'UIGradient', 'Instance.new("Frame")'):
         assert needle not in skin, 'ToyboxSkin only places pictures and labels: ' + needle
     made = set(re.findall(r'Instance\.new\("(\w+)"\)', skin))
     assert made == {'ImageLabel', 'TextLabel', 'UIStroke', 'UICorner', 'UITextSizeConstraint'}, 'ToyboxSkin draws nothing itself (no code-built art): %s' % sorted(made)
@@ -143,8 +148,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE) and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact, FusionMenu and DinoIndexScreens reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen and ToyboxLayout reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)
@@ -186,6 +191,13 @@ for _, case in {{80, 62, 1}, {48, 37, 0.6}, {30, 30, 0.8}, {0, 0, 0.56}, {200, 9
     assert(side * case[3] >= 48 - 1e-6, "X at least 48 px on screen") assert(side * case[3] <= math.max(48, math.min(case[1], case[2])) + 1e-6, "X no bigger than the button's short side")
 end
 eq(Kit.closeSide(60, 60, 0), 60, "a broken scale counts as 1")
+-- ---- BD-1189: the X sits inside the header strip, equal inset right / top / bottom (8 px), square, at least 48 px on screen
+for _, case in {{78, 1, 62, 8}, {96, 0.6, 80, 8}, {120, 1.5, 104, 8}} do
+    local side, inset = Kit.closeBox(case[1], case[2])
+    eq(side, case[3], "X side in the strip") eq(inset, case[4], "X inset 8 px")
+    assert(side * case[2] >= 48 - 1e-6 and 2 * inset + side == case[1], "X at least 48 px on screen and centred in the strip")
+end
+do local side, inset = Kit.closeBox(78, 0.6) assert(side * 0.6 >= 48 - 1e-6 and inset == 0, "a strip too short for 48 px + 8 px insets: 48 px wins, the X fills the strip, never pokes out") end
 -- ---- places
 __PLACES__
 for place, colour in Kit.PlaceHeader do
@@ -270,7 +282,7 @@ local ColorSequence = {new = function(...) return "ColorSequence" end}
 local TweenInfo = {new = function(seconds) return {seconds = seconds} end}
 local GUI = {Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ScrollingFrame = true}
 local SIGNALS = {MouseEnter = true, MouseLeave = true, SelectionGained = true, SelectionLost = true, InputBegan = true, InputEnded = true,
-    Destroying = true, Activated = true, ChildAdded = true, Changed = true}
+    Destroying = true, Activated = true, ChildAdded = true, Changed = true, MouseButton1Down = true, MouseButton1Up = true}
 local required = {}
 local isInstance = setmetatable({}, {__mode = "k"})
 local function instance(class)
@@ -319,7 +331,7 @@ local Instance = {new = function(class)
     local p = i.__props
     if GUI[class] then
         for k, v in DEFAULTS.GuiObject do p[k] = v end
-        p.Size, p.Position, p.AnchorPoint, p.AbsoluteSize = UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Vector2.new(0, 0)
+        p.Size, p.Position, p.AnchorPoint, p.AbsoluteSize, p.AbsolutePosition = UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Vector2.new(0, 0), Vector2.new(0, 0)
         p.BackgroundColor3 = Color3.fromRGB(163, 162, 165)
     end
     if class == "TextLabel" or class == "TextButton" then for k, v in DEFAULTS.Text do p[k] = v end p.TextColor3 = Color3.new(0, 0, 0) end
@@ -337,8 +349,10 @@ local TweenService = {Create = function(_, target, info, goals)
     function tween:Cancel() end
     return tween
 end}
-local task = {delay = function() end}
-local game = {GetService = function(_, name) assert(name == "TweenService", "asked for " .. tostring(name)) return TweenService end}
+local task = {delay = function() end, spawn = function(f) f() end}
+local PRELOADED = {}
+local ContentProvider = {PreloadAsync = function(_, list) for _, url in list do table.insert(PRELOADED, url) end end}
+local game = {GetService = function(_, name) assert(name == "TweenService" or name == "ContentProvider", "asked for " .. tostring(name)) return if name == "ContentProvider" then ContentProvider else TweenService end}
 local script = {Parent = setmetatable({}, {__index = function(_, k) return k end})}
 local function show(v)
     if type(v) == "table" and isInstance[v] then return "<" .. v.ClassName .. ">" end
@@ -432,9 +446,11 @@ local function window()
     local body = Instance.new("Frame")
     body.ZIndex, body.Parent = 23, panel
     local closeButton = button(header, "X", 80, 76, C.red)
-    closeButton.AbsoluteSize = Vector2.new(80, 62)
+    header.AbsoluteSize, header.AbsolutePosition = Vector2.new(852, 78), Vector2.new(0, 0)
+    closeButton.AbsoluteSize, closeButton.AbsolutePosition = Vector2.new(80, 62), Vector2.new(770, 1)
     return {shade = shade, panel = panel, header = header, heading = heading, closeButton = closeButton, scale = scale, body = body}
 end
+if Theme.Toybox and BOUND == "all" then assert(#PRELOADED == 23, "BD-1189: all 23 kit pictures are preloaded when the skin loads, got " .. #PRELOADED) elseif not Theme.Toybox then assert(#PRELOADED == 0, "flag off: nothing is preloaded") else assert(#PRELOADED <= 23, "preload lists bound ids only") end
 local w = window()
 -- the hook of ModalCompact.attach, as written there
 if Theme.Toybox then Theme.Toybox.window({panel = w.panel, header = w.header, heading = w.heading, closeButton = w.closeButton, scale = w.scale}) end
@@ -549,9 +565,23 @@ local x = w.closeButton:FindFirstChild("ToyboxFace")
 assert(x and x.Image == ids.toybox_close and x.ScaleType == Enum.ScaleType.Fit, "the red gloss X, drawn whole")
 assert(x.Size == UDim2.fromOffset(62, 62), "desktop: a square of the button's short side")
 assert(w.closeButton:FindFirstChild("ToyboxText").Visible == false and w.closeButton.TextTransparency == 1, "the X is in the picture, the letter is hidden")
+-- BD-1189: the picture's rect inside the strip (design px) = equal inset right / top / bottom (8 px), fully inside, square
+local function closeRect(img, btn, hdr, s)
+    local side = img.Size.X.Offset
+    local right = btn.AbsolutePosition.X + btn.AbsoluteSize.X + img.Position.X.Offset * s
+    local top = btn.AbsolutePosition.Y + img.Position.Y.Offset * s
+    return {side = side, rightInset = (hdr.AbsolutePosition.X + hdr.AbsoluteSize.X - right) / s, topInset = (top - hdr.AbsolutePosition.Y) / s,
+        bottomInset = (hdr.AbsolutePosition.Y + hdr.AbsoluteSize.Y - (top + side * s)) / s}
+end
+local desktopX = closeRect(x, w.closeButton, w.header, 1)
+assert(desktopX.rightInset == 8 and desktopX.topInset == 8 and desktopX.bottomInset == 8 and desktopX.side == 62, "1280x720: the X is inside the strip, 8 px from right, top and bottom")
+-- phone: a taller strip (96 design px) at scale 0.6 (what ModalCompact lays out), the button pinned 2 px from the right edge
 w.scale.Scale = 0.6
-w.closeButton.AbsoluteSize = Vector2.new(48, 37)
+w.header.AbsoluteSize = Vector2.new(852 * 0.6, 96 * 0.6)
+w.closeButton.AbsolutePosition, w.closeButton.AbsoluteSize = Vector2.new((852 - 2 - 80) * 0.6, 0.6), Vector2.new(48, 37)
+local phoneX = closeRect(x, w.closeButton, w.header, 0.6)
 assert(x.Size.X.Offset == x.Size.Y.Offset and x.Size.X.Offset * 0.6 >= 48 - 1e-6, "small window: the X is still a square of at least 48 px on screen")
+assert(math.abs(phoneX.rightInset - 8) < 1e-6 and math.abs(phoneX.topInset - 8) < 1e-6 and math.abs(phoneX.bottomInset - 8) < 1e-6, "phone: the X is inside the strip with equal insets")
 w.closeButton.BackgroundColor3 = C.card
 assert(x.Image == ids.toybox_close, "the X never becomes a plain button")
 -- ---- the Fusion Menu window: a fixed place

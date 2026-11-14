@@ -108,6 +108,13 @@ function M.bodyHeight(): number
     return 402
 end
 
+-- BD-1189: the body width (design px, the scroller's own units) that is on screen: 824 on desktop, the scroller width on a compact canvas.
+function M.bodyWidth(): number
+    local m = if ctx then M.model() else nil
+    if m and m.mode == "compact" then return math.floor(m.innerW) end
+    return 824
+end
+
 function M.bodyScale(): number
     local m = if ctx then M.model() else nil
     return if m then m.effScale else 1

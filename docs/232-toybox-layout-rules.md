@@ -40,7 +40,8 @@ Same grid, same buttons, same content in both. **Owner pick 2026-11-14: "actuall
 ## 4. Next steps
 
 1. ~~Owner picks A or B.~~ Done: A (bright cream).
-2. Shared layout helpers in `ToyboxKit` / `ToyboxSkin` (inset, gutter, panel, row, button sizes) so screens stop placing things by hand.
-3. Pilot: the dino detail page in code, flag-gated, Studio pictures at 1280x720 and a phone size.
-4. Then **every** menu on the same rules (owner 2026-11-14: "apply the same to the other menus and such. it should be able to compete with the top roblox experiences"): Crystal Shop (PR #580), Eggs and nests, hatch reveal panels, Index list, Patterns / Colours, Settings, Potions, Fusion, Run Complete, popups / confirms, HUD tiles. One screen per change, Studio pictures for each.
-5. Preload the kit pictures when the skin loads (a new header was blank for a moment the first time it showed).
+2. ~~Shared layout helpers~~ Built (branch claude/bd-1189-detail-page): numbers in `ToyboxKit` (inset 16, gutter 12, panel padding 12, corner 14, buttons 48 / 40, type 28 / 20 / 16 / 14, cream tones, `detailLayout`, `buttonHeights`, `cellWidth`, `emptySlots`, `closeBox`), helpers in `Shared/ToyboxLayout` (`panel`, `preview`, `row`, `text`, `actionButton`, `emptySlot`). Other screens reuse them.
+3. ~~Pilot: the dino detail page~~ Built behind `ToyboxUIEnabled` (`DinoIndexPanels`); `tools/verify_toybox_layout.py` proves the rects at 1280x720 and a phone window. **Studio pictures: not taken yet (lead).**
+4. Close X (owner 2026-11-14): fully inside the header strip, equal 8 px inset right / top / bottom, every window. Done in the skin, asserted in `verify_toybox_ui.py`.
+5. Then Crystal Shop (PR #580), Eggs, Index list, Settings, Potions, Fusion on the same rules. The window inset (18 / 20 px today) moves to 16 with the first of these.
+6. ~~Preload the kit pictures~~ Done in `ToyboxSkin`.

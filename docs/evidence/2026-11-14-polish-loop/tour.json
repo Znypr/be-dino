@@ -1,0 +1,13 @@
+{
+ "build": "main 6488f2e5 + PR #579 (playtest profile)",
+ "viewport": "1274x481 (Studio, short landscape)",
+ "screens": {
+  "hud": "hud.jpg",
+  "collection": "collection.jpg",
+  "eggs": "eggs.jpg",
+  "auras": "auras.jpg",
+  "potions": "potions.jpg",
+  "fusion": "fusion.jpg",
+  "settings": "settings.jpg"
+ }
+}
