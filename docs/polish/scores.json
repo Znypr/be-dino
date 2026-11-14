@@ -4,6 +4,11 @@
    "date": "2026-11-14",
    "score": 5,
    "line": "world looks good, HUD broken rail and mixed buttons"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 6,
+   "line": "rail fixed, mixed button styles remain"
   }
  ],
  "collection": [
@@ -11,6 +16,16 @@
    "date": "2026-11-14",
    "score": 4,
    "line": "empty-looking, clipped bottom"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 7,
+   "line": "fills the window, black silhouettes"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 8,
+   "line": "soft silhouettes with rarity edges"
   }
  ],
  "eggs": [
@@ -18,6 +33,16 @@
    "date": "2026-11-14",
    "score": 4,
    "line": "oversized button, three colours, unused right third"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 7,
+   "line": "clean, nest art contradicts Empty"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 8,
+   "line": "clean, empty nests fixed"
   }
  ],
  "auras": [
@@ -25,6 +50,11 @@
    "date": "2026-11-14",
    "score": 5,
    "line": "nice cards, price overlap, off-style art"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 4,
+   "line": "price icon inside the word (regression)"
   }
  ],
  "potions": [
@@ -39,6 +69,21 @@
    "date": "2026-11-14",
    "score": 1,
    "line": "empty window with wrong title"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 4,
+   "line": "routes right, old layout"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 6,
+   "line": "cream panels, old donor/result cards, width"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 7,
+   "line": "full width, cream result card with badge; empty donor bar"
   }
  ],
  "settings": [

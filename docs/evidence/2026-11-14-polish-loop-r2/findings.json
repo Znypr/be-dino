@@ -1,0 +1,62 @@
+[
+ {
+  "screen": "auras",
+  "role": "qa",
+  "title": "Price icon lands inside the word after the BD-1192 fix",
+  "detail": "With the Toybox skin on, the amber icon sits at x=687 inside \"3,700 Crystals\" (text at 652); offline checks passed, Studio shows the overlap.",
+  "fix": "Icon and skin word label from one centred group; skin-on case in verify_price_group.py.",
+  "severity": 3,
+  "reach": 3,
+  "kind": "bug"
+ },
+ {
+  "screen": "eggs",
+  "role": "kid",
+  "title": "Empty nest slots show a full egg in a nest",
+  "detail": "Each \"Empty\" slot uses the egg-in-nest picture, so it says empty but shows an egg.",
+  "fix": "Empty slot = empty nest picture (or faded nest, no egg), egg art only when a nest holds an egg.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "art"
+ },
+ {
+  "screen": "eggs",
+  "role": "ux",
+  "title": "\"AUTO: OFF\" and \"Auto-open: off\" say the same thing twice",
+  "detail": "The toggle shows its state and the line next to it repeats it.",
+  "fix": "Keep the toggle; replace the line with what auto-open does (\"Opens eggs for you\").",
+  "severity": 1,
+  "reach": 3,
+  "kind": "copy"
+ },
+ {
+  "screen": "collection",
+  "role": "art",
+  "title": "Undiscovered dinos are hard black silhouettes",
+  "detail": "Brief asked for soft tinted silhouettes; pure black on cream reads harsh and gloomy for kids.",
+  "fix": "Silhouette in a soft tone of the card (e.g. 35% dark brown) with the rarity edge.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "art"
+ },
+ {
+  "screen": "fusion",
+  "role": "ux",
+  "title": "Fusion Menu still the old layout",
+  "detail": "Text on studs (yellow \"You need 6 Base...\" and red \"Hatch new dinos\"), black slot boxes, five button colours.",
+  "fix": "Put Fusion on the docs/232 rules like the detail page (cream panels, one primary button).",
+  "severity": 3,
+  "reach": 2,
+  "kind": "layout"
+ },
+ {
+  "screen": "hud",
+  "role": "qa",
+  "title": "\"BUILD\" label alone under the eggs plate",
+  "detail": "A lone \"BUILD\" word (no build id) shows under the eggs plate in Studio.",
+  "fix": "Show the full build id or hide it outside Studio/admin.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "bug"
+ }
+]

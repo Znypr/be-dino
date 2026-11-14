@@ -7,6 +7,7 @@
   * src/shared/AssetSlots.luau: per slot line, the bound value wins over "" (two different ids for one slot = stop, a human decides).
   * docs/77-asset-registry.md and docs/115-decisions-log.md (append-only logs): both sides' lines are kept (ours first).
   * docs/evidence/roblox-uploads.json: union of both sides by assetId (fields merged).
+  * docs/kanban/rows/BD-*.md (one row per file): the side whose status is further along wins (Backlog < In progress < Review < Review / test < Done).
 Any other conflicted file is left alone and named. Standard library only.
 """
 from __future__ import annotations
@@ -57,6 +58,20 @@ def uploads() -> str:
     return json.dumps(out, indent=2, ensure_ascii=False) + '\n'
 
 
+ORDER = ['Backlog', 'Blocked', 'In progress', 'In review', 'Review', 'Review / test', 'Done']
+
+
+def row_stage(text: str) -> int:
+    parts = text.split('|')
+    status = parts[2].strip() if len(parts) > 2 else ''
+    return ORDER.index(status) if status in ORDER else -1
+
+
+def kanban_row(path: str) -> str:
+    ours, theirs = git('show', f':2:{path}'), git('show', f':3:{path}')
+    return theirs if row_stage(theirs) > row_stage(ours) else ours
+
+
 def main(argv=None) -> int:
     check = '--check' in (argv or sys.argv[1:])
     conflicted = git('diff', '--name-only', '--diff-filter=U').split()
@@ -68,6 +83,8 @@ def main(argv=None) -> int:
             new = BLOCK.sub(lambda m: m.group(1) + m.group(2), open(path, encoding='utf-8').read())
         elif path == UPLOADS:
             new = uploads()
+        elif path.startswith('docs/kanban/rows/BD-') and path.endswith('.md'):
+            new = kanban_row(path)
         else:
             print('left for a human:', path)
             continue

@@ -26,6 +26,7 @@ Owner 2026-11-14: "i shouldnt have to tell you all of this, critique your own ga
 | UX / layout | docs/232 rules: grid, inset, gutter, no text on studs, one button height, one primary colour, nothing clipped, X inside the header |
 | Sound and feel | docs/87: calm, soft, a little magical; feedback and reward moments |
 | QA | overlaps, clipped text, wrong numbers, debug text, empty states, phone size |
+| Benchmark | every run: compare UI, assets, behaviour and **retention** with the top Roblox experiences ([235](235-top-games-benchmark.md), owner 2026-11-14 "always cross reference ... with the top performing roblox experiences"); one finding per gap |
 
 ## Not covered yet
 

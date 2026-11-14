@@ -28,7 +28,7 @@ STATE = ROOT / 'docs/polish/findings.json'
 SCORES = ROOT / 'docs/polish/scores.json'
 QUEUE = ROOT / 'docs/be-dino-queue.md'
 KIT = ROOT / 'src/shared/ToyboxKit.luau'
-ROLES = {'kid', 'reviewer', 'art', 'ux', 'feel', 'qa'}
+ROLES = {'kid', 'reviewer', 'art', 'ux', 'feel', 'qa', 'benchmark'}  # benchmark = docs/235 top-games comparison
 START, END = '<!-- polish-loop:start -->', '<!-- polish-loop:end -->'
 
 # Screens the tour opens (Bootstrap open(name)); the rest of ScreenPlace needs game state (a pending egg, a purchase).
