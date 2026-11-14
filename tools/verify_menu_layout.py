@@ -27,6 +27,9 @@ MODULES.update({
     'ShopCards': 'src/client/ShopCards.luau',
     'ShopCard': 'src/client/ShopCard.luau',
     'PriceGroup': 'src/shared/PriceGroup.luau',  # BD-1192
+    'ShopToyboxPage': 'src/client/ShopToyboxPage.luau',  # BD-1178: ShopScreens asks it whether the Toybox page is on
+    'ToyboxShop': 'src/shared/ToyboxShop.luau',
+    'ToyboxKit': 'src/shared/ToyboxKit.luau',
     'ShopCardState': 'src/shared/ShopCardState.luau',
     'ShopPreview': 'src/shared/ShopPreview.luau',
     'ShopForDino': 'src/shared/ShopForDino.luau',

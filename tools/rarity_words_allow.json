@@ -1,6 +1,14 @@
 {
   "_about": "BD-1120 (docs/202 R5). Places in src/client that put a rarity word on screen WITHOUT going through Shared/RarityWord. A count per file (a new one fails, a stale one fails). Each is a place where the tier colour is already carried by a FILL (the word stays, in white), or where the text is built here and painted where it is shown.",
   "unpainted": {
+    "src/client/DinoIndexList.luau": {
+      "count": 1,
+      "reason": "The Dino Index card chip is FILLED with the tier colour (Theme.RarityColors), so a coloured word would vanish into it: the white word on the tier fill shows both (same as DinoIndexScreens)."
+    },
+    "src/client/EggsPanels.luau": {
+      "count": 2,
+      "reason": "The Eggs stage rarity chip is FILLED with the tier colour (ctx.rarityColors), so the word stays white on the fill (same as the old Eggs screen)."
+    },
     "src/client/Bootstrap.client.luau": {
       "count": 2,
       "reason": "autoOpenText builds the plain line \"Auto-open: Common, Uncommon\"; the Eggs screen paints it (RarityWord.paintLabel on the auto-open line, checked in the text-floor smoke)."
