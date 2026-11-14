@@ -110,6 +110,8 @@ end
 
 -- spec: {kind="trail"|"aura", item, owned, equipped, level, x, y, height, buyY, targetHeight, onPress, onInfo}
 function Cards.build(ui, parent: GuiObject, spec)
+    local Toybox = Theme.Toybox -- BD-1178 (docs/231): the Toybox card, only while the flag is on and the six card pictures are bound
+    if Toybox and Toybox.Kit.ready(require(Shared.AssetSlots).Images, "card") then return require(script.Parent.ShopToyboxCard).build(ui, parent, spec) end
     if MainConfig.ShopCardPriceButtonEnabled == true then return Cards.buildPrice(ui, parent, spec) end
     local item, isTrail = spec.item, spec.kind == "trail"
     local data = if isTrail then P.trailCard(item, spec) else P.auraCard(item, UIFormat.boost("Growth", item.growth), spec)

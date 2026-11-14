@@ -354,8 +354,10 @@ function Shop.render(name: string)
         label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
         local buyH=buttonH(57) -- BD-1103: BUY and CANCEL never touch, however big the 44 px floor makes them
-        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
-        button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),C.red,function() open("auras") end)
+        local toybox=Theme.Toybox and Theme.Toybox.Kit.ready(require(Shared.AssetSlots).Images,"card") and require(Shared.ToyboxShop).confirm(item.name,isTrail) or nil -- BD-1178 (docs/231): "Buy X?" and "Not now", same buttons
+        if toybox then heading.Text=toybox.title end
+        button(body,if toybox then toybox.buy else (if isTrail then "BUY TRAIL" else "BUY AURA"),290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
+        button(body,if toybox then toybox.cancel else "CANCEL",290,261+buyH+19,510,buttonH(45),C.red,function() open("auras") end)
     elseif name=="auraInfo" then
         -- BD-1118 / BD-1144 (docs/202 R3, docs/213): the read-only details page behind the Info word of a price card. The name in its tier colour, the short
         -- lines of ShopPreview.infoLines with the rarity word coloured (RarityWord), a Back button and NO buy button: buying stays on auraConfirm.

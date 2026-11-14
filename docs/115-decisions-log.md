@@ -734,3 +734,9 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **Ids.** The 23 pictures are **not uploaded**; the slots `toybox_*` in `src/shared/AssetSlots.luau` are empty and no id was invented. Until they are bound the flag changes only the text outline (a picture group is used only when all its ids are bound).
 - **To overturn.** Set the playtest rule of `ToyboxUIEnabled` to false (one line in `tools/release_profiles.py`).
 - **Evidence.** Offline only: `tools/verify_toybox_ui.py` (57 mutants; the 23 PNGs measured against the slice rects), `tests/test_release.py`, `tests/test_rehearsal.py`. **No Studio, no phone, nobody has seen the skin in the game.**
+
+## LEAD decisions 2026-11-14: the Toybox Crystal Shop (BD-1178, [231](231-toybox-crystal-shop.md))
+- **LEAD decision (owner delegated 2026-10-16).** No second flag: the shop follows `ToyboxUIEnabled` and draws the Toybox card only when the six card ids are bound (otherwise the old card stays). Overturn: add a flag in `Config` and `tools/release_profiles.py`.
+- **LEAD decision.** The tabs stay in the top row, not on the right (the shop body is a fixed 824 px box and the Eggs, Conditions, Crystals and odds pages use its full width). Not picked: a right column for all five pages (needs a re-layout of every page, no Studio to check it). Overturn: a follow-up row.
+- **LEAD decision.** No "Nests" tab (the game has none); no "Find it in Volcano" hint (no data); a locked Legendary or Mythic shows "?" and "Reach level N". The rarity word sits on a cream pill so a tier colour never lies on the same tier colour. The Info word stays on the card so the details page is still reachable.
+- **Unchanged.** Server, save, prices, Robux, economy, default build. **Evidence:** offline only (`tools/verify_toybox_shop.py`, 32 mutants). No Studio, no phone, nothing seen.

@@ -43,6 +43,8 @@ BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
 ART = 'resources/ui/v2/toybox/final'
+# BD-1178 (docs/231): the Crystal Shop in the Toybox look reads the kit through its own verifier, tools/verify_toybox_shop.py
+CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
 
 # The hook lines. Removing them gives "today's files"; check 2 compares the flag-off build against that.
 THEME_HOOKS = [
@@ -142,8 +144,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, CONFIG, SLOTS, STYLE) and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact and FusionMenu reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, CONFIG, SLOTS, STYLE) + CRYSTAL_SHOP and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)
