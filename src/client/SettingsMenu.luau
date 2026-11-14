@@ -7,6 +7,8 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Model = require(Shared:WaitForChild("SettingsModel"))
 local Mixer = require(Shared:WaitForChild("AudioMixer"))
 local C = Theme.Colors
+local Kit: any = nil -- the Toybox kit, required only while Theme.Toybox is on
+local Layout: any = nil -- the Toybox layout helpers, required only while Theme.Toybox is on
 
 local Menu = {}
 local currentTab = "sound"
@@ -35,22 +37,47 @@ local function fitMetrics()
     ROW = BTN + 8
     TOP = BTN + 16
 end
+-- BD-1205 (docs/236, finding P-54d840): with Config.ToyboxUIEnabled (Theme.Toybox) the tabs are cream chips and every tab sits on ONE cream panel: rows =
+-- label left | control column (sliders: label | slider | value), dark ink with no outline, one button height, a selected choice amber. T = the rects of
+-- Kit.settingsLayout for the open tab (nil = the old layout, every line below runs as before).
+local T: any = nil
+local function rowY(row: number): number
+    return if T then T.panel.y + Kit.PanelPad + row * T.pitch else TOP + row * ROW
+end
+local function ink(label: TextLabel): TextLabel
+    if T then Layout.ink(label, "value") end
+    return label
+end
+local function soundLabAllowed(): boolean
+    local player = game:GetService("Players").LocalPlayer
+    return Kit.soundLabVisible(game:GetService("RunService"):IsStudio(), player ~= nil and player:GetAttribute("IsAdmin") == true)
+end
 local LEVEL_TEXT = {full = "FULL", lite = "LITE", off = "OFF"}
 local SIZE_TEXT = {small = "SMALL", normal = "NORMAL", big = "BIG"}
 
 function Menu.tab(): string return currentTab end
 function Menu.setTab(id: string) if table.find(Model.Tabs, id) then currentTab = id end end
 
+local function rowLabel(body: Instance, ctx: Context, row: number, text: string, oldWidth: number)
+    local l = if T then ctx.label(body, text, Kit.PanelPad, rowY(row), T.labelW, BTN, Kit.Type.heading) else ctx.label(body, text, 0, TOP + row * ROW, oldWidth, BTN, 28)
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    ink(l).Name = "RowLabel"
+end
+
 local function toggle(body: Instance, ctx: Context, row: number, text: string, on: boolean, change: () -> ())
-    ctx.label(body, text, 0, TOP + row * ROW, 400, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
-    local b = ctx.button(body, if on then "ON" else "OFF", 420, TOP + row * ROW, 160, BTN, if on then C.accent else C.card, change)
+    rowLabel(body, ctx, row, text, 400)
+    local b = if T then ctx.button(body, if on then "ON" else "OFF", T.controlX, rowY(row), Kit.Settings.toggleW, BTN, if on then C.accent else C.card, change)
+        else ctx.button(body, if on then "ON" else "OFF", 420, TOP + row * ROW, 160, BTN, if on then C.accent else C.card, change)
     b.Name = "Toggle_" .. text
 end
 
 local function choice(body: Instance, ctx: Context, row: number, text: string, options: {string}, names: {[string]: string}, selected: string, pick: (string) -> ())
-    ctx.label(body, text, 0, TOP + row * ROW, 250, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
+    rowLabel(body, ctx, row, text, 250)
+    local count = math.max(#options, 1)
+    local w = if T then math.min(168, math.floor((T.controlW - Kit.Gutter * (count - 1)) / count)) else 168
     for i, id in options do
-        local b = ctx.button(body, names[id], 270 + (i - 1) * 180, TOP + row * ROW, 168, BTN, if id == selected then C.accent else C.card, function() pick(id) end)
+        local x = if T then T.controlX + (i - 1) * (w + Kit.Gutter) else 270 + (i - 1) * 180
+        local b = ctx.button(body, names[id], x, if T then rowY(row) else TOP + row * ROW, w, BTN, if id == selected then (if T then Layout.Amber else C.accent) else C.card, function() pick(id) end)
         b.Name = "Choice_" .. text .. "_" .. id
     end
 end
@@ -58,16 +85,30 @@ end
 local function drawSound(body: Instance, ctx: Context)
     local Volume = require(script.Parent.VolumeSliders)
     for i, key in Mixer.Order do
-        Volume.row(body, key, 0, TOP + (i - 1) * ROW, 824, 25, function() Model.set(key, Mixer.get(key)) end)
+        local change = function() Model.set(key, Mixer.get(key)) end
+        if T then
+            Volume.row(body, key, Kit.PanelPad, rowY(i - 1) + (BTN - 40) // 2, T.width - 2 * Kit.PanelPad, 25, change, {labelW = T.labelW, valueW = Kit.Settings.valueW, textSize = Kit.Type.heading})
+        else
+            Volume.row(body, key, 0, TOP + (i - 1) * ROW, 824, 25, change)
+        end
     end
     local on = Theme.HatchSoundEnabled ~= false
     toggle(body, ctx, 3, "Hatch sound", on, function() Theme.HatchSoundEnabled = Theme.HatchSoundEnabled == false ctx.open("settings") end)
-    ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, BTN, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
-    ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, BTN, C.card, function()
+    local function reset()
         Mixer.reset()
         for _, key in Mixer.Order do Model.set(key, Mixer.get(key)) end
         ctx.open("settings")
-    end)
+    end
+    if T then
+        ctx.button(body, "RESET SOUND", T.controlX + Kit.Settings.toggleW + Kit.Gutter, rowY(3), Kit.Settings.resetW, BTN, C.card, reset).Name = "Button_ResetSound"
+        -- SOUND LAB is a test page: Studio and admins only (a player never sees it)
+        if soundLabAllowed() then
+            ctx.button(body, "SOUND LAB", T.controlX, rowY(4), Kit.Settings.resetW, BTN, C.card, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
+        end
+    else
+        ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, BTN, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
+        ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, BTN, C.card, reset)
+    end
 end
 
 local function drawLook(body: Instance, ctx: Context)
@@ -76,7 +117,13 @@ local function drawLook(body: Instance, ctx: Context)
     choice(body, ctx, 1, "Weather", Model.Levels, LEVEL_TEXT, s.weather, function(id) Model.set("weather", id) ctx.open("settings") end)
     toggle(body, ctx, 2, "Calm motion", s.calm, function() Model.set("calm", not Model.calm()) ctx.open("settings") end)
     toggle(body, ctx, 3, "Fast mode", Model.isFast(s), function() Model.set("fast", not Model.isFast(Model.get())) ctx.open("settings") end)
-    ctx.label(body, "Fast mode: less sparkle for slow phones", 0, TOP + 4 * ROW, 824, 30, 20, C.gold)
+    if T then
+        local note = ctx.label(body, "Fast mode: less sparkle for slow phones", Kit.PanelPad, rowY(4), T.width - 2 * Kit.PanelPad, 30, Kit.Type.body)
+        note.TextXAlignment, note.Name = Enum.TextXAlignment.Left, "FastNote"
+        Layout.ink(note, "label")
+    else
+        ctx.label(body, "Fast mode: less sparkle for slow phones", 0, TOP + 4 * ROW, 824, 30, 20, C.gold)
+    end
 end
 
 -- BD-570 (docs/134 s13): the row "Gifts from: Everyone / Friends / Nobody". Drawn only with Config.GiftClaimEnabled and a GiftAction remote on the
@@ -95,8 +142,8 @@ local function drawGifts(body: Instance, ctx: Context, row: number): boolean
 end
 
 local function drawControls(body: Instance, ctx: Context)
-    ctx.label(body, "Camera", 0, TOP, 250, BTN, 28).TextXAlignment = Enum.TextXAlignment.Left
-    ctx.button(body, "RESET", 270, TOP, 180, BTN, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
+    rowLabel(body, ctx, 0, "Camera", 250)
+    ctx.button(body, "RESET", if T then T.controlX else 270, rowY(0), 180, BTN, if T then C.card else C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
     -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
     -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
@@ -110,9 +157,10 @@ local function drawControls(body: Instance, ctx: Context)
     if Config.GiftClaimEnabled == true and drawGifts(body, ctx, used) then used += 1 end -- BD-570: flag off = nothing drawn, nothing required, no remote call
     local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
     for i, line in lines do
-        local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
+        local row = if T then ctx.label(body, line, Kit.PanelPad, rowY(used) + 2 + (i - 1) * 26, T.width - 2 * Kit.PanelPad, 26, Kit.Type.body) else ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
         row.Name = "ControlsLine" .. i
         row.TextXAlignment = Enum.TextXAlignment.Left
+        if T then Layout.ink(row, "label") end
     end
 end
 
@@ -120,14 +168,30 @@ end
 function Menu.build(body: Instance, ctx: Context): string
     fitMetrics()
     local lab = currentTab == "sound" and labOpen
+    T = nil
+    if Theme.Toybox and not lab then -- BD-1205: the cream chips + one cream panel (the Sound lab test page keeps the old look)
+        Layout = require(Shared:WaitForChild("ToyboxLayout"))
+        Kit = Layout.Kit
+        local compact = require(script.Parent:WaitForChild("ModalCompact"))
+        local rows = if currentTab == "sound" then (if soundLabAllowed() then 5 else 4) elseif currentTab == "look" then 5 elseif currentTab == "controls" then 6 else 1
+        T = Kit.settingsLayout(compact.bodyScale(), compact.bodyWidth(), compact.bodyHeight(), rows)
+        BTN = T.big
+        local panel = Layout.panel(body :: GuiObject, "SettingsPanel", UDim2.fromOffset(T.panel.w, T.panel.h), UDim2.fromOffset(T.panel.x, T.panel.y))
+        panel.Name = "SettingsPanel"
+    end
     -- The Sound lab is a page of its own: no tab bar under its BACK button (a purple tab sliver and a cut word showed through).
     for i, id in Model.Tabs do
         if lab then break end
-        local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, BTN, if id == currentTab then C.purple else C.card, function()
+        local pick = function()
             currentTab = id
             ctx.open("settings")
-        end)
-        b.Name = "Tab_" .. id
+        end
+        if T then
+            Layout.tabChip(body :: GuiObject, "Tab_" .. id, Model.TabLabels[id], UDim2.fromOffset(T.tabs[i].w, T.tabs[i].h), UDim2.fromOffset(T.tabs[i].x, T.tabs[i].y), id == currentTab, Kit.Type.heading, pick)
+        else
+            local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, BTN, if id == currentTab then C.purple else C.card, pick)
+            b.Name = "Tab_" .. id
+        end
     end
     if lab then
         -- BD-081: Sound lab replaces the Sound tab body (the lab page has no tab bar); BACK returns to the sliders.
@@ -136,6 +200,27 @@ function Menu.build(body: Instance, ctx: Context): string
     elseif currentTab == "look" then drawLook(body, ctx)
     elseif currentTab == "controls" then drawControls(body, ctx) end
     return currentTab
+end
+
+-- BD-1205: the Help tab is drawn by SmallScreens with 824 px design coordinates. On the Toybox look it goes into a frame inset by the panel padding (scaled
+-- to fit), on the cream panel; `inkHelp` makes its plain labels dark ink. Flag off (or another tab) = the body itself, nothing changes.
+function Menu.helpHost(body: Instance): Instance
+    if T == nil then return body end
+    local host = Instance.new("Frame")
+    host.Name, host.BackgroundTransparency, host.BorderSizePixel = "HelpHost", 1, 0
+    host.Position, host.Size = UDim2.fromOffset(Kit.PanelPad, 0), UDim2.fromOffset(824, 402)
+    host.ZIndex = if body:IsA("GuiObject") then body.ZIndex else 1
+    local fit = Instance.new("UIScale")
+    fit.Scale = (T.width - 2 * Kit.PanelPad) / 824
+    fit.Parent = host
+    host.Parent = body
+    return host
+end
+function Menu.inkHelp(host: Instance)
+    if T == nil then return end
+    for _, child in host:GetChildren() do
+        if child:IsA("TextLabel") then Layout.ink(child, "value") end
+    end
 end
 
 return Menu

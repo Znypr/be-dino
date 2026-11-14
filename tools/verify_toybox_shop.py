@@ -93,7 +93,7 @@ def check_sources():
     assert code_only(cards).count('Toybox') == 5, 'ShopCards mentions Toybox only in its two hook lines'
     screens = read('src/client/ShopScreens.luau')
     assert screens.count('require(Shared.ToyboxShop).confirm(item.name,isTrail)') == 1 and screens.count('Theme.Toybox and Theme.Toybox.Kit.ready(require(Shared.AssetSlots).Images,"card")') == 1, 'ShopScreens asks for the popup words once, behind the flag and the bound group'
-    assert code_only(screens).count('Toybox') <= 24, 'ShopScreens mentions Toybox only in the page, hint, wallet, panel and popup lines'
+    assert code_only(screens).count('Toybox') <= 44, 'ShopScreens mentions Toybox only in the page, hint, wallet, panel, popup and (BD-1205) Potion Shop lines'
     for line in code_only(screens).splitlines():
         if 'Toybox' in line:
             for needle in ('FireServer', 'transact(', 'shopAction'):

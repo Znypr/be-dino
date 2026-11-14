@@ -21,7 +21,13 @@ local weatherArt: Frame? = nil
 local lastWeather = ""
 
 local function placeArt(art: Frame?)
-    if art then art.Position, art.Size = UDim2.fromOffset(4, 7), UDim2.fromOffset(48, 48) end
+    if art == nil then return end
+    if Theme.Toybox then -- BD-1205: the same icon box as LEAP / CHOMP (Kit.Hud)
+        local hud = Theme.Toybox.Kit.Hud
+        art.Position, art.Size = UDim2.fromOffset(hud.iconX, (hud.height - hud.icon) // 2), UDim2.fromOffset(hud.icon, hud.icon)
+    else
+        art.Position, art.Size = UDim2.fromOffset(4, 7), UDim2.fromOffset(48, 48)
+    end
 end
 
 function M.short(): boolean
@@ -33,6 +39,7 @@ function M.attach(d: any)
     ctx = d
     weatherArt = Theme.icon(d.tile, "weather")
     placeArt(weatherArt)
+    if Theme.Toybox then require(script.Parent:WaitForChild("HudToybox")).attach(d) end -- BD-1205: LEAP, CHOMP, the weather pill in one style
 end
 
 function M.refresh(p: any, now: number)
@@ -50,6 +57,7 @@ function M.refresh(p: any, now: number)
             Sfx.play("weather_start")
         end
     end
+    if Theme.Toybox then require(script.Parent:WaitForChild("HudToybox")).tick(d, now) end -- BD-1205: one-word LEAP, grey HOME
     local short = M.short()
     local endsAt = if id == "clear" then workspace:GetAttribute("NextWeatherAt") else workspace:GetAttribute("WeatherEndsAt")
     d.text.Text = Words.weather(id, workspace:GetAttribute("WeatherName"), (endsAt or now) - now, short)

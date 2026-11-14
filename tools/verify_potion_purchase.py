@@ -270,7 +270,7 @@ def static_checks():
     assert 'transact("buyPotion",item.id.."@"..potionChoice.window,false)' in h, 'buy must send the window-stamped id'
     assert h.index('transact(') < h.index('open("potions")'), 'transact before leaving the modal'
     # CANCEL is the only other control on the confirm card and never transacts.
-    c = re.search(r'button\(body,"CANCEL",290,263\+buyH\+18,510,buttonH\(44\),C\.red,function\(\) open\("potions"\) end\)', client)
+    c = re.search(r'button\(body,"CANCEL",290,263\+buyH\+18,510,buttonH\(44\),(?:if onPanel then C\.card else C\.red|C\.red),function\(\) open\("potions"\) end\)', client)
     assert c, 'CANCEL button on the confirm card'
     # The scrim closes the modal (a click outside the panel): documented, never buys.
     assert 'shade.Activated:Connect(function() if require(script.Parent.ModalClose).outsideTap() then close() end end)' in client  # BD-1019: still a close, now through the hatch's backdrop rule

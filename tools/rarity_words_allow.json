@@ -24,6 +24,10 @@
     "src/client/HatchSequence.luau": {
       "count": 1,
       "reason": "The reveal tier badge is a chip filled with the tier colour (TIER_COLORS = Theme.RarityColors, BD-1070): white word on the tier fill."
+    },
+    "src/client/PotionToyboxPage.luau": {
+      "count": 1,
+      "reason": "BD-1205: only the tier COLOUR of the icon ring is read; no rarity word is drawn on the potion cards"
     }
   }
 }

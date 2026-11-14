@@ -360,6 +360,114 @@ function Kit.fusionLayout(scale: number, bodyW: number?, bodyH: number?, wide: b
     return layout
 end
 
+-- BD-1205 (docs/232 / docs/236): the Potion Shop on the layout rules. One cream info row on top (the restock chip left, the "rarer potions" note right),
+-- then ONE scrolling view: the six offers as equal cards that fill the body width (3 columns, 2 when a card would be under Potions.minCell3 px on screen),
+-- 12 px gaps, and under them the cream "Your potions" panel with one row of use chips. Everything is a multiple of 4 / 12 like the other screens.
+Kit.Potions = {count = 6, headH = 36, iconBox = 56, inset = 8, textGap = 8, scrollBar = 8, pad = 4, cardMax = 150, ownedTitleW = 132, ownedPad = 8, chipW = 168, minCell3 = 230, rowGap = 6, restockW = 140}
+function Kit.potionLayout(scale: number, bodyW: number?, bodyH: number?)
+    local P = Kit.Potions
+    local s = if scale == scale and scale > 0.01 then scale else 1
+    local W, H = bodyW or 824, bodyH or 402
+    local _, small = Kit.buttonHeights(s)
+    local textPx = math.max(16, math.ceil(14 / s))
+    local nameH, lineH = math.max(24, textPx + 6), math.max(20, textPx + 4)
+    local gut, pad = Kit.Gutter, P.pad
+    local headH = math.max(P.headH, textPx + 12) -- not tappable: a text row, not a button
+    local content = W - P.scrollBar - 2 * pad
+    local columns = if ((content - 2 * gut) / 3) * s >= P.minCell3 then 3 else 2
+    local rows = math.ceil(P.count / columns)
+    local viewY = headH + gut
+    local viewH = math.max(H - viewY, 0)
+    local cardMin = P.inset + math.max(P.iconBox, nameH + 2 * lineH) + P.rowGap + small + P.inset
+    local ownedMin = 2 * P.ownedPad + small -- one row: the title left, the use chips right
+    local fill = math.floor((viewH - 2 * pad - (rows - 1) * gut - gut - ownedMin) / rows)
+    local cellH = math.max(cardMin, math.min(fill, P.cardMax))
+    local cellW = Kit.cellWidth(content, columns, gut)
+    local x0 = pad + math.floor((content - (cellW * columns + gut * (columns - 1))) / 2)
+    local layout: any = {width = W, height = H, columns = columns, rows = rows, cellW = cellW, cellH = cellH, button = small, textPx = textPx, nameH = nameH, lineH = lineH}
+    layout.head = {x = 0, y = 0, w = W, h = headH}
+    layout.restock = {x = 0, y = 0, w = P.restockW, h = headH}
+    layout.note = {x = P.restockW + gut, y = 0, w = W - P.restockW - gut, h = headH}
+    layout.view = {x = 0, y = viewY, w = W, h = viewH}
+    layout.cards = {}
+    for i = 1, P.count do
+        local col, row = (i - 1) % columns, (i - 1) // columns
+        layout.cards[i] = {x = x0 + col * (cellW + gut), y = pad + row * (cellH + gut), w = cellW, h = cellH}
+    end
+    local ownedY = pad + rows * cellH + (rows - 1) * gut + gut
+    local ownedH = math.max(ownedMin, viewH - pad - ownedY)
+    layout.owned = {x = x0, y = ownedY, w = cellW * columns + gut * (columns - 1), h = ownedH}
+    local ownedMid = math.floor((ownedH - small) / 2)
+    layout.ownedTitle = {x = Kit.PanelPad, y = ownedMid, w = P.ownedTitleW, h = small}
+    layout.ownedRow = {x = Kit.PanelPad + P.ownedTitleW + gut, y = ownedMid, w = layout.owned.w - 2 * Kit.PanelPad - P.ownedTitleW - gut, h = small}
+    layout.canvasH = ownedY + ownedH + pad
+    layout.scrolls = layout.canvasH > viewH + 0.5
+    return layout
+end
+-- The parts of one potion card (design px inside the card): the icon tile at the left, name / effect / stock beside it, ONE full-width button at the foot.
+function Kit.potionCard(width: number, height: number, lay: any)
+    local P = Kit.Potions
+    local textX = P.inset + P.iconBox + P.textGap
+    local c: any = {}
+    c.icon = {x = P.inset, y = P.inset, w = P.iconBox, h = P.iconBox}
+    c.name = {x = textX, y = P.inset, w = width - textX - P.inset, h = lay.nameH}
+    c.desc = {x = textX, y = P.inset + lay.nameH, w = width - textX - P.inset, h = lay.lineH}
+    c.stock = {x = textX, y = P.inset + lay.nameH + lay.lineH, w = width - textX - P.inset, h = lay.lineH}
+    c.button = {x = P.inset, y = height - P.inset - lay.button, w = width - 2 * P.inset, h = lay.button}
+    return c
+end
+-- The potion picture a card shows: its own icon, else the common icon of its kind, else the speed bottle (never a blank tile). `images` = the bound ids.
+function Kit.potionIconSlot(images: {[string]: any}, potionId: string, kind: string): string?
+    for _, key in {"potion_icon_" .. potionId, "potion_icon_" .. kind .. "_common", "potion_icon_speed_common"} do
+        local id = images[key]
+        if type(id) == "string" and string.match(id, "^rbxassetid://%d+$") ~= nil then return key end
+    end
+    return nil
+end
+
+-- BD-1205: Settings on one cream panel. Four cream tab chips (equal width, one button height), then the panel; a row = label left | control column;
+-- a slider row is label | slider | value. `rows` = how many rows the open tab has, so the panel is as tall as its rows (or the rest of the body).
+Kit.Settings = {tabs = 4, labelFrac = 0.28, minLabel = 140, valueW = 72, toggleW = 160, resetW = 200, rowGap = 12}
+function Kit.settingsLayout(scale: number, bodyW: number?, bodyH: number?, rows: number?)
+    local S = Kit.Settings
+    local W, H = bodyW or 824, bodyH or 402
+    local big = Kit.buttonHeights(scale)
+    local gut, pad = Kit.Gutter, Kit.PanelPad
+    local layout: any = {big = big, width = W, height = H}
+    local cw = Kit.cellWidth(W, S.tabs, gut)
+    layout.tabs = {}
+    for i = 1, S.tabs do layout.tabs[i] = {x = (i - 1) * (cw + gut), y = 0, w = cw, h = big} end
+    local count = math.max(rows or 4, 1)
+    local pitch = big + S.rowGap
+    local panelY = big + gut
+    local panelH = math.max(H - panelY, 2 * pad + count * pitch - S.rowGap)
+    layout.panel = {x = 0, y = panelY, w = W, h = panelH}
+    layout.pitch = pitch
+    layout.labelW = math.max(S.minLabel, math.floor((W - 2 * pad) * S.labelFrac))
+    layout.controlX = pad + layout.labelW + gut
+    layout.controlW = W - pad - layout.controlX
+    layout.rows = {}
+    for i = 1, count do layout.rows[i] = {x = pad, y = pad + (i - 1) * pitch, w = W - 2 * pad, h = big} end -- inside the panel
+    return layout
+end
+-- SOUND LAB is a test page: shown in Studio and to admins only.
+function Kit.soundLabVisible(isStudio: boolean, isAdmin: boolean): boolean
+    return isStudio or isAdmin
+end
+
+-- BD-1205: the HUD buttons (LEAP, CHOMP, HOME) and the weather pill in ONE style: the same height, 14 px corners, an icon on the left and ONE word,
+-- the key hint as a small round badge in the top-right corner. Heights are design px of the 286 px timers column; 60 px keeps touch >= 44 px at the
+-- smallest HUD scale the rail fix of BD-1193 allows.
+Kit.Hud = {height = 60, corner = 14, icon = 40, iconX = 10, word = 22, badge = 22, badgeInset = 4, wordX = 56}
+function Kit.hudWord(kind: string, secondsLeft: number?, duration: ((number) -> string)?): string
+    if kind == "leap" then
+        if secondsLeft ~= nil and secondsLeft > 0 then return if duration then duration(secondsLeft) else tostring(math.ceil(secondsLeft)) .. " s" end
+        return "LEAP"
+    end
+    if kind == "chomp" then return "CHOMP" end
+    return "HOME"
+end
+
 -- The slice scale of a picture drawn `width` x `height` px. A header never stretches up or down (scale = height / 128). The others use
 -- half size, less when the box is so small that the caps would not fit.
 function Kit.sliceScale(slot: string, width: number, height: number): number

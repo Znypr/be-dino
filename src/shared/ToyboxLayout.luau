@@ -62,6 +62,30 @@ function Layout.ink(label: TextLabel, which: string?): TextLabel
     end
     return label
 end
+-- BD-1205: a cream chip button (a tab, a choice): `selected` = amber. The word is dark ink on its OWN label with no outline, so the skin's outlined
+-- white button word can never draw over the cream; the button itself keeps the text (accessibility, tests) but is transparent.
+Layout.Amber = Color3.fromRGB(255, 215, 106)
+function Layout.tabChip(parent: GuiObject, name: string, text: string, size: UDim2, position: UDim2, selected: boolean, textSize: number, callback: () -> ()): TextButton
+    local b = Instance.new("TextButton")
+    b.Name, b.Text, b.AutoButtonColor, b.BorderSizePixel = name, text, false, 0
+    b.BackgroundColor3 = if selected then Layout.Amber else tone("panel")
+    b.Position, b.Size, b.ZIndex = position, size, parent.ZIndex + 1
+    b.Font, b.TextSize, b.TextColor3 = Enum.Font.FredokaOne, Kit.textSize(textSize), tone("value")
+    b.TextTransparency, b.TextStrokeTransparency = 1, 1
+    local round = Instance.new("UICorner")
+    round.CornerRadius, round.Parent = UDim.new(0, Kit.CardCorner), b
+    local line = Instance.new("UIStroke")
+    line.Name, line.Color, line.Thickness, line.Parent = "CreamOutline", OUTLINE, Kit.PanelStroke, b
+    local word = Instance.new("TextLabel")
+    word.Name, word.BackgroundTransparency, word.Size, word.ZIndex, word.Text = "ChipWord", 1, UDim2.fromScale(1, 1), b.ZIndex + 1, text
+    word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, Kit.textSize(textSize), false, Enum.TextXAlignment.Center
+    Layout.ink(word)
+    word.Parent = b
+    word.ChildAdded:Connect(function(child) if child:IsA("UIStroke") then child.Transparency = 1 end end)
+    b.Activated:Connect(callback)
+    b.Parent = parent
+    return b
+end
 -- A text label on a panel: type scale size (28 / 20 / 16 / 14), never under 14, shrinks to 14 rather than clip.
 function Layout.text(parent: GuiObject, text: string, size: UDim2, position: UDim2, textSize: number, which: string?, alignX: Enum.TextXAlignment?): TextLabel
     local label = Instance.new("TextLabel")

@@ -50,6 +50,7 @@ CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
 ART = 'resources/ui/v2/toybox/final'
 # BD-1178 (docs/231): the Crystal Shop in the Toybox look reads the kit through its own verifier, tools/verify_toybox_shop.py
+POLISH_FILES = tuple('src/client/' + n + '.luau' for n in ('PotionToyboxPage', 'SettingsMenu', 'HudToybox', 'HudTimers', 'VolumeSliders', 'SmallScreens')) + ('src/shared/TimerWords.luau',)  # BD-1205 (docs/236): Potion Shop, Settings, HUD buttons
 CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopToyboxPage.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
 
 # The hook lines. Removing them gives "today's files"; check 2 compares the flag-off build against that.
@@ -150,7 +151,7 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP and 'Toybox' in text:
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES and 'Toybox' in text:
             raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)

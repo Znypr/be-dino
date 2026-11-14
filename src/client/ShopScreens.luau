@@ -420,10 +420,28 @@ function Shop.render(name: string)
         -- BD-051: server-clock rotation. Offers/stock come from the shared deterministic rules; the server re-checks every purchase.
         local window=ProgressionRules.shopWindow(workspace:GetServerTimeNow())
         potionChoice.window=window
-        local restock=label(body,"",0,0,824,32,21,C.gold)
+        -- BD-1205 (docs/236): with Config.ToyboxUIEnabled the Potion Shop is drawn by PotionToyboxPage (cream cards that fill the body, green crystal buy buttons,
+        -- the owned potions on a cream panel); flag off = every line below runs as before.
+        local PotionToybox=if Theme.Toybox then require(script.Parent.PotionToyboxPage) else nil
+        local restock: any
+        if PotionToybox then
+            local compact=require(script.Parent.ModalCompact)
+            local parts=compact.parts()
+            restock=PotionToybox.build({label=label,button=button,art=art},body,header,{scale=viewportScale(),
+                bodyW=require(Shared.ToyboxShop).usableWidth(compact.bodyWidth(),compact.model().mode=="compact"),bodyH=compact.bodyHeight(),
+                p=p,window=window,crystals=num("Crystals"),closeSide=if parts then parts.closeButton.Size.X.Offset else 48,
+                onBuy=function(item) potionChoice.id=item.id open("potionConfirm") end,
+                onUse=function(item)
+                    potionChoice.id=item.id
+                    local buff=p.buffs[item.kind]
+                    if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
+                end}).restock
+        else
+            restock=label(body,"",0,0,824,32,21,C.gold)
+        end
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
-            restock.Text=require(Shared.TimerWords).restock(num("Crystals"),left,Config.TimerChipsEnabled==true) -- BD-1124: "New in 25 s" with the flag on
+            restock.Text=if PotionToybox then require(Shared.TimerWords).restockIn(left) else require(Shared.TimerWords).restock(num("Crystals"),left,Config.TimerChipsEnabled==true) -- BD-1124: "New in 25 s" with the flag on
         end
         header_text()
         task.spawn(function()
@@ -440,6 +458,7 @@ function Shop.render(name: string)
         -- docs/68: 6 offers in a 3x2 grid plus the owned list scroll together, so the panel fits a phone landscape (UIScale) and desktop.
         -- BD-1103: every height below is the old design number on a desktop window; on a small window the text and button floors (14 / 44 px) make the parts taller, so
         -- the card, the row pitch and everything under the grid follow (a hint over the second row, a price over a name and a USE row under the hint were the slips).
+        if not PotionToybox then -- BD-1205: the Toybox page above is the whole screen; the lines up to the matching `end` are the old page (not re-indented)
         local potionOffers=ProgressionRules.shopOffers(window)
         local nameH,leftH,btnH,useH=math.max(24,textPx(19)+5),math.max(20,textPx(16)+4),buttonH(44),buttonH(44)
         local descH=36
@@ -501,19 +520,25 @@ function Shop.render(name: string)
         end
         if slot==0 then label(scroller,"Buy a potion above to use it",0,listY,824,math.max(32,textPx(18)+6),18) end
         scroller.CanvasSize=UDim2.fromOffset(0,listY+math.max(1,math.ceil(slot/3))*(useH+6)+8)
+        end -- BD-1205: if not PotionToybox
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
+        local onPanel=Theme.Toybox~=nil -- BD-1205: on the Toybox look the confirm sits on a cream panel with dark words (no text on studs), CANCEL is grey, not red
+        local TP=require(script.Parent.ShopToyboxPage)
+        local compact=require(script.Parent.ModalCompact)
+        if onPanel then TP.panel(body,0,require(Shared.ToyboxShop).usableWidth(compact.bodyWidth(),compact.model().mode=="compact"),compact.bodyHeight()) end
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
-        label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
-        label(body,if replacing then "Using this ends your old "..item.kind.." potion" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        local nameLine=label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
+        local priceLine=label(body,if replacing then "Using this ends your old "..item.kind.." potion" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        if onPanel then TP.ink(nameLine) TP.ink(priceLine) end
         local buyH=buttonH(58) -- BD-1103: BUY and CANCEL never touch
         button(body,if replacing then "Replace" else "BUY POTION",290,263,510,buyH,C.accent,function()
             if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..potionChoice.window,false) end
             open("potions")
         end)
-        button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),C.red,function() open("potions") end)
+        button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),if onPanel then C.card else C.red,function() open("potions") end)
     end
 end
 
