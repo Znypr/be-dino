@@ -740,3 +740,12 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **LEAD decision.** The tabs stay in the top row, not on the right (the shop body is a fixed 824 px box and the Eggs, Conditions, Crystals and odds pages use its full width). Not picked: a right column for all five pages (needs a re-layout of every page, no Studio to check it). Overturn: a follow-up row.
 - **LEAD decision.** No "Nests" tab (the game has none); no "Find it in Volcano" hint (no data); a locked Legendary or Mythic shows "?" and "Reach level N". The rarity word sits on a cream pill so a tier colour never lies on the same tier colour. The Info word stays on the card so the details page is still reachable.
 - **Unchanged.** Server, save, prices, Robux, economy, default build. **Evidence:** offline only (`tools/verify_toybox_shop.py`, 32 mutants). No Studio, no phone, nothing seen.
+## 2026-11-14 Owner picks: Toybox style, Parasaurolophus, five new species
+
+Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questions/` (q2, q3, q4):
+- **Text outline 3 px (C-57, OWNER).** First pick 4 px; after seeing it in Studio the owner said "3px was better". Under `ToyboxUIEnabled` every outlined text is 3 px at every size (was 3 px, 4 px from 28 px text). `Kit.StrokeSmall` in `src/shared/ToyboxKit.luau`. The handbook's "2 to 3 px" stays the rule of the default build until the flag reaches it.
+- **Gloss buttons (OWNER).** The kit stays glossy; no matte variant.
+- **Dino detail header in the rarity colour (C-58, OWNER).** Under the skin the dino detail page's header is the kit header of the dino's rarity. **LEAD fill-in (PROVISIONAL):** Common cream (the kit has no grey header), Uncommon green, Rare blue, Epic purple, Legendary amber, Mythic red (red is otherwise kept for the X). To overturn: `Kit.RarityHeader`.
+- **Uploads (OWNER "yes upload to roblox").** The 23 Toybox pictures are uploaded (Decals, all moderation Approved, `docs/evidence/roblox-uploads.json`). Binding waits for the decal-to-image-id lookup in Studio.
+- **Five more playable species (OWNER "yes").** Kentrosaurus, Liopleurodon, Archelon, Sauropelta and Styracosaurus (V3 models in Place1) become game species: BD-1187.
+- **Parasaurolophus (OWNER, reluctant).** "Both look odd"; if one must be picked, the V3 "cannon alt" (B). Bind B now (BD-1186) and remodel it through the mesh pipeline (BD-1188).

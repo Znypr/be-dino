@@ -10,7 +10,7 @@ AssetSlots.luau (an engine mock stands in for Roblox; nothing is drawn):
      with every Toybox line removed, and ToyboxSkin is never required;
   3. the kit numbers: every place gets its header colour (amber shop, green potions, blue dinos, purple fusion, cream eggs, dark
      settings), every screen name the client opens has a place and none uses the red header; the nearest gloss button for each Theme
-     colour; text outline 3 px, 4 px from 28 px text; text never under 14 px; the X never under 48 px on screen;
+     colour; text outline 3 px at every size (owner 2026-11-14); text never under 14 px; the X never under 48 px on screen;
   4. the pictures (Pillow): every file of resources/ui/v2/toybox/final is in the kit with its real size and nothing else is in the
      folder; every 9-slice rect keeps the rounded corners out of the stretching centre, and the centre really is stretchable (no shine
      stripe of a header and no stud of a card inside it; a header never stretches up or down);
@@ -39,6 +39,7 @@ SLOTS = 'src/shared/AssetSlots.luau'
 MOTION = 'src/shared/UIMotion.luau'
 COMPACT = 'src/client/ModalCompact.luau'
 FUSION = 'src/client/FusionMenu.luau'
+INDEX = 'src/client/DinoIndexScreens.luau'  # owner 2026-11-14 (C-58): rarity-coloured detail header
 BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
@@ -144,8 +145,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, CONFIG, SLOTS, STYLE) + CRYSTAL_SHOP and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact, FusionMenu and the Crystal Shop files reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE) + CRYSTAL_SHOP and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)
@@ -172,8 +173,10 @@ local Kit = (__KIT__)()
 local function eq(a, b, what) assert(a == b, what .. ": got " .. tostring(a) .. ", want " .. tostring(b)) end
 -- ---- floors and text
 eq(Kit.MinText, 14, "text floor") eq(Kit.MinClose, 48, "X floor")
-eq(Kit.stroke(14), 3, "small text outline") eq(Kit.stroke(27), 3, "27 px outline") eq(Kit.stroke(28), 4, "28 px outline") eq(Kit.stroke(60), 4, "big text outline")
+eq(Kit.stroke(14), 3, "small text outline (owner 2026-11-14: 3 px)") eq(Kit.stroke(27), 3, "27 px outline") eq(Kit.stroke(28), 3, "28 px outline") eq(Kit.stroke(60), 3, "big text outline")
 eq(Kit.stroke(0 / 0), 3, "a broken size still gets an outline")
+for tier, colour in {"cream", "green", "blue", "purple", "amber", "red"} do eq(Kit.raritySlot(tier), "toybox_header_" .. colour, "rarity header " .. tier) end
+eq(Kit.raritySlot(99), "toybox_header_cream", "an unknown tier gets the Common header")
 for _, size in {1, 8, 13, 13.9} do eq(Kit.textSize(size), 14, "text under the floor") end
 eq(Kit.textSize(14), 14, "floor itself") eq(Kit.textSize(23), 23, "bigger text keeps its size") eq(Kit.textSize(0 / 0), 14, "a broken size")
 for _, size in {1, 14, 20, 28, 40, 80} do local s = Kit.stroke(size) assert(s >= 3 and s <= 4, "outline is 3..4 px") end
@@ -465,7 +468,7 @@ assert(count(w.shade, isToybox) == 0, "no id bound: no picture and no Toybox ins
 assert(w.panel.BackgroundTransparency == 0 and w.header.BackgroundTransparency == 0 and buy.BackgroundTransparency == 0, "no id bound: nothing is hidden")
 assert(w.panel:FindFirstChild("FossilTexture").Visible and w.header:FindFirstChild("FossilTexture").Visible, "no id bound: the old texture stays")
 assert(buy.TextTransparency == 0 and buy:FindFirstChildOfClass("UIStroke").Enabled and w.closeButton.TextTransparency == 0, "no id bound: buttons keep their own word and edge")
-assert(strokeOf(card) == 3 and strokeOf(big) == 4 and strokeOf(w.heading) == 4, "flag on: text outline 3 px, 4 px from 28 px text")
+assert(strokeOf(card) == 3 and strokeOf(big) == 3 and strokeOf(w.heading) == 3, "flag on: text outline 3 px at every size")
 Theme.Toybox.place("auras") -- no header strip: must not error
 '''
 
@@ -505,7 +508,7 @@ assert(drop.Position == UDim2.fromOffset(0, Kit.DropPixels) and tostring(drop.Te
 buy.Text = "Sold"
 assert(word.Text == "Sold" and drop.Text == "Sold", "the label follows the button's Text")
 buy.TextSize = 30
-assert(word.TextSize == 30 and strokeOf(word) == 4 and strokeOf(drop) == 4, "30 px text: 4 px outline")
+assert(word.TextSize == 30 and strokeOf(word) == 3 and strokeOf(drop) == 3, "30 px text: 3 px outline")
 buy.TextTransparency = .25
 assert(word.TextTransparency == .25 and drop.TextTransparency == .25 and buy.TextTransparency == 1, "a dimmed word dims the label; the button's own word stays hidden")
 for key, color in {dark = C.card, red = C.red, gold = C.gold, blue = C.blue, purple = C.purple, grey = Theme.RarityColors[1], green = C.accent} do
@@ -542,7 +545,7 @@ assert(w.header.BackgroundTransparency == 1, "a screen's flat header colour stay
 local title = w.header:FindFirstChild("ToyboxDrop")
 assert(title and title.Text == "Dino Index" and title.ZIndex < w.heading.ZIndex and title.Position == w.heading.Position + UDim2.fromOffset(0, 3), "the title has its drop, 3 px under it")
 w.heading.Text = "Eggs"
-assert(title.Text == "Eggs" and title.TextSize == 40 and strokeOf(title) == 4 and strokeOf(w.heading) == 4, "the drop follows the title; 4 px outline")
+assert(title.Text == "Eggs" and title.TextSize == 40 and strokeOf(title) == 3 and strokeOf(w.heading) == 3, "the drop follows the title; 3 px outline")
 -- ---- the X
 local x = w.closeButton:FindFirstChild("ToyboxFace")
 assert(x and x.Image == ids.toybox_close and x.ScaleType == Enum.ScaleType.Fit, "the red gloss X, drawn whole")
@@ -718,7 +721,7 @@ MUTANTS = {
     # the kit numbers
     'text floor 12 px': (KIT, 'Kit.MinText = 14', 'Kit.MinText = 12'),
     'X floor 40 px': (KIT, 'Kit.MinClose = 48', 'Kit.MinClose = 40'),
-    'thin 2 px outline': (KIT, 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 4, 28', 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 2, 4, 28'),
+    'thin 2 px outline': (KIT, 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 3, 28', 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 2, 3, 28'),
     'heavy 6 px outline': (KIT, 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 4, 28', 'Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 6, 28'),
     'the X ignores the window scale': (KIT, '    return math.max(short, Kit.MinClose) / s\n', '    return math.max(short, Kit.MinClose)\n'),
     'the Crystal Shop is green': (KIT, 'Kit.PlaceHeader = {shop = "amber",', 'Kit.PlaceHeader = {shop = "green",'),

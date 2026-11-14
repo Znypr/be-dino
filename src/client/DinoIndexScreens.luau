@@ -142,6 +142,7 @@ function Screens.render(name: string)
         local base,gold,diamond=copies(selected)
         local event=eventMutation(selected)
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected),rarityColors[index]
+        if Theme.Toybox then Theme.Toybox.rarity(index) end -- owner 2026-11-14 (C-58): rarity-coloured header under the skin
         DinoIndexPanels.species({
             body=body,speciesId=selected,color=rarityColors[index],
             owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil,
@@ -171,6 +172,7 @@ function Screens.render(name: string)
         local event=eventMutation(selected)
         local owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected),rarityColors[index]
+        if Theme.Toybox then Theme.Toybox.rarity(index) end -- owner 2026-11-14 (C-58): rarity-coloured header under the skin
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
