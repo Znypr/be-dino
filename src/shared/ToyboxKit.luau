@@ -166,7 +166,9 @@ Kit.Type = {title = 28, heading = 20, body = 16, small = 14} -- the type scale; 
 Kit.Tone = { -- bright cream (owner pick A, 2026-11-14), 0..255 rgb
     panel = {255, 247, 227}, card = {255, 253, 246}, previewTop = {255, 233, 184}, previewBottom = {246, 213, 140},
     label = {122, 106, 78}, value = {58, 47, 30}, slot = {235, 224, 196},
+    ready = {221, 243, 205}, busy = {255, 236, 190}, silhouette = {206, 190, 158}, -- BD-1195 / BD-1194: soft card tints (nest ready / growing, undiscovered dino)
 }
+Kit.CardStroke, Kit.ChipCorner = 2, 8
 Kit.DashLength, Kit.DashGap, Kit.DashThickness = 10, 8, 3 -- an empty slot: dashes round a rounded card
 -- Button heights for a window scaled by `scale`: the design size, but never under 44 px on screen (the touch rule, docs/72).
 function Kit.buttonHeights(scale: number): (number, number)
@@ -238,6 +240,123 @@ function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, so
     layout.columns = Kit.columnsFor(rightContent)
     layout.cellW = Kit.cellWidth(rightContent, layout.columns, gut)
     layout.cellH = D.cardH
+    return layout
+end
+
+-- BD-1195 (docs/232): the rects of the Eggs screen (design px inside the menu body: 824 x 402 desktop, wider / a little taller on a compact window).
+-- Top panel = the nests (heading, "Nests 0/5" chip, `capacity` equal cards); bottom row = the stage panel (egg picture) on the left and the info
+-- panel on the right (status line, up to two note lines, ONE 48 px button, the small AUTO toggle). `noteLines` = how many note lines show (0..2).
+-- One place for the numbers, so the screen and tools/verify_toybox_layout.py agree.
+Kit.Eggs = {headH = 28, chipW = 112, statusH = 28, noteH = 24, nestCardMax = 132, nestCardMin = 48, stageMaxW = 300, stageMinW = 200, infoMinW = 300, autoW = 150}
+function Kit.eggsLayout(scale: number, bodyW: number?, bodyH: number?, noteLines: number?, capacity: number?)
+    local E = Kit.Eggs
+    local W, H = bodyW or 824, bodyH or 402
+    local cap = capacity or 5
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local notes = math.clamp(noteLines or 0, 0, 2) * E.noteH
+    local infoMin = pad + E.statusH + notes + gut + big + gut + small + pad
+    local nestsH = math.max(pad + E.headH + gut + E.nestCardMin + pad, math.min(pad + E.headH + gut + E.nestCardMax + pad, H - gut - infoMin))
+    local bottomH = H - gut - nestsH
+    local layout: any = {big = big, small = small, width = W, height = H, capacity = cap}
+    layout.nests = {x = 0, y = 0, w = W, h = nestsH}
+    layout.nestHead = {x = pad, y = pad, w = W - 2 * pad - E.chipW - gut, h = E.headH}
+    layout.nestChip = {x = W - pad - E.chipW, y = pad, w = E.chipW, h = E.headH}
+    local cellW = Kit.cellWidth(W - 2 * pad, cap, gut)
+    local cardY = pad + E.headH + gut
+    layout.cellW, layout.cellH = cellW, nestsH - cardY - pad
+    layout.nestCards = {}
+    for i = 1, cap do table.insert(layout.nestCards, {x = pad + (i - 1) * (cellW + gut), y = cardY, w = cellW, h = layout.cellH}) end
+    local by = nestsH + gut
+    local stageW = math.clamp(math.floor(W * 0.38), E.stageMinW, E.stageMaxW)
+    layout.stagePanel = {x = 0, y = by, w = stageW + 2 * pad, h = bottomH}
+    layout.stage = {x = pad, y = pad, w = stageW, h = bottomH - 2 * pad} -- inside the stage panel
+    local infoX = stageW + 2 * pad + gut
+    local infoW = W - infoX
+    layout.infoPanel = {x = infoX, y = by, w = infoW, h = bottomH}
+    layout.status = {x = pad, y = pad, w = infoW - 2 * pad, h = E.statusH}
+    layout.notes = {x = pad, y = pad + E.statusH, w = infoW - 2 * pad, h = notes}
+    layout.action = {x = pad, y = bottomH - pad - small - gut - big, w = infoW - 2 * pad, h = big}
+    layout.auto = {x = pad, y = bottomH - pad - small, w = E.autoW, h = small}
+    layout.autoLine = {x = pad + E.autoW + gut, y = bottomH - pad - small, w = infoW - 2 * pad - E.autoW - gut, h = small}
+    return layout
+end
+
+-- BD-1194 (docs/232): the rects of the Dino Index list. The bottom bar (progress meter, page arrows, FUSION) is ALWAYS inside the body, one
+-- button high at its foot; the card grid above it scrolls and fills the body width in equal columns (the 8 px scroll-bar strip stays on the right).
+Kit.Index = {minCard = 190, maxColumns = 6, minColumns = 3, cardH = 176, fusionW = 140, arrowW = 48, pageW = 64, minMeter = 120, scrollBar = 8}
+function Kit.indexLayout(scale: number, bodyW: number?, bodyH: number?, paged: boolean?)
+    local I = Kit.Index
+    local W, H = bodyW or 824, bodyH or 402
+    local big = Kit.buttonHeights(scale)
+    local gut = Kit.Gutter
+    local layout: any = {big = big, width = W, height = H}
+    layout.bar = {x = 0, y = H - big, w = W, h = big}
+    layout.grid = {x = 0, y = 0, w = W, h = math.max(H - big - gut, 0)}
+    layout.fusion = {x = W - I.fusionW, y = H - big, w = I.fusionW, h = big}
+    local right = layout.fusion.x - gut
+    if paged then
+        layout.next = {x = right - I.arrowW, y = H - big, w = I.arrowW, h = big}
+        layout.page = {x = layout.next.x - gut - I.pageW, y = H - big, w = I.pageW, h = big}
+        layout.prev = {x = layout.page.x - gut - I.arrowW, y = H - big, w = I.arrowW, h = big}
+        right = layout.prev.x - gut
+    end
+    layout.meter = {x = 0, y = H - big, w = right, h = big}
+    local content = W - I.scrollBar
+    layout.columns = math.clamp(math.floor((content + gut) / (I.minCard + gut)), I.minColumns, I.maxColumns)
+    layout.cellW = Kit.cellWidth(content, layout.columns, gut)
+    layout.cellH = I.cardH
+    return layout
+end
+
+-- docs/232: the rects of the Fusion Menu body. Three cream panels (dino list | slots | result) 12 px apart fill the body width; when the
+-- three tier chips do not fit above the list (`wide`) they take one row across the top and the panels start 12 px under it. Everything inside a
+-- panel sits 12 px from its edge; the bottom of the centre panel holds the two small grey buttons, the bottom of the result panel the ONE
+-- primary FUSE button. The dino list, the slot grid and the odds list scroll or share what is left, never overflow the body.
+Kit.Fusion = {headH = 28, noteH = 20, guaranteeH = 24, filterW = 96, leftFrac = 0.38, centreFrac = 0.28, fillFrac = 0.6, minResult = 48}
+function Kit.fusionLayout(scale: number, bodyW: number?, bodyH: number?, wide: boolean?)
+    local F = Kit.Fusion
+    local W, H = bodyW or 1160, bodyH or 390
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local top = if wide then big + gut else 0
+    local PH = H - top
+    local avail = W - 2 * gut
+    local leftW = math.floor(avail * F.leftFrac)
+    local centreW = math.floor(avail * F.centreFrac)
+    local rightW = avail - leftW - centreW
+    local layout: any = {big = big, small = small, width = W, height = H, wide = wide == true}
+    layout.tabRow = if wide then {x = 0, y = 0, w = W, h = big} else nil
+    layout.left = {x = 0, y = top, w = leftW, h = PH}
+    layout.centre = {x = leftW + gut, y = top, w = centreW, h = PH}
+    layout.right = {x = leftW + centreW + 2 * gut, y = top, w = rightW, h = PH}
+    -- inside the dino list panel (coordinates of the panel's inner box, 12 px in)
+    local li = {w = leftW - 2 * pad, h = PH - 2 * pad}
+    layout.leftIn = li
+    local ly = 0
+    if not wide then layout.tabs = {x = 0, y = 0, w = li.w, h = big} ly = big + gut end
+    layout.goal = {x = 0, y = ly, w = li.w - F.filterW - gut, h = small}
+    layout.filter = {x = li.w - F.filterW, y = ly, w = F.filterW, h = small}
+    layout.grid = {x = 0, y = ly + small + gut, w = li.w, h = math.max(li.h - ly - small - gut, 0)}
+    -- inside the slots panel
+    local ci = {w = centreW - 2 * pad, h = PH - 2 * pad}
+    layout.centreIn = ci
+    layout.head = {x = 0, y = 0, w = ci.w, h = F.headH}
+    local fillW = math.floor((ci.w - gut) * F.fillFrac)
+    layout.fill = {x = 0, y = ci.h - small, w = fillW, h = small}
+    layout.clear = {x = fillW + gut, y = ci.h - small, w = ci.w - fillW - gut, h = small}
+    layout.slots = {x = 0, y = F.headH + gut, w = ci.w, h = math.max(ci.h - F.headH - gut - gut - small, 0)}
+    -- inside the result panel
+    local ri = {w = rightW - 2 * pad, h = PH - 2 * pad}
+    layout.rightIn = ri
+    layout.fuse = {x = 0, y = ri.h - big, w = ri.w, h = big}
+    layout.note = {x = 0, y = ri.h - big - gut - F.noteH, w = ri.w, h = F.noteH}
+    local free = math.max(layout.note.y - gut, 0)
+    local resultH = math.max(F.minResult, math.floor((free - F.guaranteeH - 2 * gut) * 0.5))
+    layout.result = {x = 0, y = 0, w = ri.w, h = math.min(resultH, free)}
+    layout.guarantee = {x = 0, y = layout.result.h + gut, w = ri.w, h = F.guaranteeH}
+    local oddsY = layout.guarantee.y + F.guaranteeH + gut
+    layout.odds = {x = 0, y = oddsY, w = ri.w, h = math.max(free - oddsY, 0)}
     return layout
 end
 

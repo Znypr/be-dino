@@ -1,0 +1,11 @@
+{
+ "build": "eggs/index branch + #584 + #583 + #582 (playtest)",
+ "viewport": "1274x481",
+ "screens": {
+  "hud": "hud.jpg",
+  "eggs": "eggs.jpg",
+  "collection": "collection.jpg",
+  "auras": "auras.jpg",
+  "fusion": "fusion.jpg"
+ }
+}

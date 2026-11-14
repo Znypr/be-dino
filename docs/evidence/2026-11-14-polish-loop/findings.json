@@ -1,0 +1,200 @@
+[
+ {
+  "screen": "all windows",
+  "role": "ux",
+  "title": "Content uses only the left two thirds; right third is empty studs",
+  "detail": "Index, Eggs, Shop, Potions and Settings all stop at about x=840 of a 1250 px window; the rest is a bare stud field, so every menu looks unfinished.",
+  "fix": "Lay content out to the window width with the docs/232 helpers (grid columns grow, inset 16, gutter 12) or size the window to its content.",
+  "severity": 3,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "all windows",
+  "role": "ux",
+  "title": "The X hangs on the header corner",
+  "detail": "The red X overlaps the strip outline and the frame on every window (owner noticed).",
+  "fix": "X fully inside the strip, centred, equal 8 px inset (in the BD-1189 pilot brief).",
+  "severity": 3,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "all windows",
+  "role": "reviewer",
+  "title": "Header strip is a long empty bar with a small left title",
+  "detail": "Title is small and left, the striped strip runs empty to the X; top games put a bigger title with an icon and keep the strip short or centred.",
+  "fix": "Title 28 px with the place icon, strip only as wide as needed or centred title.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "hud",
+  "role": "qa",
+  "title": "Side rail broken: only POTIONS and a shield float at the top centre",
+  "detail": "Dinos, Eggs, Fusion, Shop and Settings buttons are missing; POTIONS and the shield sit over the SIZE bar area at the short viewport.",
+  "fix": "Fix the rail layout for short landscape screens (vertical rail on the left edge, all six, 44 px min).",
+  "severity": 3,
+  "reach": 3,
+  "kind": "bug",
+  "needs_owner": false
+ },
+ {
+  "screen": "hud",
+  "role": "art",
+  "title": "HUD buttons in four styles",
+  "detail": "LEAP (blue, icon, two lines \"[E] ready\"), CHOMP (green, F badge), HOME (big red) and the weather pill each look different; red HOME reads as danger.",
+  "fix": "One HUD button style from the kit: same height, icon + one word, key hint as a small badge; HOME grey or blue.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "art",
+  "needs_owner": false
+ },
+ {
+  "screen": "hud",
+  "role": "kid",
+  "title": "Hint text floats on the world with no plate",
+  "detail": "\"Eat food to grow. Bigger dinos find eggs!\" sits under an empty dark SIZE capsule; hard to read on bright grass.",
+  "fix": "Put the objective on a small cream plate with an icon; show SIZE as a filled bar with a dino icon.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "collection",
+  "role": "qa",
+  "title": "Bottom bar cut off at short screens",
+  "detail": "At 1274x481 the progress bar, page arrows and FUSION button are clipped under the window edge.",
+  "fix": "Scroll the grid, keep the bottom bar always inside the window (safe area), test at 481 px height.",
+  "severity": 3,
+  "reach": 2,
+  "kind": "bug",
+  "needs_owner": false
+ },
+ {
+  "screen": "collection",
+  "role": "kid",
+  "title": "Undiscovered cards repeat \"??? / ???\" and black blobs",
+  "detail": "Six of six visible cards are black silhouettes with \"???\" twice and \"Not discovered\"; it reads as empty and a bit gloomy.",
+  "fix": "One \"?\" line, soft tinted silhouette, a hint where to find it (rarity colour edge).",
+  "severity": 2,
+  "reach": 2,
+  "kind": "copy",
+  "needs_owner": false
+ },
+ {
+  "screen": "eggs",
+  "role": "ux",
+  "title": "Oversized Explore button and nested boxes",
+  "detail": "A huge green Explore block, a cyan banner and a cyan AUTO button stack inside a dark box inside the window; three button colours on one screen.",
+  "fix": "One primary button (Explore, normal 48 px height), banner as plain text, AUTO as a toggle chip; one panel.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "eggs",
+  "role": "art",
+  "title": "Nest slots are tiny icons in heavy frames",
+  "detail": "Five slots show a small nest icon over an \"Empty\" pill in a dark frame; nothing inviting.",
+  "fix": "Bigger nest art per slot, soft empty state, the count as a chip.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "art",
+  "needs_owner": false
+ },
+ {
+  "screen": "auras",
+  "role": "qa",
+  "title": "Price text overlaps the crystal icon",
+  "detail": "\"3700 Crystals\" and \"470 Crystals\" run into the crystal icon on the buy buttons.",
+  "fix": "Measure icon + text and centre them as one group; shorter \"3,700\" with the icon only.",
+  "severity": 3,
+  "reach": 3,
+  "kind": "bug",
+  "needs_owner": false
+ },
+ {
+  "screen": "auras",
+  "role": "art",
+  "title": "Aura icons do not fit the icon set",
+  "detail": "Owner 2026-11-14: the aura pictures do not fit the new set (footprint medallion in a ring).",
+  "fix": "Remake Meadow, Tidal, Royal in the batch-2 style (glossy chunky symbol, no medallion) via ChatGPT, owner picks.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "art",
+  "needs_owner": true
+ },
+ {
+  "screen": "auras",
+  "role": "kid",
+  "title": "Long helper line for a kid",
+  "detail": "\"Switch dinos in Dinos to style another one\" is long and abstract.",
+  "fix": "\"Styling: Compy\" with a small \"Change\" button.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "copy",
+  "needs_owner": false
+ },
+ {
+  "screen": "potions",
+  "role": "art",
+  "title": "Prime Feast has a blank blue square instead of a picture",
+  "detail": "The Rare potion card shows an empty blue tile where the bottle should be.",
+  "fix": "Bind or make the missing potion icon; a missing icon should fall back to the generic bottle, never a blank tile.",
+  "severity": 3,
+  "reach": 2,
+  "kind": "art",
+  "needs_owner": false
+ },
+ {
+  "screen": "potions",
+  "role": "ux",
+  "title": "Grey price buttons look disabled",
+  "detail": "Common potion prices sit on grey buttons, the same grey as sold out; Uncommon are green.",
+  "fix": "Buy buttons always green with the crystal icon; grey only for sold out / cannot afford.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "layout",
+  "needs_owner": false
+ },
+ {
+  "screen": "potions",
+  "role": "qa",
+  "title": "Footer text clipped and on studs",
+  "detail": "\"Rarer potions show up less often. Your potions (tap to use)\" sits on studs at the bottom edge, half cut.",
+  "fix": "Move to a panel footer or a small info button.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "bug",
+  "needs_owner": false
+ },
+ {
+  "screen": "fusion",
+  "role": "qa",
+  "title": "Opening Fusion shows an empty window titled \"Potion Shop\"",
+  "detail": "open(\"fusion\") through the shared window gave an empty purple window with the previous title; the Fusion Menu is its own window. Verify the rail path does not do this.",
+  "fix": "Route \"fusion\" to FusionMenu everywhere; the shared window never shows an empty body; set the title on every open.",
+  "severity": 3,
+  "reach": 2,
+  "kind": "bug",
+  "needs_owner": false
+ },
+ {
+  "screen": "settings",
+  "role": "ux",
+  "title": "Rows sit on studs, values far right",
+  "detail": "Labels, sliders and percents are placed on the stud field; RESET SOUND and ON are different sizes; the cyan SOUND LAB is a dev tool shown to kids.",
+  "fix": "Settings rows on one panel, slider + value together, hide SOUND LAB outside Studio/admin.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "layout",
+  "needs_owner": false
+ }
+]
