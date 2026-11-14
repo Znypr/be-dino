@@ -143,7 +143,7 @@ for _, touch in {false, true} do
                     check(not string.find(act.Text, "Crystals", 1, true), ctag .. ": no price on a locked button")
                 else
                     seen.buy += 1
-                    check(act.Text == item.price .. " Crystals" and act.BackgroundColor3 == Colors.accent and act.Active == true, ctag .. ": the price is on the green button (" .. act.Text .. ")")
+                    check(act.Text == UIFormatReal.number(item.price) .. " Crystals" and act.BackgroundColor3 == Colors.accent and act.Active == true, ctag .. ": the price is on the green button (" .. act.Text .. ")")
                 end
                 -- nothing else writes the price on the card
                 for _, d in card:GetDescendants() do

@@ -26,6 +26,7 @@ MODULES.update({
     'ShopTiles': 'src/client/ShopTiles.luau',
     'ShopCards': 'src/client/ShopCards.luau',
     'ShopCard': 'src/client/ShopCard.luau',
+    'PriceGroup': 'src/shared/PriceGroup.luau',  # BD-1192
     'ShopCardState': 'src/shared/ShopCardState.luau',
     'ShopPreview': 'src/shared/ShopPreview.luau',
     'ShopForDino': 'src/shared/ShopForDino.luau',

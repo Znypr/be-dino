@@ -1,0 +1,12 @@
+[
+ {
+  "screen": "fusion",
+  "role": "art",
+  "title": "Empty dark bar on the Fusion donor card",
+  "detail": "Under \"Older dino\" the donor card shows an empty dark progress bar.",
+  "fix": "Hide the bar when there is no progress to show, or draw it as a thin cream track with its label.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "art"
+ }
+]
