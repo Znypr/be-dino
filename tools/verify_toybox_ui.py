@@ -135,7 +135,7 @@ def static_checks(read):
         assert style.count(hook) == 1, 'TextStyle hook: %r' % hook
     assert code_only(style).count('SkinThickness') == 5 and 'require(' not in code_only(style), 'TextStyle only reads its own SkinThickness (nil by default)'
     compact = read(COMPACT)
-    assert compact.count('function M.layout(screen: string?)\n    local c = ctx\n    if not c then return end\n' + COMPACT_PLACE) == 1, 'ModalCompact.layout recolours the header only when it is given a screen name'
+    assert compact.count('local function doLayout(screen: string?)\n    local c = ctx\n    if not c then return end\n' + COMPACT_PLACE) == 1, 'ModalCompact.layout recolours the header only when it is given a screen name'
     assert compact.count(COMPACT_WINDOW + '    M.layout()\n') == 1, 'ModalCompact.attach skins the menu window (flag on only)'
     assert code_only(compact).count('Toybox') == 4, 'ModalCompact mentions Toybox only in its two hook lines'
     fusion = read(FUSION)
