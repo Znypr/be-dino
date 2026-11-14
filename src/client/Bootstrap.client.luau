@@ -1041,9 +1041,5 @@ Input.InputBegan:Connect(function(input,processed)
         if require(Shared.ModalCloseRules).keyAction(if shade.Visible then active else "",want)=="close" then close() else open(want) end -- BD-1074: key twice = closed
     end
 end)
-<<<<<<< HEAD
-require(script.Parent.ScreenTour).attach(player,open,close,function() return active end)
-=======
 if RunService:IsStudio() then require(script.Parent.ScreenTour)(player,open,close,function() return active end) end -- BD-1191
->>>>>>> origin/claude/polish-loop-asset-picks
 end mountHud() end

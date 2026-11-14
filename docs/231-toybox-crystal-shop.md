@@ -25,7 +25,7 @@ No new flag: the shop follows `Config.ToyboxUIEnabled` (default false, playtest 
 - a **cream benefit band** with dark text ("Growth +15%", "Faster"), then **ONE wide button** at the foot: green with the crystal icon and the number ("60", "3,700": icon and number are one group, `PriceGroup`, BD-1192, so they never overlap, also with the skin's word label), grey UNEQUIP on the equipped card (gold ring + soft glow), grey LOCKED on a locked secret card;
 - a **locked Legendary / Mythic** is a secret: name "???", a "?" in the art box, a short hint ("Reach level 30") in the band, LOCKED. A locked trail of a lower tier keeps its picture and says LEVEL n;
 - the old **Info** word is gone from the card (not in the target); a **tap on the art box** opens the same read-only details page.
-- Art in the box today: the aura ring icon / trail icon. A live 3D preview of the player's dino wearing the aura is NOT done here (row BD-1203).
+- Art in the box today: the bound aura picture (the v2 ring alone, `AuraRing`, centred) / the trail icon; tab and Styling chip words are dark ink (#3A2F1E) on their own label, no outline. A live 3D preview of the player's dino wearing the aura is NOT done here (row BD-1203).
 
 ## 3. Not done, and why (OWNER QUESTION in docs/116 C-59)
 

@@ -77,6 +77,8 @@ MUTANTS = {
     'the selected tab is not amber': {'ShopToyboxPage': [('b.BackgroundColor3 = if selected then AMBER else tone("panel")', 'b.BackgroundColor3 = tone("panel")')]},
     'Eggs and Crystals have no cream panel': {'ShopScreens': [('if cosmeticTab~="auras" and cosmeticTab~="trails" then ToyboxPage.panel(', 'if false then ToyboxPage.panel(')]},
     'the popup has no cream panel': {'ShopScreens': [('if onPanel then ToyboxPage.panel(body,0,', 'if false then ToyboxPage.panel(body,0,')]},
+    'the aura card draws the old assembled art, not the ring': {'ShopToyboxCard': [('if type(ring) == "string" and ring ~= "" then', 'if false then')]},
+    'the tab word is drawn outlined white': {'ShopToyboxPage': [('    ink(word)\n', '    word.TextColor3 = Color3.new(1, 1, 1)\n')]},
     'a tap on the price buys at once (no popup)': {'ShopScreens': [('                    else chosenAura=item.id open("auraConfirm") end\n                end,\n                onInfo=', '                    else transact(if isTrail then "buyTrail" else "buyAura",item.id) end\n                end,\n                onInfo=')]},
 }
 
@@ -107,9 +109,9 @@ def check_sources():
             assert needle not in source, label + ' is presentation only: ' + needle
     assert card.count('Instance.new("Frame")') == 1, 'the one Frame of the card is the ray fan (a rotating holder), nothing else is built from frames'
     made = set(re.findall(r'Instance\.new\("(\w+)"\)', card))
-    assert made == {'ImageLabel', 'Frame', 'UICorner', 'UIStroke', 'UIPadding', 'UIGradient', 'TextButton', 'UITextSizeConstraint'} - {'UITextSizeConstraint'}, 'ShopToyboxCard draws no art itself (pictures, one ray holder, flat cream boxes and the art tap only): %s' % sorted(made)
+    assert made == {'ImageLabel', 'Frame', 'UICorner', 'UIStroke', 'UIPadding', 'UIGradient', 'TextButton'}, 'ShopToyboxCard draws no art itself (pictures, one ray holder, flat cream boxes and the art tap only): %s' % sorted(made)
     made = set(re.findall(r'Instance\.new\("(\w+)"\)', page))
-    assert made == {'Frame', 'TextButton', 'ScrollingFrame', 'UICorner', 'UIStroke'}, 'ShopToyboxPage draws flat cream boxes and chips only (no picture): %s' % sorted(made)
+    assert made == {'Frame', 'TextButton', 'TextLabel', 'ScrollingFrame', 'UICorner', 'UIStroke'}, 'ShopToyboxPage draws flat cream boxes and chips only (no picture): %s' % sorted(made)
     assert 'ImageLabel' not in page and 'rbxassetid' not in page, 'the page draws no picture itself'
     assert 'Images' in card and 'Kit.image(Slots.Images' in card, 'the card picture id is read from AssetSlots.Images (never an invented id)'
     assert not re.search(r'rbxassetid://\d', read('src/client/ShopToyboxCard.luau') + read('src/client/ShopToyboxPage.luau') + read('src/shared/ToyboxShop.luau')), 'no asset id is written in the new files'

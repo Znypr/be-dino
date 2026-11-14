@@ -73,9 +73,16 @@ local function chip(parent: GuiObject, name: string, text: string, x: number, wi
     b.BackgroundColor3 = if selected then AMBER else tone("panel")
     b.Position, b.Size, b.ZIndex = UDim2.fromOffset(x, 0), UDim2.fromOffset(width, height), parent.ZIndex + 1
     b.Font, b.TextSize, b.TextColor3 = Enum.Font.FredokaOne, textSize, tone("value")
-    b.TextStrokeTransparency = 1
+    b.TextTransparency, b.TextStrokeTransparency = 1, 1 -- the button keeps the word (tests, accessibility); the dark word below is what is drawn
     round(b, 12)
     outline(b, 3)
+    -- the word: dark ink, no outline, on its own label so no outline style of the window can touch it (owner / lead Studio check 2026-11-14)
+    local word = Instance.new("TextLabel")
+    word.Name, word.BackgroundTransparency, word.Size, word.ZIndex, word.Text = "ChipWord", 1, UDim2.fromScale(1, 1), b.ZIndex + 1, text
+    word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, textSize, false, Enum.TextXAlignment.Center
+    ink(word)
+    word.Parent = b
+    word.ChildAdded:Connect(function(child) if child:IsA("UIStroke") then child.Transparency = 1 end end)
     b.Activated:Connect(callback)
     b.Parent = parent
     return b

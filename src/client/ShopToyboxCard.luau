@@ -146,8 +146,16 @@ function Card.build(ui, parent: GuiObject, spec)
             who.Size, who.Position = UDim2.fromScale(.34, 1), UDim2.fromScale(.64, 0)
         else
             local size = math.clamp(math.min(innerH - 8, plan.art.w - 8), 48, 140)
-            local icon = ui.art(art, "aura_" .. item.id, (plan.art.w - size) / 2, (innerH - size) / 2, size)
-            if icon then icon.ZIndex = art.ZIndex + 3 end
+            local ring = (Slots.Images :: any)["aura_" .. item.id] -- the bound aura picture (the v2 ring alone), never the assembled layers
+            if type(ring) == "string" and ring ~= "" then
+                local img = Instance.new("ImageLabel")
+                img.Name, img.BackgroundTransparency, img.Image, img.ScaleType = "AuraRing", 1, ring, Enum.ScaleType.Fit
+                img.AnchorPoint, img.Position, img.Size, img.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(size, size), art.ZIndex + 3
+                img.Parent = art
+            else
+                local icon = ui.art(art, "aura_" .. item.id, (plan.art.w - size) / 2, (innerH - size) / 2, size)
+                if icon then icon.ZIndex = art.ZIndex + 3 end
+            end
         end
     end
     local tap = Instance.new("TextButton")

@@ -191,6 +191,9 @@ for _, touch in {false, true} do
                     local selected = (id == page)
                     check(d.Text == Rules.tabTitle(id), tag .. ": tab text " .. d.Text)
                     check(sameColour(d.BackgroundColor3, Color3.fromRGB(255, 215, 106)) == selected, tag .. ": only the selected tab is amber (" .. id .. ")")
+                    local word = childNamed(d, "ChipWord")
+                    check(word ~= nil and word.Text == d.Text and sameColour(word.TextColor3, Color3.fromRGB(KitReal.Tone.value[1], KitReal.Tone.value[2], KitReal.Tone.value[3])) and word.TextStrokeTransparency == 1, tag .. ": tab " .. id .. " is dark ink without an outline")
+                    check(word ~= nil and pxOf(word) >= 13.5, tag .. ": the tab word is at least 14 px")
                     check(pxOf(d) >= 13.5 and rectOf(d).h >= 43.5, string.format("%s: tab %s is %.1f px text, %d px high", tag, id, pxOf(d), rectOf(d).h + .5))
                 end
             end
@@ -275,6 +278,11 @@ for _, touch in {false, true} do
                 if word and name then check(rectOf(name).y + rectOf(name).h <= rectOf(word).y + 1.5 and rectOf(word).y + rectOf(word).h <= ar.y + 1.5, ctag .. ": name, pill, art box in order") end
                 check(ar.h >= 48 * k - 1, ctag .. ": the art box keeps room for a picture")
                 check(art.ClipsDescendants == true and childNamed(art, "InfoTap") ~= nil, ctag .. ": the art box is clipped and taps open the details")
+                if not isTrail then
+                    local ring = childNamed(art, "AuraRing")
+                    check(ring ~= nil and ring.Image == SlotsReal.Images["aura_" .. id] and ring.Image ~= "", ctag .. ": the art box shows the bound aura picture (the ring)")
+                    if ring then check(inside(rectOf(ring), ar, 1.5), ctag .. ": the ring is inside the art box") end
+                end
                 -- rays: three, from the uploaded shaft texture
                 local fan = childNamed(art, "Rays")
                 check(fan ~= nil and #fan:GetChildren() == 3, ctag .. ": three slow rays behind the art")
