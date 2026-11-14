@@ -136,6 +136,110 @@ for _, win in windows do
         assert(n >= 10, tag .. "the helpers drew their texts: " .. n)
     end
 end
+-- ---- BD-1195: the Eggs screen at the four windows ----
+local function coloured(buttons)
+    local n = 0
+    for _, b in buttons do
+        local c = b.BackgroundColor3
+        if Kit.buttonKey(math.floor(c.R * 255 + .5), math.floor(c.G * 255 + .5), math.floor(c.B * 255 + .5)) ~= "grey" then n += 1 end
+    end
+    return n
+end
+local GREYC = Color3.fromRGB(128, 142, 158)
+for _, win in windows do
+    for _, notes in {0, 1, 2} do
+        if win.scale < 0.6 and notes == 2 then continue end -- the artificial 0.56 window cannot hold two note lines (no real window is that small: the lowest real scale is 0.77)
+        local tag = string.format("eggs %s (body %dx%d, scale %.2f) notes %d: ", win.name, win.w, win.h, win.scale, notes)
+        local lay = Kit.eggsLayout(win.scale, win.w, win.h, notes, 5)
+        local W, H, pad, gut = lay.width, lay.height, Kit.PanelPad, Kit.Gutter
+        local big, small = Kit.buttonHeights(win.scale)
+        assert(W == win.w and H == win.h, tag .. "the screen uses the whole body")
+        assert(lay.nests.x == 0 and lay.nests.w == W and lay.nests.y == 0, tag .. "the nests panel fills the width")
+        assert(lay.nests.y + lay.nests.h + gut == lay.stagePanel.y and lay.stagePanel.y == lay.infoPanel.y, tag .. "nests to the bottom row is 12 px")
+        assert(lay.stagePanel.x == 0 and lay.stagePanel.x + lay.stagePanel.w + gut == lay.infoPanel.x and lay.infoPanel.x + lay.infoPanel.w == W, tag .. "stage and info panels: 12 px apart, filling the width")
+        assert(lay.stagePanel.y + lay.stagePanel.h == H and lay.infoPanel.y + lay.infoPanel.h == H, tag .. "nothing below the body")
+        assert(lay.infoPanel.w >= Kit.Eggs.infoMinW - 1 and lay.stagePanel.w >= Kit.Eggs.stageMinW, tag .. "both bottom panels have room")
+        inside(lay.nestHead, W, lay.nests.h, pad, tag .. "heading inside the nests panel")
+        inside(lay.nestChip, W, lay.nests.h, pad, tag .. "count chip inside the nests panel")
+        assert(lay.nestHead.x + lay.nestHead.w + gut == lay.nestChip.x and lay.nestChip.x + lay.nestChip.w + pad == W, tag .. "heading and chip 12 px apart")
+        assert(#lay.nestCards == 5, tag .. "five nest cards")
+        for i, card in lay.nestCards do
+            inside(card, W, lay.nests.h, pad, tag .. "nest card " .. i .. " inside the nests panel with 12 px")
+            assert(card.w == lay.cellW and card.h == lay.cellH and card.y == pad + Kit.Eggs.headH + gut, tag .. "equal nest cards under the heading, 12 px gap")
+            if i > 1 then assert(lay.nestCards[i - 1].x + lay.nestCards[i - 1].w + gut == card.x, tag .. "nest cards 12 px apart") end
+        end
+        assert(lay.cellH >= Kit.Eggs.nestCardMin and lay.cellW >= 100, tag .. "nest cards big enough for the art")
+        local lastCard = lay.nestCards[5]
+        assert(W - pad - (lastCard.x + lastCard.w) <= 5, tag .. "the row of cards fills the panel width")
+        inside(lay.stage, lay.stagePanel.w, lay.stagePanel.h, pad, tag .. "stage inside its panel with 12 px")
+        assert(lay.stage.w + 2 * pad == lay.stagePanel.w and lay.stage.h + 2 * pad == lay.stagePanel.h, tag .. "the stage fills its panel")
+        for _, name in {"status", "notes", "action", "auto", "autoLine"} do inside(lay[name], lay.infoPanel.w, lay.infoPanel.h, pad, tag .. name .. " inside the info panel with 12 px") end
+        assert(lay.status.y + lay.status.h <= lay.notes.y and lay.notes.y + lay.notes.h + gut <= lay.action.y, tag .. "status, notes, button do not overlap (12 px above the button)")
+        assert(lay.action.y + lay.action.h + gut == lay.auto.y and lay.auto.y + lay.auto.h + pad == lay.infoPanel.h, tag .. "AUTO 12 px under the button, 12 px from the foot")
+        assert(lay.auto.x + lay.auto.w + gut == lay.autoLine.x and lay.autoLine.w >= 100, tag .. "AUTO toggle and its line 12 px apart")
+        assert(lay.action.h == big and lay.auto.h == small and big >= 48 and big * win.scale >= 44 - 1e-6 and small * win.scale >= 44 - 1e-6, tag .. "ONE 48 px primary button, AUTO small, never under 44 px on screen")
+        assert(lay.action.w == lay.infoPanel.w - 2 * pad, tag .. "the primary button is full width of its panel")
+        local root = Instance.new("Frame")
+        local nests = Layout.panel(root, "Nests", UDim2.fromOffset(lay.nests.w, lay.nests.h), UDim2.new())
+        Layout.text(nests, "Lucky nests open one at a time.", UDim2.fromOffset(lay.nestHead.w, lay.nestHead.h), UDim2.fromOffset(lay.nestHead.x, lay.nestHead.y), Kit.Type.body, "label")
+        local chip = Layout.chip(nests, "Nests 0/5", UDim2.fromOffset(lay.nestChip.w, lay.nestChip.h), UDim2.fromOffset(lay.nestChip.x, lay.nestChip.y))
+        for i, card in lay.nestCards do
+            local c = Layout.card(nests, "NestSlot" .. i, UDim2.fromOffset(card.w, card.h), UDim2.fromOffset(card.x, card.y), if i == 2 then "ready" else nil)
+            Layout.text(c, "Empty", UDim2.fromOffset(card.w - 8, 24), UDim2.fromOffset(4, card.h - 32), Kit.Type.body, "label", Enum.TextXAlignment.Center)
+        end
+        local info = Layout.panel(root, "Info", UDim2.fromOffset(lay.infoPanel.w, lay.infoPanel.h), UDim2.fromOffset(lay.infoPanel.x, lay.infoPanel.y))
+        Layout.text(info, "Go find eggs on the island!", UDim2.fromOffset(lay.status.w, lay.status.h), UDim2.fromOffset(lay.status.x, lay.status.y), Kit.Type.heading)
+        local open = Layout.actionButton(info, "Explore", UDim2.fromOffset(lay.action.w, lay.action.h), UDim2.fromOffset(lay.action.x, lay.action.y), C.accent, false, function() end)
+        local auto = Layout.actionButton(info, "AUTO: OFF", UDim2.fromOffset(lay.auto.w, lay.auto.h), UDim2.fromOffset(lay.auto.x, lay.auto.y), GREYC, true, function() end)
+        assert(coloured({open, auto}) == 1, tag .. "exactly one coloured button (Explore / OPEN)")
+        inside(rect(chip), lay.nests.w, lay.nests.h, pad, tag .. "chip instance inside the nests panel")
+        assert(texts(root, tag .. "screen") >= 9, tag .. "texts drawn")
+    end
+end
+assert(Kit.Eggs.autoW >= 140, "the AUTO toggle is wide enough for 'AUTO: LOCKED' at 16 px")
+
+-- ---- BD-1194: the Dino Index list at the four windows ----
+for _, win in windows do
+    for _, paged in {false, true} do
+        local tag = string.format("index %s (body %dx%d, scale %.2f) paged %s: ", win.name, win.w, win.h, win.scale, tostring(paged))
+        local lay = Kit.indexLayout(win.scale, win.w, win.h, paged)
+        local W, H, gut = lay.width, lay.height, Kit.Gutter
+        local big = Kit.buttonHeights(win.scale)
+        assert(W == win.w and H == win.h, tag .. "the list uses the whole body")
+        assert(lay.bar.y + lay.bar.h == H and lay.bar.h == big and big >= 48 and big * win.scale >= 44 - 1e-6, tag .. "the bottom bar sits inside the body, button high, never under 44 px on screen")
+        assert(lay.grid.x == 0 and lay.grid.w == W and lay.grid.y == 0 and lay.grid.y + lay.grid.h + gut == lay.bar.y, tag .. "the grid fills the width and ends 12 px above the bar (it scrolls)")
+        assert(lay.fusion.x + lay.fusion.w == W and lay.fusion.y == lay.bar.y, tag .. "FUSION at the right end of the bar")
+        local right = lay.fusion.x - gut
+        if paged then
+            assert(lay.next.x + lay.next.w == right and lay.page.x + lay.page.w + gut == lay.next.x and lay.prev.x + lay.prev.w + gut == lay.page.x, tag .. "page arrows 12 px apart")
+            right = lay.prev.x - gut
+        end
+        assert(lay.meter.x == 0 and lay.meter.x + lay.meter.w == right and lay.meter.w >= Kit.Index.minMeter, tag .. "the progress meter takes the rest of the bar (at least 120 px)")
+        for _, name in {"meter", "fusion"} do inside(lay[name], W, H, 0, tag .. name .. " inside the body") end
+        assert(lay.columns >= 3 and lay.columns <= 6, tag .. "3 to 6 columns")
+        local content = W - Kit.Index.scrollBar
+        local used = lay.cellW * lay.columns + (lay.columns - 1) * gut
+        assert(used <= content and used >= content - lay.columns, tag .. "equal columns fill the body width")
+        assert(lay.cellW >= 150 and lay.cellH >= 150, tag .. "cards big enough for the dino")
+        if win.w >= 1200 then assert(lay.columns == 6, tag .. "a wide window gets 6 columns") end
+        local root = Instance.new("Frame")
+        local track = Layout.card(root, "IndexBar", UDim2.fromOffset(lay.meter.w, lay.meter.h), UDim2.fromOffset(lay.meter.x, lay.meter.y), "slot")
+        Layout.text(track, "Found 3/22", UDim2.fromOffset(lay.meter.w - 16, lay.meter.h - 4), UDim2.fromOffset(8, 2), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
+        local buttons = {Layout.actionButton(root, "FUSION", UDim2.fromOffset(lay.fusion.w, lay.fusion.h), UDim2.fromOffset(lay.fusion.x, lay.fusion.y), C.accent, false, function() end)}
+        if paged then
+            for _, name in {"prev", "next"} do
+                table.insert(buttons, Layout.actionButton(root, if name == "prev" then "<" else ">", UDim2.fromOffset(lay[name].w, lay[name].h), UDim2.fromOffset(lay[name].x, lay[name].y), GREYC, true, function() end))
+            end
+        end
+        assert(coloured(buttons) == 1, tag .. "exactly one coloured button (FUSION)")
+        local card = Layout.card(root, "Card", UDim2.fromOffset(lay.cellW, lay.cellH), UDim2.new(), "slot")
+        local q = Layout.text(card, "?", UDim2.fromOffset(lay.cellW - 16, 28), UDim2.fromOffset(8, lay.cellH - 36), Kit.Type.heading, "label", Enum.TextXAlignment.Center)
+        inside(rect(q), lay.cellW, lay.cellH, 8, tag .. "the one '?' line inside its card")
+        assert(texts(root, tag .. "list") >= 3, tag .. "texts drawn")
+    end
+end
+local tiny = Kit.indexLayout(1, 667, 300, true)
+assert(tiny.bar.y + tiny.bar.h == 300 and tiny.meter.w >= Kit.Index.minMeter, "the Index bar stays inside a short 667 x 300 body")
 -- rows never clip: the longest values the page can show, at the 14 px floor (about 0.56 of the size per character)
 local lay = Kit.detailLayout(1, 0, false, false, 824, 402)
 local valueWidth = lay.rows.w - math.floor(lay.rows.w * 0.3) - Kit.Gutter
@@ -178,6 +282,35 @@ def static_checks(read):
     assert 'L.tone("card"), 0' in code and 'Theme.Toybox.Kit.Tone.value' in code, 'the egg badge is a cream chip with dark ink'
     assert 'g.primaryColorId ~= nil' in code, 'a copy without colours draws no empty colour bar'
     assert 'ScrollingFrame") -- a very short window' in panels, 'the facts list scrolls on a very short window'
+    # ---- BD-1195 Eggs screen / BD-1194 Dino Index list: flag off = the old screens, flag on = the new modules ----
+    eggs_old, eggs_new = U.code_only(read(U.EGGS)), U.code_only(read(U.EGGSP))
+    idx_old, idx_new = U.code_only(read(U.INDEX)), U.code_only(read(U.INDEXL))
+    assert re.search(r'if Theme\.Toybox then return require\(script\.Parent\.EggsPanels\)\.build\(', eggs_old), 'EggsScreen loads EggsPanels only behind Theme.Toybox'
+    assert eggs_old.count('EggsPanels') == 1, 'EggsPanels is required once, behind the flag'
+    assert re.search(r'if Theme\.Toybox then[^\n]*\n\s*local compact=require\(script\.Parent\.ModalCompact\)\n\s*require\(script\.Parent\.DinoIndexList\)\.build\(', idx_old), 'the Index loads DinoIndexList only behind Theme.Toybox'
+    assert idx_old.count('DinoIndexList') == 1, 'DinoIndexList is required once, behind the flag'
+    for needle in ('local slotW, gap = 156, 11', 'ConditionStage.hero(card', 'art(icon, "egg_nest_single"', 'local gear = button(card, "AUTO"'):
+        assert needle in eggs_old, 'flag off keeps the old Eggs screen: ' + needle
+    for needle in ('button(card,"VIEW DINO"', 'meter(body,0,if bigBar then 350 else 356', 'button(body,"FUSION",624,350,200,44'):
+        assert needle in idx_old, 'flag off keeps the old Index list: ' + needle
+    assert 'fromScale(1, 1)' not in eggs_new and 'Active = true' not in eggs_new, 'the new Eggs screen never covers the header (X)'
+    for needle in ('ctx.openNest(info.id)', 'ctx.openEgg()', 'ctx.explore()', 'ctx.openSettings("help")', 'EggsLogic.nestSlots', 'NestQueue.project', 'Copy.eggOfText',
+                   'Copy.CrackedShellLine', 'Copy.CrackedHint', 'Copy.ChipTypeCaption', 'Copy.ChipShellCaption', 'ConditionStage.hero', 'MutationLook.get', 'ctx.autoOpenText()',
+                   'EggsLogic.nestHeader', 'UIFormat.duration', 'Finish a run to earn a nest!', 'EggPicture.add', 'ProgressionRules.item'):
+        assert needle in eggs_new, 'the new Eggs screen keeps the function: ' + needle
+    for needle in ('IndexProgress.page', 'Secret.indexOrder', 'Secret.summary', 'IndexMilestone', 'MutationBadge', 'd.open("detail")', 'd.openFusion()', 'ScrollingFrame',
+                   'FusionSelection.indexCard', 'ColourBonus', 'indexCount', 'IndexProgress.state.page'):
+        assert needle in idx_new, 'the new Index list keeps the function: ' + needle
+    egg_buttons = re.findall(r'L\.actionButton\(info, [^\n]*?, (if primary\(\) then C\.accent else GREY|GREY|C\.accent), (?:true|false), function', eggs_new)
+    assert egg_buttons == ['if primary() then C.accent else GREY', 'GREY'], 'Eggs: ONE coloured button (OPEN / Explore, grey while the egg grows), AUTO grey: %r' % egg_buttons
+    idx_buttons = re.findall(r'L\.actionButton\(root, [^\n]*?, (GREY|C\.accent), (?:true|false), function', idx_new)
+    assert sorted(idx_buttons) == ['C.accent', 'GREY', 'GREY'], 'Index: ONE coloured button (FUSION), the page arrows grey: %r' % idx_buttons
+    assert 'Panels.autoState(' in eggs_new and '"AUTO: OFF"' in eggs_new and '"AUTO: LOCKED"' in eggs_new, 'AUTO shows its state on the toggle'
+    assert '"?"' in idx_new and '"???"' not in idx_new and 'look.status' not in idx_new, 'an undiscovered card has ONE "?" line, no "???" twice'
+    assert 'ImageColor3 = L.tone("silhouette")' in idx_new, 'the undiscovered silhouette is a soft tint'
+    for module in (eggs_new, idx_new):
+        assert 'rbxassetid' not in module and 'Instance.new("ImageLabel")' not in module, 'no code-drawn art in the new screens'
+        assert not re.search(r'MinTextSize\s*=\s*(\d|1[0-3])\b', module), 'no text floor under 14 px'
     layout = U.code_only(read(LAYOUT))
     for number in re.findall(r'TextSize\s*=\s*(\d+)', layout):
         assert int(number) >= 14, 'no text under 14 px in the layout helpers'
@@ -201,6 +334,19 @@ MUTANTS = {
     'the page ignores the body size': (PANELS, 'if TB and ctx.bodySize then bodyW, bodyH = ctx.bodySize() end', ''),
     'EQUIP can fall below the body': (U.KIT, 'layout.equip = {x = pad, y = H - pad - big, w = leftContent, h = big}', 'layout.equip = {x = pad, y = 402 - pad - big, w = leftContent, h = big}'),
     'the grid stops at 4 columns': (U.KIT, 'math.min(D.maxColumns, math.floor((contentWidth + Kit.Gutter) / (D.minCell + Kit.Gutter)))', 'D.columns'),
+    'the Eggs bottom row drops below the body': (U.KIT, 'local by = nestsH + gut', 'local by = nestsH + gut + 8'),
+    'the Eggs nest cards leave the 12 px gutter': (U.KIT, 'x = pad + (i - 1) * (cellW + gut), y = cardY', 'x = pad + (i - 1) * (cellW + gut + 2), y = cardY'),
+    'the Eggs status line overlaps the button': (U.KIT, 'layout.status = {x = pad, y = pad, w = infoW - 2 * pad, h = E.statusH}', 'layout.status = {x = pad, y = pad, w = infoW - 2 * pad, h = bottomH}'),
+    'the Eggs AUTO toggle turns coloured': (U.EGGSP, 'size(lay.auto), pos(lay.auto), GREY', 'size(lay.auto), pos(lay.auto), C.blue'),
+    'the Eggs screen loads without the flag': (U.EGGS, 'if Theme.Toybox then return require(script.Parent.EggsPanels)', 'if true then return require(script.Parent.EggsPanels)'),
+    'the Eggs nest tap is gone': (U.EGGSP, 'ctx.openNest(info.id)', 'nil'),
+    'the Index bottom bar is cut off': (U.KIT, 'layout.bar = {x = 0, y = H - big, w = W, h = big}', 'layout.bar = {x = 0, y = 402 - big, w = W, h = big}'),
+    'the Index grid leaves the right third empty': (U.KIT, 'layout.cellW = Kit.cellWidth(content, layout.columns, gut)', 'layout.cellW = 190'),
+    'the Index grid runs into the bar': (U.KIT, 'layout.grid = {x = 0, y = 0, w = W, h = math.max(H - big - gut, 0)}', 'layout.grid = {x = 0, y = 0, w = W, h = math.max(H - big, 0)}'),
+    'the Index FUSION button leaves the body': (U.KIT, 'layout.fusion = {x = W - I.fusionW, y = H - big, w = I.fusionW, h = big}', 'layout.fusion = {x = W - I.fusionW + 20, y = H - big, w = I.fusionW, h = big}'),
+    'a second coloured Index button': (U.INDEXL, 'size(lay.prev), pos(lay.prev), GREY', 'size(lay.prev), pos(lay.prev), C.accent'),
+    'the Index card says ??? again': (U.INDEXL, 'L.text(card, "?", UDim2.fromOffset(innerW, 28)', 'L.text(card, "???", UDim2.fromOffset(innerW, 28)'),
+    'the Index list loads without the flag': (U.INDEX, 'if Theme.Toybox then -- BD-1194', 'if true then -- BD-1194'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
 }
 
@@ -229,7 +375,7 @@ def main():
     except AssertionError as error:
         print('Toybox layout check failed:', error)
         return 1
-    print('layout ok: detail page rects at 1280x720 and a phone window, helpers, static rules')
+    print('layout ok: detail page rects at 1280x720 and a phone window, Eggs screen and Dino Index list at four windows, helpers, static rules')
     if not args.no_mutants:
         for name, (path, old, new) in MUTANTS.items():
             try:

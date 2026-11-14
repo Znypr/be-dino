@@ -41,6 +41,9 @@ COMPACT = 'src/client/ModalCompact.luau'
 FUSION = 'src/client/FusionMenu.luau'
 LAYOUT = 'src/shared/ToyboxLayout.luau'  # BD-1189: panels, rows, buttons, empty slots
 PANELS = 'src/client/DinoIndexPanels.luau'  # BD-1189: the pilot page
+EGGSP = 'src/client/EggsPanels.luau'  # BD-1195: the Eggs screen on the layout rules
+INDEXL = 'src/client/DinoIndexList.luau'  # BD-1194: the Dino Index list on the layout rules
+EGGS = 'src/client/EggsScreen.luau'  # BD-1195: requires EggsPanels behind the flag
 INDEX = 'src/client/DinoIndexScreens.luau'  # owner 2026-11-14 (C-58): rarity-coloured detail header
 BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
@@ -145,8 +148,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS) and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels and ToyboxLayout reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen and ToyboxLayout reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)
