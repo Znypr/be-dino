@@ -188,6 +188,21 @@ function Panels.species(ctx)
     local speciesId: string = ctx.speciesId
     local speciesName = Config.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId) -- BD-604
     local T = math.max(W.Touch, math.ceil(W.Touch / math.max(.3, ctx.scale())))
+    -- BD-1189 (docs/232): with Config.ToyboxUIEnabled (Theme.Toybox) the page is two cream panels placed by the Toybox layout helpers; flag off = the page as before.
+    local TB: any = Theme.Toybox
+    local L: any = if TB then require(Shared.ToyboxLayout) else nil
+    local Kit: any = if TB then L.Kit else nil
+    local bigH, smallH = 0, 0
+    if TB then bigH, smallH = Kit.buttonHeights(ctx.scale()) end
+    local GREY = Color3.fromRGB(128, 142, 158) -- the grey gloss button; the only coloured (green) button of the page is EQUIP
+    local offColor = if TB then GREY else C.card
+    local gridPad, gridCols = if TB then Kit.Gutter else 8, 4
+    local oddsPercent: string? = nil
+    if TB then
+        local total, mine = 0, 0
+        for _, row in Config.ChestSpeciesWeights do total += row.weight if row.speciesId == speciesId then mine = row.weight end end
+        if mine > 0 and total > 0 then oddsPercent = Sel.pct(100 * mine / total) .. " of eggs" end
+    end
     local root = Instance.new("Frame")
     root.Name, root.Size, root.BackgroundTransparency = "DinoIndexSpecies", UDim2.fromScale(1, 1), 1
     root.Parent = ctx.body
@@ -204,6 +219,19 @@ function Panels.species(ctx)
     end
 
     -- Undiscovered species: black silhouette and one plain line, nothing else.
+    if not ctx.owned and TB then
+        local pad = Kit.PanelPad
+        local width = 296 - 2 * pad
+        local panel = L.panel(left, "Panel", UDim2.fromScale(1, 1), UDim2.new())
+        local stage = L.preview(panel, UDim2.fromOffset(width, 196), UDim2.fromOffset(pad, pad))
+        local view = Preview.add(stage, speciesId, "silhouette")
+        view.Size, view.Position = UDim2.fromScale(1, .9), UDim2.fromScale(0, .05)
+        L.text(panel, "Not discovered yet", UDim2.fromOffset(width, 32), UDim2.fromOffset(pad, pad + 196 + Kit.Gutter), Kit.Type.heading)
+        local line = L.text(panel, "Hatch eggs to find " .. speciesName .. ".", UDim2.fromOffset(width, 48), UDim2.fromOffset(pad, pad + 196 + Kit.Gutter + 36), Kit.Type.body, "label")
+        line.TextWrapped = true
+        L.actionButton(panel, "BACK", UDim2.fromOffset(width, bigH), UDim2.fromOffset(pad, 402 - pad - bigH), GREY, false, function() ctx.onBack() end).Name = "Back"
+        return root
+    end
     if not ctx.owned then
         local stage = W.box(left, UDim2.fromOffset(296, 250), UDim2.new(), Color3.fromRGB(62, 64, 74), 24)
         local view = Preview.add(stage, speciesId, "silhouette")
@@ -221,6 +249,8 @@ function Panels.species(ctx)
     local grid: ScrollingFrame? = nil
     local filterButton: TextButton? = nil
     local equipButton: TextButton? = nil
+    local rowsHost: Frame? = nil
+    local rightHost: GuiObject = right
     local traitsList: ScrollingFrame? = nil
     local eggHit: TextButton? = nil
     local titleLabel: TextLabel? = nil
@@ -237,7 +267,7 @@ function Panels.species(ctx)
         if equipButton then
             local on = st.selected ~= nil and st.selected == st.equippedId
             equipButton.Text = if on then "EQUIPPED" else "EQUIP"
-            equipButton.BackgroundColor3 = if on then C.card else C.accent
+            equipButton.BackgroundColor3 = if on then offColor else C.accent
         end
     end
     for _, attribute in {"EquippedSpeciesId", "EquippedGenesJson", "EquippedShiny", "EquippedBig", "EquippedEventMutation"} do
@@ -254,7 +284,35 @@ function Panels.species(ctx)
         buildLeft()
     end
 
+    -- BD-1189: the facts of the selected copy as label / value rows (no inline colours, nothing clipped); the egg badge is painted from the details.
+    local function fillRows(d: any)
+        local host = rowsHost
+        if not host or not host.Parent then return end
+        host:ClearAllChildren()
+        local response = st.details[d.instanceId]
+        if type(response) == "table" and eggHit and eggHit.Parent then paintEggButton(eggHit, response) end
+        local g = d.genes or {}
+        local rows: {{string}} = {
+            {"Pattern", Sel.name(catalog, "patterns", g.patternId, "Plain")},
+            {"Class", require(script.Parent.ClassRow).label(d.speciesId or speciesId)},
+            {"Stage", Sel.stageTitle(d.stage)},
+        }
+        if oddsPercent then table.insert(rows, {"Found in", oddsPercent}) end
+        if type(response) == "table" then
+            for _, row in Sel.details(response, catalog).traits do
+                if row.label == "Boost" or row.label == "Colour bonus" then table.insert(rows, {row.label, row.value}) end
+            end
+        end
+        local special: {string} = {}
+        if d.shiny == true then table.insert(special, "Shiny") end
+        if d.big == true then table.insert(special, "BIG") end
+        if type(d.mutationId) == "string" and d.mutationId ~= "" then table.insert(special, Sel.name(catalog, "mutations", d.mutationId)) end
+        if #special > 0 then table.insert(rows, {"Special", table.concat(special, " • ")}) end
+        for i, row in rows do L.row(host, i, 296 - 2 * Kit.PanelPad, row[1], row[2]) end
+    end
+
     local function fillDetails(d: any)
+        if TB then fillRows(d) return end
         local list, label = traitsList, titleLabel
         if not list or not label then return end
         for _, child in list:GetChildren() do if child:IsA("TextLabel") or child.Name == "ClassRow" then child:Destroy() end end
@@ -295,7 +353,56 @@ function Panels.species(ctx)
         end)
     end
 
+    local function buildLeftT()
+        if hero then hero.destroy() hero = nil end
+        left:ClearAllChildren()
+        rowsHost, eggHit = nil, nil
+        local d = if st.selected then st.byId[st.selected] else nil
+        local stageName = if d then d.stage else ctx.fallbackStage
+        local lay = Kit.detailLayout(ctx.scale(), 0, false) -- the preview takes what the rows and the button leave
+        local panel = L.panel(left, "Panel", UDim2.fromScale(1, 1), UDim2.new())
+        local width, rowsH, rowsTop = lay.rows.w, lay.rows.h, lay.rows.y
+        local stage = L.preview(panel, UDim2.fromOffset(lay.preview.w, lay.preview.h), UDim2.fromOffset(lay.preview.x, lay.preview.y))
+        local view = Preview.add(stage, speciesId, if stageName == nil then "base" else stageName)
+        view.Size, view.Position = UDim2.fromScale(1, 1), UDim2.new()
+        PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil} else nil)
+        hero = InspectView.attach(view, {hintPosition = UDim2.new(.5, 0, 0, 34), resetPosition = UDim2.new(1, -6, 0, 6)})
+        local pad = lay.rows.x
+        if not d then
+            local line = L.text(panel, ctx.fallbackLine, UDim2.fromOffset(width, rowsH), UDim2.fromOffset(pad, rowsTop), Kit.Type.body)
+            line.TextWrapped, line.TextYAlignment = true, Enum.TextYAlignment.Top
+        else
+            local host = Instance.new("Frame")
+            host.Name, host.BackgroundTransparency, host.Size, host.Position, host.ZIndex = "Facts", 1, UDim2.fromOffset(width, rowsH), UDim2.fromOffset(pad, rowsTop), panel.ZIndex + 1
+            host.Parent = panel
+            rowsHost = host
+            local hit = Instance.new("TextButton")
+            hit.Name, hit.Text, hit.BackgroundColor3, hit.BackgroundTransparency = "EggButton", "", C.card, .25
+            hit.Size, hit.Position, hit.ZIndex, hit.Parent = UDim2.fromOffset(48, 48), UDim2.new(1, -54, 1, -54), stage.ZIndex + 6, stage
+            local hitCorner = Instance.new("UICorner") hitCorner.CornerRadius = UDim.new(.5, 0) hitCorner.Parent = hit
+            eggHit = hit
+            paintEggButton(hit, if type(st.details[d.instanceId]) == "table" then st.details[d.instanceId] else nil)
+            hit.Activated:Connect(function()
+                local response = st.details[d.instanceId]
+                eggPopup(root, if type(response) == "table" then response else nil, response == "loading")
+            end)
+            loadDetails(d)
+        end
+        local equip = L.actionButton(panel, "EQUIP", UDim2.fromOffset(lay.equip.w, lay.equip.h), UDim2.fromOffset(lay.equip.x, lay.equip.y), C.accent, false, function()
+            if d then
+                if st.equippedId == d.instanceId then ctx.notify("Already equipped", C.gold) return end
+                local request = MyDinos.equipRequest(d)
+                if request then ctx.equip(request.speciesId, request.variantKey) end
+            else
+                ctx.equip(speciesId, nil)
+            end
+        end)
+        equip.Name, equipButton = "Equip", equip
+        if st.loaded then refreshEquipped() end
+    end
+
     buildLeft = function()
+        if TB then buildLeftT() return end
         if hero then hero.destroy() hero = nil end
         left:ClearAllChildren()
         local d = if st.selected then st.byId[st.selected] else nil
@@ -347,9 +454,16 @@ function Panels.species(ctx)
     local function buildCard(d: any, order: number, parent: GuiObject)
         local button = Instance.new("TextButton")
         button.Name, button.Text, button.AutoButtonColor, button.LayoutOrder = "Dino_" .. order, "", false, order
-        button.BackgroundColor3 = StageColors[d.stage] or StageColors.base
-        Theme.decorate(button, 8)
-        local stroke = button:FindFirstChildOfClass("UIStroke") :: UIStroke
+        local stroke: UIStroke
+        if TB then
+            button.BackgroundColor3 = L.tone("card") -- a cream card; the stage is the pill on it
+            local round = Instance.new("UICorner") round.CornerRadius = UDim.new(0, Kit.CardCorner) round.Parent = button
+            stroke = Instance.new("UIStroke") stroke.Parent = button
+        else
+            button.BackgroundColor3 = StageColors[d.stage] or StageColors.base
+            Theme.decorate(button, 8)
+            stroke = button:FindFirstChildOfClass("UIStroke") :: UIStroke
+        end
         stroke.Color, stroke.Thickness = if d.instanceId == st.selected then C.gold else C.outline, if d.instanceId == st.selected then 5 else 3
         button.Parent = parent
         button.Activated:Connect(function() selectCopy(d.instanceId) end)
@@ -389,7 +503,8 @@ function Panels.species(ctx)
             pillX += width + 4
         end
         if mutationId then MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, rows.chipY)) end -- BD-352: a real badge (own colour, 14 px word, dot)
-        W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, MyDinos.Card.labelH), UDim2.fromOffset(4, rows.labelY), 14)
+        local nameLabel = W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, MyDinos.Card.labelH), UDim2.fromOffset(4, rows.labelY), 14)
+        if TB then L.ink(nameLabel) end
         W.swatch(button, g, UDim2.new(1, -16, 0, MyDinos.Card.swatchH), UDim2.fromOffset(8, rows.swatchY))
         local tag = pill(button, "EQUIPPED", C.accent, UDim2.new(1, -8, 0, MyDinos.Card.tagH), UDim2.fromOffset(4, rows.tagY), C.outline)
         tag.Visible = d.instanceId == st.equippedId
@@ -402,7 +517,7 @@ function Panels.species(ctx)
         if not g then return end
         local total = 0
         for _ in cards do total += 1 end
-        local first, last = MyDinos.window(g.CanvasPosition.Y, g.AbsoluteWindowSize.Y / math.max(.3, ctx.scale()), MyDinos.Card.h, 8, 4, total)
+        local first, last = MyDinos.window(g.CanvasPosition.Y, g.AbsoluteWindowSize.Y / math.max(.3, ctx.scale()), MyDinos.Card.h, gridPad, gridCols, total)
         for _, entry in cards do
             if entry.index >= first and entry.index <= last then entry.mount() else entry.unmount() end
         end
@@ -414,6 +529,16 @@ function Panels.species(ctx)
         for _, child in target:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
         table.clear(cards)
         local view = viewList()
+        if #view == 0 and TB then
+            local empty = L.text(rightHost, "No dinos match, clear filters", UDim2.fromOffset(492, 32), UDim2.fromOffset(12, 150), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
+            empty.Name = "EmptyState"
+            L.actionButton(rightHost, "Clear filters", UDim2.fromOffset(220, smallH), UDim2.fromOffset(148, 204), GREY, true, function()
+                st.chosen, st.sortKey = {}, "rarest"
+                empty:Destroy()
+                buildRight()
+            end).Name = "ClearFilters"
+            return
+        end
         if #view == 0 then
             local empty = W.label(right, "No dinos match, clear filters", UDim2.fromOffset(516, 44), UDim2.fromOffset(0, 150), 24, C.gold)
             empty.Name = "EmptyState"
@@ -426,6 +551,9 @@ function Panels.species(ctx)
         end
         local count, more = MyDinos.page(view, st.visible)
         for i = 1, count do buildCard(view[i], i, target) end
+        if TB and more == 0 then -- empty slots finish the last row and give at least two rows, so the grid never looks unfinished
+            for k = 1, Kit.emptySlots(count, gridCols, 2) do L.emptySlot(target, Kit.cellWidth(492, gridCols, Kit.Gutter), Kit.Detail.cardH, count + k) end
+        end
         updateWindow()
         if more > 0 then
             local b = W.button(target, "SHOW MORE (" .. more .. ")", UDim2.new(), UDim2.new(), C.blue, function()
@@ -436,7 +564,59 @@ function Panels.species(ctx)
         end
     end
 
+    local function buildRightT()
+        right:ClearAllChildren()
+        grid, filterButton = nil, nil
+        local pad, gut = Kit.PanelPad, Kit.Gutter
+        local width = 516 - 2 * pad
+        local panel = L.panel(right, "Panel", UDim2.fromScale(1, 1), UDim2.new())
+        rightHost = panel
+        if not st.loaded then
+            L.text(panel, "Loading your dinos...", UDim2.fromOffset(width, 32), UDim2.fromOffset(pad, 150), Kit.Type.heading, "label", Enum.TextXAlignment.Center)
+            return
+        end
+        local active = MyDinos.activeChips(st.chosen, catalog)
+        local count = #active + (if st.sortKey ~= "rarest" then 1 else 0)
+        local usedDup = false
+        if ctx.dupRow then -- the "3 of 6 for Gold!" bars sit at the foot of the panel (BD-1170); the page only reserves the row when they show something
+            usedDup = ctx.dupRow(panel, st.list, Kit.Detail.height - pad - smallH, smallH, width, pad) > 0
+        end
+        local lay = Kit.detailLayout(ctx.scale(), if #active > 0 then T + 4 else 0, usedDup, count > 0)
+        L.text(panel, Kit.copiesHeading(speciesName, #st.list), UDim2.fromOffset(lay.heading.w, lay.heading.h), UDim2.fromOffset(lay.heading.x, lay.heading.y), Kit.Type.heading).Name = "Header"
+        L.actionButton(panel, "BACK", UDim2.fromOffset(lay.back.w, lay.back.h), UDim2.fromOffset(lay.back.x, lay.back.y), GREY, true, function() ctx.onBack() end).Name = "Back"
+        local fb = L.actionButton(panel, if count > 0 then "SORT (" .. count .. ")" else "SORT", UDim2.fromOffset(lay.sort.w, lay.sort.h), UDim2.fromOffset(lay.sort.x, lay.sort.y), GREY, true, function() openSheet() end)
+        fb.Name, filterButton = "FilterButton", fb
+        if #active > 0 then
+            local row = Instance.new("ScrollingFrame")
+            row.Name, row.Size, row.Position = "ActiveFilters", UDim2.fromOffset(lay.filters.w, lay.filters.h), UDim2.fromOffset(lay.filters.x, lay.filters.y)
+            row.BackgroundTransparency, row.BorderSizePixel, row.ScrollBarThickness = 1, 0, 0
+            row.ScrollingDirection, row.AutomaticCanvasSize, row.CanvasSize = Enum.ScrollingDirection.X, Enum.AutomaticSize.X, UDim2.new()
+            row.Parent = panel
+            W.list(row, 6, true)
+            for _, chip in active do
+                chipButton(row, chip.text .. "  X", T, true, if chip.group == "colorId" then W.colorOf(chip.value) else nil, function()
+                    st.chosen[chip.group] = nil
+                    st.visible = MyDinos.PageSize
+                    st.selected = MyDinos.settleSelection(viewList(), st.selected)
+                    buildRight()
+                    buildLeft()
+                end)
+            end
+        end
+        local g = W.scroll(panel, UDim2.fromOffset(lay.grid.w, lay.grid.h), UDim2.fromOffset(lay.grid.x, lay.grid.y)) -- the scroll bar sits in the right padding
+        g.Name = "DinoCards"
+        local layout = Instance.new("UIGridLayout")
+        layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.fromOffset(lay.cellW, lay.cellH), UDim2.fromOffset(gut, gut), Enum.SortOrder.LayoutOrder
+        layout.Parent = g
+        grid = g
+        table.insert(connections, g:GetPropertyChangedSignal("CanvasPosition"):Connect(updateWindow))
+        buildGrid()
+        local settled = MyDinos.settleSelection(viewList(), st.selected)
+        if settled ~= st.selected then st.selected = settled buildLeft() end
+    end
+
     buildRight = function()
+        if TB then buildRightT() return end
         right:ClearAllChildren()
         grid, filterButton = nil, nil
         if not st.loaded then
@@ -556,6 +736,17 @@ function Panels.species(ctx)
     loadAll(ctx.revision(), function(ok: boolean)
         answered = true
         if not root.Parent then return end
+        if not ok and TB then
+            right:ClearAllChildren()
+            local panel = L.panel(right, "Panel", UDim2.fromScale(1, 1), UDim2.new())
+            L.text(panel, "Could not load your dinos", UDim2.fromOffset(492, 32), UDim2.fromOffset(12, 140), Kit.Type.heading, "value", Enum.TextXAlignment.Center)
+            L.actionButton(panel, "TRY AGAIN", UDim2.fromOffset(220, smallH), UDim2.fromOffset(148, 196), GREY, true, function()
+                cache.revision = -1
+                root:Destroy()
+                Panels.species(ctx)
+            end)
+            return
+        end
         if not ok then
             right:ClearAllChildren()
             W.label(right, "Could not load your dinos", UDim2.fromOffset(516, 44), UDim2.fromOffset(0, 140), 26, C.red)

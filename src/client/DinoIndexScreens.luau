@@ -151,11 +151,11 @@ function Screens.render(name: string)
             scale=viewportScale,
             revision=function() return num("ProfileRevision") end,
             -- BD-1170 (docs/227): with DupProgressEnabled a row of progress bars ("3 of 6 for Gold!"); a tap opens the Fusion Menu on this dino. Flag off = nil, the page is unchanged.
-            dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height)
+            dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height,rowWidth,left)
                 local species=selected
                 local ok,client=pcall(require,script.Parent.DupProgressClient) -- a module that cannot load never breaks the page
                 if not ok or type(client)~="table" then return 0 end
-                return client.indexRow(parent,dinos,species,top,height,function(stage) client.openFusion(species,stage,openFusion) end)
+                return client.indexRow(parent,dinos,species,top,height,function(stage) client.openFusion(species,stage,openFusion) end,rowWidth,left)
             end else nil,
             equipped=function()
                 local ok,genes=pcall(function() return Http:JSONDecode(str("EquippedGenesJson","null")) end)

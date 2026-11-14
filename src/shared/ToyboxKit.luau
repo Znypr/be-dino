@@ -143,6 +143,94 @@ function Kit.closeSide(absW: number, absH: number, scale: number): number
     return math.max(short, Kit.MinClose) / s
 end
 
+-- BD-1189 (owner 2026-11-14): the X sits fully INSIDE the header strip, centred, with the same inset on the right, top and bottom (8 px, the 8 px
+-- grid), square, at least 48 px on screen. headerH = the strip height in design px. Returns side, inset (design px; the inset only drops under 8 on
+-- a strip so short that the 48 px X could not fit, then it is still equal on all three sides).
+Kit.CloseInset = 8
+function Kit.closeBox(headerH: number, scale: number): (number, number)
+    local s = if scale == scale and scale > 0.01 then scale else 1
+    local h = if headerH == headerH and headerH > 0 then headerH else 0
+    local side = math.max(h - 2 * Kit.CloseInset, Kit.MinClose / s)
+    return side, math.max((h - side) / 2, 0)
+end
+
+-- ---- BD-1189 (docs/232): layout numbers every Toybox screen shares (design px, multiples of 4). Screens place nothing by hand any more: they ask
+-- ToyboxSkin's helpers (panel, row, actionButton, emptySlot) that read these. OWNER TARGET (clean like top Roblox games); numbers PROVISIONAL (LEAD).
+Kit.Inset = 16 -- frame to content on every side (the menu body keeps its older 18 / 20 px until the window itself moves; recorded in docs/115)
+Kit.Gutter = 12 -- between panels, cards, buttons
+Kit.PanelPad = 12 -- inside a panel
+Kit.PanelCorner, Kit.PreviewCorner, Kit.CardCorner, Kit.PanelStroke = 14, 10, 12, 3
+Kit.ButtonH, Kit.ButtonSmallH = 48, 40
+Kit.RowH = 24 -- one label / value row (16 px text)
+Kit.Type = {title = 28, heading = 20, body = 16, small = 14} -- the type scale; 14 is the floor
+Kit.Tone = { -- bright cream (owner pick A, 2026-11-14), 0..255 rgb
+    panel = {255, 247, 227}, card = {255, 253, 246}, previewTop = {255, 233, 184}, previewBottom = {246, 213, 140},
+    label = {122, 106, 78}, value = {58, 47, 30}, slot = {235, 224, 196},
+}
+Kit.DashLength, Kit.DashGap, Kit.DashThickness = 10, 8, 3 -- an empty slot: dashes round a rounded card
+-- Button heights for a window scaled by `scale`: the design size, but never under 44 px on screen (the touch rule, docs/72).
+function Kit.buttonHeights(scale: number): (number, number)
+    local s = if scale == scale and scale > 0.01 then scale else 1
+    local touch = math.ceil(44 / s)
+    return math.max(Kit.ButtonH, touch), math.max(Kit.ButtonSmallH, touch)
+end
+-- "Your Compies (3)": the heading of a copies list never repeats the window title (docs/232 rule "no repeats").
+function Kit.plural(name: string): string
+    if string.match(name, "[^aeiouAEIOU]y$") then return string.sub(name, 1, -2) .. "ies" end
+    if string.match(name, "[sxz]$") or string.match(name, "[cs]h$") then return name .. "es" end
+    return name .. "s"
+end
+function Kit.copiesHeading(name: string, count: number): string
+    return "Your " .. Kit.plural(name) .. " (" .. count .. ")"
+end
+-- Equal cells: the width of one of `columns` cells that fill `width` with `gutter` between them.
+function Kit.cellWidth(width: number, columns: number, gutter: number): number
+    return math.floor((width - gutter * (columns - 1)) / math.max(columns, 1))
+end
+-- Empty slots that finish the last row of a grid (and give it at least `minRows` rows), so a grid never looks unfinished.
+function Kit.emptySlots(count: number, columns: number, minRows: number): number
+    local total = math.max(math.ceil(count / columns), minRows) * columns
+    return total - count
+end
+
+-- The rects of the dino detail page (design px, inside the 824 x 402 menu body): a 296 px left panel, a 12 px gutter, a 516 px right panel.
+-- `scale` = the window's UIScale (buttons never under 44 px on screen), `filterRowH` = height of the chosen-filter chips row (0 = none),
+-- `dupRow` = whether the "3 of 6 for Gold!" bars are shown. One place for the numbers, so the page and tools/verify_toybox_layout.py agree.
+Kit.Detail = {leftW = 296, rightW = 516, height = 402, columns = 4, cardH = 160, rowCount = 6, backW = 96, sortW = 96, sortWFilter = 128}
+function Kit.detailLayout(scale: number, filterRowH: number, dupRow: boolean, sortActive: boolean?)
+    local D = Kit.Detail
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local leftContent, rightContent = D.leftW - 2 * pad, D.rightW - 2 * pad
+    local rowsH = D.rowCount * Kit.RowH
+    local previewH = math.max(120, D.height - 3 * pad - gut - rowsH - big)
+    local layout: any = {big = big, small = small}
+    layout.leftPanel = {x = 0, y = 0, w = D.leftW, h = D.height}
+    layout.preview = {x = pad, y = pad, w = leftContent, h = previewH}
+    layout.rows = {x = pad, y = pad + previewH + gut, w = leftContent, h = rowsH}
+    layout.equip = {x = pad, y = D.height - pad - big, w = leftContent, h = big}
+    layout.rightPanel = {x = D.leftW + gut, y = 0, w = D.rightW, h = D.height}
+    local sortW = if sortActive then D.sortWFilter else D.sortW
+    local backX = pad + rightContent - D.backW
+    layout.back = {x = backX, y = pad, w = D.backW, h = small}
+    layout.sort = {x = backX - gut - sortW, y = pad, w = sortW, h = small}
+    layout.heading = {x = pad, y = pad, w = rightContent - D.backW - sortW - 2 * gut, h = small}
+    local top = pad + small + gut
+    if filterRowH > 0 then
+        layout.filters = {x = pad, y = top, w = rightContent, h = filterRowH}
+        top += filterRowH + gut
+    end
+    local bottom = D.height - pad
+    if dupRow then
+        layout.dup = {x = pad, y = bottom - small, w = rightContent, h = small}
+        bottom -= small + gut
+    end
+    layout.grid = {x = pad, y = top, w = rightContent + 8, h = bottom - top} -- 8 px wider: the scroll bar sits in the right padding
+    layout.cellW = Kit.cellWidth(rightContent, D.columns, gut)
+    layout.cellH = D.cardH
+    return layout
+end
+
 -- The slice scale of a picture drawn `width` x `height` px. A header never stretches up or down (scale = height / 128). The others use
 -- half size, less when the box is so small that the caps would not fit.
 function Kit.sliceScale(slot: string, width: number, height: number): number
