@@ -20,21 +20,28 @@ Screen scores (latest, 10 = top Roblox game): auras 5, collection 4, eggs 4, fus
 | 9 | P-d0e74b | all windows | Content uses only the left two thirds; right third is empty studs | Lay content out to the window width with the docs/232 helpers (grid columns grow, inset 16, gutter 12) or size the window to its content. | BD-1189 |
 | 9 | P-4a7f08 | all windows | The X hangs on the header corner | X fully inside the strip, centred, equal 8 px inset (in the BD-1189 pilot brief). | BD-1189 |
 | 9 | P-9283ac | auras | Price text overlaps the crystal icon | Measure icon + text and centre them as one group; shorter "3,700" with the icon only. | BD-1192 |
+| 9 | P-da0e02 | game | No daily login reward or streak | Daily streak calendar in the lobby: crystals and an egg on day 3 / 7, PROVISIONAL amounts, server time, flag-gated. | BD-1197 |
+| 9 | P-e96b77 | game | No playtime rewards | Playtime gift track on the HUD (small chest with a timer), rewards PROVISIONAL, flag-gated. | BD-1198 |
+| 9 | P-639327 | game | Runs are about 5 minutes (under 6 min = low Day-1) | One-tap "Play again" after the hatch, a run-streak bonus, and lobby goals so a session holds 3+ runs. | BD-1199 |
 | 9 | P-3ccb6b | hud | Side rail broken: only POTIONS and a shield float at the top centre | Fix the rail layout for short landscape screens (vertical rail on the left edge, all six, 44 px min). | BD-1193 |
 | 6 | P-11f0c6 | all windows | Header strip is a long empty bar with a small left title | Title 28 px with the place icon, strip only as wide as needed or centred title. | BD-1189 |
 | 6 | P-110029 | collection | Bottom bar cut off at short screens | Scroll the grid, keep the bottom bar always inside the window (safe area), test at 481 px height. | BD-1194 |
 | 6 | P-ae0545 | eggs | Oversized Explore button and nested boxes | One primary button (Explore, normal 48 px height), banner as plain text, AUTO as a toggle chip; one panel. | BD-1195 |
 | 6 | P-43bc51 | fusion | Opening Fusion shows an empty window titled "Potion Shop" | Route "fusion" to FusionMenu everywhere; the shared window never shows an empty body; set the title on every open. | BD-1196 |
+| 6 | P-190ca1 | game | Objectives built but switched off | Turn Objectives on in the playtest profile after a Studio check; add a daily set. |  |
 | 6 | P-476117 | hud | HUD buttons in four styles | One HUD button style from the kit: same height, icon + one word, key hint as a small badge; HOME grey or blue. |  |
 | 6 | P-4af24d | hud | Hint text floats on the world with no plate | Put the objective on a small cream plate with an icon; show SIZE as a filled bar with a dino icon. |  |
 | 6 | P-6bd182 | potions | Prime Feast has a blank blue square instead of a picture | Bind or make the missing potion icon; a missing icon should fall back to the generic bottle, never a blank tile. |  |
 | 6 | P-33416f | potions | Grey price buttons look disabled | Buy buttons always green with the crystal icon; grey only for sold out / cannot afford. |  |
 | 4 | P-54e167 | collection | Undiscovered cards repeat "??? / ???" and black blobs | One "?" line, soft tinted silhouette, a hint where to find it (rarity colour edge). |  |
 | 4 | P-a46a8f | eggs | Nest slots are tiny icons in heavy frames | Bigger nest art per slot, soft empty state, the count as a chip. |  |
+| 4 | P-6bbd4a | game | No friends-in-server bonus | Small luck bonus per friend in the server (capped), shown on the HUD. |  |
+| 4 | P-3c944f | game | No Roblox badges | Badge set for key moments (badge creation is the owner account step). |  |
+| 4 | P-4c506a | game | Index completion gives no reward | Index milestones (5 / 10 / 20 species) give crystals, a nest or a title. |  |
+| 4 | P-b6c84e | game | No return notification when a nest is ready | Opt-in experience notification when a nest finishes (owner sets up the notification string). |  |
 | 4 | P-1b265a | potions | Footer text clipped and on studs | Move to a panel footer or a small info button. |  |
 | 4 | P-54d840 | settings | Rows sit on studs, values far right | Settings rows on one panel, slider + value together, hide SOUND LAB outside Studio/admin. |  |
 | 2 | P-98c817 | auras | Long helper line for a kid | "Styling: Compy" with a small "Change" button. |  |
-| owner | P-51df6c | auras | Aura icons do not fit the icon set | Remake Meadow, Tidal, Royal in the batch-2 style (glossy chunky symbol, no medallion) via ChatGPT, owner picks. |  |
 
-18 open, 0 fixed.
+27 open, 0 fixed.
 <!-- polish-loop:end -->
