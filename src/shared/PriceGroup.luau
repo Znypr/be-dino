@@ -22,4 +22,10 @@ function PriceGroup.layout(measure: (number) -> number, startSize: number, minSi
     end
 end
 
+-- A UIPadding on the button moves EVERY child (the icon, the skin word label) by PaddingLeft, so the icon's own x is
+-- measured from the padded edge: iconX - textLeft (negative). Screen x of the icon = padLeft + iconPos = group.iconX; screen x of the word label = padLeft = group.textLeft.
+function PriceGroup.placement(group: Layout): {padLeft: number, iconPos: number}
+    return {padLeft = group.textLeft, iconPos = group.iconX - group.textLeft}
+end
+
 return PriceGroup

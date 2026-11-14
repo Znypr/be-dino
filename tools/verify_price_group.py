@@ -64,6 +64,15 @@ for _, buttonW in {200, 248, 264, 300, 400} do
                 check(g.size >= 14 and g.size <= 25, tag .. ": size out of range " .. g.size)
                 check(g.iconX >= margin - 1e-6, tag .. ": the icon starts left of the margin")
                 check(g.textLeft >= g.iconX + iconSize + gapPx - 1e-6, tag .. ": the text touches the icon")
+                -- the UIPadding of the button moves every child: the icon and, with the Toybox skin ON, the word label "ToyboxText" (full size, text Left aligned).
+                -- Screen x of a child = padLeft + its own x. Skin OFF: the button's own text starts at padLeft. Skin ON: the label starts at padLeft too.
+                local at = PriceGroup.placement(g)
+                local iconScreenX = at.padLeft + at.iconPos
+                check(math.abs(iconScreenX - g.iconX) < 1e-6, tag .. ": the icon is drawn at " .. iconScreenX .. ", not at the group's " .. g.iconX)
+                for _, skin in {false, true} do
+                    local wordX = at.padLeft -- the same with the skin on or off
+                    check(iconScreenX + iconSize + gapPx <= wordX + 1e-6, tag .. ": the word starts inside the icon (skin " .. tostring(skin) .. ")")
+                end
                 if g.fits then
                     check(g.textLeft + textW <= buttonW - margin + 1e-6, tag .. ": the text runs out of the button")
                     local left, right = g.iconX, buttonW - (g.iconX + g.groupW)
@@ -106,7 +115,8 @@ def run(runner, source):
 def check_sources():
     cards = read('src/client/ShopCards.luau')
     assert 'GetTextSize' in cards and 'PriceGroup.layout(measure' in cards, 'ShopCards measures the price text'
-    assert 'ui.art(act, "amber", group.iconX' in cards and 'UDim.new(0, group.textLeft)' in cards, 'ShopCards places the icon and the text from the group'
+    assert 'ui.art(act, "amber", place.iconPos' in cards and 'UDim.new(0, place.padLeft)' in cards, 'ShopCards places the icon and the text from the group'
+    assert 'PriceGroup.placement(group)' in cards and 'place.iconPos' in cards and 'place.padLeft' in cards, 'ShopCards places the icon relative to the padding'
     assert 'iconSize + 14' not in cards, 'the fixed icon spot is gone'
 
 
@@ -117,6 +127,7 @@ MUTANTS = {
     'the text never steps down': {PG: [('if groupW <= room or size <= minSize then', 'if true then')]},
     'the text steps down under 14 px': {PG: [('size <= minSize', 'size <= 8')]},
     'the icon may start left of the margin': {PG: [('local iconX = math.max(margin, (buttonW - groupW) / 2)', 'local iconX = (buttonW - groupW) / 2')]},
+    'the icon x is not relative to the padded edge (the icon lands inside the word, as with the skin on in Studio)': {PG: [('iconPos = group.iconX - group.textLeft', 'iconPos = group.iconX')]},
     'no thousands comma': {'UIFormat': [('    local out=text:reverse():gsub("(%d%d%d)","%1,"):reverse()', '    local out=text')]},
 }
 

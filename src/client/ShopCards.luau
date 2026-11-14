@@ -108,10 +108,11 @@ function Cards.buildPrice(ui, parent: GuiObject, spec)
         end
         local group = PriceGroup.layout(measure, math.max(act.TextSize, 14), 14, width, iconSize, 8, 8)
         act.TextSize = group.size
-        local icon = ui.art(act, "amber", group.iconX, (spec.targetHeight - iconSize) / 2, iconSize) -- nil where the art is not bound (and in the mocks)
+        local place = PriceGroup.placement(group) -- the padding below moves the icon too, so its own x is relative to the padded edge
+        local icon = ui.art(act, "amber", place.iconPos, (spec.targetHeight - iconSize) / 2, iconSize) -- nil where the art is not bound (and in the mocks)
         if icon then icon.Name = "CrystalIcon" end
         local pad = Instance.new("UIPadding")
-        pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, group.textLeft), act -- the price starts after the icon and never touches it
+        pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, place.padLeft), act -- the price starts after the icon and never touches it
         act:SetAttribute("PriceGroupW", group.groupW)
     end
     if data.equipped then equippedRing(card) end
