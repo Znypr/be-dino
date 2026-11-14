@@ -129,6 +129,11 @@ def check_file(path):
         raise UploadError("%s does not look like an FBX file (wrong header)." % p.name)
     if ext == ".glb" and not head.startswith(b"glTF"):
         raise UploadError("%s does not look like a .glb file (wrong header)." % p.name)
+    # 2026-11-14: palette PNGs (colour type 3) upload and pass moderation but never load as ImageLabel images in the game;
+    # tests/test_delivery.py also requires RGBA icons. Refuse them here so it cannot happen silently again.
+    if ext == ".png" and head[:8] == b"\x89PNG\r\n\x1a\n" and len(head) > 25 and head[25] == 3:
+        raise UploadError("%s is a palette (256-colour) PNG; Roblox images from it do not load. Convert it to RGBA first "
+                          "(Pillow: Image.open(p).convert('RGBA').save(p))." % p.name)
     asset_type, ctype = FORMATS[ext]
     return asset_type, ctype, size, sha256(p.read_bytes()).hexdigest()
 

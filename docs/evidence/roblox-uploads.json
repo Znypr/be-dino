@@ -792,5 +792,375 @@
     "moderation": "Approved",
     "uploaded": "2026-11-14T09:00:02Z",
     "imageId": "104133746888674"
+  },
+  {
+    "assetId": "102977300524121",
+    "assetType": "Decal",
+    "displayName": "aura_meadow",
+    "file": "aura_meadow.png",
+    "bytes": 132125,
+    "sha256": "7c80f59fde98600501674554f971fae0cfdccc629b4e6b1d9558c7f693f68540",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:29:59Z"
+  },
+  {
+    "assetId": "100842909662911",
+    "assetType": "Decal",
+    "displayName": "aura_royal",
+    "file": "aura_royal.png",
+    "bytes": 133231,
+    "sha256": "3847d71c96b2d59b06d0554dd535f86223e5f058dc8a4553c5a8e189d0505ca4",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:05Z"
+  },
+  {
+    "assetId": "97541848000372",
+    "assetType": "Decal",
+    "displayName": "aura_tidal",
+    "file": "aura_tidal.png",
+    "bytes": 99042,
+    "sha256": "9e501b2a63065401ad6b20320a4da1168ee594609dfa284808ed912af27188d9",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:11Z"
+  },
+  {
+    "assetId": "118177464525993",
+    "assetType": "Decal",
+    "displayName": "crystals_l",
+    "file": "crystals_l.png",
+    "bytes": 146111,
+    "sha256": "32a63d13ebe4d707f5796d22535091ba74a12df88e89ee36a824fe565e126466",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:16Z"
+  },
+  {
+    "assetId": "107033902554668",
+    "assetType": "Decal",
+    "displayName": "crystals_m",
+    "file": "crystals_m.png",
+    "bytes": 115212,
+    "sha256": "f928e3efd868a969cc23303bb5197290916f5057b03ed9b3a7008a99f76f02ca",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:22Z"
+  },
+  {
+    "assetId": "126966382941609",
+    "assetType": "Decal",
+    "displayName": "crystals_s",
+    "file": "crystals_s.png",
+    "bytes": 102174,
+    "sha256": "5e911b2ac248bf5a3ce3ab1dbb90ec14e1a919fab46b01d23e2fa5853237ac09",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:25Z"
+  },
+  {
+    "assetId": "71403817411442",
+    "assetType": "Decal",
+    "displayName": "crystals_xl",
+    "file": "crystals_xl.png",
+    "bytes": 156266,
+    "sha256": "07ebe521ad16f508682bb595cd0dd8ba47db66179101ed91d0137760d8e25c27",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:31Z"
+  },
+  {
+    "assetId": "122453219709170",
+    "assetType": "Decal",
+    "displayName": "fame_plaque",
+    "file": "fame_plaque.png",
+    "bytes": 147047,
+    "sha256": "15de5c6b06781a4d6df0c550bcb41814f96893ba6a2ea4bcb0febfb3b57f5c49",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:37Z"
+  },
+  {
+    "assetId": "72811656247735",
+    "assetType": "Decal",
+    "displayName": "golden_drumstick_icon",
+    "file": "golden_drumstick_icon.png",
+    "bytes": 61289,
+    "sha256": "485dcfb235d5af1605288306575c0154f44322a33d970216cda92aec85eee48e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:43Z"
+  },
+  {
+    "assetId": "97809254158799",
+    "assetType": "Decal",
+    "displayName": "hud_bite",
+    "file": "hud_bite.png",
+    "bytes": 83120,
+    "sha256": "5b2d935830437cc25e17b4f19744cbe6860c054e1e71c327097dae45baaa8065",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:49Z"
+  },
+  {
+    "assetId": "78156334814679",
+    "assetType": "Decal",
+    "displayName": "hud_heart",
+    "file": "hud_heart.png",
+    "bytes": 52071,
+    "sha256": "add131de1f5f80ec6f8b47e7c08dbb92bf175bc9fa4357d42ee5e73981dbfebc",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:51Z"
+  },
+  {
+    "assetId": "121196741763966",
+    "assetType": "Decal",
+    "displayName": "hud_hit_bubble",
+    "file": "hud_hit_bubble.png",
+    "bytes": 81445,
+    "sha256": "6f9971f613d92dea4781c66ad729fbbdb323cb57a54370c8021b5f9d4015b0be",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:30:57Z"
+  },
+  {
+    "assetId": "126066172383762",
+    "assetType": "Decal",
+    "displayName": "index_tab_colours",
+    "file": "index_tab_colours.png",
+    "bytes": 87586,
+    "sha256": "32359b93ddc89fb6bd5c7cf0e4bf9255dd6ca5f286a93b566362055949dd06f1",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:03Z"
+  },
+  {
+    "assetId": "104161964229177",
+    "assetType": "Decal",
+    "displayName": "index_tab_patterns",
+    "file": "index_tab_patterns.png",
+    "bytes": 74400,
+    "sha256": "ec30669feecd04c315ca5d87073058e414caecc048c8bb08e6d371e775fabf8b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:09Z"
+  },
+  {
+    "assetId": "120499383599841",
+    "assetType": "Decal",
+    "displayName": "notify_crystal",
+    "file": "notify_crystal.png",
+    "bytes": 60130,
+    "sha256": "98ebcd0e2179daddbd88ac0f2974bccad5d01c1ae678b77fab37d16f7eb0609f",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:15Z"
+  },
+  {
+    "assetId": "85917600322436",
+    "assetType": "Decal",
+    "displayName": "notify_level",
+    "file": "notify_level.png",
+    "bytes": 63262,
+    "sha256": "d47797f65a4117241982d7f9da191eced933703ae81b51474f0ff87edd44b84e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:18Z"
+  },
+  {
+    "assetId": "81986494148840",
+    "assetType": "Decal",
+    "displayName": "notify_mutation_egg",
+    "file": "notify_mutation_egg.png",
+    "bytes": 96027,
+    "sha256": "a6122c1fc4560e0ecf5b76f9a8807a9df94c14d563a6cae11c0ab75e0d5e30ad",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:24Z"
+  },
+  {
+    "assetId": "118022719326541",
+    "assetType": "Decal",
+    "displayName": "notify_star",
+    "file": "notify_star.png",
+    "bytes": 54938,
+    "sha256": "c7d52ec59b9e406b930c695cda9406028ec5a16079d96f15067003ef96e3613a",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:30Z"
+  },
+  {
+    "assetId": "74296751225825",
+    "assetType": "Decal",
+    "displayName": "notify_warning",
+    "file": "notify_warning.png",
+    "bytes": 50282,
+    "sha256": "2fc44726741a925ab97542744557dba71297b27a1e0f34f0a8fad5436d73e35c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:35Z"
+  },
+  {
+    "assetId": "80949148627300",
+    "assetType": "Decal",
+    "displayName": "objective_arrow",
+    "file": "objective_arrow.png",
+    "bytes": 40884,
+    "sha256": "5d41465f45b1bdf419eb67906c8f6cef3909275be4b44cf753527148fe803183",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:41Z"
+  },
+  {
+    "assetId": "71960160181811",
+    "assetType": "Decal",
+    "displayName": "objective_chevron",
+    "file": "objective_chevron.png",
+    "bytes": 46528,
+    "sha256": "2ebc346184f076f0b1c236872b41f9f3ef5919d1ce8dfd3289e0c1cc5eadf8de",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:44Z"
+  },
+  {
+    "assetId": "104894944950366",
+    "assetType": "Decal",
+    "displayName": "paint_bucket",
+    "file": "paint_bucket.png",
+    "bytes": 218031,
+    "sha256": "110c069b70bd9b52514b79f890aed68a82ab0d295085abe7e1b6c086d75df731",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:50Z"
+  },
+  {
+    "assetId": "107396207442888",
+    "assetType": "Decal",
+    "displayName": "rarity_common",
+    "file": "rarity_common.png",
+    "bytes": 96079,
+    "sha256": "6c93ab2b78c9f7e7f6449c0fc603cf3364c6a40bdc9c7655b93acc75b2e145c9",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:31:56Z"
+  },
+  {
+    "assetId": "131345042955349",
+    "assetType": "Decal",
+    "displayName": "rarity_epic",
+    "file": "rarity_epic.png",
+    "bytes": 118599,
+    "sha256": "1e6e3fb756c435323732a8f6f480f0ae65718e8e8b43ec09d095600a678cf22d",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:02Z"
+  },
+  {
+    "assetId": "97646134964338",
+    "assetType": "Decal",
+    "displayName": "rarity_legendary",
+    "file": "rarity_legendary.png",
+    "bytes": 126986,
+    "sha256": "0c571fa160e8c9aec50bd66bba001a19e1cc4532f240bd99288cbaeeb4c175fd",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:08Z"
+  },
+  {
+    "assetId": "134856627897143",
+    "assetType": "Decal",
+    "displayName": "rarity_mythic",
+    "file": "rarity_mythic.png",
+    "bytes": 148464,
+    "sha256": "27807b65f323e88ebfe616c3b5ad079134f2d968955cf767ac6194c84240615c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:11Z"
+  },
+  {
+    "assetId": "124050910469179",
+    "assetType": "Decal",
+    "displayName": "rarity_rare",
+    "file": "rarity_rare.png",
+    "bytes": 94851,
+    "sha256": "eafdc99261f597c417bb1ee5cc244456d4f44a1c322627c050c92c285aecc2d9",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:17Z"
+  },
+  {
+    "assetId": "119341222754495",
+    "assetType": "Decal",
+    "displayName": "rarity_uncommon",
+    "file": "rarity_uncommon.png",
+    "bytes": 99106,
+    "sha256": "fcfff2ee12718d30b81a58ebc75a701ef492b2451d2f4bc9930f60f3855621fb",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:23Z"
+  },
+  {
+    "assetId": "121988340008782",
+    "assetType": "Decal",
+    "displayName": "station_fusion",
+    "file": "station_fusion.png",
+    "bytes": 134321,
+    "sha256": "3c07b9eeca346a8f699d9551cb64df224498d0b3e72c3a4f6d331aa288a21989",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:28Z"
+  },
+  {
+    "assetId": "89819039720918",
+    "assetType": "Decal",
+    "displayName": "station_index",
+    "file": "station_index.png",
+    "bytes": 127187,
+    "sha256": "fe554d05db82a57b64fabec72674c2a7af0124a4e9d22bf256aefa7d07096dbd",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:34Z"
+  },
+  {
+    "assetId": "76579692142495",
+    "assetType": "Decal",
+    "displayName": "station_nests",
+    "file": "station_nests.png",
+    "bytes": 133301,
+    "sha256": "ed7c3306de2512dc6ae375f42f9aa32accc5300cf87cce1499632ff55ca95025",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:38Z"
+  },
+  {
+    "assetId": "96132495855751",
+    "assetType": "Decal",
+    "displayName": "station_potions",
+    "file": "station_potions.png",
+    "bytes": 129794,
+    "sha256": "493f18e6365ffca227dd6af70c433f9256bcb78b4ddb401277498a9ee96b954f",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:44Z"
+  },
+  {
+    "assetId": "95255884275581",
+    "assetType": "Decal",
+    "displayName": "station_settings",
+    "file": "station_settings.png",
+    "bytes": 130782,
+    "sha256": "e7117baa1d977c60b098b90cb68f86619c77049db09e11b476b127bd7c06b123",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:50Z"
+  },
+  {
+    "assetId": "77794692261981",
+    "assetType": "Decal",
+    "displayName": "station_style",
+    "file": "station_style.png",
+    "bytes": 124188,
+    "sha256": "e005b4b41bf0126a8cab5497ed88afd01e61c40ff0374b7d77f7e5c6b237fcca",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:32:55Z"
+  },
+  {
+    "assetId": "104011374613441",
+    "assetType": "Decal",
+    "displayName": "tier_diamond",
+    "file": "tier_diamond.png",
+    "bytes": 909944,
+    "sha256": "f0802103bbaab8df53b52dc9a68662b72c11584cff9bc12cbe7dc9fed67ae012",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:33:04Z"
+  },
+  {
+    "assetId": "108182524707689",
+    "assetType": "Decal",
+    "displayName": "tier_emerald",
+    "file": "tier_emerald.png",
+    "bytes": 200586,
+    "sha256": "550cf8b37bb570b43a124be8af3f3870de350e75c762efa353aa3155f4fd0f7d",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:33:07Z"
+  },
+  {
+    "assetId": "127859316451296",
+    "assetType": "Decal",
+    "displayName": "tier_gold",
+    "file": "tier_gold.png",
+    "bytes": 849364,
+    "sha256": "74a350cb670d8e637b98073c68c2f878af847e39b125db0977e0b1c5e0f602e8",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:33:15Z"
   }
 ]
