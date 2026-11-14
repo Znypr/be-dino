@@ -520,9 +520,11 @@
   "reach": 2,
   "kind": "layout",
   "id": "P-26182b",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR #586 6f270666, seen in Studio run 4",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "fusion",
@@ -534,9 +536,11 @@
   "reach": 2,
   "kind": "layout",
   "id": "P-b8fc4d",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR #586 6f270666, seen in Studio run 4",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "fusion",
@@ -548,9 +552,11 @@
   "reach": 2,
   "kind": "art",
   "id": "P-9db3af",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR #586 6f270666, seen in Studio run 4",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "fusion",
@@ -562,6 +568,22 @@
   "reach": 2,
   "kind": "bug",
   "id": "P-08d922",
+  "state": "fixed",
+  "first_seen": "2026-11-14",
+  "seen": 1,
+  "note": "PR #586 6f270666, seen in Studio run 4",
+  "fixed": "2026-11-14"
+ },
+ {
+  "screen": "fusion",
+  "role": "art",
+  "title": "Empty dark bar on the Fusion donor card",
+  "detail": "Under \"Older dino\" the donor card shows an empty dark progress bar.",
+  "fix": "Hide the bar when there is no progress to show, or draw it as a thin cream track with its label.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "art",
+  "id": "P-fb8a4c",
   "state": "open",
   "first_seen": "2026-11-14",
   "seen": 1
