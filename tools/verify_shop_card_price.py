@@ -15,7 +15,7 @@ import text_style_floors as tf  # noqa: E402
 import rehearsal_env  # noqa: E402
 
 BODY = 'tools/shop_card_price_smoke.luau'
-EXTRA = {'RarityWord': 'src/shared/RarityWord.luau', 'UIFormat': 'src/shared/UIFormat.luau'}
+EXTRA = {'RarityWord': 'src/shared/RarityWord.luau', 'UIFormat': 'src/shared/UIFormat.luau', 'PriceGroup': 'src/shared/PriceGroup.luau'}
 
 
 def read(path):
@@ -61,7 +61,8 @@ def check_sources():
     assert 'ShopCardPriceButtonEnabled = false,' in cfg, 'the flag is false in source'
     cards = read('src/client/ShopCards.luau')
     assert 'function Cards.buildPrice' in cards and 'if MainConfig.ShopCardPriceButtonEnabled == true then return Cards.buildPrice(ui, parent, spec) end' in cards, 'Cards.build hands the flag-on card to buildPrice'
-    assert 'pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, iconSize + 14), act' in cards, 'the price text is padded away from the crystal icon'
+    assert 'pad.Name, pad.PaddingLeft, pad.Parent = "IconPad", UDim.new(0, group.textLeft), act' in cards, 'the price text is padded away from the crystal icon'
+    assert 'PriceGroup.layout(measure' in cards and 'ui.art(act, "amber", group.iconX' in cards, 'BD-1192: the icon and the price are one measured group'
     screens = read('src/client/ShopScreens.luau')
     assert 'auraInfo = true' in screens and 'elseif name=="auraInfo" then' in screens, 'the read-only details page exists'
     info = screens[screens.index('elseif name=="auraInfo" then'):screens.index('elseif name=="potions" then')]
