@@ -7,6 +7,8 @@ local IconLayout = require(script.Parent.UIIconLayout)
 local TrailArtwork = require(script.Parent.TrailArtwork)
 local FxUi = require(script.Parent.FxUi)
 local PotionArt = require(script.Parent.PotionArt)
+local Config = require(script.Parent.Config)
+local UIMotion = require(script.Parent.UIMotion)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -60,18 +62,66 @@ function Theme.decorate(object: GuiObject, radius: number)
             Theme.animate(scale,.09,{Scale=(if Theme.MotionEnabled then value else 1)*(object:GetAttribute("UIScaleBase") or 1)})
             Theme.animate(border,.09,{Color=if hovered or pressed then Theme.Colors.gold else Theme.Colors.outline})
         end
+        -- BD-1182 (docs/228 board 6, docs/229): with Config.MotionPresetsEnabled a press sinks the button 5 px in 80 ms (no shrink) and the
+        -- release pops it to 103%, then back to rest. Numbers and the Reduce Motion rule: Shared/UIMotion. The sink is a NumberValue whose
+        -- change is ADDED to the button's Position, so a layout pass that moves the button meanwhile is never undone. Flag off: none of this runs.
+        local presets = (Config :: any).MotionPresetsEnabled == true
+        local sink: NumberValue? = nil
+        local sunk, popSerial = 0, 0
+        local function sinkTo(pixels: number, seconds: number)
+            if sink == nil then
+                if pixels == 0 then return end
+                local value = Instance.new("NumberValue")
+                value.Name = "PressSink"
+                value.Changed:Connect(function(now: number)
+                    object.Position += UDim2.fromOffset(0, now - sunk)
+                    sunk = now
+                end)
+                value.Parent = object
+                sink = value
+            end
+            Theme.animate(sink :: NumberValue, seconds, {Value = pixels})
+        end
+        local function pressDown()
+            local plan = UIMotion.press(not Theme.MotionEnabled)
+            popSerial += 1
+            sinkTo(plan.sink, plan.seconds)
+            animate(1)
+        end
+        local function pressUp(rest: number)
+            local plan = UIMotion.release(not Theme.MotionEnabled)
+            popSerial += 1
+            local serial = popSerial
+            sinkTo(0, plan.popSeconds)
+            if plan.popSeconds <= 0 then animate(rest) return end
+            Theme.animate(scale, plan.popSeconds, {Scale = plan.pop * (object:GetAttribute("UIScaleBase") or 1)})
+            Theme.animate(border, .09, {Color = if hovered then Theme.Colors.gold else Theme.Colors.outline})
+            task.delay(plan.popSeconds, function()
+                if popSerial == serial and not pressed and object.Parent then
+                    Theme.animate(scale, plan.settleSeconds, {Scale = rest * (object:GetAttribute("UIScaleBase") or 1)})
+                end
+            end)
+        end
+        local function pressLost()
+            popSerial += 1
+            sinkTo(0, UIMotion.press(not Theme.MotionEnabled).seconds)
+        end
         object.MouseEnter:Connect(function() hovered=true animate(if pressed then .96 else 1.035) end)
-        object.MouseLeave:Connect(function() hovered=false pressed=false animate(1) end)
+        object.MouseLeave:Connect(function() hovered=false pressed=false animate(1) if presets then pressLost() end end)
         object.SelectionGained:Connect(function() hovered=true animate(1.035) end)
-        object.SelectionLost:Connect(function() hovered=false pressed=false animate(1) end)
+        object.SelectionLost:Connect(function() hovered=false pressed=false animate(1) if presets then pressLost() end end)
         object.InputBegan:Connect(function(input)
             if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch or input.KeyCode==Enum.KeyCode.ButtonA then
-                pressed=true animate(.96)
+                pressed=true
+                if presets then pressDown() else animate(.96) end
             end
         end)
         object.InputEnded:Connect(function(input)
             if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch or input.KeyCode==Enum.KeyCode.ButtonA then
-                pressed=false animate(if hovered and input.UserInputType~=Enum.UserInputType.Touch then 1.035 else 1)
+                local wasPressed=pressed
+                pressed=false
+                local rest=if hovered and input.UserInputType~=Enum.UserInputType.Touch then 1.035 else 1
+                if presets and wasPressed then pressUp(rest) else animate(rest) end
             end
         end)
         object.Destroying:Connect(function()
@@ -79,6 +129,7 @@ function Theme.decorate(object: GuiObject, radius: number)
             if tween then tween:Cancel() tweens[scale]=nil end
             local strokeTween=tweens[border]
             if strokeTween then strokeTween:Cancel() tweens[border]=nil end
+            if sink then Theme.cancel(sink :: NumberValue) end
         end)
     end
 end

@@ -141,7 +141,8 @@ local function close()
     Theme.animate(scale,.12,{Scale=scale.Scale*.96})
     Theme.animate(shade,.12,{BackgroundTransparency=1})
     Theme.animate(panel,.12,{Position=require(script.Parent.ModalCompact).home(.52)})
-    task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
+    local hide=if Config.MotionPresetsEnabled then require(script.Parent.MotionFx).close(scale,shade,panel) else .13 -- BD-1182
+    task.delay(if motion then hide else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
 -- BD-296: the modal blur belongs to a visible modal only (menu open, scrim shown, ScreenGui enabled and in the PlayerGui).
@@ -261,15 +262,13 @@ local function open(name: string)
     Theme.animate(panel,.16,{Position=require(script.Parent.ModalCompact).home(.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
     Theme.animate(blur,.16,{Size=blurTarget()})
+    if Config.MotionPresetsEnabled and not wasVisible then require(script.Parent.MotionFx).open(scale,viewportScale()) end -- BD-1182
     if name=="hatch" then -- BD-519: the hatch body starts from the settled home, not a slide still running
         Theme.cancel(body)
         body.AnchorPoint,body.Position=Vector2.zero,require(script.Parent.ModalCompact).place(true,motion)
     end
     render(name)
-    -- The content moves as one layer.
-    -- BD-519: not for the hatch. HatchSequence.play (inside render) already anchored the body at its centre (anchor .5, BODY_CENTER);
-    -- a slide to the plain home position with that anchor drew the whole egg stage at the top-left corner for the first frames
-    -- (long on the first OPEN of a session, when assets load). The hatch owns the body position itself.
+    -- The content moves as one layer. BD-519: not the hatch, which owns the body position (HatchSequence.play anchored it at its centre).
     if name~="hatch" then
         body.Position=require(script.Parent.ModalCompact).place(false,motion)
         Theme.animate(body,.14,{Position=require(script.Parent.ModalCompact).place(true,motion)})
