@@ -1,0 +1,51 @@
+{
+ "hud": [
+  {
+   "date": "2026-11-14",
+   "score": 5,
+   "line": "world looks good, HUD broken rail and mixed buttons"
+  }
+ ],
+ "collection": [
+  {
+   "date": "2026-11-14",
+   "score": 4,
+   "line": "empty-looking, clipped bottom"
+  }
+ ],
+ "eggs": [
+  {
+   "date": "2026-11-14",
+   "score": 4,
+   "line": "oversized button, three colours, unused right third"
+  }
+ ],
+ "auras": [
+  {
+   "date": "2026-11-14",
+   "score": 5,
+   "line": "nice cards, price overlap, off-style art"
+  }
+ ],
+ "potions": [
+  {
+   "date": "2026-11-14",
+   "score": 4,
+   "line": "missing icon, grey prices, clipped footer"
+  }
+ ],
+ "fusion": [
+  {
+   "date": "2026-11-14",
+   "score": 1,
+   "line": "empty window with wrong title"
+  }
+ ],
+ "settings": [
+  {
+   "date": "2026-11-14",
+   "score": 5,
+   "line": "works but plain and on studs"
+  }
+ ]
+}

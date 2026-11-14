@@ -187,9 +187,12 @@ def static_errors() -> list[str]:
     if panel.count('Theme.icon(') != 2 or not re.search(r'local function makeIcon\(.*?\n        if not art\[which\] then return nil end\n        local icon = Theme\.icon\(parent, Rules\.Slots\[which\]\)', panel, re.S):
         errors.append('ObjectivesPanel: Theme.icon is called twice only (the trophy, and makeIcon behind `if not art[which] then return nil end`)')
     slots = read('src/shared/AssetSlots.luau')
+    registry = read('docs/77-asset-registry.md')
     for key in ('objective_chevron', 'objective_arrow', 'notify_crystal', 'notify_star'):
-        if not re.search(rf'^\s*{key} = "",', slots, re.M):
-            errors.append(f'AssetSlots.Images.{key} must exist and be empty in source (art pending, never an invented id)')
+        # empty (art pending) or a real uploaded id that has its docs/77 line (bound 2026-11-14, docs/233); never an invented id
+        m = re.search(rf'^\s*{key} = "(|rbxassetid://(\d+))",', slots, re.M)
+        if not m or (m.group(2) and m.group(2) not in registry):
+            errors.append(f'AssetSlots.Images.{key} must exist and be empty or a bound id with a docs/77 line (never an invented id)')
     if 'Rules.Slots' not in panel or 'chevron = "objective_chevron", arrow = "objective_arrow", crystal = "notify_crystal", star = "notify_star"' not in read('src/shared/ObjectivePanelRules.luau'):
         errors.append('ObjectivePanelRules.Slots must name the four Theme.ImageIds keys of docs/109 section 9')
     if 'Theme.icon(header, "trophy")' not in panel or not re.search(r'^\s*trophy = "rbxassetid://\d+"', read('src/shared/UIIconAssets.luau'), re.M):

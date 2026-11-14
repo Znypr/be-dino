@@ -415,12 +415,14 @@ def check_wiring():
     assert 'if s.indexSeen > 0 then out.indexSeen = s.indexSeen end' in settings, 'indexSeen is stored lazily: never in a profile that never looked'
     assert 'Settings.set("indexSeen", total)' in read('src/client/IndexTabs.luau') and 'indexSeen' not in read('src/client/FtueRail.luau')
     assert 'PatternColourIndexEnabled ~= true' in read('src/client/IndexTabs.luau'), 'IndexTabs does nothing with the flag off, so nothing is ever written'
-    # asset slots: one per pattern id and the two tab icons, all unbound
+    # asset slots: one per pattern id (unbound) and the two tab icons (empty or a registered id)
     slots = read('src/shared/AssetSlots.luau')
     for row_id in re.findall(r'\{id="(0\d_[a-z_]+)"', read('src/shared/ProgressionConfig.luau')):
         assert re.search(r'^\s*pattern_%s = "",' % row_id, slots, re.M), 'AssetSlots.Images.pattern_' + row_id
-    for name in ('index_tab_patterns', 'index_tab_colours'):
-        assert re.search(r'^\s*%s = "",' % name, slots, re.M), name
+    registry = read('docs/77-asset-registry.md')
+    for name in ('index_tab_patterns', 'index_tab_colours'):  # empty, or a real uploaded id with its docs/77 line (bound 2026-11-14, docs/233)
+        m = re.search(r'^\s*%s = "(|rbxassetid://(\d+))",' % name, slots, re.M)
+        assert m and (not m.group(2) or m.group(2) in registry), name
     # close paths: nothing full-screen was added, the tabs sit left of X inside the header
     tabs = read('src/client/IndexTabs.luau')
     assert 'Active = true' not in tabs and tabs.count('Instance.new("TextButton")') == 1 and 'UDim2.new(1 / 3, -6, 1, 0)' in tabs, 'the only buttons are the three tabs inside the tab bar: no full-screen button or Active frame over the menu'
