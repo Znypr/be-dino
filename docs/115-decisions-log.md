@@ -734,3 +734,13 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **Ids.** The 23 pictures are **not uploaded**; the slots `toybox_*` in `src/shared/AssetSlots.luau` are empty and no id was invented. Until they are bound the flag changes only the text outline (a picture group is used only when all its ids are bound).
 - **To overturn.** Set the playtest rule of `ToyboxUIEnabled` to false (one line in `tools/release_profiles.py`).
 - **Evidence.** Offline only: `tools/verify_toybox_ui.py` (57 mutants; the 23 PNGs measured against the slice rects), `tests/test_release.py`, `tests/test_rehearsal.py`. **No Studio, no phone, nobody has seen the skin in the game.**
+
+## 2026-11-14 Owner picks: Toybox style, Parasaurolophus, five new species
+
+Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questions/` (q2, q3, q4):
+- **Text outline 4 px (C-57, OWNER).** Under `ToyboxUIEnabled` every outlined text is 4 px at every size (was 3 px, 4 px from 28 px text). `Kit.StrokeSmall` in `src/shared/ToyboxKit.luau`. The handbook's "2 to 3 px" stays the rule of the default build until the flag reaches it.
+- **Gloss buttons (OWNER).** The kit stays glossy; no matte variant.
+- **Dino detail header in the rarity colour (C-58, OWNER).** Under the skin the dino detail page's header is the kit header of the dino's rarity. **LEAD fill-in (PROVISIONAL):** Common cream (the kit has no grey header), Uncommon green, Rare blue, Epic purple, Legendary amber, Mythic red (red is otherwise kept for the X). To overturn: `Kit.RarityHeader`.
+- **Uploads (OWNER "yes upload to roblox").** The 23 Toybox pictures are uploaded (Decals, all moderation Approved, `docs/evidence/roblox-uploads.json`). Binding waits for the decal-to-image-id lookup in Studio.
+- **Five more playable species (OWNER "yes").** Kentrosaurus, Liopleurodon, Archelon, Sauropelta and Styracosaurus (V3 models in Place1) become game species: BD-1187.
+- **Parasaurolophus (OWNER, reluctant).** "Both look odd"; if one must be picked, the V3 "cannon alt" (B). Bind B now (BD-1186) and remodel it through the mesh pipeline (BD-1188).

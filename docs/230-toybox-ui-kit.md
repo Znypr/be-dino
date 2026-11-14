@@ -43,6 +43,10 @@ The pictures are in five groups: headers, buttons, X, window body (frame and stu
 - A colourless button (white, grey, the card colour) is the grey or the dark gloss button, never a colour.
 - Text drop: only window titles and button words have it. Every other text has the thicker outline without a drop (a drop needs a second label per text).
 
+## 5b. Owner picks 2026-11-14
+
+Text outline 4 px at every size; gloss stays; the dino detail page header takes the rarity colour (`Kit.RarityHeader`: Common cream, Uncommon green, Rare blue, Epic purple, Legendary amber, Mythic red, PROVISIONAL LEAD mapping). The 23 pictures are uploaded (Decals, Approved); binding needs the image ids from Studio. Docs/115 2026-11-14.
+
 ## 6. Open steps
 
 1. **Upload the 23 pictures** (owner's account). `python tools/upload_batch.py` now lists them as the group "Toybox UI kit"; after the upload `python tools/bind_assets.py --batch ...` writes the ids into `AssetSlots.Images` and the docs/77 lines. Nothing was uploaded in this change and no id was invented.

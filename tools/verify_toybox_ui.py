@@ -39,6 +39,7 @@ SLOTS = 'src/shared/AssetSlots.luau'
 MOTION = 'src/shared/UIMotion.luau'
 COMPACT = 'src/client/ModalCompact.luau'
 FUSION = 'src/client/FusionMenu.luau'
+INDEX = 'src/client/DinoIndexScreens.luau'  # owner 2026-11-14 (C-58): rarity-coloured detail header
 BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
@@ -142,8 +143,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, CONFIG, SLOTS, STYLE) and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact and FusionMenu reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE) and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu and DinoIndexScreens reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)
@@ -170,8 +171,10 @@ local Kit = (__KIT__)()
 local function eq(a, b, what) assert(a == b, what .. ": got " .. tostring(a) .. ", want " .. tostring(b)) end
 -- ---- floors and text
 eq(Kit.MinText, 14, "text floor") eq(Kit.MinClose, 48, "X floor")
-eq(Kit.stroke(14), 3, "small text outline") eq(Kit.stroke(27), 3, "27 px outline") eq(Kit.stroke(28), 4, "28 px outline") eq(Kit.stroke(60), 4, "big text outline")
-eq(Kit.stroke(0 / 0), 3, "a broken size still gets an outline")
+eq(Kit.stroke(14), 4, "small text outline (owner 2026-11-14: 4 px)") eq(Kit.stroke(27), 4, "27 px outline") eq(Kit.stroke(28), 4, "28 px outline") eq(Kit.stroke(60), 4, "big text outline")
+eq(Kit.stroke(0 / 0), 4, "a broken size still gets an outline")
+for tier, colour in {"cream", "green", "blue", "purple", "amber", "red"} do eq(Kit.raritySlot(tier), "toybox_header_" .. colour, "rarity header " .. tier) end
+eq(Kit.raritySlot(99), "toybox_header_cream", "an unknown tier gets the Common header")
 for _, size in {1, 8, 13, 13.9} do eq(Kit.textSize(size), 14, "text under the floor") end
 eq(Kit.textSize(14), 14, "floor itself") eq(Kit.textSize(23), 23, "bigger text keeps its size") eq(Kit.textSize(0 / 0), 14, "a broken size")
 for _, size in {1, 14, 20, 28, 40, 80} do local s = Kit.stroke(size) assert(s >= 3 and s <= 4, "outline is 3..4 px") end
@@ -463,7 +466,7 @@ assert(count(w.shade, isToybox) == 0, "no id bound: no picture and no Toybox ins
 assert(w.panel.BackgroundTransparency == 0 and w.header.BackgroundTransparency == 0 and buy.BackgroundTransparency == 0, "no id bound: nothing is hidden")
 assert(w.panel:FindFirstChild("FossilTexture").Visible and w.header:FindFirstChild("FossilTexture").Visible, "no id bound: the old texture stays")
 assert(buy.TextTransparency == 0 and buy:FindFirstChildOfClass("UIStroke").Enabled and w.closeButton.TextTransparency == 0, "no id bound: buttons keep their own word and edge")
-assert(strokeOf(card) == 3 and strokeOf(big) == 4 and strokeOf(w.heading) == 4, "flag on: text outline 3 px, 4 px from 28 px text")
+assert(strokeOf(card) == 4 and strokeOf(big) == 4 and strokeOf(w.heading) == 4, "flag on: text outline 4 px at every size")
 Theme.Toybox.place("auras") -- no header strip: must not error
 '''
 
@@ -498,7 +501,7 @@ assert(buy.BackgroundTransparency == 1 and buy.TextTransparency == 1 and buy.Tex
 assert(buy:FindFirstChildOfClass("UIStroke").Enabled == false, "the old edge is off: the picture has its own")
 assert(word.Text == "Buy" and drop.Text == "Buy" and word.TextTransparency == 0, "the word is on the label")
 assert(word.TextSize == 14 and drop.TextSize == 14, "a 10 px word is raised to the 14 px floor")
-assert(strokeOf(word) == 3 and strokeOf(drop) == 3, "3 px outline")
+assert(strokeOf(word) == 4 and strokeOf(drop) == 4, "4 px outline")
 assert(drop.Position == UDim2.fromOffset(0, Kit.DropPixels) and tostring(drop.TextColor3) ~= tostring(word.TextColor3), "the drop is a dark copy under the word")
 buy.Text = "Sold"
 assert(word.Text == "Sold" and drop.Text == "Sold", "the label follows the button's Text")

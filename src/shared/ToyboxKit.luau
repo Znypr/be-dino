@@ -8,7 +8,7 @@ local Kit = {}
 
 Kit.MinText = 14 -- docs/72 floor: no text under 14 px
 Kit.MinClose = 48 -- docs/202 R6 / BD-1117: the X is a square of at least 48 px on screen
-Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 3, 4, 28 -- docs/228: text outline 3 px, 4 px from 28 px text up
+Kit.StrokeSmall, Kit.StrokeBig, Kit.StrokeBigFrom = 4, 4, 28 -- owner 2026-11-14 (C-57): text outline 4 px at every size (was 3 px, 4 px from 28 px text up)
 Kit.DropPixels = 3 -- the dark copy of a title or button word sits this far under it
 Kit.Outline = {13, 15, 20} -- the same dark as Theme.Colors.outline / TextStyle.Dark
 
@@ -85,6 +85,12 @@ Kit.ScreenPlace = {
 }
 function Kit.placeOf(screen: string?): string
     return (if screen then Kit.ScreenPlace[screen] else nil) or Kit.DefaultPlace
+end
+-- Owner 2026-11-14 (C-58): the dino detail page keeps its rarity colour under the skin. Rarity tier 1..6 (Common .. Mythic) -> header picture,
+-- the nearest kit colour to Theme.RarityColors. PROVISIONAL (LEAD): Common = cream (the kit has no grey header), Mythic = red.
+Kit.RarityHeader = {"cream", "green", "blue", "purple", "amber", "red"}
+function Kit.raritySlot(tier: number): string
+    return "toybox_header_" .. (Kit.RarityHeader[tier] or Kit.RarityHeader[1])
 end
 function Kit.headerOf(place: string): string
     return Kit.PlaceHeader[place] or Kit.PlaceHeader[Kit.DefaultPlace]
