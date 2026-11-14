@@ -55,6 +55,11 @@
    "date": "2026-11-14",
    "score": 4,
    "line": "price icon inside the word (regression)"
+  },
+  {
+   "date": "2026-11-14",
+   "score": 7,
+   "line": "target layout, prices clean; chip text and old aura art"
   }
  ],
  "potions": [
@@ -91,6 +96,13 @@
    "date": "2026-11-14",
    "score": 5,
    "line": "works but plain and on studs"
+  }
+ ],
+ "trails": [
+  {
+   "date": "2026-11-14",
+   "score": 8,
+   "line": "4 equal cards, equipped ring, level locks"
   }
  ]
 }

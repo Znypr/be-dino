@@ -87,8 +87,8 @@ function Page.build(ui, body: GuiObject, header: GuiObject, spec)
     local chip, restock = Layout.chip(body, TimerWords.restockIn(0), size(lay.restock), pos(lay.restock))
     chip.Name = "RestockChip"
     restock.Name = "RestockText"
-    local note = Layout.text(body, "Rarer potions show up less often.", size(lay.note), pos(lay.note), Kit.Type.body, "value", Enum.TextXAlignment.Right)
-    note.Name = "RarityNote"
+    local noteChip, note = Layout.chip(body, "Rarer potions show up less often.", size(lay.note), pos(lay.note)) -- on cream, never straight on the studs
+    noteChip.Name, note.Name = "RarityNoteChip", "RarityNote"
     note:SetAttribute("TextKind", "note")
     ShopPage.wallet({art = ui.art, label = ui.label}, header, chip, spec.crystals, spec.closeSide or 48)
 

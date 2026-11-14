@@ -28,6 +28,14 @@
     "src/client/PotionToyboxPage.luau": {
       "count": 1,
       "reason": "BD-1205: only the tier COLOUR of the icon ring is read; no rarity word is drawn on the potion cards"
+    },
+    "src/client/DinoIndexList.luau": {
+      "count": 1,
+      "reason": "BD-1194 Toybox Index card: the rarity chip is FILLED with the tier colour (ChipStyle.apply), the word sits on it in white, same as DinoIndexScreens."
+    },
+    "src/client/EggsPanels.luau": {
+      "count": 2,
+      "reason": "BD-1195 Toybox Eggs stage: the rarity pill is FILLED with the tier colour, the word sits on it in white, same as EggsScreen; the second hit is the ctx field list (rarityNames) in the header comment, nothing shown."
     }
   }
 }

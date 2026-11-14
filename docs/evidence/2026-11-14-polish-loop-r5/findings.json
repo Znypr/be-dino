@@ -1,0 +1,22 @@
+[
+ {
+  "screen": "auras",
+  "role": "ux",
+  "title": "Shop chip words are outlined white on cream",
+  "detail": "Auras / Trails / Eggs / Crystals and \"Styling: Compy\" draw outlined white text on cream chips: blurry, low contrast.",
+  "fix": "Dark ink #3A2F1E without outline on the chips.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "layout"
+ },
+ {
+  "screen": "auras",
+  "role": "art",
+  "title": "Aura cards still show the old footprint-stone art",
+  "detail": "The art box shows the assembled footprint stone + rings, not the owner-picked ring icons (aura v2).",
+  "fix": "Show the bound aura_* ring picture in the art box under the flag.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "art"
+ }
+]

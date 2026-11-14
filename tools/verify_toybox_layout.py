@@ -285,6 +285,9 @@ do -- the cream chip: dark ink word on its own label, NO outline (the skin's out
         assert(word.TextStrokeTransparency == 1 and word.TextColor3 == Layout.tone("value") and word.TextSize >= 14, "dark ink, no outline, at least 14 px")
         for _, child in word.__children do assert(child.ClassName ~= "UIStroke" or child.Transparency == 1, "no visible stroke on the chip word") end
         assert(chip:FindFirstChild("ToyboxText") == nil, "no skin word label on a cream chip")
+        local outline = chip:FindFirstChild("CreamOutline")
+        assert(outline ~= nil and outline.ApplyStrokeMode == Enum.ApplyStrokeMode.Border, "the chip outline is a BORDER stroke (a text stroke would halo the hidden word)")
+        for _, child in chip.__children do assert(child.ClassName ~= "UIStroke" or child.ApplyStrokeMode == Enum.ApplyStrokeMode.Border, "no text-mode stroke on the chip button") end
     end
 end
 assert(Kit.Eggs.autoW >= 140, "the AUTO toggle is wide enough for 'AUTO: LOCKED' at 16 px")
@@ -530,6 +533,9 @@ def static_checks(read):
     assert 'Instance.new("Frame")' in hud or True
     assert 'FireServer' not in hud and 'Position =' not in hud.replace('word.Position', '').replace('badge.Position', '').replace('icon.Position', '') or True
     assert 'leap.Position' not in hud and 'bite.Position' not in hud and 'tile.Position' not in hud, 'HudToybox never moves a button (TouchLayout and the rail fix keep their numbers)'
+    assert 'ApplyStrokeMode.Border, badge' in hud and 'UDim2.new(1, -H.badgeInset, 0, H.badgeInset)' in hud and 'Vector2.new(1, 0)' in hud, 'the key badge is a ring (border stroke) fully inside the top-right corner'
+    assert 'UDim.new(0, H.wordX), UDim.new(0, H.badgeInset), bite' in hud and 'H.iconX - H.wordX' in hud and 'GetTextSize' in hud, 'CHOMP: the icon is left, the measured word right of it (padding), never overlapping'
+    assert 'Layout.chip(body, "Rarer potions show up less often."' in potions_page, 'the rarity note sits in a cream chip, not on the studs'
     assert 'KeyHint' in hud and 'UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled' in hud, 'the key hint is a small badge, desktop only'
     for module in (potions_page, hud):
         assert not re.search(r'MinTextSize\s*=\s*(\d|1[0-3])\b', module), 'no text floor under 14 px'
@@ -600,6 +606,10 @@ MUTANTS = {
     'LEAP says the long sentence again': (U.KIT, 'return "LEAP"\n    end\n    if kind == "chomp"', 'return "LEAP [E] ready"\n    end\n    if kind == "chomp"'),
     'the HUD buttons are shorter than 44 px': (U.KIT, 'Kit.Hud = {height = 60,', 'Kit.Hud = {height = 40,'),
     'HOME is red again': (U.HUDT, 'found.BackgroundColor3 == C.red then found.BackgroundColor3 = C.card', 'found.BackgroundColor3 == C.red then found.BackgroundColor3 = C.red'),
+    'the chip outline halos the word again': (U.LAYOUT, 'line.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Contextual', 'line.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual -- Contextual'),
+    'the key badge pokes out of the button': (U.HUDT, 'UDim2.new(1, -H.badgeInset, 0, H.badgeInset)', 'UDim2.new(1, H.badge, 0, -H.badgeInset)'),
+    'the CHOMP icon overlaps the word': (U.HUDT, 'UDim.new(0, H.wordX), UDim.new(0, H.badgeInset), bite', 'UDim.new(0, 0), UDim.new(0, H.badgeInset), bite'),
+    'the rarity note is on the studs again': (U.POTIONP, 'Layout.chip(body, "Rarer potions show up less often."', 'Layout.text(body, "Rarer potions show up less often."'),
     'HudToybox moves a button': (U.HUDT, '    leap.Size = UDim2.fromOffset(leap.Size.X.Offset, H.height)', '    leap.Position = UDim2.fromOffset(0, 0)'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
 }

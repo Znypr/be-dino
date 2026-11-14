@@ -76,6 +76,7 @@ function Layout.tabChip(parent: GuiObject, name: string, text: string, size: UDi
     round.CornerRadius, round.Parent = UDim.new(0, Kit.CardCorner), b
     local line = Instance.new("UIStroke")
     line.Name, line.Color, line.Thickness, line.Parent = "CreamOutline", OUTLINE, Kit.PanelStroke, b
+    line.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Contextual on a TextButton outlines its (hidden) TEXT: the dark halo around the chip word
     local word = Instance.new("TextLabel")
     word.Name, word.BackgroundTransparency, word.Size, word.ZIndex, word.Text = "ChipWord", 1, UDim2.fromScale(1, 1), b.ZIndex + 1, text
     word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, Kit.textSize(textSize), false, Enum.TextXAlignment.Center
@@ -129,7 +130,7 @@ function Layout.actionButton(parent: GuiObject, text: string, size: UDim2, posit
         local round = Instance.new("UICorner")
         round.CornerRadius, round.Parent = UDim.new(0, 10), b
         local line = Instance.new("UIStroke")
-        line.Color, line.Thickness, line.Parent = OUTLINE, Kit.PanelStroke, b
+        line.Color, line.Thickness, line.ApplyStrokeMode, line.Parent = OUTLINE, Kit.PanelStroke, Enum.ApplyStrokeMode.Border, b
     end
     b.Activated:Connect(callback)
     b.Parent = parent

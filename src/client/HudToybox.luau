@@ -37,13 +37,13 @@ function M.badge(button: GuiObject, key: string): TextLabel?
     local badge = Instance.new("TextLabel")
     badge.Name, badge.Text, badge.BackgroundColor3, badge.BorderSizePixel = "KeyHint", key, Layout.tone("panel"), 0
     badge.Size = UDim2.fromOffset(H.badge, H.badge)
-    badge.Position = UDim2.fromOffset(button.Size.X.Offset - H.badge - H.badgeInset, H.badgeInset)
+    badge.AnchorPoint, badge.Position = Vector2.new(1, 0), UDim2.new(1, -H.badgeInset, 0, H.badgeInset) -- fully inside the top-right corner, whatever the width
     badge.Font, badge.TextSize, badge.ZIndex = Enum.Font.FredokaOne, 15, button.ZIndex + 3
     Layout.ink(badge, "value")
     local round = Instance.new("UICorner")
     round.CornerRadius, round.Parent = UDim.new(0.5, 0), badge
     local line = Instance.new("UIStroke")
-    line.Color, line.Thickness, line.Parent = Color3.fromRGB(Kit.Outline[1], Kit.Outline[2], Kit.Outline[3]), 2, badge
+    line.Color, line.Thickness, line.ApplyStrokeMode, line.Parent = Color3.fromRGB(Kit.Outline[1], Kit.Outline[2], Kit.Outline[3]), 2, Enum.ApplyStrokeMode.Border, badge -- a ring round the badge, not a stroke round the letter
     badge.Parent = button
     return badge
 end
@@ -71,13 +71,24 @@ function M.attach(ctx: any)
     if bite and bite:IsA("TextButton") then
         pill(bite)
         bite.Size = UDim2.fromOffset(bite.Size.X.Offset, H.height)
-        bite.TextSize = H.word
+        -- icon left, word right: a padding of Kit.Hud.wordX moves every child (the skin's word label too), so the word centres in what is left of the button
+        local pad = Instance.new("UIPadding")
+        pad.Name, pad.PaddingLeft, pad.PaddingRight, pad.Parent = "WordPad", UDim.new(0, H.wordX), UDim.new(0, H.badgeInset), bite
+        local room = bite.Size.X.Offset - H.wordX - H.badgeInset
+        local size = H.word
+        while size > Kit.MinText do -- measure the real word and step the size down until it fits beside the icon
+            local ok, bounds = pcall(function() return game:GetService("TextService"):GetTextSize(bite.Text, size, bite.Font, Vector2.new(10000, 200)).X end)
+            if (ok and typeof(bounds) == "number" and bounds or #bite.Text * size * 0.62) <= room then break end
+            size -= 1
+        end
+        bite.TextSize = size
         local id = (Slots.Images :: any).hud_bite
         if type(id) == "string" and string.match(id, "^rbxassetid://%d+$") then -- the owner's bite picture beside the word, never a blank box
             local icon = Instance.new("ImageLabel")
             icon.Name, icon.BackgroundTransparency, icon.Image, icon.ScaleType, icon.ZIndex = "BiteIcon", 1, id, Enum.ScaleType.Fit, bite.ZIndex + 2
             icon.Parent = bite
             placeIcon(bite, icon)
+            icon.Position = UDim2.fromOffset(H.iconX - H.wordX, (H.height - H.icon) // 2) -- relative to the padded edge
         end
         M.badge(bite, "F")
     end

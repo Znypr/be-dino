@@ -36,6 +36,10 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | objective_arrow | image, owner upload | - | 81040257111561 | src/shared/AssetSlots.luau:Images.objective_arrow (BD-077 (art), BD-561 (wiring, done)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | notify_crystal | image, owner upload | - | 87275351939166 | src/shared/AssetSlots.luau:Images.notify_crystal (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | notify_star | image, owner upload | - | 82032022012036 | src/shared/AssetSlots.luau:Images.notify_star (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| objective_chevron | image, owner upload | - | 138538873823323 | src/shared/AssetSlots.luau:Images.objective_chevron (BD-077 (art), BD-561 (wiring, done)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| objective_arrow | image, owner upload | - | 81917287927580 | src/shared/AssetSlots.luau:Images.objective_arrow (BD-077 (art), BD-561 (wiring, done)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| notify_crystal | image, owner upload | - | 103879527936868 | src/shared/AssetSlots.luau:Images.notify_crystal (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| notify_star | image, owner upload | - | 87247575629190 | src/shared/AssetSlots.luau:Images.notify_star (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | fossil_centerpiece | UI icon (layer) | resources/ui/v2/layers/fossil-centerpiece-v1.png | 86663955990810 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_meadow_ring | UI icon (layer) | resources/ui/v2/layers/aura-meadow-ring-v1.png | 80049958683098 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_tidal_ring | UI icon (layer) | resources/ui/v2/layers/aura-tidal-ring-v1.png | 80241308683604 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
@@ -185,6 +189,36 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | station_index | image, owner upload | - | 133317672413595 | src/shared/AssetSlots.luau:Images.station_index (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | notify_mutation_egg | image, owner upload | - | 127761070636987 | src/shared/AssetSlots.luau:Images.notify_mutation_egg (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | tier_gold | image, owner upload | - | 134871994098899 | src/shared/AssetSlots.luau:Images.tier_gold (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| crystals_l | image, owner upload | - | 134012257983577 | src/shared/AssetSlots.luau:Images.crystals_l (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_mythic | image, owner upload | - | 85192795020248 | src/shared/AssetSlots.luau:Images.rarity_mythic (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| fame_plaque | image, owner upload | - | 89091330276848 | src/shared/AssetSlots.luau:Images.fame_plaque (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_rare | image, owner upload | - | 130015113225091 | src/shared/AssetSlots.luau:Images.rarity_rare (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| crystals_m | image, owner upload | - | 138225820858409 | src/shared/AssetSlots.luau:Images.crystals_m (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| tier_emerald | image, owner upload | - | 101300409871650 | src/shared/AssetSlots.luau:Images.tier_emerald (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| index_tab_colours | image, owner upload | - | 84461229014296 | src/shared/AssetSlots.luau:Images.index_tab_colours (BD-1039, BD-1034) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| crystals_s | image, owner upload | - | 73692000099415 | src/shared/AssetSlots.luau:Images.crystals_s (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| hud_heart | image, owner upload | - | 103627845728321 | src/shared/AssetSlots.luau:Images.hud_heart (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_common | image, owner upload | - | 109408901861626 | src/shared/AssetSlots.luau:Images.rarity_common (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| crystals_xl | image, owner upload | - | 115160553538225 | src/shared/AssetSlots.luau:Images.crystals_xl (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_potions | image, owner upload | - | 124583075758572 | src/shared/AssetSlots.luau:Images.station_potions (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| golden_drumstick_icon | image, owner upload | - | 128830053810901 | src/shared/AssetSlots.luau:Images.golden_drumstick_icon (BD-207) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_settings | image, owner upload | - | 81039286167549 | src/shared/AssetSlots.luau:Images.station_settings (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| hud_hit_bubble | image, owner upload | - | 82974641998253 | src/shared/AssetSlots.luau:Images.hud_hit_bubble (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_nests | image, owner upload | - | 87480979921614 | src/shared/AssetSlots.luau:Images.station_nests (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| hud_bite | image, owner upload | - | 88098741898139 | src/shared/AssetSlots.luau:Images.hud_bite (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| index_tab_patterns | image, owner upload | - | 75408411407176 | src/shared/AssetSlots.luau:Images.index_tab_patterns (BD-1039, BD-1034) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| notify_warning | image, owner upload | - | 127045613626428 | src/shared/AssetSlots.luau:Images.notify_warning (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_fusion | image, owner upload | - | 136086184605893 | src/shared/AssetSlots.luau:Images.station_fusion (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_legendary | image, owner upload | - | 89934686985830 | src/shared/AssetSlots.luau:Images.rarity_legendary (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_style | image, owner upload | - | 72000129709653 | src/shared/AssetSlots.luau:Images.station_style (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| notify_level | image, owner upload | - | 101902706955178 | src/shared/AssetSlots.luau:Images.notify_level (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| paint_bucket | image, owner upload | - | 90924013786813 | src/shared/AssetSlots.luau:Images.paint_bucket (BD-171, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_epic | image, owner upload | - | 119691673457076 | src/shared/AssetSlots.luau:Images.rarity_epic (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| tier_diamond | image, owner upload | - | 116862249367886 | src/shared/AssetSlots.luau:Images.tier_diamond (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| rarity_uncommon | image, owner upload | - | 81970655792431 | src/shared/AssetSlots.luau:Images.rarity_uncommon (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| station_index | image, owner upload | - | 92280757859856 | src/shared/AssetSlots.luau:Images.station_index (BD-248, BD-331, docs/104) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| notify_mutation_egg | image, owner upload | - | 137082702115998 | src/shared/AssetSlots.luau:Images.notify_mutation_egg (BD-304 follow-up) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| tier_gold | image, owner upload | - | 124623556754819 | src/shared/AssetSlots.luau:Images.tier_gold (BD-113, BD-048, BD-336) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | toybox_panel_frame | image, owner upload | - | 138963766297159 | src/shared/AssetSlots.luau:Images.toybox_panel_frame (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | toybox_card_uncommon | image, owner upload | - | 86352450149994 | src/shared/AssetSlots.luau:Images.toybox_card_uncommon (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | toybox_button_grey | image, owner upload | - | 87114495678967 | src/shared/AssetSlots.luau:Images.toybox_button_grey (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
@@ -211,6 +245,9 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | aura_tidal | image, owner upload | - | 107728346619328 | src/shared/AssetSlots.luau:Images.aura_tidal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | aura_meadow | image, owner upload | - | 71681656262976 | src/shared/AssetSlots.luau:Images.aura_meadow (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | aura_royal | image, owner upload | - | 104133746888674 | src/shared/AssetSlots.luau:Images.aura_royal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_tidal | image, owner upload | - | 119064819855336 | src/shared/AssetSlots.luau:Images.aura_tidal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_meadow | image, owner upload | - | 85161536882764 | src/shared/AssetSlots.luau:Images.aura_meadow (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_royal | image, owner upload | - | 77476680820809 | src/shared/AssetSlots.luau:Images.aura_royal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 
 Notes
 
