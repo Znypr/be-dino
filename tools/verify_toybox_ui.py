@@ -49,6 +49,8 @@ BOOT = 'src/client/Bootstrap.client.luau'
 CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
 ART = 'resources/ui/v2/toybox/final'
+# BD-1178 (docs/231): the Crystal Shop in the Toybox look reads the kit through its own verifier, tools/verify_toybox_shop.py
+CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopToyboxPage.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
 
 # The hook lines. Removing them gives "today's files"; check 2 compares the flag-off build against that.
 THEME_HOOKS = [
@@ -133,11 +135,11 @@ def static_checks(read):
         assert style.count(hook) == 1, 'TextStyle hook: %r' % hook
     assert code_only(style).count('SkinThickness') == 5 and 'require(' not in code_only(style), 'TextStyle only reads its own SkinThickness (nil by default)'
     compact = read(COMPACT)
-    assert compact.count('function M.layout(screen: string?)\n    local c = ctx\n    if not c then return end\n' + COMPACT_PLACE) == 1, 'ModalCompact.layout recolours the header only when it is given a screen name'
+    assert compact.count('local function doLayout(screen: string?)\n    local c = ctx\n    if not c then return end\n' + COMPACT_PLACE) == 1, 'ModalCompact.layout recolours the header only when it is given a screen name'
     assert compact.count(COMPACT_WINDOW + '    M.layout()\n') == 1, 'ModalCompact.attach skins the menu window (flag on only)'
     assert code_only(compact).count('Toybox') == 4, 'ModalCompact mentions Toybox only in its two hook lines'
     fusion = read(FUSION)
-    assert fusion.count(FUSION_WINDOW) == 1 and code_only(fusion).count('Toybox') == 2, 'the Fusion Menu window asks Theme.Toybox once, with the place "fusion"'
+    assert fusion.count(FUSION_WINDOW) == 1 and code_only(fusion).count('Theme.Toybox') == 3, 'the Fusion Menu window asks Theme.Toybox once, with the place "fusion" (plus the flag-gated layout require and the toyboxBody / frame helpers, docs/232 Fusion)'
     boot = read(BOOT)
     assert boot.count(BOOT_HOOK) == 1 and boot.count('ModalCompact).layout(') == 2, 'open(name) hands the screen name to ModalCompact.layout'
     assert boot.index('    body:ClearAllChildren()\n' + BOOT_HOOK) < boot.index('    render(name)\n'), 'the header is recoloured before the screen is drawn'
@@ -148,8 +150,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) and 'Toybox' in text:
-            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen and ToyboxLayout reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP and 'Toybox' in text:
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)

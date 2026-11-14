@@ -27,6 +27,9 @@ MODULES.update({
     'ShopCards': 'src/client/ShopCards.luau',
     'ShopCard': 'src/client/ShopCard.luau',
     'PriceGroup': 'src/shared/PriceGroup.luau',  # BD-1192
+    'ShopToyboxPage': 'src/client/ShopToyboxPage.luau',  # BD-1178: ShopScreens asks it whether the Toybox page is on
+    'ToyboxShop': 'src/shared/ToyboxShop.luau',
+    'ToyboxKit': 'src/shared/ToyboxKit.luau',
     'ShopCardState': 'src/shared/ShopCardState.luau',
     'ShopPreview': 'src/shared/ShopPreview.luau',
     'ShopForDino': 'src/shared/ShopForDino.luau',
@@ -108,7 +111,7 @@ MUTANTS = {
         'ShopCards': [('local rarityW = wide(data.chip.text, 104)', 'local rarityW = 104')],
     },
     'BUY and CANCEL touch on the aura confirm page': {
-        'ShopScreens': [('button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),', 'button(body,"CANCEL",290,337,510,45,')],
+        'ShopScreens': [('button(body,if toybox then toybox.cancel else "CANCEL",290,261+buyH+19,510,buttonH(45),', 'button(body,if toybox then toybox.cancel else "CANCEL",290,337,510,45,')],
     },
     'BUY and CANCEL touch on the potion confirm page': {
         'ShopScreens': [('button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),', 'button(body,"CANCEL",290,339,510,44,')],

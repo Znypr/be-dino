@@ -86,7 +86,11 @@ function List.build(d: any)
             else
                 local view = Preview.add(card, id, "silhouette")
                 view.Position, view.Size = UDim2.fromOffset(8, 12), UDim2.fromOffset(innerW, lay.cellH - 12 - 38)
-                view.ImageColor3 = L.tone("silhouette")
+                -- a soft dark-brown tint at ~0.35 transparency (not a hard black shape); the card edge takes the rarity colour
+                view.ImageColor3, view.ImageTransparency = Color3.fromRGB(107, 90, 68), 0.35
+                local edge = card:FindFirstChildOfClass("UIStroke")
+                local silRarity = d.rarityColors[rarity]
+                if edge and silRarity then edge.Color = silRarity end
                 L.text(card, "?", UDim2.fromOffset(innerW, 28), UDim2.fromOffset(8, lay.cellH - 36), Kit.Type.heading, "label", Enum.TextXAlignment.Center).Name = "Unknown"
             end
         end

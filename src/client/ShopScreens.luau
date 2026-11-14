@@ -88,13 +88,15 @@ end
 
 function Shop.render(name: string)
     if name=="auras" then
-        heading.Text,header.BackgroundColor3="Crystal Shops",C.purple
+        local ToyboxPage=require(script.Parent.ShopToyboxPage) -- BD-1178 (docs/231): the Toybox page, only while the flag is on and the card pictures are bound
+        local toybox=ToyboxPage.active()
+        heading.Text,header.BackgroundColor3=if toybox then "Crystal Shop" else "Crystal Shops",C.purple
         local p=progression()
         p.trails=p.trails or {}
         local isTrail=cosmeticTab=="trails"
         local touch=Input.TouchEnabled or require(script.Parent.ModalCompact).model().mode=="compact" -- BD-1101: a small PC window gets the same room-for-44-px layout as a phone
         local targetHeight=if touch then math.max(45,45/viewportScale()) else 44
-        local tabsHeight=if touch then targetHeight else 40
+        local tabsHeight=if touch then targetHeight else (if toybox then 44 else 40)
         local cardsY=tabsHeight+12
         -- BD-1101/BD-1103: on a small window the visible body is taller than 402 design px (innerH) and every 14 px text and 44 px button is bigger in design px,
         -- so the card is as tall as the room (never less than its parts need: name, chips, a 56 px picture, two text lines, the button); it scrolls when it must.
@@ -117,10 +119,28 @@ function Shop.render(name: string)
                 onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end})
             return
         end
-        for i,tab in shopTabs do
-            local tabButton=button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
-            tabButton.TextSize=20
-            ShopTiles.decorateTab(tabButton,tab,tabsHeight)
+        local bodyW=require(Shared.ToyboxShop).usableWidth(require(script.Parent.ModalCompact).bodyWidth(),require(script.Parent.ModalCompact).model().mode=="compact")
+        if toybox then
+            -- BD-1178: cream tab chips (the selected one amber), "Styling: <dino>" on the right, the crystal wallet in the header; the pages below sit on cream panels
+            local speciesId=str("EquippedSpeciesId","compy")
+            local tabRows=ToyboxPage.tabs(body,{tabs=shopTabs,current=cosmeticTab,height=tabsHeight,bodyW=bodyW,textPx=textPx(18),
+                styling=if cosmeticTab=="auras" or cosmeticTab=="trails" then (Config.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId)) else nil,
+                onTab=function(tab) cosmeticTab=tab open("auras") end,onStyling=function() open("collection") end})
+            cardsY=tabRows+12
+            local mark=Instance.new("Frame") mark.Name,mark.BackgroundTransparency,mark.Size,mark.Parent="ShopWalletMark",1,UDim2.fromOffset(0,0),body
+            local Compact=require(script.Parent.ModalCompact)
+            local signature=Compact.signature() -- the window was resized while the shop is open: the cards and chips are drawn again for the new body
+            local stop=Compact.onLayout(function() if Compact.signature()~=signature and mark.Parent and isActive()=="auras" then body:ClearAllChildren() render("auras") end end)
+            mark.Destroying:Connect(stop)
+            local parts=require(script.Parent.ModalCompact).parts()
+            ToyboxPage.wallet({art=art,label=label},header,mark,num("Crystals"),if parts then parts.closeButton.Size.X.Offset else 48)
+            if cosmeticTab~="auras" and cosmeticTab~="trails" then ToyboxPage.panel(body,cardsY-6,bodyW,require(script.Parent.ModalCompact).bodyHeight()-cardsY+6) end
+        else
+            for i,tab in shopTabs do
+                local tabButton=button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
+                tabButton.TextSize=20
+                ShopTiles.decorateTab(tabButton,tab,tabsHeight)
+            end
         end
         if cosmeticTab=="eggs" then
             if not ShopTiles.eggProduct(body,20,cardsY+12,220) then art(body,"egg",20,cardsY+12,220) end
@@ -246,21 +266,33 @@ function Shop.render(name: string)
             return
         end
         -- BD-393: say whose style this is (the one equipped dino) and where to change it; the cards move down a little.
+        local owned=if isTrail then p.trails else p.auras
+        local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
+        local items=if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras
+        local cardsParent,cells=body,nil
+        if toybox then
+            -- BD-1178: no "For:" strip and no pages: the cards fill the body width in equal columns and the rows below the first scroll
+            local viewTop=cardsY
+            if hintInFooter then viewTop=ToyboxPage.hint({label=label},body,require(Shared.FtueP1).NoCrystalsHint,cardsY,bodyW,textPx(18)) end
+            local grid
+            cardsParent,grid=ToyboxPage.grid(body,viewTop,bodyW,require(script.Parent.ModalCompact).bodyHeight()-viewTop,viewportScale(),#items,targetHeight)
+            cells=grid.cells
+        else
         local headerH=if touch then math.max(require(Shared.ShopForDino).HeaderHeight,math.ceil(28/viewportScale())+8) else require(Shared.ShopForDino).HeaderHeight
         require(script.Parent.ShopCards).forHeader({label=label,box=box},body,cardsY-2,str("EquippedSpeciesId","compy"),headerH)
         cardsY+=headerH
         cardsHeight=if touch then cardHeightFor(cardsY) else require(Shared.ShopForDino).CardsHeightDesktop
         buyY=cardsHeight-targetHeight-10
-        local owned=if isTrail then p.trails else p.auras
-        local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
-        for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
-            if isTrail and (i<(trailPage-1)*3+1 or i>trailPage*3) then continue end
+        end
+        for i,item in items do
+            if not toybox and isTrail and (i<(trailPage-1)*3+1 or i>trailPage*3) then continue end
             local slot=if isTrail then (i-1)%3 else i-1
+            local cell=if cells then cells[i] else nil
             -- BD-142/BD-143: big live previews, rarity chip, words for speed, shared card states (src/client/ShopCards).
             local equipped,locked=equippedId==item.id,isTrail and num("AccountLevel")<item.level and not owned[item.id]
-            require(script.Parent.ShopCards).build({label=label,box=box,button=button,art=art},body,{
+            require(script.Parent.ShopCards).build({label=label,box=box,button=button,art=art},cardsParent,{
                 kind=if isTrail then "trail" else "aura",item=item,speciesId=str("EquippedSpeciesId","compy"),owned=owned[item.id]==true,equipped=equipped,level=num("AccountLevel"),
-                x=slot*276,y=cardsY,height=cardsHeight,buyY=buyY,targetHeight=targetHeight,scale=viewportScale(),
+                x=if cell then cell.x else slot*276,y=if cell then cell.y else cardsY,width=if cell then cell.w else nil,height=if cell then cell.h else cardsHeight,buyY=buyY,targetHeight=targetHeight,scale=viewportScale(),
                 onPress=function()
                     if locked then notify("Requires account level "..item.level,C.gold) return end
                     if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
@@ -268,6 +300,7 @@ function Shop.render(name: string)
                 end,
                 onInfo=function() chosenAura=item.id open("auraInfo") end}) -- BD-1144: the Info word of the price card (read-only page, no buying there)
         end
+        if toybox then return end -- BD-1178: no footer line and no page arrows (the wallet is in the header, the grid scrolls)
         local footerY=if touch then math.max(bodyH-targetHeight,cardsY+cardsHeight+12) else 402-targetHeight
         if isTrail then
             -- BD-334: the arrow that cannot go further is dimmed and inert (page 1 "<", page 4 ">").
@@ -350,12 +383,18 @@ function Shop.render(name: string)
         local isTrail=cosmeticTab=="trails"
         local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
         heading.Text,header.BackgroundColor3=if isTrail then "Buy Trail?" else "Buy Aura?",C.purple
+        local ToyboxPage=require(script.Parent.ShopToyboxPage) -- BD-1178: on the Toybox page the popup sits on a cream panel with dark words (no text on studs)
+        local onPanel=ToyboxPage.active()
+        if onPanel then ToyboxPage.panel(body,0,require(Shared.ToyboxShop).usableWidth(require(script.Parent.ModalCompact).bodyWidth(),require(script.Parent.ModalCompact).model().mode=="compact"),require(script.Parent.ModalCompact).bodyHeight()) end
         art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
-        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
-        label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
+        local nameLine=label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
+        local priceLine=label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
+        if onPanel then ToyboxPage.ink(nameLine) ToyboxPage.ink(priceLine) end
         local buyH=buttonH(57) -- BD-1103: BUY and CANCEL never touch, however big the 44 px floor makes them
-        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
-        button(body,"CANCEL",290,261+buyH+19,510,buttonH(45),C.red,function() open("auras") end)
+        local toybox=Theme.Toybox and Theme.Toybox.Kit.ready(require(Shared.AssetSlots).Images,"card") and require(Shared.ToyboxShop).confirm(item.name,isTrail) or nil -- BD-1178 (docs/231): "Buy X?" and "Not now", same buttons
+        if toybox then heading.Text=toybox.title end
+        button(body,if toybox then toybox.buy else (if isTrail then "BUY TRAIL" else "BUY AURA"),290,261,510,buyH,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
+        button(body,if toybox then toybox.cancel else "CANCEL",290,261+buyH+19,510,buttonH(45),if toybox then C.card else C.red,function() open("auras") end)
     elseif name=="auraInfo" then
         -- BD-1118 / BD-1144 (docs/202 R3, docs/213): the read-only details page behind the Info word of a price card. The name in its tier colour, the short
         -- lines of ShopPreview.infoLines with the rarity word coloured (RarityWord), a Back button and NO buy button: buying stays on auraConfirm.

@@ -87,6 +87,15 @@ function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number)
         icon.Size, icon.Position, icon.ZIndex = UDim2.fromOffset(iconSize, iconSize), UDim2.fromOffset((r.w - iconSize) // 2, 8), card.ZIndex + 1
         icon.Parent = card
         art(icon, "egg_nest_single", 0, 0, iconSize)
+        -- BD-1202 (finding P-dbfb7f): an EMPTY slot never shows the egg. The nest picture has its egg baked in, so an empty slot shows only the lower
+        -- third of it (the woven nest, no egg) at 40%, cropped by a clipping box (same picture, same art helper, nothing new drawn).
+        local emptyNest = Instance.new("Frame")
+        emptyNest.Name, emptyNest.BackgroundTransparency, emptyNest.BorderSizePixel, emptyNest.ClipsDescendants, emptyNest.Visible = "EmptyNest", 1, 0, true, false
+        emptyNest.Size = UDim2.fromOffset(iconSize, math.floor(iconSize * 0.34))
+        emptyNest.Position, emptyNest.ZIndex = UDim2.fromOffset((r.w - iconSize) // 2, 8 + math.floor(iconSize * 0.33)), card.ZIndex + 1
+        emptyNest.Parent = card
+        local nestOnly = art(emptyNest, "egg_nest_single", 0, -math.floor(iconSize * 0.63), iconSize)
+        if nestOnly then dim(emptyNest, 0.6) end
         local text = L.text(card, "", UDim2.fromOffset(r.w - 8, 24), UDim2.fromOffset(4, textY), Kit.Type.body, "value", Enum.TextXAlignment.Center)
         text.Name = "NestText"
         local tap = Instance.new("TextButton") -- the whole card is the button (it fills the card, no colour of its own)
@@ -99,7 +108,7 @@ function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number)
             elseif info and info.state == "empty" then ctx.notify("Finish a run to earn a nest!", C.gold)
             elseif info then ctx.notify("Still growing. Hang tight!", C.gold) end
         end)
-        slotViews[i] = {card = card, icon = icon, text = text}
+        slotViews[i] = {card = card, icon = icon, text = text, emptyNest = emptyNest}
     end
 
     -- ---- the egg stage, in its own panel ----
@@ -213,7 +222,7 @@ function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number)
             v.card.BackgroundColor3 = L.tone(if slot.state == "ready" then "ready" elseif slot.state == "opening" then "busy" else "card")
             v.text.Text = if slot.state == "opening" then UIFormat.duration(slot.remaining) else slot.text
             L.ink(v.text, if empty then "label" else "value")
-            dim(v.icon, if empty then .6 else 0)
+            v.emptyNest.Visible, v.icon.Visible = empty, not empty -- BD-1202: an empty slot = the nest without the egg, never the egg art
         end
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         statusText, buttonText = EggsLogic.cardCopy(state)

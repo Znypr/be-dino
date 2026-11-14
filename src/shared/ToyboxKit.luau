@@ -309,6 +309,57 @@ function Kit.indexLayout(scale: number, bodyW: number?, bodyH: number?, paged: b
     return layout
 end
 
+-- docs/232: the rects of the Fusion Menu body. Three cream panels (dino list | slots | result) 12 px apart fill the body width; when the
+-- three tier chips do not fit above the list (`wide`) they take one row across the top and the panels start 12 px under it. Everything inside a
+-- panel sits 12 px from its edge; the bottom of the centre panel holds the two small grey buttons, the bottom of the result panel the ONE
+-- primary FUSE button. The dino list, the slot grid and the odds list scroll or share what is left, never overflow the body.
+Kit.Fusion = {headH = 28, noteH = 20, guaranteeH = 24, filterW = 96, leftFrac = 0.38, centreFrac = 0.28, fillFrac = 0.6, minResult = 48}
+function Kit.fusionLayout(scale: number, bodyW: number?, bodyH: number?, wide: boolean?)
+    local F = Kit.Fusion
+    local W, H = bodyW or 1160, bodyH or 390
+    local big, small = Kit.buttonHeights(scale)
+    local pad, gut = Kit.PanelPad, Kit.Gutter
+    local top = if wide then big + gut else 0
+    local PH = H - top
+    local avail = W - 2 * gut
+    local leftW = math.floor(avail * F.leftFrac)
+    local centreW = math.floor(avail * F.centreFrac)
+    local rightW = avail - leftW - centreW
+    local layout: any = {big = big, small = small, width = W, height = H, wide = wide == true}
+    layout.tabRow = if wide then {x = 0, y = 0, w = W, h = big} else nil
+    layout.left = {x = 0, y = top, w = leftW, h = PH}
+    layout.centre = {x = leftW + gut, y = top, w = centreW, h = PH}
+    layout.right = {x = leftW + centreW + 2 * gut, y = top, w = rightW, h = PH}
+    -- inside the dino list panel (coordinates of the panel's inner box, 12 px in)
+    local li = {w = leftW - 2 * pad, h = PH - 2 * pad}
+    layout.leftIn = li
+    local ly = 0
+    if not wide then layout.tabs = {x = 0, y = 0, w = li.w, h = big} ly = big + gut end
+    layout.goal = {x = 0, y = ly, w = li.w - F.filterW - gut, h = small}
+    layout.filter = {x = li.w - F.filterW, y = ly, w = F.filterW, h = small}
+    layout.grid = {x = 0, y = ly + small + gut, w = li.w, h = math.max(li.h - ly - small - gut, 0)}
+    -- inside the slots panel
+    local ci = {w = centreW - 2 * pad, h = PH - 2 * pad}
+    layout.centreIn = ci
+    layout.head = {x = 0, y = 0, w = ci.w, h = F.headH}
+    local fillW = math.floor((ci.w - gut) * F.fillFrac)
+    layout.fill = {x = 0, y = ci.h - small, w = fillW, h = small}
+    layout.clear = {x = fillW + gut, y = ci.h - small, w = ci.w - fillW - gut, h = small}
+    layout.slots = {x = 0, y = F.headH + gut, w = ci.w, h = math.max(ci.h - F.headH - gut - gut - small, 0)}
+    -- inside the result panel
+    local ri = {w = rightW - 2 * pad, h = PH - 2 * pad}
+    layout.rightIn = ri
+    layout.fuse = {x = 0, y = ri.h - big, w = ri.w, h = big}
+    layout.note = {x = 0, y = ri.h - big - gut - F.noteH, w = ri.w, h = F.noteH}
+    local free = math.max(layout.note.y - gut, 0)
+    local resultH = math.max(F.minResult, math.floor((free - F.guaranteeH - 2 * gut) * 0.5))
+    layout.result = {x = 0, y = 0, w = ri.w, h = math.min(resultH, free)}
+    layout.guarantee = {x = 0, y = layout.result.h + gut, w = ri.w, h = F.guaranteeH}
+    local oddsY = layout.guarantee.y + F.guaranteeH + gut
+    layout.odds = {x = 0, y = oddsY, w = ri.w, h = math.max(free - oddsY, 0)}
+    return layout
+end
+
 -- The slice scale of a picture drawn `width` x `height` px. A header never stretches up or down (scale = height / 128). The others use
 -- half size, less when the box is so small that the caps would not fit.
 function Kit.sliceScale(slot: string, width: number, height: number): number
