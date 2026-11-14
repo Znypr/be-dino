@@ -21,6 +21,7 @@ end
 local function ready(group: string): boolean
     return Kit.ready(Slots.Images, group)
 end
+Skin.ready = ready
 -- The size a box is laid out at, before any UIScale: its offsets when it is sized in px, else what is on screen now.
 local function designSize(object: GuiObject): (number, number)
     local size = object.Size
@@ -180,8 +181,10 @@ function Skin.button(button: TextButton, border: UIStroke?)
     build(button, border)
 end
 
--- The red gloss X: the close picture drawn whole as a square at the right of the button, at least 48 px on screen.
-function Skin.close(button: TextButton, scale: UIScale?)
+-- The red gloss X: the close picture drawn whole as a square fully inside the header strip, centred, with the same inset (8 px) from the
+-- right edge as from the top and bottom, at least 48 px on screen (Kit.closeBox). `header` = the strip the button sits in. The button stays
+-- the touch target; only the picture moves inside the strip.
+function Skin.close(button: TextButton, scale: UIScale?, header: GuiObject?)
     local closeId = id("toybox_close")
     if not closeId then return end
     local face = faces[button] or build(button, button:FindFirstChildOfClass("UIStroke"))
@@ -190,13 +193,20 @@ function Skin.close(button: TextButton, scale: UIScale?)
     local image = face.image
     image.ScaleType, image.Image = Enum.ScaleType.Fit, closeId
     image:SetAttribute("ToyboxSlot", "toybox_close")
-    image.AnchorPoint, image.Position = Vector2.new(1, 0.5), UDim2.new(1, 0, 0.5, 0)
+    image.AnchorPoint = Vector2.new(1, 0)
+    local strip = header or (button.Parent :: any)
     local function size()
-        local side = Kit.closeSide(button.AbsoluteSize.X, button.AbsoluteSize.Y, if scale then scale.Scale else 1)
+        local s = if scale and scale.Scale > 0.01 then scale.Scale else 1
+        local side, inset = Kit.closeBox(strip.AbsoluteSize.Y / s, s)
         image.Size = UDim2.fromOffset(side, side)
+        local right = (strip.AbsolutePosition.X + strip.AbsoluteSize.X) - (button.AbsolutePosition.X + button.AbsoluteSize.X)
+        local top = strip.AbsolutePosition.Y - button.AbsolutePosition.Y
+        image.Position = UDim2.new(1, right / s - inset, 0, top / s + inset)
     end
     size()
     button:GetPropertyChangedSignal("AbsoluteSize"):Connect(size)
+    button:GetPropertyChangedSignal("AbsolutePosition"):Connect(size)
+    strip:GetPropertyChangedSignal("AbsoluteSize"):Connect(size)
     if scale then scale:GetPropertyChangedSignal("Scale"):Connect(size) end
 end
 
@@ -225,9 +235,13 @@ function Skin.window(window: Window)
         local strip = picture(header, "ToyboxHeader", slot, -2)
         slice(strip, slot, header)
         if window.place == nil then mainHeader = strip end
-        if window.heading then Skin.drop(window.heading) end
+        if window.heading then
+            -- BD-1189: the title sits vertically centred on the strip, 16 px from the left (docs/232); the X is inside the strip too
+            window.heading.AnchorPoint, window.heading.Position = Vector2.new(0, 0.5), UDim2.new(0, Kit.Inset, 0.5, 0)
+            Skin.drop(window.heading)
+        end
     end
-    if window.closeButton then Skin.close(window.closeButton, window.scale) end
+    if window.closeButton then Skin.close(window.closeButton, window.scale, window.header) end
 end
 
 -- The menu window shows another screen: its header takes the colour of the screen's place.
@@ -247,5 +261,21 @@ function Skin.rarity(tier: number)
     image.Image = id(slot) or image.Image
     image:SetAttribute("ToyboxSlot", slot)
 end
+
+-- BD-1189: the kit pictures load in a spawned task as soon as the skin loads, so the first header or button is never blank for a moment.
+-- Only bound ids are listed; a failure is ignored (the picture then loads when it is first drawn, as before).
+local function preload()
+    local urls: {string} = {}
+    for slot in Kit.Assets do
+        local url = id(slot)
+        if url then table.insert(urls, url) end
+    end
+    if #urls == 0 then return end
+    task.spawn(function()
+        pcall(function() game:GetService("ContentProvider"):PreloadAsync(urls) end)
+    end)
+end
+Skin.preload = preload
+preload()
 
 return Skin

@@ -60,6 +60,14 @@ function M.layout(screen: string?)
     local c = ctx
     if not c then return end
     if screen and Theme.Toybox then Theme.Toybox.place(screen) end
+    if screen then
+        -- Opening any shared-window screen closes the Fusion Menu first (it is its own window: two windows never stack). Flag on and off.
+        local fusionModule = script.Parent:FindFirstChild("FusionMenu")
+        if fusionModule then
+            local ok, fusion = pcall(require, fusionModule)
+            if ok and type(fusion) == "table" and fusion.isOpen and fusion.isOpen() then fusion.close() end
+        end
+    end
     local m = M.model()
     model = m
     c.scale.Scale = m.scale
@@ -106,6 +114,13 @@ function M.bodyHeight(): number
     local m = if ctx then M.model() else nil
     if m and m.mode == "compact" then return math.floor(m.innerH) end
     return 402
+end
+
+-- BD-1189: the body width (design px, the scroller's own units) that is on screen: 824 on desktop, the scroller width on a compact canvas.
+function M.bodyWidth(): number
+    local m = if ctx then M.model() else nil
+    if m and m.mode == "compact" then return math.floor(m.innerW) end
+    return 824
 end
 
 function M.bodyScale(): number
@@ -231,6 +246,14 @@ function M.attach(context: Ctx)
     context.body.ChildAdded:Connect(schedule)
     if Theme.Toybox then Theme.Toybox.window({panel = context.panel, header = context.header, heading = context.heading, closeButton = context.closeButton, scale = context.scale}) end -- BD-1177
     M.layout()
+end
+
+-- The shared window as it is on screen (px, after its UIScale) and how far its centre sits right of the screen centre. nil before attach().
+-- The Fusion Menu uses this under the Toybox flag so it is exactly as big and as centred as every other menu window.
+function M.frame(): (Vector2?, number)
+    if not ctx then return nil, 0 end
+    local m = M.model()
+    return Vector2.new(math.floor(m.panelW * m.scale), math.floor(m.panelH * m.scale)), m.centerDx
 end
 
 -- BD-1039: the pieces of the Bootstrap modal for a screen that decorates its header (the Index tabs). nil before attach().

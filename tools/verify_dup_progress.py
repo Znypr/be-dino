@@ -309,7 +309,7 @@ def static_checks(read):
     assert hatch.count('if dupLine then require(script.Parent.DupProgressClient).hatchResult(dupLine, r.speciesId, failed, a.nameLabel.Text, a.body:FindFirstChild("TapHint")) end') == 1, 'the result is counted'
     assert hatch.count('if dupLine then require(script.Parent.DupProgressClient).hatchReveal(dupLine,') == 1, 'the line shows with the reveal'
     screens = read(SCREENS)
-    assert screens.count('dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height)') == 1 and 'end else nil,' in screens, 'flag off = the Index page gets no row'
+    assert screens.count('dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height,rowWidth,left)') == 1 and 'end else nil,' in screens, 'flag off = the Index page gets no row'
     assert screens.count('if (Config :: any).DupProgressEnabled==true then pcall(function() require(script.Parent.DupProgressClient).start() end) end') == 1, 'the copy list is read from start-up, only with the flag on'
     assert 'client.openFusion(species,stage,openFusion)' in screens, 'the tap opens the Fusion Menu on this dino'
     assert read(PANELS).count('if ctx.dupRow then top += ctx.dupRow(right, st.list, top, T) end') == 1, 'the row sits above the cards'

@@ -32,6 +32,52 @@ local C = W.Colors
 local T = W.Touch
 
 local FusionMenu = {}
+-- docs/232 Fusion Menu (finding "Fusion Menu still the old layout"): under Config.ToyboxUIEnabled the browse screen is three cream panels on the Toybox
+-- layout rules (dino list | slots | result), dark ink on cream, ONE green button (FUSE). Flag off: L is nil and every branch below is skipped.
+local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil
+local Kit: any = if L then L.Kit else nil
+local GREY = Color3.fromRGB(128, 142, 158) -- the grey gloss button; the only coloured (green) button of the Fusion screen is FUSE
+local INK_GOOD, INK_BAD = Color3.fromRGB(34, 130, 62), Color3.fromRGB(176, 40, 32) -- readable on cream (the white-outline greens / reds are not)
+local function ink(label: TextLabel, which: string?): TextLabel
+    if L then L.ink(label, which or "value") end
+    return label
+end
+local function inkColour(label: TextLabel, colour: Color3): TextLabel
+    if L then
+        label.TextColor3, label.TextStrokeTransparency = colour, 1
+        for _, child in label:GetChildren() do
+            if child:IsA("UIStroke") then child.Transparency = 1 end -- the shared outlined style adds a stroke: no outline on a cream card
+        end
+    end
+    return label
+end
+-- Under the flag the Fusion window is the shared menu window: same size and place (ModalCompact.frame), never narrower or off-centre.
+local toyboxPanel: Frame? = nil
+local function applyToyboxFrame()
+    if not (L and toyboxPanel) then return end
+    local okModule, compact = pcall(require, script.Parent.ModalCompact)
+    if not okModule then return end
+    local size, dx = compact.frame()
+    if not size then return end
+    local frame = toyboxPanel :: Frame
+    frame.AnchorPoint, frame.Size, frame.Position = Vector2.new(.5, .5), UDim2.fromOffset(size.X, size.Y), UDim2.new(.5, dx, .5, 0)
+    local limit = frame:FindFirstChildOfClass("UISizeConstraint")
+    if limit then limit.MaxSize = Vector2.new(4096, 4096) end
+end
+-- Toybox chips and cards that are buttons (tier tabs, filter chips, slot cards): flat cream (or warm when picked), 2 px dark outline, no gloss picture.
+local function flatButton(parent: Instance, size: UDim2, position: UDim2, on: boolean, callback: () -> ()): TextButton
+    local b = Instance.new("TextButton")
+    b.Text, b.AutoButtonColor, b.Size, b.Position = "", false, size, position
+    b.BackgroundColor3 = L.tone(if on then "previewTop" else "card")
+    local round = Instance.new("UICorner")
+    round.CornerRadius = UDim.new(0, Kit.ChipCorner)
+    round.Parent = b
+    local line = Instance.new("UIStroke")
+    line.ApplyStrokeMode, line.Color, line.Thickness, line.Parent = Enum.ApplyStrokeMode.Border, C.outline, if on then Kit.PanelStroke else Kit.CardStroke, b
+    b.Activated:Connect(callback)
+    b.Parent = parent
+    return b
+end
 local leftInset = 0 -- px kept clear for the left nav rail
 -- Client display constants (module-local by design; no Config edits).
 FusionMenu.QuoteDebounce = .35
@@ -90,6 +136,7 @@ local body: Frame? = nil
 local titleLabel: TextLabel? = nil
 function FusionMenu.setLeftInset(px: number)
     leftInset = math.clamp(math.floor(px), 0, 320)
+    if L then applyToyboxFrame() return end
     if panel then
         (panel :: Frame).Size = UDim2.new(.97, -leftInset, .95, 0)
         ;(panel :: Frame).Position = UDim2.new(0, leftInset + 6, .5, 0)
@@ -142,6 +189,8 @@ local function ensureGui()
     note.ZIndex = 10
     toastLabel = note
     gui, panel, body = screen, frame, content
+    toyboxPanel = frame
+    applyToyboxFrame()
     Input.InputBegan:Connect(function(input, processed)
         if not processed and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) and state.open then FusionMenu.close() end
     end)
@@ -281,14 +330,18 @@ local function cardLook(d)
     local valuable = #Sel.valuableReasons(d) > 0
     entry.stroke.Color = if at then (if valuable then C.purple else C.accent) else C.outline
     entry.stroke.Thickness = if at then 5 else 3
-    entry.button.BackgroundColor3 = if reason then C.outline else C.card
+    entry.button.BackgroundColor3 = if L then L.tone(if reason then "slot" else "card") elseif reason then C.outline else C.card
     entry.status.Text = if at then "In slot " .. at .. (if valuable then " (Special)" else "")
         elseif reason then (Sel.ReasonText[reason] or reason)
         elseif valuable then "Special! Tap" else "Tap to add"
-    entry.status.TextColor3 = if at then C.accent elseif reason then C.red elseif valuable then C.purple else C.text
+    if L then
+        inkColour(entry.status, if at then INK_GOOD elseif valuable and not reason then C.purple else L.tone(if reason then "label" else "value")) -- hints are plain dark text
+    else
+        entry.status.TextColor3 = if at then C.accent elseif reason then C.red elseif valuable then C.purple else C.text
+    end
     entry.tick.Visible = at ~= nil
     entry.tick.Text = if at then tostring(at) else ""
-    entry.dim.Visible = reason ~= nil
+    entry.dim.Visible = reason ~= nil and not L -- Toybox: a card that cannot be used is the darker cream, never a dark bar
 end
 
 local function refreshCards()
@@ -313,7 +366,7 @@ local function buildGrid(grid: ScrollingFrame)
     local list = Sel.sort(Sel.visibleFor(state.dinos, state.targetStage, state.filters), state.sortKey, ctx, Sel.selectedSet(state.selection), catalog)
     for i, d in list do
         if i > state.visible then
-            local more = W.button(grid, "Show more (" .. (#list - state.visible) .. ")", UDim2.new(), UDim2.new(), C.blue, function()
+            local more = W.button(grid, "Show more (" .. (#list - state.visible) .. ")", UDim2.new(), UDim2.new(), if L then GREY else C.blue, function()
                 state.visible += FusionMenu.CardBatch
                 buildGrid(grid)
             end)
@@ -324,20 +377,32 @@ local function buildGrid(grid: ScrollingFrame)
         local card = Instance.new("TextButton")
         card.Name, card.Text, card.AutoButtonColor, card.LayoutOrder = "Dino_" .. i, "", false, i
         card.BackgroundColor3 = C.card
-        Theme.decorate(card, 10)
+        if L then
+            -- Toybox: a flat cream card (12 px corners, 2 px dark outline), not the glossy button picture
+            card.BackgroundColor3 = L.tone("card")
+            local round = Instance.new("UICorner")
+            round.CornerRadius = UDim.new(0, Kit.CardCorner)
+            round.Parent = card
+            local line = Instance.new("UIStroke")
+            line.ApplyStrokeMode, line.Color, line.Thickness, line.Parent = Enum.ApplyStrokeMode.Border, C.outline, Kit.CardStroke, card
+        else
+            Theme.decorate(card, 10)
+        end
         card.Parent = grid
         card.Activated:Connect(function() toggle(d) end)
         -- Big picture first: the real dino (lazy, culled by DinosaurPreview) with its colours.
         local view = Preview.add(card, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
         view.Size, view.Position = UDim2.new(1, -8, .44, 0), UDim2.new(0, 4, 0, 28)
         PreviewTraits.add(view, {genes = (Sel.previewTraits(d) or {}).genes})
-        W.label(card, speciesName(d), UDim2.new(1, -44, 0, 26), UDim2.fromOffset(38, 2), 22)
-        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 30), 17, C.gold)
+        ink(W.label(card, speciesName(d), UDim2.new(1, -44, 0, 26), UDim2.fromOffset(38, 2), 22))
+        local patternLabel = W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 30), 17, C.gold)
+        if L then ink(patternLabel, "label") end
         W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .44, 52))
         local traits = Sel.cardTraits(d, catalog)
-        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 62), 16, C.purple)
-        local status = W.label(card, "", UDim2.new(1, -(T + 10), 0, 46), UDim2.new(0, 4, 1, -50), 18)
-        local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)
+        local traitLabel = W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 62), 16, C.purple)
+        if L then inkColour(traitLabel, C.purple) end
+        local status = ink(W.label(card, "", UDim2.new(1, -(T + 10), 0, 46), UDim2.new(0, 4, 1, -50), 18))
+        local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), if L then GREY else C.blue, function() openDetails(d.instanceId) end)
         info.Name = "Details"
         local dim = Instance.new("Frame")
         dim.Name, dim.Size, dim.BackgroundColor3, dim.BackgroundTransparency, dim.BorderSizePixel = "Dim", UDim2.fromScale(1, 1), C.outline, .55, 0
@@ -355,6 +420,7 @@ local function buildGrid(grid: ScrollingFrame)
             elseif next(state.filters) ~= nil then "No dinos match. Tap Filter to clear."
             else "No " .. (if recipe then Sel.stageTitle(recipe.source) else "") .. " dinos yet. Hatch more eggs!"
         local empty = W.label(grid, text, UDim2.new(), UDim2.new(), 20, C.gold)
+        if L then ink(empty, "label") end
         empty.LayoutOrder = 0
     end
 end
@@ -366,22 +432,40 @@ local function resultRatio(): number
 end
 
 -- Result preview (right column): big picture of the new dino + name + guarantee line.
-local function resultBox(parent: Frame, speciesId: string?, stageId: string, traits, big: boolean)
+local function resultBox(parent: Frame, speciesId: string?, stageId: string, traits, big: boolean, fixed: any?)
     local recipe = Sel.stage(stageId)
-    local box = W.box(parent, UDim2.new(1, 0, if big then .62 else resultRatio(), 0), UDim2.new(), W.StageColors[stageId] or C.gold, 10)
+    local resultSize = if fixed then UDim2.fromOffset(fixed.w, fixed.h) else UDim2.new(1, 0, if big then .62 else resultRatio(), 0)
+    local box: Frame = if L then L.card(parent, "Result", resultSize, UDim2.new()) else W.box(parent, resultSize, UDim2.new(), W.StageColors[stageId] or C.gold, 10)
     box.Name = "Result"
     local badge = W.label(box, "NEW " .. string.upper(if recipe then recipe.name else stageId), UDim2.new(.6, 0, 0, 26), UDim2.fromOffset(6, 4), 20, C.outline)
-    badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
-    Chip.apply(badge, C.text, nil, true) -- BD-1077: the shared small chunky tag (it was a round pill)
+    if L then
+        -- Toybox: a cream card; the tier badge picture (AssetSlots tier_gold / tier_emerald / tier_diamond) and dark text, no saturated colour block
+        local tierId = (Theme :: any).ImageIds and (Theme :: any).ImageIds["tier_" .. stageId]
+        badge.Name, badge.ZIndex = "Badge", box.ZIndex + 2
+        ink(badge, "value")
+        badge.TextXAlignment = Enum.TextXAlignment.Left
+        if type(tierId) == "string" and tierId ~= "" then
+            local icon = Instance.new("ImageLabel")
+            icon.Name, icon.BackgroundTransparency, icon.Image, icon.ScaleType, icon.ZIndex = "TierBadge", 1, tierId, Enum.ScaleType.Fit, box.ZIndex + 2
+            icon.Size, icon.Position = UDim2.fromOffset(32, 32), UDim2.fromOffset(6, 4)
+            icon.Parent = box
+            badge.Size, badge.Position = UDim2.new(1, -46, 0, 32), UDim2.fromOffset(42, 4)
+        else
+            badge.Size, badge.Position = UDim2.new(1, -12, 0, 32), UDim2.fromOffset(6, 4)
+        end
+    else
+        badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
+        Chip.apply(badge, C.text, nil, true) -- BD-1077: the shared small chunky tag (it was a round pill)
+    end
     if speciesId then
         local view = Preview.add(box, speciesId, stageId)
         view.Size, view.Position = UDim2.new(1, -8, 1, -62), UDim2.fromOffset(4, 30)
         PreviewTraits.add(view, traits)
         local who = Sel.name(catalog, "species", speciesId, "Dino")
-        W.label(box, (if recipe then recipe.name else "") .. " " .. who, UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+        ink(W.label(box, (if recipe then recipe.name else "") .. " " .. who, UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text))
     else
-        W.label(box, "?", UDim2.new(1, 0, 1, -60), UDim2.fromOffset(0, 30), 80, C.outline)
-        W.label(box, "Your new dino", UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+        ink(W.label(box, "?", UDim2.new(1, 0, 1, -60), UDim2.fromOffset(0, 30), 80, C.outline), "label")
+        ink(W.label(box, "Your new dino", UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text))
     end
     return box
 end
@@ -441,13 +525,29 @@ updateColumn = function()
         local id = state.selection[i]
         local d = id and state.byId[id]
         if d then
-            local slot = W.button(col.slots, "", UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, function() toggle(d) end)
+            local slot: TextButton
+            if L then
+                -- Toybox: a flat cream card (purple outline for a special dino) instead of the glossy button picture
+                slot = flatButton(col.slots, UDim2.new(), UDim2.new(), false, function() toggle(d) end)
+                slot.BackgroundColor3 = L.tone("card")
+                local line = slot:FindFirstChildOfClass("UIStroke")
+                if line and #Sel.valuableReasons(d) > 0 then line.Color = C.purple end
+            else
+                slot = W.button(col.slots, "", UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, function() toggle(d) end)
+            end
             slot.Name, slot.LayoutOrder = "Slot_" .. i, i
             local view = Preview.add(slot, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
             view.Size, view.Position = UDim2.new(1, -4, 1, -22), UDim2.fromOffset(2, 2)
             PreviewTraits.add(view, {genes = (Sel.previewTraits(d) or {}).genes})
             W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -12))
-            W.label(slot, "x", UDim2.fromOffset(28, 28), UDim2.new(1, -30, 0, 2), 22, C.red)
+            inkColour(W.label(slot, "x", UDim2.fromOffset(28, 28), UDim2.new(1, -30, 0, 2), 22, C.red), INK_BAD)
+        elseif L then
+            -- Toybox: an empty slot is a dashed cream placeholder with a soft number (no black box)
+            local cell = col.cell
+            local empty = L.emptySlot(col.slots, cell.w, cell.h, i)
+            empty.Name = "Empty_" .. i
+            local number = W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 40, L.tone("slot"))
+            L.ink(number, "slot")
         else
             local empty = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)
             empty.Name, empty.LayoutOrder = "Empty_" .. i, i
@@ -461,25 +561,48 @@ updateColumn = function()
     for _, child in right:GetChildren() do if child.Name ~= "Fuse" then child:Destroy() end end
     local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
     local speciesId = if state.quote then state.quote.speciesId else (if first then first.speciesId else nil)
-    resultBox(right, speciesId, state.targetStage, nil, false)
-    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, resultRatio(), 4), 22, C.accent)
+    local rl = col.lay
+    local resultFrame = resultBox(right, speciesId, state.targetStage, nil, false, if rl then rl.result else nil)
+    local guaranteeText = if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText
+    local guarantee = W.label(right, guaranteeText, if rl then UDim2.fromOffset(rl.guarantee.w, rl.guarantee.h) else UDim2.new(1, 0, 0, 28),
+        if rl then UDim2.fromOffset(rl.guarantee.x, rl.guarantee.y) else UDim2.new(0, 0, resultRatio(), 4), 22, C.accent)
+    if rl then inkColour(guarantee, if recipe and recipe.approved then INK_GOOD else L.tone("label")) end
     guarantee.Name = "Guarantee"
     local chips = Instance.new("ScrollingFrame")
     chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Odds", 1, 0
     chips.Size, chips.Position = UDim2.new(1, 0, 1 - resultRatio(), -(T + 70)), UDim2.new(0, 0, resultRatio(), 34)
+    if rl then chips.Size, chips.Position = UDim2.fromOffset(rl.odds.w, rl.odds.h), UDim2.fromOffset(rl.odds.x, rl.odds.y) end
     chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.Y, UDim2.new()
     chips.Parent = right
     if ready then
-        oddsSections(chips, (state.quote :: any).odds, (state.quote :: any).patternId, panelWidth() * .34 - 18)
+        oddsSections(chips, (state.quote :: any).odds, (state.quote :: any).patternId, if rl then rl.odds.w - 14 else panelWidth() * .34 - 18)
+        if L then
+            for _, item in chips:GetDescendants() do
+                if item.Name == "Heading" and item:IsA("TextLabel") then ink(item, "label") end
+            end
+        end
     else
         local msg = W.label(chips, state.quoteMessage, UDim2.new(1, -6, 0, 56), UDim2.new(), 18, if state.quoteStatus == "error" then C.red else C.gold)
+        if L then if state.quoteStatus == "error" then inkColour(msg, INK_BAD) else ink(msg, "value") end end
         msg.Name = "Message"
     end
     -- BD-347: a calm line next to FUSE; the details line lives in the odds panel (OddsCopy.fusionDetails, shown on confirm).
-    local calm = W.label(right, OddsCopy.fusionCalm, UDim2.new(1, 0, 0, 22), UDim2.new(0, 0, 1, -(T + 34)), 17, Dim)
+    local calm = W.label(right, OddsCopy.fusionCalm, if rl then UDim2.fromOffset(rl.note.w, rl.note.h) else UDim2.new(1, 0, 0, 22),
+        if rl then UDim2.fromOffset(rl.note.x, rl.note.y) else UDim2.new(0, 0, 1, -(T + 34)), 17, Dim)
+    if rl then ink(calm, "label") end
     calm.Name = "OddsNote"
-    col.fuse.BackgroundColor3 = if ready then C.accent else C.card
+    col.fuse.BackgroundColor3 = if ready then C.accent elseif L then GREY else C.card
     col.fuse.Text = if ready then "FUSE!" elseif #state.selection < need then "Pick " .. (need - #state.selection) .. " more" else "FUSE"
+end
+
+-- docs/232: the body the Toybox panels fill: the real size when the panel has been laid out, else what ensureGui makes of the viewport.
+local function toyboxBody(): (number, number)
+    applyToyboxFrame()
+    if panel then
+        local size = (panel :: Frame).Size -- set by applyToyboxFrame: the shared window, in px
+        if size.X.Scale == 0 and size.X.Offset >= 300 then return math.floor(size.X.Offset - 16), math.floor(size.Y.Offset - (T + 22)) end
+    end
+    return math.floor(panelWidth()), math.floor(math.min(680, viewportSize().Y * .95) - (T + 22))
 end
 
 local function renderBrowse()
@@ -504,34 +627,68 @@ local function renderBrowse()
     centre.Name = "Ingredients"
     local right = Instance.new("Frame")
     right.Name, right.BackgroundTransparency, right.Size, right.Position, right.Parent = "ResultColumn", 1, UDim2.new(.34, -6, 1, -under), UDim2.new(.66, 6, 0, under), root
+    local lay: any = nil
+    if L then
+        -- Toybox: three cream panels fill the body (12 px apart). `left`, `centre` and `right` become the transparent boxes 12 px inside them,
+        -- so everything below is placed exactly as before, just inside a panel. Tier tabs are chips, text is dark ink.
+        left:Destroy()
+        centre:Destroy()
+        right:Destroy()
+        local bodyW, bodyH = toyboxBody()
+        lay = Kit.fusionLayout(1, bodyW, bodyH, wide)
+        tabHeight = lay.big
+        local function inner(panelRect: any, innerRect: any, name: string): Frame
+            local panel = L.panel(root, name .. "Panel", UDim2.fromOffset(panelRect.w, panelRect.h), UDim2.fromOffset(panelRect.x, panelRect.y))
+            local box = Instance.new("Frame")
+            box.Name, box.BackgroundTransparency, box.BorderSizePixel = name, 1, 0
+            box.Size, box.Position, box.ZIndex = UDim2.fromOffset(innerRect.w, innerRect.h), UDim2.fromOffset(Kit.PanelPad, Kit.PanelPad), panel.ZIndex + 1
+            box.Parent = panel
+            return box
+        end
+        left = inner(lay.left, lay.leftIn, "Browse")
+        centre = inner(lay.centre, lay.centreIn, "Ingredients")
+        right = inner(lay.right, lay.rightIn, "ResultColumn")
+    end
     -- Row 1: three big tier tabs.
     local rowW = tabs.rowW
     for i, s in Sel.Stages do
         local words = Sel.tabText(s.id)
         local slot = tabs.tabs[i]
         local on = state.targetStage == s.id
-        local b = W.button(if wide then root else left, "", UDim2.new(slot.w / rowW, 0, 0, tabHeight), UDim2.new(slot.x / rowW, 0, 0, 0),
-            if on then (W.StageColors[s.id] or C.gold) else C.card, function()
-                if state.targetStage == s.id then return end
-                state.targetStage = s.id
-                if not s.approved then toast(words.title .. ": " .. Sel.LockedStageText, C.gold) end
-                state.selection, state.visible = {}, FusionMenu.CardBatch
-                render()
-                scheduleQuote()
-            end)
+        local pickTier = function()
+            if state.targetStage == s.id then return end
+            state.targetStage = s.id
+            if not s.approved then toast(words.title .. ": " .. Sel.LockedStageText, C.gold) end
+            state.selection, state.visible = {}, FusionMenu.CardBatch
+            render()
+            scheduleQuote()
+        end
+        local tabSize, tabPos = UDim2.new(slot.w / rowW, 0, 0, tabHeight), UDim2.new(slot.x / rowW, 0, 0, 0)
+        local b = if L then flatButton(if wide then root else left, tabSize, tabPos, on, pickTier)
+            else W.button(if wide then root else left, "", tabSize, tabPos, if on then (W.StageColors[s.id] or C.gold) else C.card, pickTier)
         b.Name = "Stage_" .. s.id
-        W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), slot.titleSize, if on then C.outline else C.text)
-        W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), slot.subSize, if on then C.outline else Dim)
+        local titleLabel2 = W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), slot.titleSize, if on then C.outline else C.text)
+        local subLabel = W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), slot.subSize, if on then C.outline else Dim)
+        if L then ink(titleLabel2, "value") ink(subLabel, "label") end
     end
     -- Row 2: goal sentence + one Filter button.
     local y = if wide then 0 else tabHeight + 6
     column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 20, C.gold, true)
     column.goal.Name = "Goal"
     local filterOn = state.filtersOpen or next(state.filters) ~= nil
-    W.button(left, "Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card, function()
+    local filterButton = W.button(left, "Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card, function()
         state.filtersOpen = not state.filtersOpen
         render()
-    end).Name = "Filter"
+    end)
+    filterButton.Name = "Filter"
+    if L then
+        -- Toybox: the instruction is plain dark text inside the panel; Filter is a small grey button (same grey open or closed)
+        ink(column.goal, "value")
+        column.goal.TextWrapped = true
+        column.goal.Size = UDim2.fromOffset(lay.goal.w, lay.goal.h)
+        filterButton.Size, filterButton.Position, filterButton.BackgroundColor3 = UDim2.fromOffset(lay.filter.w, lay.filter.h), UDim2.fromOffset(lay.filter.x, y), GREY
+        y = y + lay.small + Kit.Gutter - (T + 6) -- the grid starts 12 px under the goal row
+    end
     y += T + 6
     if state.filtersOpen then
         -- Chips (tap to cycle, scroll sideways) live behind the Filter button.
@@ -542,7 +699,7 @@ local function renderBrowse()
         chips.Parent = left
         W.list(chips, 6, true)
         local options = Sel.filterOptions(state.dinos, catalog)
-        W.button(chips, "Sort: " .. Sel.SortNames[state.sortKey], UDim2.fromOffset(150, T), UDim2.new(), C.purple, function()
+        W.button(chips, "Sort: " .. Sel.SortNames[state.sortKey], UDim2.fromOffset(150, T), UDim2.new(), if L then GREY else C.purple, function()
             local i = table.find(Sel.SortKeys, state.sortKey) or 1
             state.sortKey = Sel.SortKeys[i % #Sel.SortKeys + 1]
             render()
@@ -550,14 +707,14 @@ local function renderBrowse()
         for i, field in FilterChips do
             local value = state.filters[field]
             local chip = W.button(chips, FilterLabels[field] .. ": " .. filterValueName(field, value), UDim2.fromOffset(150, T), UDim2.new(),
-                if value ~= nil then C.blue else C.card, function()
+                if L then GREY elseif value ~= nil then C.blue else C.card, function()
                     state.filters[field] = Sel.cycle(options[field] or {}, state.filters[field])
                     state.visible = FusionMenu.CardBatch
                     render()
                 end)
             chip.LayoutOrder = i
         end
-        local reset = W.button(chips, "Clear", UDim2.fromOffset(84, T), UDim2.new(), C.red, function()
+        local reset = W.button(chips, "Clear", UDim2.fromOffset(84, T), UDim2.new(), if L then GREY else C.red, function()
             state.filters, state.visible, state.filtersOpen = {}, FusionMenu.CardBatch, false
             render()
         end)
@@ -578,15 +735,15 @@ local function renderBrowse()
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
-        W.label(grid, "Could not load dinos: " .. Sel.failureMessage(state.listError), UDim2.new(), UDim2.new(), 20, C.red)
-        W.button(grid, "Try again", UDim2.new(), UDim2.new(), C.blue, function() loadList() render() end)
+        inkColour(W.label(grid, "Could not load dinos: " .. Sel.failureMessage(state.listError), UDim2.new(), UDim2.new(), 20, C.red), INK_BAD)
+        W.button(grid, "Try again", UDim2.new(), UDim2.new(), if L then GREY else C.blue, function() loadList() render() end)
     else
         buildGrid(grid)
     end
     -- Centre column: slots, Fill for me, Clear.
     local need = (active and active.donorCount) or 0
     local cols, rows = table.unpack(SlotGrid[state.targetStage] or {3, 2})
-    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -110, 0, 30), UDim2.fromOffset(8, 2), 22, C.text, true)
+    local putIn = W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -110, 0, 30), UDim2.fromOffset(8, 2), 22, C.text, true)
     column.count = W.label(centre, "", UDim2.fromOffset(100, 30), UDim2.new(1, -106, 0, 2), 22, C.gold)
     column.count.Name = "SlotCount"
     local slots = Instance.new("Frame")
@@ -595,10 +752,23 @@ local function renderBrowse()
     local slotLayout = Instance.new("UIGridLayout")
     slotLayout.CellSize = UDim2.new(1 / cols, -6, 1 / rows, -6)
     slotLayout.CellPadding, slotLayout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
+    if L then
+        -- Toybox: heading + count on one 28 px row, the slot area fills what is left, equal cells 12 px apart (offsets, so the dashes fit exactly)
+        ink(putIn, "value")
+        putIn.Size, putIn.Position = UDim2.fromOffset(lay.head.w - 72 - Kit.Gutter, lay.head.h), UDim2.fromOffset(0, 0)
+        ink(column.count, "label")
+        column.count.TextXAlignment = Enum.TextXAlignment.Right
+        column.count.Size, column.count.Position = UDim2.fromOffset(72, lay.head.h), UDim2.fromOffset(lay.head.w - 72, 0)
+        slots.Size, slots.Position = UDim2.fromOffset(lay.slots.w, lay.slots.h), UDim2.fromOffset(lay.slots.x, lay.slots.y)
+        local cellW = math.max(math.floor((lay.slots.w - Kit.Gutter * (cols - 1)) / cols), 24)
+        local cellH = math.max(math.floor((lay.slots.h - Kit.Gutter * (rows - 1)) / rows), 24)
+        slotLayout.CellSize, slotLayout.CellPadding = UDim2.fromOffset(cellW, cellH), UDim2.fromOffset(Kit.Gutter, Kit.Gutter)
+        column.cell = {w = cellW, h = cellH}
+    end
     slotLayout.HorizontalAlignment, slotLayout.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
     slotLayout.Parent = slots
     column.slots = slots
-    W.button(centre, "Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), C.accent, function()
+    local fillButton = W.button(centre, "Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent, function()
         -- BD-346: never swallowed. While the list is refreshing say so; otherwise always answer with what was added or why not.
         if state.loading then toast("One moment...", C.gold) return end
         local before = state.selection
@@ -608,15 +778,23 @@ local function renderBrowse()
         toast(message, if #filled > #before then C.accent else C.gold)
         refreshCards()
         scheduleQuote()
-    end).Name = "AutoFill"
-    W.button(centre, "Clear", UDim2.new(.38, -8, 0, T), UDim2.new(.62, 2, 1, -(T + 6)), C.red, function()
+    end)
+    fillButton.Name = "AutoFill"
+    local clearButton = W.button(centre, "Clear", UDim2.new(.38, -8, 0, T), UDim2.new(.62, 2, 1, -(T + 6)), if L then GREY else C.red, function()
         state.selection = {}
         refreshCards()
         scheduleQuote()
-    end).Name = "Clear"
+    end)
+    clearButton.Name = "Clear"
+    if L then
+        fillButton.Size, fillButton.Position = UDim2.fromOffset(lay.fill.w, lay.fill.h), UDim2.fromOffset(lay.fill.x, lay.fill.y)
+        clearButton.Size, clearButton.Position = UDim2.fromOffset(lay.clear.w, lay.clear.h), UDim2.fromOffset(lay.clear.x, lay.clear.y)
+    end
     -- Right column: result, chips, FUSE.
     column.right = right
-    column.fuse = W.button(right, "FUSE", UDim2.new(1, 0, 0, T + 8), UDim2.new(0, 0, 1, -(T + 8)), C.card, function()
+    column.lay = lay
+    column.fuse = W.button(right, "FUSE", if L then UDim2.fromOffset(lay.fuse.w, lay.fuse.h) else UDim2.new(1, 0, 0, T + 8),
+        if L then UDim2.fromOffset(lay.fuse.x, lay.fuse.y) else UDim2.new(0, 0, 1, -(T + 8)), if L then GREY else C.card, function()
         local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
         if not ready then
             toast(if state.quoteStatus == "loading" then "One moment..." else state.quoteMessage, C.gold)
@@ -1027,7 +1205,15 @@ function FusionMenu.open()
     pcall(function()
         (screen :: any).ScreenInsets = if camera and camera.ViewportSize.Y < 500 then Enum.ScreenInsets.CoreUISafeInsets else Enum.ScreenInsets.DeviceSafeInsets
     end)
-    if panel and motion() then
+    if L then
+        applyToyboxFrame()
+        if panel and motion() then
+            local frame = panel :: Frame
+            local rest = frame.Position
+            frame.Position = UDim2.new(rest.X.Scale, rest.X.Offset, .53, 0)
+            Theme.animate(frame, .16, {Position = rest})
+        end
+    elseif panel and motion() then
         local frame = panel :: Frame
         frame.Position = UDim2.new(0, leftInset + 6, .53, 0)
         Theme.animate(frame, .16, {Position = UDim2.new(0, leftInset + 6, .5, 0)})

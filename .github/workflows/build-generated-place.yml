@@ -164,6 +164,7 @@ jobs:
           python tools/verify_ui_motion.py --runner /tmp/luau/luau
           python tools/verify_toybox_ui.py --runner /tmp/luau/luau
           python tools/verify_toybox_shop.py --runner /tmp/luau/luau
+          python tools/verify_toybox_layout.py --runner /tmp/luau/luau
           python tools/verify_hatch_pacing.py --runner /tmp/luau/luau
           python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
           python tools/verify_tag_fit.py --runner /tmp/luau/luau

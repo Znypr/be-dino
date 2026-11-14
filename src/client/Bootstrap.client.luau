@@ -1041,4 +1041,5 @@ Input.InputBegan:Connect(function(input,processed)
         if require(Shared.ModalCloseRules).keyAction(if shade.Visible then active else "",want)=="close" then close() else open(want) end -- BD-1074: key twice = closed
     end
 end)
+require(script.Parent.ScreenTour).attach(player,open,close,function() return active end)
 end mountHud() end
