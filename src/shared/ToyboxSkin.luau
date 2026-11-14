@@ -239,4 +239,13 @@ function Skin.place(screen: string)
     image:SetAttribute("ToyboxSlot", slot)
 end
 
+-- The dino detail page: its header takes the colour of the dino's rarity (owner 2026-11-14, C-58), not the blue of the Dinos place.
+function Skin.rarity(tier: number)
+    local image = mainHeader
+    if not image then return end
+    local slot = Kit.raritySlot(tier)
+    image.Image = id(slot) or image.Image
+    image:SetAttribute("ToyboxSlot", slot)
+end
+
 return Skin
