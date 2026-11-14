@@ -245,6 +245,7 @@ local render
 local openFusion
 local rail
 local function open(name: string)
+    if require(script.Parent.ModalGuard).routed(name,openFusion) then return end -- BD-1196
     local wasVisible=shade.Visible and active~=""
     modalVersion+=1
     active=name
@@ -268,6 +269,7 @@ local function open(name: string)
         body.AnchorPoint,body.Position=Vector2.zero,require(script.Parent.ModalCompact).place(true,motion)
     end
     render(name)
+    require(script.Parent.ModalGuard).fill(name,{body=body,heading=heading,header=header,label=label,color=C.card,gold=C.gold}) -- BD-1196
     -- The content moves as one layer. BD-519: not the hatch, which owns the body position (HatchSequence.play anchored it at its centre).
     if name~="hatch" then
         body.Position=require(script.Parent.ModalCompact).place(false,motion)

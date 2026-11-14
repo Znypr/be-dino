@@ -9,6 +9,13 @@ function UIFormat.duration(seconds: number): string
     local hours,minutes=total//3600,(total%3600)//60
     return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
 end
+-- BD-1192: 3700 -> "3,700" (whole numbers; a price on a button is read at a glance). Negative and fractional values are rounded to a whole number.
+function UIFormat.number(value: number): string
+    local text=tostring(math.floor(math.abs(value)+.5))
+    local out=text:reverse():gsub("(%d%d%d)","%1,"):reverse()
+    if string.sub(out,1,1)=="," then out=string.sub(out,2) end
+    return (if value<0 then "-" else "")..out
+end
 function UIFormat.readyIn(seconds: number): string return "Ready in "..UIFormat.duration(seconds) end
 -- 1.2 -> "+20%", 0.8 -> "-20%", 1 -> "" (neutral).
 function UIFormat.percent(multiplier: number): string
