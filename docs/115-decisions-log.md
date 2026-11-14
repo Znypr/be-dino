@@ -740,6 +740,7 @@ Fact found while writing the spec (CURRENT BUILD, read from `src/`, not run): **
 - **LEAD decision.** The tabs stay in the top row, not on the right (the shop body is a fixed 824 px box and the Eggs, Conditions, Crystals and odds pages use its full width). Not picked: a right column for all five pages (needs a re-layout of every page, no Studio to check it). Overturn: a follow-up row.
 - **LEAD decision.** No "Nests" tab (the game has none); no "Find it in Volcano" hint (no data); a locked Legendary or Mythic shows "?" and "Reach level N". The rarity word sits on a cream pill so a tier colour never lies on the same tier colour. The Info word stays on the card so the details page is still reachable.
 - **Unchanged.** Server, save, prices, Robux, economy, default build. **Evidence:** offline only (`tools/verify_toybox_shop.py`, 32 mutants). No Studio, no phone, nothing seen.
+- **2026-11-14 Toybox panel tone (OWNER, BD-1189, docs/232):** "actually bright": every Toybox screen uses the A layout (cream inner panels, dark text) on the docs/232 grid. ~~"dark" (B)~~ was the first answer, changed minutes later.
 ## 2026-11-14 Owner picks: Toybox style, Parasaurolophus, five new species
 
 Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questions/` (q2, q3, q4):
