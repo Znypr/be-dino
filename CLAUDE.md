@@ -16,7 +16,7 @@ Roblox dinosaur growth, collection and hatching game: Luau game code built into 
 - After committing, for board changes: `python tools/verify_kanban_merge.py --base origin/main --head HEAD`. CI runs everything above on every PR.
 
 ## Rules
-- `main` is protected: work on a branch in your own worktree, open a PR, merge only with the owner's OK. Never rebase or force-push; catch up with `git merge origin/main`. No `git stash` (shared between worktrees).
+- `main` is protected: work on a branch in your own worktree, open a PR. Merging green, reviewed PRs is delegated to the lead session (docs/160, owner 2026-10-16), logged as a LEAD decision; sub-agents never merge. Never rebase or force-push; catch up with `git merge origin/main`. No `git stash` (shared between worktrees).
 - Public repo: never commit secrets, sign-ins, personal data, local paths, third-party screenshots (`be-dino-reference-shots/`), `*.rbxl` places or generated builds (`build/BeDino-Build*.rbxlx`, manifests, Blender frame folders). The Roblox Open Cloud key comes only from the environment, never printed.
 - Never touch the owner's `Place1.rbxl` or its Studio window. Never claim Studio or phone acceptance without evidence.
 - BD ids and doc numbers only from `python tools/next_bd_id.py` (`--doc`); rows via `python tools/kanban.py`; never mark Done without evidence.
