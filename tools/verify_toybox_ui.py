@@ -137,7 +137,7 @@ def static_checks(read):
     assert compact.count(COMPACT_WINDOW + '    M.layout()\n') == 1, 'ModalCompact.attach skins the menu window (flag on only)'
     assert code_only(compact).count('Toybox') == 4, 'ModalCompact mentions Toybox only in its two hook lines'
     fusion = read(FUSION)
-    assert fusion.count(FUSION_WINDOW) == 1 and code_only(fusion).count('Toybox') == 2, 'the Fusion Menu window asks Theme.Toybox once, with the place "fusion"'
+    assert fusion.count(FUSION_WINDOW) == 1 and code_only(fusion).count('Toybox') == 4, 'the Fusion Menu window asks Theme.Toybox once, with the place "fusion" (plus the flag-gated layout require, docs/232 Fusion)'
     boot = read(BOOT)
     assert boot.count(BOOT_HOOK) == 1 and boot.count('ModalCompact).layout(') == 2, 'open(name) hands the screen name to ModalCompact.layout'
     assert boot.index('    body:ClearAllChildren()\n' + BOOT_HOOK) < boot.index('    render(name)\n'), 'the header is recoloured before the screen is drawn'

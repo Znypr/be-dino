@@ -45,3 +45,5 @@ Same grid, same buttons, same content in both. **Owner pick 2026-11-14: "actuall
 4. Close X (owner 2026-11-14): fully inside the header strip, equal 8 px inset right / top / bottom, every window. Done in the skin, asserted in `verify_toybox_ui.py`.
 5. Then Crystal Shop (PR #580), Eggs, Index list, Settings, Potions, Fusion on the same rules. The window inset (18 / 20 px today) moves to 16 with the first of these.
 6. ~~Preload the kit pictures~~ Done in `ToyboxSkin`.
+
+7. Fusion Menu (finding "Fusion Menu still the old layout"): built behind `ToyboxUIEnabled` (`FusionMenu`, rects `Kit.fusionLayout`): three cream panels (dino list | slots | result), tier tabs as chips, instructions as dark text in the panel, dashed empty slots, Fill for me / Clear / Filter small grey, FUSE the one green button (grey until ready). Also: an empty nest slot on Eggs shows the cropped nest without the egg (BD-1202 finding P-dbfb7f); an undiscovered Index dino is a soft brown silhouette (0.35) with the rarity colour on the card edge. **Studio pictures: not taken yet (lead).**

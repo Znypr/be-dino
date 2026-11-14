@@ -238,6 +238,66 @@ for _, win in windows do
         assert(texts(root, tag .. "list") >= 3, tag .. "texts drawn")
     end
 end
+
+-- ---- docs/232: the Fusion Menu body at four windows (body = the panel the menu really draws: 97% x 95% of the window, max 1180 x 680, minus the header) ----
+for _, win in {{1280, 720}, {1274, 481}, {667, 375}, {1920, 1080}} do
+    for _, wide in {false, true} do
+        local bodyW = math.floor(math.min(1180, win[1] * 0.97) - 16)
+        local bodyH = math.floor(math.min(680, win[2] * 0.95) - (44 + 22))
+        local tag = string.format("fusion %dx%d (body %dx%d) wide %s: ", win[1], win[2], bodyW, bodyH, tostring(wide))
+        local lay = Kit.fusionLayout(1, bodyW, bodyH, wide)
+        local pad, gut = Kit.PanelPad, Kit.Gutter
+        local big, small = lay.big, lay.small
+        assert(big >= 48 and small >= 44, tag .. "buttons 48 px, small never under 44 px on screen")
+        assert(lay.left.x == 0 and lay.left.x + lay.left.w + gut == lay.centre.x and lay.centre.x + lay.centre.w + gut == lay.right.x and lay.right.x + lay.right.w == bodyW, tag .. "three panels 12 px apart, filling the body width")
+        assert(lay.left.y == lay.centre.y and lay.centre.y == lay.right.y and lay.left.h == lay.centre.h and lay.centre.h == lay.right.h, tag .. "equal panel rows")
+        assert(lay.left.y + lay.left.h == bodyH and lay.right.y + lay.right.h == bodyH, tag .. "nothing below the body")
+        if wide then
+            assert(lay.tabRow and lay.tabRow.w == bodyW and lay.tabRow.y + lay.tabRow.h + gut == lay.left.y, tag .. "the tier chips take one row, 12 px above the panels")
+        else
+            assert(lay.tabs and lay.tabs.y == 0 and lay.tabs.h == big and lay.tabs.y + lay.tabs.h + gut == lay.goal.y, tag .. "the tier chips sit at the top of the list panel, 12 px above the goal row")
+        end
+        local li, ci, ri = lay.leftIn, lay.centreIn, lay.rightIn
+        assert(li.w == lay.left.w - 2 * pad and li.h == lay.left.h - 2 * pad and ci.w == lay.centre.w - 2 * pad and ri.w == lay.right.w - 2 * pad, tag .. "content 12 px inside each panel")
+        for _, name in {"goal", "filter", "grid"} do inside(lay[name], li.w, li.h, 0, tag .. name .. " inside the list panel with 12 px") end
+        assert(lay.goal.x + lay.goal.w + gut == lay.filter.x and lay.filter.x + lay.filter.w == li.w, tag .. "goal text and Filter 12 px apart")
+        assert(lay.goal.y + lay.goal.h + gut == lay.grid.y and lay.grid.y + lay.grid.h == li.h and lay.grid.h >= 60, tag .. "the dino list fills the rest, 12 px under the goal row")
+        for _, name in {"head", "slots", "fill", "clear"} do inside(lay[name], ci.w, ci.h, 0, tag .. name .. " inside the slots panel with 12 px") end
+        assert(lay.fill.x + lay.fill.w + gut == lay.clear.x and lay.clear.x + lay.clear.w == ci.w and lay.fill.y == lay.clear.y and lay.clear.y + lay.clear.h == ci.h, tag .. "Fill for me and Clear 12 px apart at the foot")
+        assert(lay.head.y + lay.head.h + gut == lay.slots.y and lay.slots.y + lay.slots.h + gut == lay.fill.y and lay.slots.h >= 100, tag .. "slot area 12 px between the heading and the buttons")
+        for _, name in {"result", "guarantee", "odds", "note", "fuse"} do inside(lay[name], ri.w, ri.h, 0, tag .. name .. " inside the result panel with 12 px") end
+        assert(lay.fuse.y + lay.fuse.h == ri.h and lay.fuse.h == big and lay.fuse.w == ri.w, tag .. "ONE full-width 48 px FUSE button at the foot")
+        assert(lay.note.y + lay.note.h + gut == lay.fuse.y, tag .. "the note is 12 px above FUSE")
+        assert(lay.result.y + lay.result.h + gut == lay.guarantee.y and lay.guarantee.y + lay.guarantee.h + gut == lay.odds.y, tag .. "result, guarantee, odds stacked 12 px apart")
+        assert(lay.odds.y + lay.odds.h + gut == lay.note.y and lay.odds.h >= 0, tag .. "odds list ends 12 px above the note (it scrolls)")
+        if bodyH >= 380 then assert(lay.odds.h >= 60 and lay.result.h >= 80, tag .. "odds and the result picture have room") end
+        -- the real instances: panels, cream slot cards, dashed empty slots, grey small buttons, ONE green button, dark text >= 14 px
+        local root = Instance.new("Frame")
+        local panels = {}
+        for _, name in {"left", "centre", "right"} do
+            panels[name] = Layout.panel(root, name, UDim2.fromOffset(lay[name].w, lay[name].h), UDim2.fromOffset(lay[name].x, lay[name].y))
+        end
+        Layout.text(panels.left, "You need 6 Base dinos.", UDim2.fromOffset(lay.goal.w, lay.goal.h), UDim2.fromOffset(pad + lay.goal.x, pad + lay.goal.y), Kit.Type.body, "value")
+        local cols, rows = 3, 2
+        local cellW = math.floor((lay.slots.w - gut * (cols - 1)) / cols)
+        local cellH = math.floor((lay.slots.h - gut * (rows - 1)) / rows)
+        assert(cellW >= 24 and cellH >= 24, tag .. "slot cells big enough")
+        for k = 1, 6 do
+            local slot = Layout.emptySlot(panels.centre, cellW, cellH, k)
+            every(slot, function(node) if node ~= slot then inside(rect(node), cellW, cellH, 0, tag .. "a dash inside its empty slot") end end)
+        end
+        local buttons = {
+            Layout.actionButton(panels.left, "Filter", UDim2.fromOffset(lay.filter.w, lay.filter.h), UDim2.fromOffset(pad + lay.filter.x, pad + lay.filter.y), GREYC, true, function() end),
+            Layout.actionButton(panels.centre, "Fill for me", UDim2.fromOffset(lay.fill.w, lay.fill.h), UDim2.fromOffset(pad + lay.fill.x, pad + lay.fill.y), GREYC, true, function() end),
+            Layout.actionButton(panels.centre, "Clear", UDim2.fromOffset(lay.clear.w, lay.clear.h), UDim2.fromOffset(pad + lay.clear.x, pad + lay.clear.y), GREYC, true, function() end),
+            Layout.actionButton(panels.right, "FUSE!", UDim2.fromOffset(lay.fuse.w, lay.fuse.h), UDim2.fromOffset(pad + lay.fuse.x, pad + lay.fuse.y), C.accent, false, function() end),
+        }
+        assert(coloured(buttons) == 1, tag .. "exactly one coloured button (FUSE)")
+        local notReady = Layout.actionButton(panels.right, "Pick 6 more", UDim2.fromOffset(lay.fuse.w, lay.fuse.h), UDim2.new(), GREYC, false, function() end)
+        assert(coloured({notReady}) == 0, tag .. "FUSE is grey while not ready")
+        assert(texts(root, tag .. "fusion") >= 5, tag .. "texts drawn")
+    end
+end
 local tiny = Kit.indexLayout(1, 667, 300, true)
 assert(tiny.bar.y + tiny.bar.h == 300 and tiny.meter.w >= Kit.Index.minMeter, "the Index bar stays inside a short 667 x 300 body")
 -- rows never clip: the longest values the page can show, at the 14 px floor (about 0.56 of the size per character)
@@ -307,7 +367,24 @@ def static_checks(read):
     assert sorted(idx_buttons) == ['C.accent', 'GREY', 'GREY'], 'Index: ONE coloured button (FUSION), the page arrows grey: %r' % idx_buttons
     assert 'Panels.autoState(' in eggs_new and '"AUTO: OFF"' in eggs_new and '"AUTO: LOCKED"' in eggs_new, 'AUTO shows its state on the toggle'
     assert '"?"' in idx_new and '"???"' not in idx_new and 'look.status' not in idx_new, 'an undiscovered card has ONE "?" line, no "???" twice'
-    assert 'ImageColor3 = L.tone("silhouette")' in idx_new, 'the undiscovered silhouette is a soft tint'
+    assert 'Color3.fromRGB(107, 90, 68), 0.35' in idx_new and 'edge.Color = silRarity' in idx_new, 'the undiscovered silhouette is a soft brown tint (0.35) with the rarity colour on the card edge'
+    # ---- BD-1202: an empty nest slot never shows the egg ----
+    assert 'EmptyNest' in eggs_new and 'v.emptyNest.Visible, v.icon.Visible = empty, not empty' in eggs_new and 'ClipsDescendants' in eggs_new, 'an empty nest slot shows the cropped nest, not the egg art'
+    assert 'dim(v.icon, if empty' not in eggs_new, 'the faded egg is no longer the empty look'
+    # ---- docs/232: the Fusion Menu on the layout rules, behind the flag ----
+    fus = U.code_only(read(U.FUSION))
+    assert 'local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil' in fus and fus.count('ToyboxLayout') == 1, 'FusionMenu requires the layout helpers behind Theme.Toybox only'
+    assert 'Kit.fusionLayout(1, bodyW, bodyH, wide)' in fus and 'lay = nil' not in fus and 'if L then' in fus, 'the flag-on browse screen uses Kit.fusionLayout'
+    for needle in ('Sel.autoFill(', 'Sel.toggle(', 'OddsCopy.fusionCalm', 'oddsSections(', 'state.acknowledged', 'state.mode, state.acknowledged = "confirm"', 'Sel.formatOdds', 'Sel.goalText(',
+                   'Sel.filterOptions(', 'FusionMenu.setLeftInset', 'Sel.valuableReasons', 'resultBox(', 'Sel.LockedStageText', 'TagFit.fusionTabs'):
+        assert needle in fus, 'the Fusion Menu keeps the function: ' + needle
+    assert re.search(r'if L then GREY elseif value ~= nil then C\.blue else C\.card', fus), 'filter chips are grey under the flag'
+    assert 'col.fuse.BackgroundColor3 = if ready then C.accent elseif L then GREY else C.card' in fus, 'FUSE is the one green button, grey while not ready'
+    for needle in ('"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent', '"Clear", UDim2.new(.38, -8, 0, T), UDim2.new(.62, 2, 1, -(T + 6)), if L then GREY else C.red',
+                   '"Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card'):
+        assert needle in fus, 'flag off keeps the old button colours: ' + needle
+    assert 'L.emptySlot(col.slots, cell.w, cell.h, i)' in fus, 'an empty fusion slot is a dashed cream placeholder'
+    assert fus.count('C.accent, function') + len(re.findall(r'if L then GREY else C\.accent', fus)) >= 1, 'accent kept for the flag-off Fill button'
     for module in (eggs_new, idx_new):
         assert 'rbxassetid' not in module and 'Instance.new("ImageLabel")' not in module, 'no code-drawn art in the new screens'
         assert not re.search(r'MinTextSize\s*=\s*(\d|1[0-3])\b', module), 'no text floor under 14 px'
@@ -347,6 +424,15 @@ MUTANTS = {
     'a second coloured Index button': (U.INDEXL, 'size(lay.prev), pos(lay.prev), GREY', 'size(lay.prev), pos(lay.prev), C.accent'),
     'the Index card says ??? again': (U.INDEXL, 'L.text(card, "?", UDim2.fromOffset(innerW, 28)', 'L.text(card, "???", UDim2.fromOffset(innerW, 28)'),
     'the Index list loads without the flag': (U.INDEX, 'if Theme.Toybox then -- BD-1194', 'if true then -- BD-1194'),
+    'the Fusion panels drift apart': (U.KIT, 'layout.centre = {x = leftW + gut, y = top, w = centreW, h = PH}', 'layout.centre = {x = leftW + gut + 3, y = top, w = centreW, h = PH}'),
+    'the Fusion body runs below the screen': (U.KIT, 'layout.fuse = {x = 0, y = ri.h - big, w = ri.w, h = big}', 'layout.fuse = {x = 0, y = ri.h - big + 6, w = ri.w, h = big}'),
+    'the Fusion note touches FUSE': (U.KIT, 'layout.note = {x = 0, y = ri.h - big - gut - F.noteH, w = ri.w, h = F.noteH}', 'layout.note = {x = 0, y = ri.h - big - F.noteH, w = ri.w, h = F.noteH}'),
+    'the Fusion FUSE button stays green when not ready': (U.FUSION, 'col.fuse.BackgroundColor3 = if ready then C.accent elseif L then GREY else C.card', 'col.fuse.BackgroundColor3 = if ready or L then C.accent else C.card'),
+    'the Fusion Fill button turns green': (U.FUSION, '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent', '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), C.accent'),
+    'the Fusion empty slot is a black box again': (U.FUSION, 'L.emptySlot(col.slots, cell.w, cell.h, i)', 'W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)'),
+    'the Fusion menu loads the layout without the flag': (U.FUSION, 'local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil', 'local L: any = require(Shared.ToyboxLayout)'),
+    'the empty nest shows the egg': (U.EGGSP, 'v.emptyNest.Visible, v.icon.Visible = empty, not empty', 'v.emptyNest.Visible, v.icon.Visible = false, true'),
+    'the undiscovered silhouette is black again': (U.INDEXL, 'Color3.fromRGB(107, 90, 68), 0.35', 'Color3.new(0, 0, 0), 0'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
 }
 
