@@ -43,8 +43,26 @@ local function ink(label: TextLabel, which: string?): TextLabel
     return label
 end
 local function inkColour(label: TextLabel, colour: Color3): TextLabel
-    if L then label.TextColor3, label.TextStrokeTransparency = colour, 1 end
+    if L then
+        label.TextColor3, label.TextStrokeTransparency = colour, 1
+        for _, child in label:GetChildren() do
+            if child:IsA("UIStroke") then child.Transparency = 1 end -- the shared outlined style adds a stroke: no outline on a cream card
+        end
+    end
     return label
+end
+-- Under the flag the Fusion window is the shared menu window: same size and place (ModalCompact.frame), never narrower or off-centre.
+local toyboxPanel: Frame? = nil
+local function applyToyboxFrame()
+    if not (L and toyboxPanel) then return end
+    local okModule, compact = pcall(require, script.Parent.ModalCompact)
+    if not okModule then return end
+    local size, dx = compact.frame()
+    if not size then return end
+    local frame = toyboxPanel :: Frame
+    frame.AnchorPoint, frame.Size, frame.Position = Vector2.new(.5, .5), UDim2.fromOffset(size.X, size.Y), UDim2.new(.5, dx, .5, 0)
+    local limit = frame:FindFirstChildOfClass("UISizeConstraint")
+    if limit then limit.MaxSize = Vector2.new(4096, 4096) end
 end
 -- Toybox chips and cards that are buttons (tier tabs, filter chips, slot cards): flat cream (or warm when picked), 2 px dark outline, no gloss picture.
 local function flatButton(parent: Instance, size: UDim2, position: UDim2, on: boolean, callback: () -> ()): TextButton
@@ -118,6 +136,7 @@ local body: Frame? = nil
 local titleLabel: TextLabel? = nil
 function FusionMenu.setLeftInset(px: number)
     leftInset = math.clamp(math.floor(px), 0, 320)
+    if L then applyToyboxFrame() return end
     if panel then
         (panel :: Frame).Size = UDim2.new(.97, -leftInset, .95, 0)
         ;(panel :: Frame).Position = UDim2.new(0, leftInset + 6, .5, 0)
@@ -170,6 +189,8 @@ local function ensureGui()
     note.ZIndex = 10
     toastLabel = note
     gui, panel, body = screen, frame, content
+    toyboxPanel = frame
+    applyToyboxFrame()
     Input.InputBegan:Connect(function(input, processed)
         if not processed and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) and state.open then FusionMenu.close() end
     end)
@@ -314,13 +335,13 @@ local function cardLook(d)
         elseif reason then (Sel.ReasonText[reason] or reason)
         elseif valuable then "Special! Tap" else "Tap to add"
     if L then
-        inkColour(entry.status, if at then INK_GOOD elseif reason then INK_BAD elseif valuable then C.purple else L.tone("label"))
+        inkColour(entry.status, if at then INK_GOOD elseif valuable and not reason then C.purple else L.tone(if reason then "label" else "value")) -- hints are plain dark text
     else
         entry.status.TextColor3 = if at then C.accent elseif reason then C.red elseif valuable then C.purple else C.text
     end
     entry.tick.Visible = at ~= nil
     entry.tick.Text = if at then tostring(at) else ""
-    entry.dim.Visible = reason ~= nil
+    entry.dim.Visible = reason ~= nil and not L -- Toybox: a card that cannot be used is the darker cream, never a dark bar
 end
 
 local function refreshCards()
@@ -413,20 +434,38 @@ end
 -- Result preview (right column): big picture of the new dino + name + guarantee line.
 local function resultBox(parent: Frame, speciesId: string?, stageId: string, traits, big: boolean, fixed: any?)
     local recipe = Sel.stage(stageId)
-    local box = W.box(parent, if fixed then UDim2.fromOffset(fixed.w, fixed.h) else UDim2.new(1, 0, if big then .62 else resultRatio(), 0), UDim2.new(), W.StageColors[stageId] or C.gold, 10)
+    local resultSize = if fixed then UDim2.fromOffset(fixed.w, fixed.h) else UDim2.new(1, 0, if big then .62 else resultRatio(), 0)
+    local box: Frame = if L then L.card(parent, "Result", resultSize, UDim2.new()) else W.box(parent, resultSize, UDim2.new(), W.StageColors[stageId] or C.gold, 10)
     box.Name = "Result"
     local badge = W.label(box, "NEW " .. string.upper(if recipe then recipe.name else stageId), UDim2.new(.6, 0, 0, 26), UDim2.fromOffset(6, 4), 20, C.outline)
-    badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
-    Chip.apply(badge, C.text, nil, true) -- BD-1077: the shared small chunky tag (it was a round pill)
+    if L then
+        -- Toybox: a cream card; the tier badge picture (AssetSlots tier_gold / tier_emerald / tier_diamond) and dark text, no saturated colour block
+        local tierId = (Theme :: any).ImageIds and (Theme :: any).ImageIds["tier_" .. stageId]
+        badge.Name, badge.ZIndex = "Badge", box.ZIndex + 2
+        ink(badge, "value")
+        badge.TextXAlignment = Enum.TextXAlignment.Left
+        if type(tierId) == "string" and tierId ~= "" then
+            local icon = Instance.new("ImageLabel")
+            icon.Name, icon.BackgroundTransparency, icon.Image, icon.ScaleType, icon.ZIndex = "TierBadge", 1, tierId, Enum.ScaleType.Fit, box.ZIndex + 2
+            icon.Size, icon.Position = UDim2.fromOffset(32, 32), UDim2.fromOffset(6, 4)
+            icon.Parent = box
+            badge.Size, badge.Position = UDim2.new(1, -46, 0, 32), UDim2.fromOffset(42, 4)
+        else
+            badge.Size, badge.Position = UDim2.new(1, -12, 0, 32), UDim2.fromOffset(6, 4)
+        end
+    else
+        badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
+        Chip.apply(badge, C.text, nil, true) -- BD-1077: the shared small chunky tag (it was a round pill)
+    end
     if speciesId then
         local view = Preview.add(box, speciesId, stageId)
         view.Size, view.Position = UDim2.new(1, -8, 1, -62), UDim2.fromOffset(4, 30)
         PreviewTraits.add(view, traits)
         local who = Sel.name(catalog, "species", speciesId, "Dino")
-        W.label(box, (if recipe then recipe.name else "") .. " " .. who, UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+        ink(W.label(box, (if recipe then recipe.name else "") .. " " .. who, UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text))
     else
-        W.label(box, "?", UDim2.new(1, 0, 1, -60), UDim2.fromOffset(0, 30), 80, C.outline)
-        W.label(box, "Your new dino", UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+        ink(W.label(box, "?", UDim2.new(1, 0, 1, -60), UDim2.fromOffset(0, 30), 80, C.outline), "label")
+        ink(W.label(box, "Your new dino", UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text))
     end
     return box
 end
@@ -558,8 +597,11 @@ end
 
 -- docs/232: the body the Toybox panels fill: the real size when the panel has been laid out, else what ensureGui makes of the viewport.
 local function toyboxBody(): (number, number)
-    local real = if body then (body :: Frame).AbsoluteSize else Vector2.new(0, 0)
-    if real.X >= 300 and real.Y >= 200 then return math.floor(real.X), math.floor(real.Y) end
+    applyToyboxFrame()
+    if panel then
+        local size = (panel :: Frame).Size -- set by applyToyboxFrame: the shared window, in px
+        if size.X.Scale == 0 and size.X.Offset >= 300 then return math.floor(size.X.Offset - 16), math.floor(size.Y.Offset - (T + 22)) end
+    end
     return math.floor(panelWidth()), math.floor(math.min(680, viewportSize().Y * .95) - (T + 22))
 end
 
@@ -1163,7 +1205,15 @@ function FusionMenu.open()
     pcall(function()
         (screen :: any).ScreenInsets = if camera and camera.ViewportSize.Y < 500 then Enum.ScreenInsets.CoreUISafeInsets else Enum.ScreenInsets.DeviceSafeInsets
     end)
-    if panel and motion() then
+    if L then
+        applyToyboxFrame()
+        if panel and motion() then
+            local frame = panel :: Frame
+            local rest = frame.Position
+            frame.Position = UDim2.new(rest.X.Scale, rest.X.Offset, .53, 0)
+            Theme.animate(frame, .16, {Position = rest})
+        end
+    elseif panel and motion() then
         local frame = panel :: Frame
         frame.Position = UDim2.new(0, leftInset + 6, .53, 0)
         Theme.animate(frame, .16, {Position = UDim2.new(0, leftInset + 6, .5, 0)})

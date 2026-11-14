@@ -384,6 +384,18 @@ def static_checks(read):
                    '"Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card'):
         assert needle in fus, 'flag off keeps the old button colours: ' + needle
     assert 'L.emptySlot(col.slots, cell.w, cell.h, i)' in fus, 'an empty fusion slot is a dashed cream placeholder'
+    # ---- Fusion window frame, donor / result cards, one window at a time (lead Studio check 2026-11-14) ----
+    compact_src = U.code_only(read(U.COMPACT))
+    boot = U.code_only(read(U.BOOT))
+    assert 'function M.frame()' in compact_src and 'm.panelW * m.scale' in compact_src and 'm.centerDx' in compact_src, 'ModalCompact.frame gives the shared window size and centre'
+    assert 'compact.frame()' in fus and 'UDim2.new(.5, dx, .5, 0)' in fus and 'Vector2.new(.5, .5)' in fus, 'under the flag the Fusion window takes the shared window size and place'
+    assert 'if L then applyToyboxFrame() return end' in fus, 'setLeftInset no longer shrinks the Toybox window'
+    assert 'fusion.isOpen and fusion.isOpen() then fusion.close() end' in compact_src and compact_src.index('fusion.close()') < compact_src.index('c.scale.Scale = m.scale'), 'opening a shared-window screen closes the Fusion Menu first (flag on and off)'
+    assert re.search(r'local function showFusionMenu\(\)\n\s*close\(\)[^\n]*\n(?:[^\n]*\n)*?\s*FusionMenu\.open\(\)', boot.replace('\r', '')) or 'showFusionMenu' in boot and re.search(r'showFusionMenu\(\)\s*close\(\)', boot), 'opening Fusion closes the shared window first'
+    assert 'entry.dim.Visible = reason ~= nil and not L' in fus, 'no dark bar over a donor card that cannot be used'
+    assert 'if child:IsA("UIStroke") then child.Transparency = 1 end' in fus, 'ink text loses the outline stroke too'
+    assert 'if L then L.card(parent, "Result", resultSize, UDim2.new()) else' in fus and '"tier_" .. stageId' in fus and 'TierBadge' in fus, 'the result is a cream card with the tier badge picture'
+    assert 'Chip.apply(badge, C.text, nil, true)' in fus, 'flag off keeps the old result badge'
     assert fus.count('C.accent, function') + len(re.findall(r'if L then GREY else C\.accent', fus)) >= 1, 'accent kept for the flag-off Fill button'
     for module in (eggs_new, idx_new):
         assert 'rbxassetid' not in module and 'Instance.new("ImageLabel")' not in module, 'no code-drawn art in the new screens'
@@ -431,6 +443,10 @@ MUTANTS = {
     'the Fusion Fill button turns green': (U.FUSION, '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent', '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), C.accent'),
     'the Fusion empty slot is a black box again': (U.FUSION, 'L.emptySlot(col.slots, cell.w, cell.h, i)', 'W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)'),
     'the Fusion menu loads the layout without the flag': (U.FUSION, 'local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil', 'local L: any = require(Shared.ToyboxLayout)'),
+    'the Fusion window stays narrow': (U.FUSION, 'frame.AnchorPoint, frame.Size, frame.Position = Vector2.new(.5, .5), UDim2.fromOffset(size.X, size.Y), UDim2.new(.5, dx, .5, 0)', 'frame.AnchorPoint = Vector2.new(.5, .5)'),
+    'Fusion stays open under another screen': (U.COMPACT, 'if ok and type(fusion) == "table" and fusion.isOpen and fusion.isOpen() then fusion.close() end', 'if false then end'),
+    'a dark bar covers the donor card': (U.FUSION, 'entry.dim.Visible = reason ~= nil and not L', 'entry.dim.Visible = reason ~= nil'),
+    'the result card is yellow again': (U.FUSION, 'local box: Frame = if L then L.card(parent, "Result", resultSize, UDim2.new()) else', 'local box: Frame = if false then L.card(parent, "Result", resultSize, UDim2.new()) else'),
     'the empty nest shows the egg': (U.EGGSP, 'v.emptyNest.Visible, v.icon.Visible = empty, not empty', 'v.emptyNest.Visible, v.icon.Visible = false, true'),
     'the undiscovered silhouette is black again': (U.INDEXL, 'Color3.fromRGB(107, 90, 68), 0.35', 'Color3.new(0, 0, 0), 0'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
