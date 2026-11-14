@@ -40,7 +40,8 @@ local function round(object: GuiObject, radius: number)
 end
 local function outline(object: GuiObject, thickness: number)
     local line = Instance.new("UIStroke")
-    line.Name, line.Color, line.Thickness, line.Parent = "CreamOutline", OUTLINE, thickness, object
+    line.Name, line.Color, line.Thickness, line.ApplyStrokeMode = "CreamOutline", OUTLINE, thickness, Enum.ApplyStrokeMode.Border -- Border: the line round the box only, never round its text
+    line.Parent = object
 end
 -- Dark body text on a cream surface (no outline): the same rule as ToyboxLayout.ink.
 local function ink(label: TextLabel, which: string?): TextLabel

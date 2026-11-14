@@ -26,7 +26,8 @@ local function round(object: GuiObject, radius: number)
 end
 local function outline(object: GuiObject, thickness: number)
     local line = Instance.new("UIStroke")
-    line.Name, line.Color, line.Thickness, line.Parent = "CreamOutline", OUTLINE, thickness, object
+    line.Name, line.Color, line.Thickness, line.ApplyStrokeMode = "CreamOutline", OUTLINE, thickness, Enum.ApplyStrokeMode.Border -- Border: the line round the box only, never round its text
+    line.Parent = object
 end
 local function ink(label: TextLabel, which: string?): TextLabel
     label.TextColor3, label.TextStrokeTransparency = tone(which or "value"), 1
