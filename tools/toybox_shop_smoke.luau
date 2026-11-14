@@ -57,8 +57,22 @@ do
     local confirm = Rules.confirm("Royal", false)
     check(confirm.title == "Buy Royal?" and confirm.cancel == "NOT NOW" and confirm.buy == "BUY AURA", "the Buy popup words")
     check(Rules.confirm("Ember Trail", true).buy == "BUY TRAIL", "the trail popup says BUY TRAIL")
-    local layout = Rules.layout(230, 48, 28, 28)
-    check(layout.artY > layout.pillY and layout.artY + layout.artH <= 230 and layout.bandY + 28 == layout.artH, "layout: the art box ends above the button and the band lies along its bottom")
+    local L = Rules.layout(194, 330, 48, 1)
+    check(L.name.y < L.pill.y and L.pill.y + L.pill.h <= L.art.y and L.art.y + L.art.h <= L.band.y and L.band.y + L.band.h <= L.button.y and L.button.y + L.button.h <= 330,
+        "layout: name, pill, art box, band and button stack in order inside the card")
+    check(L.button.w == 194 - 2 * Rules.Page.insetX and L.art.w == L.button.w and L.band.w == L.button.w, "layout: art box, band and button are one width")
+    check(Rules.cardMin(48, 1) >= 48 + Rules.Page.minArt and Rules.layout(194, Rules.cardMin(48, 1), 48, 1).art.h >= Rules.Page.minArt, "layout: the least card height keeps room for the art")
+    check(Rules.columns(824, 1) == 4 and Rules.columns(836, 0.78) == 3 and Rules.columns(836, 0.6) == 3 and Rules.columns(1250, 1) == 4, "columns: 4 when a cell is 170 px on screen, else 3")
+    for _, spec in {{824, 1, 12}, {836, 0.78, 12}, {1250, 1, 7}} do
+        local g = Rules.grid(spec[1], 320, spec[2], spec[3], 48)
+        local last = g.cells[math.min(g.columns, spec[3])]
+        check(spec[1] - 8 - (last.x + last.w) <= 16 and g.cells[1].x <= Rules.Page.pad + 2, string.format("grid %d wide: the cards fill the width (right gap %d)", spec[1], spec[1] - 8 - (last.x + last.w)))
+        check(g.cells[2] == nil or g.cells[2].x - (g.cells[1].x + g.cells[1].w) == 12 or g.cells[2].y > g.cells[1].y, "grid: 12 px gaps")
+        check(g.cellW * g.columns + 12 * (g.columns - 1) <= spec[1] - 8, "grid: the row fits beside the scroll bar")
+    end
+    check(Rules.grid(824, 320, 1, 3, 48).scrolls == false and Rules.grid(824, 320, 1, 12, 48).scrolls == true, "grid: one row does not scroll, more rows do")
+    check(Rules.tabTitle("auras") == "Auras" and Rules.tabTitle("crystals") == "Crystals" and Rules.styling("Compy") == "Styling: Compy" and Rules.styling(nil) == "Styling: your dino", "tab and styling words")
+    check(Rules.walletText(12450) == "12,450" and Rules.walletText(0) == "0" and Rules.walletText(999) == "999" and Rules.walletText(1000000) == "1,000,000" and Rules.walletText(nil) == "0" and Rules.walletText(-5) == "0", "the wallet number has commas")
 end
 
 -- ===== helpers =====
@@ -79,10 +93,18 @@ local function pxOf(d)
 end
 local function cardsOf(world, prefix)
     local out = {}
-    for _, d in world.body:GetChildren() do
-        if d:IsA("GuiObject") and d.Visible and string.find(d.Name, prefix, 1, true) == 1 then table.insert(out, d) end
+    local function scan(parent)
+        for _, d in parent:GetChildren() do
+            if d:IsA("GuiObject") and d.Visible and string.find(d.Name, prefix, 1, true) == 1 then table.insert(out, d) end
+        end
     end
-    table.sort(out, function(a, b) return a.Position.X.Offset < b.Position.X.Offset end)
+    scan(world.body)
+    local grid = world.body:FindFirstChild("ShopGrid")
+    if grid then scan(grid) end
+    table.sort(out, function(a, b)
+        if math.abs(a.Position.Y.Offset - b.Position.Y.Offset) > 1 then return a.Position.Y.Offset < b.Position.Y.Offset end
+        return a.Position.X.Offset < b.Position.X.Offset
+    end)
     return out
 end
 local function childNamed(parent, name) return parent:FindFirstChild(name) end
@@ -91,7 +113,7 @@ local function hasChip(card)
     return false
 end
 local function itemOf(list, id) for _, it in list do if it.id == id then return it end end return nil end
-local function openTrails(world) for _, tab in tabsOf(world) do if tab.Text == "TRAILS" then tab.Activated:Fire() end end end
+local function openTrails(world) for _, d in world.body:GetChildren() do if d:IsA("TextButton") and string.upper(d.Text) == "TRAILS" and (d.Name == "ShopTab_trails" or d.Size.X.Offset == 155) then d.Activated:Fire() break end end end
 local function toyboxPicture(card)
     local image = card:FindFirstChild("ToyboxCard")
     return image, image and image:GetAttribute("ToyboxSlot")
@@ -129,9 +151,15 @@ for _, mode in {"flag off, ids bound", "flag on, ids unbound", "flag on, one car
 end
 
 -- ===== 3. flag on, ids bound: every size, mouse and touch, Auras then Trails =====
-local seen = {buy = 0, unequip = 0, locked = 0, tiers = {}}
+local seen = {buy = 0, unequip = 0, locked = 0, tiers = {}, columns = {}}
+local EXTRA_SIZES = {{1280, 720}, {1274, 481}, {1920, 1080}}
+local ALL_SIZES = {}
+for _, s in SIZES do table.insert(ALL_SIZES, s) end
+for _, s in EXTRA_SIZES do table.insert(ALL_SIZES, s) end
+local function sameColour(a, b) return math.abs(a.R - b.R) < 0.004 and math.abs(a.G - b.G) < 0.004 and math.abs(a.B - b.B) < 0.004 end
+local function numberOf(text) return tonumber((string.gsub(text, ",", ""))) end
 for _, touch in {false, true} do
-    for _, size in SIZES do
+    for _, size in ALL_SIZES do
         local w, h = size[1], size[2]
         for _, page in {"auras", "trails"} do
             local world = buildWorld(w, h, touch)
@@ -140,11 +168,77 @@ for _, touch in {false, true} do
             showMenu(world) shop.open("auras")
             if page == "trails" then openTrails(world) end
             ModalCompact.enforce()
-            local compact = ModalCompact.model().mode == "compact"
             local tag = string.format("Toybox %s %dx%d%s", page, w, h, if touch then " touch" else "")
             local isTrail = page == "trails"
+            local bodyW, k = Rules.usableWidth(ModalCompact.bodyWidth(), ModalCompact.model().mode == "compact"), ModalCompact.bodyScale()
+            local vis = visibleBox(world)
+            -- header: the crystal wallet pill (icon + number), left of the X
+            local pill = world.header:FindFirstChild("WalletPill")
+            check(pill ~= nil, tag .. ": the crystal wallet pill is in the header")
+            if pill then
+                local number = childNamed(pill, "WalletNumber")
+                check(number ~= nil and number.Text == Rules.walletText(1000000) and numberOf(number.Text) == 1000000, tag .. ": the wallet shows the crystals with commas (" .. tostring(number and number.Text) .. ")")
+                check(world.heading.Text == "Crystal Shop", tag .. ": the title is Crystal Shop (" .. tostring(world.heading.Text) .. ")")
+                local close = world.x
+                if close then check(not overlaps(rectOf(pill), rectOf(close)), tag .. ": the wallet pill does not touch the X") end
+            end
+            -- tab chips: one per tab, the selected one amber, cream otherwise; the Styling chip on the right
+            local chipsSeen = 0
+            for _, d in world.body:GetChildren() do
+                if d:IsA("TextButton") and string.find(d.Name, "ShopTab_", 1, true) == 1 then
+                    chipsSeen += 1
+                    local id = string.sub(d.Name, #"ShopTab_" + 1)
+                    local selected = (id == page)
+                    check(d.Text == Rules.tabTitle(id), tag .. ": tab text " .. d.Text)
+                    check(sameColour(d.BackgroundColor3, Color3.fromRGB(255, 215, 106)) == selected, tag .. ": only the selected tab is amber (" .. id .. ")")
+                    check(pxOf(d) >= 13.5 and rectOf(d).h >= 43.5, string.format("%s: tab %s is %.1f px text, %d px high", tag, id, pxOf(d), rectOf(d).h + .5))
+                end
+            end
+            check(chipsSeen == 4, tag .. ": four tab chips (" .. chipsSeen .. ")")
+            local styling = childNamed(world.body, "StylingChip")
+            check(styling ~= nil and string.find(styling.Text, "Styling: ", 1, true) == 1, tag .. ": the Styling chip")
+            if styling then
+                check(inside(rectOf(styling), rectOf(world.body), 1.5) or inside(rectOf(styling), vis, 1.5), tag .. ": the Styling chip is inside the body")
+                shop.name = "auras"
+                styling.Activated:Fire()
+                check(shop.name == "collection", tag .. ": the Styling chip opens Dinos (" .. shop.name .. ")")
+                world.body:ClearAllChildren() shop.open("auras") if page == "trails" then openTrails(world) end ModalCompact.enforce()
+            end
+            check(childNamed(world.body, "BuyEggComingSoon") == nil, tag .. ": the cards are on the page")
+            -- the grid fills the body width
+            local gridFrame = childNamed(world.body, "ShopGrid")
+            check(gridFrame ~= nil, tag .. ": the card grid")
+            if gridFrame == nil then world.gui:Destroy() continue end
+            local gr = rectOf(gridFrame)
+            local k2 = gr.w / bodyW
+            check(math.abs(gr.w / k - bodyW) < 2 or math.abs(k2 * bodyW - gr.w) < 1, tag .. ": the grid is as wide as the body")
+            check(inside(gr, vis, 2), tag .. ": the grid is inside the body (" .. describe(gr) .. " in " .. describe(vis) .. ")")
             local cards = cardsOf(world, if isTrail then "TrailCard_" else "AuraCard_")
-            check(#cards == 3, tag .. ": three cards (" .. #cards .. ")")
+            local count = #(if isTrail then ProgressionReal.Trails else ProgressionReal.Auras)
+            check(#cards == count, tag .. ": every item has a card (" .. #cards .. " of " .. count .. ")")
+            local want = math.min(Rules.columns(bodyW, k), count)
+            seen.columns[want] = true
+            if w == 1280 and h == 720 and isTrail then check(want == 4, tag .. ": 4 columns at 1280x720 (" .. want .. ")") end
+            if w == 667 and h == 375 and isTrail then check(want == 3, tag .. ": 3 columns at 667x375 (" .. want .. ")") end
+            local firstRowRight, firstRowLeft, firstY, cellW = 0, math.huge, nil, nil
+            for index, card in cards do
+                local cr = rectOf(card)
+                if index <= want then
+                    firstY = firstY or cr.y
+                    check(math.abs(cr.y - firstY) < 1.5, tag .. ": the first row is one row")
+                    cellW = cellW or cr.w
+                    check(math.abs(cr.w - cellW) < 1.5, tag .. ": equal cells (" .. cr.w .. " vs " .. cellW .. ")")
+                    firstRowRight = math.max(firstRowRight, cr.x + cr.w)
+                    firstRowLeft = math.min(firstRowLeft, cr.x)
+                    if index > 1 then
+                        local gap = (cr.x - (rectOf(cards[index - 1]).x + rectOf(cards[index - 1]).w)) / k2
+                        check(math.abs(gap - 12) < 1.5, string.format("%s: 12 px gaps (%.1f)", tag, gap))
+                    end
+                end
+            end
+            check((gr.x + gr.w - firstRowRight) / k2 <= 16.5, string.format("%s: the cards fill the body (right edge %.1f px short)", tag, (gr.x + gr.w - firstRowRight) / k2))
+            check((firstRowLeft - gr.x) / k2 <= 16.5, tag .. ": the cards start at the left edge")
+            check(inside({x = cards[1].AbsolutePosition.X, y = cards[1].AbsolutePosition.Y, w = cards[1].AbsoluteSize.X, h = 1}, gr, 2), tag .. ": the first row is inside the grid")
             for _, card in cards do
                 local id = string.sub(card.Name, (if isTrail then #"TrailCard_" else #"AuraCard_") + 1)
                 local item = itemOf(if isTrail then ProgressionReal.Trails else ProgressionReal.Auras, id)
@@ -162,58 +256,50 @@ for _, touch in {false, true} do
                     check(image.ScaleType == "ScaleType.Slice" and image.SliceCenter ~= nil and image.SliceCenter.Min.X == KitReal.Assets[wanted].slice[1], ctag .. ": the picture is 9-sliced with the kit rect")
                     seen.tiers[wanted] = true
                 end
-                -- name, rarity word, Info
-                local name, info, word = childNamed(card, "Name"), childNamed(card, "Info"), childNamed(card, "RarityWord")
-                check(name ~= nil and name.Text == item.name, ctag .. ": the name")
-                local expectWord = RarityWordReal.get(item.rarity)
-                local _, tierColour = RarityWordReal.get(item.rarity)
-                check(word ~= nil and word.Text == expectWord and word.TextColor3 == tierColour, ctag .. ": the rarity word in its tier colour")
+                -- name, rarity pill, no Info button
+                local name, word = childNamed(card, "Name"), childNamed(card, "RarityWord")
+                local secret = isTrail and item.level > 1 and Rules.mystery(item.rarity, "locked")
+                check(name ~= nil and name.Text == (if secret then Rules.MysteryName else item.name), ctag .. ": the name")
+                check(childNamed(card, "Info") == nil, ctag .. ": no Info button (a tap on the art opens the details)")
+                local expectWord, tierColour = RarityWordReal.get(item.rarity)
+                check(word ~= nil and word.Text == expectWord and word.TextColor3 == tierColour and word.BackgroundTransparency == 0, ctag .. ": the rarity word in its tier colour on a cream pill")
                 if word then check(pxOf(word) >= 13.5, string.format("%s: the rarity word is %.1f px on screen", ctag, pxOf(word))) end
                 if name then check(pxOf(name) >= 13.5, string.format("%s: the name is %.1f px on screen", ctag, pxOf(name))) end
-                check(info ~= nil and info.Text == ShopPreviewReal.InfoWord, ctag .. ": the Info word")
-                if info then
-                    local ir = rectOf(info)
-                    check(ir.w >= 43.5 and ir.h >= 43.5, string.format("%s: the Info button is %dx%d px on screen (needs 44)", ctag, ir.w + .5, ir.h + .5))
-                    check(inside(ir, cr, 1.5), ctag .. ": the Info button is inside the card")
-                    if name then check(not overlaps(rectOf(name), ir), ctag .. ": the name runs under the Info button") end
-                end
-                -- the cream art box between the name row and the button
-                local art, act = childNamed(card, "ArtBox"), childNamed(card, "Action")
-                check(art ~= nil and act ~= nil, ctag .. ": an art box and one Action button")
-                if art == nil or act == nil then continue end
-                local ar, br = rectOf(art), rectOf(act)
-                check(inside(ar, cr, 1.5), ctag .. ": the art box is inside the card")
-                check(ar.y + ar.h <= br.y + .5, ctag .. ": the art box runs under the button")
-                if word then check(rectOf(word).y + rectOf(word).h <= ar.y + 1.5, ctag .. ": the art box runs up over the rarity word") end
-                if info then check(rectOf(info).y + rectOf(info).h <= ar.y + 1.5, ctag .. ": the art box runs up over the Info button") end
-                check(ar.h >= 48 * ModalCompact.bodyScale() - 1, ctag .. ": the art box keeps room for a picture")
+                -- the cream art box between the pill and the band
+                local art, act, band = childNamed(card, "ArtBox"), childNamed(card, "Action"), childNamed(card, "BenefitBand")
+                check(art ~= nil and act ~= nil and band ~= nil, ctag .. ": an art box, a benefit band and one Action button")
+                if art == nil or act == nil or band == nil then continue end
+                local ar, br, bandR = rectOf(art), rectOf(act), rectOf(band)
+                check(inside(ar, cr, 1.5) and inside(bandR, cr, 1.5) and inside(br, cr, 1.5), ctag .. ": art box, band and button are inside the card")
+                check(ar.y + ar.h <= bandR.y + .5 and bandR.y + bandR.h <= br.y + .5, ctag .. ": art box, then band, then button, none over another")
+                if word and name then check(rectOf(name).y + rectOf(name).h <= rectOf(word).y + 1.5 and rectOf(word).y + rectOf(word).h <= ar.y + 1.5, ctag .. ": name, pill, art box in order") end
+                check(ar.h >= 48 * k - 1, ctag .. ": the art box keeps room for a picture")
+                check(art.ClipsDescendants == true and childNamed(art, "InfoTap") ~= nil, ctag .. ": the art box is clipped and taps open the details")
                 -- rays: three, from the uploaded shaft texture
                 local fan = childNamed(art, "Rays")
                 check(fan ~= nil and #fan:GetChildren() == 3, ctag .. ": three slow rays behind the art")
                 if fan then
                     for _, ray in fan:GetChildren() do check(ray.Image == EffectsReal.resolveUi("shaftGradient"), ctag .. ": a ray is the shaftGradient texture") end
                 end
-                -- the benefit band
-                local band = childNamed(art, "BenefitBand")
-                local benefit = band and childNamed(band, "Benefit")
-                local words = if isTrail then ShopPreviewReal.speedWords(item.speed) else (UIFormatReal.boost("Growth", item.growth) or "Growth")
+                -- the benefit band: dark text on cream
+                local benefit = childNamed(band, if secret then "Hint" else "Benefit")
+                local words = if secret then Rules.hint(item) else if isTrail then ShopPreviewReal.speedWords(item.speed) else (UIFormatReal.boost("Growth", item.growth) or "Growth")
                 check(benefit ~= nil and benefit.Text == words, ctag .. ": the benefit band says '" .. words .. "' (" .. tostring(benefit and benefit.Text) .. ")")
-                if band then
-                    local bbr = rectOf(band)
-                    check(math.abs(bbr.y + bbr.h - (ar.y + ar.h)) < 1.5 and math.abs(bbr.w - ar.w) < 1.5, ctag .. ": the benefit band lies along the bottom of the art box")
-                    if benefit then check(pxOf(benefit) >= 13.5, string.format("%s: the benefit is %.1f px on screen", ctag, pxOf(benefit))) end
+                if benefit then
+                    check(pxOf(benefit) >= 13.5, string.format("%s: the benefit is %.1f px on screen", ctag, pxOf(benefit)))
+                    check(sameColour(benefit.TextColor3, Color3.fromRGB(KitReal.Tone.value[1], KitReal.Tone.value[2], KitReal.Tone.value[3])), ctag .. ": the benefit is dark ink on the cream band")
                 end
                 -- ONE wide button
                 local buttons = 0
-                for _, d in card:GetChildren() do if d:IsA("TextButton") and d.Name ~= "Info" then buttons += 1 end end
-                check(buttons == 1, ctag .. ": exactly one action button (" .. buttons .. ")")
-                check(inside(br, cr, 1.5) and br.w >= cr.w - 24 * ModalCompact.bodyScale(), string.format("%s: the button is %d px wide inside a %d px card", ctag, br.w + .5, cr.w + .5))
+                for _, d in card:GetChildren() do if d:IsA("TextButton") then buttons += 1 end end
+                check(buttons == 1, ctag .. ": exactly one action button on the card (" .. buttons .. ")")
+                check(inside(br, cr, 1.5) and br.w >= cr.w - 36 * k2 - 1, string.format("%s: the button is %d px wide inside a %d px card", ctag, br.w + .5, cr.w + .5))
                 check(pxOf(act) >= 13.5, string.format("%s: the button text is %.1f px on screen", ctag, pxOf(act)))
                 local equipped = not isTrail and id == "meadow"
                 local locked = isTrail and item.level > 1
                 if equipped then
                     seen.unequip += 1
-                    check(act.Text == "UNEQUIP" and act.BackgroundColor3 == Colors.card, ctag .. ": the equipped card says UNEQUIP (" .. act.Text .. ")")
+                    check(act.Text == "UNEQUIP" and act.BackgroundColor3 == Colors.card, ctag .. ": the equipped card says UNEQUIP on grey (" .. act.Text .. ")")
                     check(card:FindFirstChild("EquippedRing") ~= nil, ctag .. ": the equipped card has its gold ring")
                     local glow = card:FindFirstChild("EquippedGlow")
                     check(glow ~= nil and glow.Image == EffectsReal.resolveUi("glowPlate"), ctag .. ": the equipped card has the soft glow (glowPlate)")
@@ -222,25 +308,87 @@ for _, touch in {false, true} do
                 end
                 if not equipped and locked then
                     seen.locked += 1
-                    check(act.Text == "LEVEL " .. item.level and act.BackgroundColor3 == ShopCardReal.SoldOutColor, ctag .. ": a locked trail says LEVEL n on a grey button (" .. act.Text .. ")")
+                    check(act.Text == (if secret then Rules.LockedWord else "LEVEL " .. item.level) and act.BackgroundColor3 == ShopCardReal.SoldOutColor, ctag .. ": a locked trail says LEVEL n on a grey button (" .. act.Text .. ")")
                 elseif not equipped then
                     seen.buy += 1
-                    check(act.Text == item.price .. " Crystals" and act.BackgroundColor3 == Colors.accent, ctag .. ": the price is on the green button (" .. act.Text .. ")")
+                    check(act.Text == UIFormatReal.number(item.price) and act.BackgroundColor3 == Colors.accent, ctag .. ": the number is on the green button (" .. act.Text .. ")")
+                    -- icon and number are one group: the icon never overlaps the number, the group fits the button
+                    local pad = act:FindFirstChild("IconPad")
+                    local icon = act:FindFirstChild("CrystalIcon")
+                    check(pad ~= nil, ctag .. ": the price group has its padding")
+                    if pad and icon then
+                        local padLeft, iconX, iconW = pad.PaddingLeft.Offset, icon.Position.X.Offset, icon.Size.X.Offset
+                        check(padLeft + iconX >= 7.5, string.format("%s: the crystal icon starts %.1f px from the button edge", ctag, padLeft + iconX))
+                        check(padLeft - (padLeft + iconX + iconW) >= 6, string.format("%s: icon and number are %.1f px apart (needs 6)", ctag, padLeft - (padLeft + iconX + iconW)))
+                        local groupW = act:GetAttribute("PriceGroupW")
+                        check(type(groupW) == "number" and groupW <= act.Size.X.Offset - 15, ctag .. ": the group fits the button")
+                    end
                 end
                 for _, d in card:GetDescendants() do
                     if d:IsA("TextLabel") and string.find(d.Text, "Crystals", 1, true) then check(false, ctag .. ": a price caption is on the card ('" .. d.Text .. "')") end
                 end
-                -- a locked Legendary would be a secret: none of the real items is both (section 4 builds one)
+                for _, d in card:GetDescendants() do
+                    if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" and d.Name ~= "Mystery" then
+                        check(pxOf(d) >= 13.5, string.format("%s: '%s' is %.1f px on screen (needs 14)", ctag, d.Text, pxOf(d)))
+                    end
+                end
                 check(childNamed(art, "Mystery") == nil or Rules.mystery(item.rarity, if equipped then "unequip" elseif locked then "locked" else "buy"), ctag .. ": the question mark only on a locked Legendary")
+            end
+            -- one coloured (green) button per card at most, the rest are grey: no blue or red anywhere on the cards
+            for _, card in cards do
+                local act = childNamed(card, "Action")
+                if act then check(act.BackgroundColor3 == Colors.accent or act.BackgroundColor3 == Colors.card or act.BackgroundColor3 == ShopCardReal.SoldOutColor, card.Name .. ": the button is green or grey, never blue or red") end
+            end
+            -- nothing of the page lies below the visible body
+            for _, d in world.body:GetChildren() do
+                if d:IsA("GuiObject") and d.Visible and d.Name ~= "ShopWalletMark" then
+                    local r = rectOf(d)
+                    check(r.y + r.h <= vis.y + vis.h + 2, string.format("%s: %s lies below the body (%s)", tag, d.Name, describe(r)))
+                end
             end
             world.gui:Destroy()
         end
     end
 end
 check(seen.buy > 0 and seen.unequip > 0 and seen.locked > 0, string.format("the sweep saw every button kind (buy %d, unequip %d, locked %d)", seen.buy, seen.unequip, seen.locked))
+check(seen.columns[4] and seen.columns[3], "the sweep saw 4 and 3 columns")
 local tierCount = 0
 for _ in seen.tiers do tierCount += 1 end
 check(tierCount >= 3, "the sweep saw at least three different tier pictures (" .. tierCount .. ")")
+
+-- ===== the other tabs sit on a cream panel, in the same window =====
+for _, size in {{1280, 720}, {667, 375}} do
+    for _, tab in {"Eggs", "Crystals"} do
+        local world = buildWorld(size[1], size[2], false)
+        toybox(true) bind(true)
+        local shop = mountShop(world, {touch = false})
+        showMenu(world) shop.open("auras")
+        for _, d in world.body:GetChildren() do if d:IsA("TextButton") and d.Text == tab then d.Activated:Fire() end end
+        ModalCompact.enforce()
+        local tag = string.format("Toybox %s tab %dx%d", tab, size[1], size[2])
+        local panel = childNamed(world.body, "ShopPanel")
+        check(panel ~= nil, tag .. ": the page sits on a cream panel")
+        check(world.header:FindFirstChild("WalletPill") ~= nil, tag .. ": the wallet is in the header on every tab")
+        check(childNamed(world.body, "ShopGrid") == nil, tag .. ": no card grid here")
+        if panel then
+            local pr, vis = rectOf(panel), visibleBox(world)
+            check(inside(pr, vis, 2), tag .. ": the panel is inside the body (" .. describe(pr) .. " in " .. describe(vis) .. ")")
+            check(pr.w / (pr.w / ModalCompact.bodyWidth()) >= ModalCompact.bodyWidth() - 1, tag .. ": the panel is as wide as the body")
+        end
+        world.gui:Destroy()
+    end
+end
+-- leaving the shop page takes the wallet away
+do
+    local world = buildWorld(1280, 720, false)
+    toybox(true) bind(true)
+    local shop = mountShop(world, {touch = false})
+    showMenu(world) shop.open("auras")
+    check(world.header:FindFirstChild("WalletPill") ~= nil, "the wallet shows on the shop")
+    world.body:ClearAllChildren()
+    check(world.header:FindFirstChild("WalletPill") == nil, "the wallet goes when the body is cleared for another screen")
+    world.gui:Destroy()
+end
 
 -- ===== rays only while the texture is uploaded; glow only while glowPlate is =====
 do
@@ -275,12 +423,14 @@ do
     local art = childNamed(card, "ArtBox")
     local mark = art and childNamed(art, "Mystery")
     check(mark ~= nil and mark.Text == "?", "a locked Legendary shows a question mark")
-    local hint = art and childNamed(art, "BenefitBand") and childNamed(childNamed(art, "BenefitBand"), "Hint")
+    local bandOf = childNamed(card, "BenefitBand")
+    local hint = bandOf and childNamed(bandOf, "Hint")
     check(hint ~= nil and hint.Text == "Reach level 30", "and a short hint (" .. tostring(hint and hint.Text) .. ")")
-    check(art ~= nil and childNamed(childNamed(art, "BenefitBand"), "Benefit") == nil and childNamed(art, "TrailIcon") == nil and childNamed(art, "DinoSilhouette") == nil, "no benefit words and no picture on the secret card")
+    check(art ~= nil and bandOf ~= nil and childNamed(bandOf, "Benefit") == nil and childNamed(art, "TrailIcon") == nil and childNamed(art, "DinoSilhouette") == nil, "no benefit words and no picture on the secret card")
     local image, slot = toyboxPicture(card)
     check(slot == "toybox_card_legendary" and image ~= nil, "the secret card still wears the Legendary card")
-    check(childNamed(card, "Action").Text == "LEVEL 30", "and its button says what is needed")
+    check(childNamed(card, "Action").Text == "LOCKED" and childNamed(card, "Action").BackgroundColor3 == ShopCardReal.SoldOutColor, "and its button says LOCKED on grey")
+    check(childNamed(card, "Name").Text == "???", "and its name is hidden")
     -- the same item once it is bought shows its picture again
     local owned = Cards.build(ui(), world.body, {kind = "trail", item = lockedLegendary, owned = true, equipped = false, level = 1, x = 300, y = 0, height = 270, buyY = 216, targetHeight = 44, scale = 1, onPress = function() end, onInfo = function() end})
     check(childNamed(childNamed(owned, "ArtBox"), "Mystery") == nil, "an owned Legendary shows its picture")
@@ -314,6 +464,7 @@ for _, size in {{1156, 793}, {516, 481}} do
             if d:IsA("TextLabel") and string.find(d.Text, item.price .. " Crystals", 1, true) then price = true end
         end
         check(price, tag .. ": the price is on the page")
+        check(childNamed(world.body, "ShopPanel") ~= nil, tag .. ": the popup sits on a cream panel")
         local buy, notNow, cancel = nil, nil, false
         for _, d in world.body:GetChildren() do
             if d:IsA("TextButton") and d.Text == "BUY AURA" then buy = d end

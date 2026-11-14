@@ -50,7 +50,7 @@ CONFIG = 'src/shared/Config.luau'
 PROFILES = 'tools/release_profiles.py'
 ART = 'resources/ui/v2/toybox/final'
 # BD-1178 (docs/231): the Crystal Shop in the Toybox look reads the kit through its own verifier, tools/verify_toybox_shop.py
-CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
+CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopToyboxPage.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
 
 # The hook lines. Removing them gives "today's files"; check 2 compares the flag-off build against that.
 THEME_HOOKS = [

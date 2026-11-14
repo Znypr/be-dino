@@ -21,7 +21,7 @@ import text_style_floors as tf  # noqa: E402
 BODY = 'tools/toybox_shop_smoke.luau'
 EXTRA = {
     'RarityWord': 'src/shared/RarityWord.luau', 'UIFormat': 'src/shared/UIFormat.luau', 'ToyboxShop': 'src/shared/ToyboxShop.luau',
-    'ToyboxKit': 'src/shared/ToyboxKit.luau', 'EffectAssets': 'src/shared/EffectAssets.luau', 'ShopToyboxCard': 'src/client/ShopToyboxCard.luau',
+    'ToyboxKit': 'src/shared/ToyboxKit.luau', 'EffectAssets': 'src/shared/EffectAssets.luau', 'ShopToyboxCard': 'src/client/ShopToyboxCard.luau', 'ShopToyboxPage': 'src/client/ShopToyboxPage.luau', 'PriceGroup': 'src/shared/PriceGroup.luau',
 }
 HOOK_CARDS = ('    local Toybox = Theme.Toybox -- BD-1178 (docs/231): the Toybox card, only while the flag is on and the six card pictures are bound\n'
               '    if Toybox and Toybox.Kit.ready(require(Shared.AssetSlots).Images, "card") then return require(script.Parent.ShopToyboxCard).build(ui, parent, spec) end\n')
@@ -57,16 +57,26 @@ MUTANTS = {
     'one ray only': {'ShopToyboxCard': [('for i, angle in Rules.RayAngles do', 'for i, angle in {0} do')]},
     'the glow is drawn without glowPlate': {'ShopToyboxCard': [('if Effects.isRealUi(Rules.GlowKey) then', 'if true then')]},
     'the equipped ring is gone': {'ShopToyboxCard': [('ring.Name, ring.Color, ring.Thickness, ring.ApplyStrokeMode, ring.Parent = "EquippedRing", C.gold, 4, Enum.ApplyStrokeMode.Border, card', 'ring.Name = "Gone"')]},
-    'the rarity word is not on the card': {'ShopToyboxCard': [('pill.Name, pill.BackgroundTransparency, pill.BackgroundColor3 = "RarityWord", 0, CREAM', 'pill.Name = "Other"')]},
-    'the rarity word is white': {'ShopToyboxCard': [('local pill = ui.label(card, word, 10, plan.pillY, pillW, pillH, textPx, tierColour)', 'local pill = ui.label(card, word, 10, plan.pillY, pillW, pillH, textPx, Color3.new(1, 1, 1))')]},
-    'the Info button is 36 design px whatever the scale': {'ShopToyboxCard': [('local infoH = math.max(36, math.ceil(P.Touch / scale))', 'local infoH = 36')]},
-    'the art box runs under the button': {'ShopToyboxCard': [('local plan = Rules.layout(spec.buyY, rowH, pillH, bandH)', 'local plan = Rules.layout(spec.buyY + 40, rowH, pillH, bandH)')]},
+    'the rarity word is not on the card': {'ShopToyboxCard': [('pill.Name, pill.BackgroundTransparency, pill.BackgroundColor3 = "RarityWord", 0, tone("panel")', 'pill.Name = "Other"')]},
+    'the rarity word is white': {'ShopToyboxCard': [('local pill = ui.label(card, word, plan.pill.x, plan.pill.y, pillW, plan.pill.h, textPx, tierColour)', 'local pill = ui.label(card, word, plan.pill.x, plan.pill.y, pillW, plan.pill.h, textPx, Color3.new(1, 1, 1))')]},
+    'the art box runs under the button': {'ShopToyboxCard': [('local plan = Rules.layout(W, spec.height, spec.targetHeight, scale)', 'local plan = Rules.layout(W, spec.height + 60, spec.targetHeight, scale)')]},
     'the art box is not clipped to the card (no ArtBox)': {'ShopToyboxCard': [('art.Name, art.ClipsDescendants = "ArtBox", true', 'art.Name = "Box2"')]},
     'the benefit band is empty': {'ShopToyboxCard': [('local words = if mystery then Rules.hint(item) else data.benefit', 'local words = ""')]},
-    'a locked Legendary still shows its picture': {'ShopToyboxCard': [('local mystery = Rules.mystery(data.rarity, tone)', 'local mystery = false')]},
+    'a locked Legendary still shows its picture': {'ShopToyboxCard': [('local mystery = Rules.mystery(data.rarity, buttonTone)', 'local mystery = false')]},
     'the price caption comes back': {'ShopToyboxCard': [('    -- ONE wide button\n', '    ui.label(card, item.price .. " Crystals", 4, spec.buyY - 26, 256, 24, 21, C.gold)\n    -- ONE wide button\n')]},
-    'the old chip comes back': {'ShopToyboxCard': [('    -- the cream art box\n', '    ui.box(card, 8, 60, 90, 28, tierColour, card.ZIndex + 1).Name = "Chip_old"\n    -- the cream art box\n')]},
-    'the button is the old 240 px one': {'ShopToyboxCard': [('10, spec.buyY, Card.Width - 20, spec.targetHeight, colours', '12, spec.buyY, 190, spec.targetHeight, colours')]},
+    'the old chip comes back': {'ShopToyboxCard': [('    -- the cream art box; a tap on it opens the read-only details page\n', '    ui.box(card, 8, 60, 90, 28, tierColour, card.ZIndex + 1).Name = "Chip_old"\n    -- the cream art box; a tap on it opens the read-only details page\n')]},
+    'the button is the old 240 px one': {'ShopToyboxCard': [('plan.button.x, plan.button.y, plan.button.w, plan.button.h, colours', '12, plan.button.y, 190, plan.button.h, colours')]},
+    'the price group padding is a fixed 10 px (icon over the number)': {'ShopToyboxCard': [('UDim.new(0, place.padLeft), act', 'UDim.new(0, 10), act')]},
+    'the cards keep a fixed 150 px width': {'ToyboxShop': [('local cellW = math.floor((content - P.gutter * (columns - 1)) / columns)', 'local cellW = 150')]},
+    'four columns on every window': {'ToyboxShop': [('    return P.minColumns\nend', '    return 4\nend')]},
+    'a compact body is used at full width': {'ToyboxShop': [('return if compact then bodyWidth - 12 else bodyWidth', 'return bodyWidth')]},
+    'the locked word is LEVEL': {'ToyboxShop': [('S.LockedWord = "LOCKED"', 'S.LockedWord = "LEVEL"')]},
+    'the secret card shows its name': {'ShopToyboxCard': [('if mystery then Rules.MysteryName else data.name', 'data.name')]},
+    'the wallet is not drawn': {'ShopScreens': [('ToyboxPage.wallet({art=art,label=label},header,mark,num("Crystals"),', 'local _skip=(function(...) end)({art=art,label=label},header,mark,num("Crystals"),')]},
+    'the Styling chip is gone': {'ShopScreens': [('styling=if cosmeticTab=="auras" or cosmeticTab=="trails" then', 'styling=if false then')]},
+    'the selected tab is not amber': {'ShopToyboxPage': [('b.BackgroundColor3 = if selected then AMBER else tone("panel")', 'b.BackgroundColor3 = tone("panel")')]},
+    'Eggs and Crystals have no cream panel': {'ShopScreens': [('if cosmeticTab~="auras" and cosmeticTab~="trails" then ToyboxPage.panel(', 'if false then ToyboxPage.panel(')]},
+    'the popup has no cream panel': {'ShopScreens': [('if onPanel then ToyboxPage.panel(body,0,', 'if false then ToyboxPage.panel(body,0,')]},
     'a tap on the price buys at once (no popup)': {'ShopScreens': [('                    else chosenAura=item.id open("auraConfirm") end\n                end,\n                onInfo=', '                    else transact(if isTrail then "buyTrail" else "buyAura",item.id) end\n                end,\n                onInfo=')]},
 }
 
@@ -81,20 +91,28 @@ def check_sources():
     assert code_only(cards).count('Toybox') == 5, 'ShopCards mentions Toybox only in its two hook lines'
     screens = read('src/client/ShopScreens.luau')
     assert screens.count('require(Shared.ToyboxShop).confirm(item.name,isTrail)') == 1 and screens.count('Theme.Toybox and Theme.Toybox.Kit.ready(require(Shared.AssetSlots).Images,"card")') == 1, 'ShopScreens asks for the popup words once, behind the flag and the bound group'
-    assert code_only(screens).count('Toybox') == 3, 'ShopScreens mentions Toybox only in the popup lines'
+    assert code_only(screens).count('Toybox') <= 24, 'ShopScreens mentions Toybox only in the page, hint, wallet, panel and popup lines'
+    for line in code_only(screens).splitlines():
+        if 'Toybox' in line:
+            for needle in ('FireServer', 'transact(', 'shopAction'):
+                assert needle not in line, 'a Toybox line of ShopScreens sends or buys: ' + line.strip()
+    assert screens.count('ToyboxPage.active()') == 2, 'the page asks ShopToyboxPage.active() (flag and bound card group) in the shop and in the popup'
     shop = code_only(read('src/shared/ToyboxShop.luau'))
     for needle in ('game', 'Instance', 'TweenService', 'task.', 'os.', 'tick(', 'math.random', 'require(', 'Enum.', 'Color3', 'UDim', 'FireServer'):
         assert needle not in shop, 'ToyboxShop is pure (no engine, clock, RNG or server): ' + needle
     card = code_only(read('src/client/ShopToyboxCard.luau'))
-    for needle in ('FireServer', 'InvokeServer', 'RemoteEvent', 'RemoteFunction', 'DataStore', 'price =', '.price =', 'UIGradient', 'Instance.new("Frame")'):
-        if needle == 'Instance.new("Frame")':
-            assert card.count(needle) == 1, 'the one Frame is the ray fan (a rotating holder), nothing else is built from frames'
-        else:
-            assert needle not in card, 'ShopToyboxCard is presentation only: ' + needle
+    page = code_only(read('src/client/ShopToyboxPage.luau'))
+    for source, label in ((card, 'ShopToyboxCard'), (page, 'ShopToyboxPage')):
+        for needle in ('FireServer', 'InvokeServer', 'RemoteEvent', 'RemoteFunction', 'DataStore', 'price =', '.price ='):
+            assert needle not in source, label + ' is presentation only: ' + needle
+    assert card.count('Instance.new("Frame")') == 1, 'the one Frame of the card is the ray fan (a rotating holder), nothing else is built from frames'
     made = set(re.findall(r'Instance\.new\("(\w+)"\)', card))
-    assert made == {'ImageLabel', 'Frame', 'UICorner', 'UIStroke', 'UIPadding'}, 'ShopToyboxCard draws no art itself (pictures, one ray holder and rounding only): %s' % sorted(made)
+    assert made == {'ImageLabel', 'Frame', 'UICorner', 'UIStroke', 'UIPadding', 'UIGradient', 'TextButton', 'UITextSizeConstraint'} - {'UITextSizeConstraint'}, 'ShopToyboxCard draws no art itself (pictures, one ray holder, flat cream boxes and the art tap only): %s' % sorted(made)
+    made = set(re.findall(r'Instance\.new\("(\w+)"\)', page))
+    assert made == {'Frame', 'TextButton', 'ScrollingFrame', 'UICorner', 'UIStroke'}, 'ShopToyboxPage draws flat cream boxes and chips only (no picture): %s' % sorted(made)
+    assert 'ImageLabel' not in page and 'rbxassetid' not in page, 'the page draws no picture itself'
     assert 'Images' in card and 'Kit.image(Slots.Images' in card, 'the card picture id is read from AssetSlots.Images (never an invented id)'
-    assert not re.search(r'rbxassetid://\d', read('src/client/ShopToyboxCard.luau') + read('src/shared/ToyboxShop.luau')), 'no asset id is written in the new files'
+    assert not re.search(r'rbxassetid://\d', read('src/client/ShopToyboxCard.luau') + read('src/client/ShopToyboxPage.luau') + read('src/shared/ToyboxShop.luau')), 'no asset id is written in the new files'
     slots = read('src/shared/AssetSlots.luau')
     for rarity in ('common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'):
         assert re.search(r'toybox_card_%s = "(rbxassetid://\d+)?",' % rarity, slots), 'AssetSlots has the slot toybox_card_' + rarity

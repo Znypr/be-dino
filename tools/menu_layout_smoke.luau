@@ -63,7 +63,7 @@ stubs.HudSettings = nil
 -- the switch-on rehearsal of docs/152 has both on). The real module needs the hub world, so this stands in for it; section 3b runs both answers.
 local fastTravelOwned = false
 stubs.HubTravelClient = {ownsFastTravel = function() return fastTravelOwned end}
-local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
+local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopToyboxPage = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
