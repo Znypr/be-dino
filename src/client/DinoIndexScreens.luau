@@ -57,6 +57,13 @@ function Screens.render(name: string)
     if name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
         if require(script.Parent.IndexTabs).mount(open) then return end
+        if Theme.Toybox then -- BD-1194 (docs/232): the list on the Toybox layout rules (src/client/DinoIndexList); flag off = the list below, unchanged
+            local compact=require(script.Parent.ModalCompact)
+            require(script.Parent.DinoIndexList).build({body=body,C=C,label=label,hero=hero,copies=copies,bestMutation=bestMutation,eventMutation=eventMutation,
+                ownedTraits=ownedTraits,speciesIndex=speciesIndex,decoded=decoded,open=open,openFusion=openFusion,select=function(id) selected=id end,
+                rarityColors=rarityColors,rarityNames=rarityNames,motion=motion,bodyW=compact.bodyWidth(),bodyH=compact.bodyHeight(),bodyScale=compact.bodyScale()})
+            return
+        end
         local unlocked=0
         -- BD-269: at most 24 cards are built per page, so a long Index stays light on phones (pager shows only if >1 page).
         local IndexProgress=require(Shared.IndexProgress)

@@ -33,6 +33,16 @@ end
 function Layout.panel(parent: GuiObject, name: string, size: UDim2, position: UDim2): Frame
     return frame(parent, name, size, position, tone("panel"), Kit.PanelCorner, Kit.PanelStroke)
 end
+-- BD-1195 / BD-1194: a card on a panel: the lighter cream (or a soft tint such as "ready" / "busy"), 12 px corners, 2 px dark outline.
+function Layout.card(parent: GuiObject, name: string, size: UDim2, position: UDim2, tint: string?): Frame
+    return frame(parent, name, size, position, tone(tint or "card"), Kit.CardCorner, Kit.CardStroke)
+end
+-- A small count chip ("Nests 0/5"): warm tone, 8 px corners, 2 px outline, dark ink (no outline on the text). Returns the chip and its label.
+function Layout.chip(parent: GuiObject, text: string, size: UDim2, position: UDim2): (Frame, TextLabel)
+    local chip = frame(parent, "Chip", size, position, tone("previewTop"), Kit.ChipCorner, Kit.CardStroke)
+    local label = Layout.text(chip, text, UDim2.new(1, -8, 1, 0), UDim2.fromOffset(4, 0), Kit.Type.body, "value", Enum.TextXAlignment.Center)
+    return chip, label
+end
 -- The preview box of a panel: warm gradient, 10 px corners, clips the 3D view.
 function Layout.preview(parent: GuiObject, size: UDim2, position: UDim2): Frame
     local box = frame(parent, "Preview", size, position, Color3.new(1, 1, 1), Kit.PreviewCorner, nil)
