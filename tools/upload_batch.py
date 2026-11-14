@@ -45,6 +45,9 @@ GROUPS = [
     # BD-1039: the Pattern Index icons (black pattern on white, opaque) and the Patterns / Colours tab icons
     ('pattern icons', 'resources/ui/v2/patterns', r'(\d\d_[a-z_]+)-v1\.png', lambda m: 'pattern_' + m.group(1), False),
     ('index tab icons', 'resources/ui/v2/icons', r'index-tab-([a-z]+)-v1\.png', lambda m: 'index_tab_' + m.group(1), True),
+    # BD-1177: the Toybox UI kit (Blender renders, draft A): header strips, gloss buttons, rarity cards, the red X, the window frame and the stud tile
+    ('Toybox UI kit', 'resources/ui/v2/toybox/final', r'((?:header|button|card)-[a-z]+|close|panel-frame|studs-tile)\.png',
+     lambda m: 'toybox_' + m.group(1).replace('-', '_'), True),
     ('FX textures', 'resources/effects/fx-v2', r'([A-Za-z]+)(?:-([a-z]+))?\.png',
      lambda m: m.group(1) + (m.group(2).capitalize() if m.group(2) else ''), True),
     ('meadow grass maps', 'resources/materials/meadow-grass-v2', r'meadow-grass-v2-([a-z]+)\.png',

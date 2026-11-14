@@ -131,7 +131,8 @@ local function ensureGui()
     limit.MaxSize, limit.Parent = Vector2.new(1180, 680), frame
     local header = W.box(frame, UDim2.new(1, -8, 0, T + 8), UDim2.fromOffset(4, 4), C.purple)
     titleLabel = W.label(header, "Fusion", UDim2.new(1, -(T * 2 + 28), 1, -8), UDim2.fromOffset(12, 4), 30, nil, true)
-    W.button(header, "X", UDim2.new(0, T + 16, 0, T), UDim2.new(1, -(T + 20), 0, 4), C.red, function() FusionMenu.close() end)
+    local closeX = W.button(header, "X", UDim2.new(0, T + 16, 0, T), UDim2.new(1, -(T + 20), 0, 4), C.red, function() FusionMenu.close() end)
+    if Theme.Toybox then Theme.Toybox.window({panel = frame, header = header, heading = titleLabel, closeButton = closeX, place = "fusion"}) end -- BD-1177: purple header, stud body, red gloss X
     local content = Instance.new("Frame")
     content.Name, content.BackgroundTransparency, content.ClipsDescendants = "FusionBody", 1, true
     content.Size, content.Position = UDim2.new(1, -16, 1, -(T + 22)), UDim2.fromOffset(8, T + 16)

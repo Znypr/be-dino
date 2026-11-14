@@ -42,6 +42,11 @@ Theme.ImageIds = table.clone(require(script.Parent.UIIconAssets))
 -- Pending owner icons (docs/120): AssetSlots.Images, "" until bound with tools/bind_assets.py. Empty ids are skipped, so every reader keeps its native fallback.
 for name, id in require(script.Parent.AssetSlots).Images do if id ~= "" and Theme.ImageIds[name] == nil then Theme.ImageIds[name] = id end end
 Theme.TextStyle = require(script.Parent.TextStyle) -- BD-390: readable text (light fill + dark stroke 2..3), use Theme.TextStyle.apply(label)
+-- BD-1177 (docs/228 board 1, docs/230): the "Toybox" skin. Flag off (the default): Theme.Toybox is nil, Shared/ToyboxSkin is never loaded and
+-- nothing below changes. Flag on: buttons get the gloss pictures (Theme.decorate), the menu window its stud body, glossy header and red X
+-- (ModalCompact and FusionMenu ask Theme.Toybox), and outlined text is 3..4 px thick. Pictures whose ids are not bound keep today's look.
+Theme.Toybox = if (Config :: any).ToyboxUIEnabled == true then require(script.Parent.ToyboxSkin) else nil
+if Theme.Toybox then Theme.TextStyle.SkinThickness = Theme.Toybox.Kit.stroke end
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
     local corner = Instance.new("UICorner")
@@ -131,6 +136,7 @@ function Theme.decorate(object: GuiObject, radius: number)
             if strokeTween then strokeTween:Cancel() tweens[border]=nil end
             if sink then Theme.cancel(sink :: NumberValue) end
         end)
+        if Theme.Toybox then Theme.Toybox.button(object, border) end -- BD-1177: the gloss button picture
     end
 end
 function Theme.texture(parent: GuiObject, width: number, height: number)

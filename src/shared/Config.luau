@@ -159,6 +159,13 @@ return table.freeze({
     -- state at once. Client presentation only: nothing is stored, sent or decided. false = every window and button moves exactly as before
     -- and src/client/MotionFx.luau is never required. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     MotionPresetsEnabled = false,
+    -- BD-1177 (docs/228 board 1, docs/230): true = the "Toybox" UI skin of Shared/ToyboxSkin: the menu windows get a stud body in a dark frame,
+    -- a glossy striped header in the colour of the place (amber shop, green potions, blue dinos, purple fusion, cream eggs, dark settings) and a
+    -- red gloss X; every button becomes a two-tone gloss button; outlined text is 3..4 px thick. The pictures are Blender renders bound in
+    -- AssetSlots.Images (toybox_*); a picture group whose ids are not bound keeps today's look. Client presentation only: nothing is stored,
+    -- sent or decided. false = every window, button and text is built exactly as before and Shared/ToyboxSkin is never required.
+    -- Owner decision 2026-11-13: pinned off in the default profile until the owner has seen it in Studio, ON in the playtest profile. Free, no Robux.
+    ToyboxUIEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

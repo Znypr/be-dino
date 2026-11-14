@@ -2608,6 +2608,287 @@
     "src/client/IndexTabs.luau",
     "index_tab_"
    ]
+  },
+  {
+   "name": "toybox_header_amber",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_amber",
+   "group": "Images.toybox_header_amber",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_green",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_green",
+   "group": "Images.toybox_header_green",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_blue",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_blue",
+   "group": "Images.toybox_header_blue",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_purple",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_purple",
+   "group": "Images.toybox_header_purple",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_dark",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_dark",
+   "group": "Images.toybox_header_dark",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_cream",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_cream",
+   "group": "Images.toybox_header_cream",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_header_red",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_header_red",
+   "group": "Images.toybox_header_red",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_header_"
+   ]
+  },
+  {
+   "name": "toybox_button_green",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_green",
+   "group": "Images.toybox_button_green",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_grey",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_grey",
+   "group": "Images.toybox_button_grey",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_gold",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_gold",
+   "group": "Images.toybox_button_gold",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_blue",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_blue",
+   "group": "Images.toybox_button_blue",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_red",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_red",
+   "group": "Images.toybox_button_red",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_purple",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_purple",
+   "group": "Images.toybox_button_purple",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_button_dark",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_button_dark",
+   "group": "Images.toybox_button_dark",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_button_"
+   ]
+  },
+  {
+   "name": "toybox_close",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_close",
+   "group": "Images.toybox_close",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_close\""
+   ]
+  },
+  {
+   "name": "toybox_panel_frame",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_panel_frame",
+   "group": "Images.toybox_panel_frame",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_panel_frame\""
+   ]
+  },
+  {
+   "name": "toybox_studs_tile",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_studs_tile",
+   "group": "Images.toybox_studs_tile",
+   "table": "Images",
+   "reader": [
+    "src/shared/ToyboxKit.luau",
+    "\"toybox_studs_tile\""
+   ]
+  },
+  {
+   "name": "toybox_card_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_common",
+   "group": "Images.toybox_card_common",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "toybox_card_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_uncommon",
+   "group": "Images.toybox_card_uncommon",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "toybox_card_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_rare",
+   "group": "Images.toybox_card_rare",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "toybox_card_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_epic",
+   "group": "Images.toybox_card_epic",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "toybox_card_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_legendary",
+   "group": "Images.toybox_card_legendary",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "toybox_card_mythic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toybox_card_mythic",
+   "group": "Images.toybox_card_mythic",
+   "table": "Images",
+   "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
   }
  ]
 }

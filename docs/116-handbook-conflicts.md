@@ -191,3 +191,10 @@ The owner answered the private Decisions dashboard (BD-661). Full words and task
 | # | Source A | Source B | Newest owner statement | Status |
 | --- | --- | --- | --- | --- |
 | C-56 | docs/09, docs/114 s11, the catalogue ("Each egg shows for 1 second") and docs/115 (correction 2026-11-11): `HatchRevealSeconds = 1`, "the build already reveals at 1 s per egg" | `src/client/HatchSequence.luau` and `HatchTimeline.luau` never read `HatchRevealSeconds`: an egg takes 5.1 s (Common) to 6.1 s (Legendary) plus a tap; only `tools/session1_smoke.luau`, `tools/verify_load.py` and the catalogue text use the value | owner 2026-11-10: Common and Uncommon about 1 s each, Rare and up the full slow reveal | **Partly resolved by BD-1164 (flag on: Common and Uncommon about 1 s).** OWNER QUESTION (low priority): keep `HatchRevealSeconds` as a load-test number only and reword docs/09 and docs/114, or remove it? The default build still reveals at 5 to 6 s per egg until the flag goes on for players. |
+
+## O. Toybox UI skin (BD-1177, 2026-11-13, [230](230-toybox-ui-kit.md))
+
+| # | Source A | Source B | Newest owner statement | Status |
+| --- | --- | --- | --- | --- |
+| C-57 | docs/114 s4.4, docs/72 and `src/shared/TextStyle.luau`: text outline 2 to 3 px, "never a heavy 4+" | docs/228 (Toybox proposal): text outline 3 to 4 px | owner 2026-11-13: the full Toybox proposal goes in behind one switch | **Resolved by the flag.** `ToyboxUIEnabled` on = 3 px, 4 px from 28 px text; off = 2 to 3 px as before. The handbook keeps 2 to 3 px until the owner has seen the skin in Studio and the flag reaches the default profile |
+| C-58 | `src/client/DinoIndexScreens.luau`: the dino detail page colours the window header by the dino's rarity | docs/228 and BD-1177: the header colour is the colour of the place (blue for Dinos) | owner 2026-11-13 (places and their colours) | **OWNER QUESTION (low priority, for the Studio look):** under the skin the detail page loses the rarity colour of its header. Keep blue, or show the rarity somewhere else on that page (a rarity card or pill)? Safest reading used: blue |
