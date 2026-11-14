@@ -443,10 +443,12 @@
   "reach": 3,
   "kind": "art",
   "id": "P-dbfb7f",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
   "seen": 1,
-  "row": "BD-1202"
+  "row": "BD-1202",
+  "note": "branch claude/polish-fusion-nests, seen in Studio run 3 (2026-11-14)",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "eggs",
@@ -472,9 +474,11 @@
   "reach": 2,
   "kind": "art",
   "id": "P-388172",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "branch claude/polish-fusion-nests, seen in Studio run 3 (2026-11-14)",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "fusion",
@@ -486,9 +490,11 @@
   "reach": 2,
   "kind": "layout",
   "id": "P-f5329e",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "branch claude/polish-fusion-nests, seen in Studio run 3 (2026-11-14)",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "hud",
@@ -500,6 +506,62 @@
   "reach": 2,
   "kind": "bug",
   "id": "P-1b1bb1",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "fusion",
+  "role": "ux",
+  "title": "Fusion window narrower than the other menus and off-centre",
+  "detail": "The Fusion Menu ends at x~1180 of 1274 while the other windows fill to ~1262; the HUD (CHOMP, crystals) shows through on the right.",
+  "fix": "Fusion uses the same window frame size and position as the shared menu window.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "layout",
+  "id": "P-26182b",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "fusion",
+  "role": "art",
+  "title": "Donor card still the old dark style",
+  "detail": "The Compy donor card is a grey-brown block with a dark bar and red \"Hatch new dinos to fuse\" text inside the cream panel.",
+  "fix": "Donor cards as cream copy cards like the detail page grid; the hint as dark text.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "layout",
+  "id": "P-b8fc4d",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "fusion",
+  "role": "art",
+  "title": "Result card still the old yellow block",
+  "detail": "\"NEW GOLD / ? / Your new dino\" is a saturated yellow block with a white pill; \"Guaranteed: Gold!\" green outlined text.",
+  "fix": "Result as a cream card with the gold tier badge (tier_gold icon) and dark text.",
+  "severity": 2,
+  "reach": 2,
+  "kind": "art",
+  "id": "P-9db3af",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "fusion",
+  "role": "qa",
+  "title": "Opening another screen leaves Fusion on top",
+  "detail": "With Fusion open, opening Eggs shows the Eggs window under the Fusion window (two windows stacked).",
+  "fix": "Opening any shared-window screen closes the Fusion Menu first (and the other way round).",
+  "severity": 3,
+  "reach": 2,
+  "kind": "bug",
+  "id": "P-08d922",
   "state": "open",
   "first_seen": "2026-11-14",
   "seen": 1
