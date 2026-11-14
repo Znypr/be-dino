@@ -617,5 +617,19 @@
   "state": "open",
   "first_seen": "2026-11-14",
   "seen": 1
+ },
+ {
+  "screen": "game",
+  "role": "benchmark",
+  "title": "Nothing new after week 1 (player sim)",
+  "detail": "tools/simulate_players.py (real egg odds, 5 personas, 30 days): ~10-14 of 22 species by day 7, then new species are rare; with a \"quit after N quiet visits\" rule almost no persona plays on day 30, the grinder runs dry first (56% on day 7). Patterns, colours, mutations and Emerald/Diamond are not modelled yet.",
+  "fix": "More \"new\" moments in weeks 2-4: count patterns/colours/mutations as discoveries (Index), daily quests, streak rewards, Index milestone rewards, Emerald/Diamond goals shown early; model them in the sim and re-run.",
+  "severity": 3,
+  "reach": 3,
+  "kind": "retention",
+  "id": "P-7691cc",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
  }
 ]

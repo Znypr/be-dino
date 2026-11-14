@@ -22,6 +22,7 @@ Screen scores (latest, 10 = top Roblox game): auras 7, collection 8, eggs 8, fus
 | 9 | P-da0e02 | game | No daily login reward or streak | Daily streak calendar in the lobby: crystals and an egg on day 3 / 7, PROVISIONAL amounts, server time, flag-gated. | BD-1197 |
 | 9 | P-e96b77 | game | No playtime rewards | Playtime gift track on the HUD (small chest with a timer), rewards PROVISIONAL, flag-gated. | BD-1198 |
 | 9 | P-639327 | game | Runs are about 5 minutes (under 6 min = low Day-1) | One-tap "Play again" after the hatch, a run-streak bonus, and lobby goals so a session holds 3+ runs. | BD-1199 |
+| 9 | P-7691cc | game | Nothing new after week 1 (player sim) | More "new" moments in weeks 2-4: count patterns/colours/mutations as discoveries (Index), daily quests, streak rewards, Index milestone rewards, Emerald/Diamond goals shown early; model them in the sim and re-run. |  |
 | 6 | P-11f0c6 | all windows | Header strip is a long empty bar with a small left title | Title 28 px with the place icon, strip only as wide as needed or centred title. | BD-1189 |
 | 6 | P-872266 | auras | Shop chip words are outlined white on cream | Dark ink #3A2F1E without outline on the chips. |  |
 | 6 | P-190ca1 | game | Objectives built but switched off | Turn Objectives on in the playtest profile after a Studio check; add a daily set. |  |
@@ -42,7 +43,6 @@ Screen scores (latest, 10 = top Roblox game): auras 7, collection 8, eggs 8, fus
 | 2 | P-98c817 | auras | Long helper line for a kid | "Styling: Compy" with a small "Change" button. |  |
 | 2 | P-fb8a4c | fusion | Empty dark bar on the Fusion donor card | Hide the bar when there is no progress to show, or draw it as a thin cream track with its label. |  |
 | 2 | P-2ed51e | game | No player codes or group reward | Code box in Settings (server-validated list) and a one-time group bonus; flag-gated. |  |
-| 2 | P-1b1bb1 | hud | "BUILD" label alone under the eggs plate | Show the full build id or hide it outside Studio/admin. |  |
 
-26 open, 14 fixed.
+27 open, 14 fixed.
 <!-- polish-loop:end -->

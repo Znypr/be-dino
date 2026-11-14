@@ -1,0 +1,15 @@
+Be Dino! player simulation (BD-1200), 300 players per persona, 30 days, catch 12 eggs per 500 food, WITH daily streak (days 3 and 7 count as new)
+Still playing = has not quit by that day (quit = `patience` sessions in a row with nothing new). PROVISIONAL personas.
+
+persona still D1    D7   D30  first Rare       first Epic       first Legendary  first Gold       species D7/D30 longest quiet
+Noah        100%   94%    3%  day 8 (37%)      day 6 (6%)       day 4.5 (1%)     day 3 (100%)          8/9                   2
+Mia         100%   95%    4%  day 5 (66%)      day 9 (22%)      day 11 (5%)      day 1 (100%)         10/11                  3
+Ava         100%  100%   23%  day 4 (93%)      day 7 (45%)      day 9 (6%)       day 1 (100%)         11/13                  4
+Sam         100%   96%    5%  day 5 (72%)      day 7 (24%)      day 13 (2%)      day 1 (100%)         10/11                  3
+Leo         100%   77%    0%  day 1 (99%)      day 4 (69%)      day 5.5 (23%)    day 1 (100%)         14/15                  5
+
+  Noah: 6, new to Roblox, slow learner, short visits; 3 days a week, 1 visit(s), 2 runs, ~300 food a run, patience 2
+  Mia: 7, casual, loves Adopt Me, cute collector; 4 days a week, 1 visit(s), 3 runs, ~500 food a run, patience 3
+  Ava: 8, collector, fills every Index page; 5 days a week, 1 visit(s), 4 runs, ~650 food a run, patience 4
+  Sam: 9, explorer, plays a few runs then wanders; 4 days a week, 1 visit(s), 3 runs, ~600 food a run, patience 3
+  Leo: 11, grinder, Pet Simulator 99 veteran; 6 days a week, 2 visit(s), 5 runs, ~900 food a run, patience 5
