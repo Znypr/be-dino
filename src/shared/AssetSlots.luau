@@ -5,9 +5,9 @@
 local Slots = {}
 Slots.Images = {
     -- bind:begin Images (one line per name; tools/bind_assets.py edits the value only)
-    aura_meadow = "",
-    aura_tidal = "",
-    aura_royal = "",
+    aura_meadow = "rbxassetid://71681656262976",
+    aura_tidal = "rbxassetid://107728346619328",
+    aura_royal = "rbxassetid://104133746888674",
     mutation_dewdrop = "rbxassetid://107735055645703",
     mutation_charged = "rbxassetid://93959050524008",
     mutation_frost = "rbxassetid://131948112110255",
