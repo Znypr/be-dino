@@ -19,7 +19,6 @@ Screen scores (latest, 10 = top Roblox game): auras 4, collection 8, eggs 8, fus
 | Rank | Id | Screen | Finding | Fix | Row |
 | ---: | --- | --- | --- | --- | --- |
 | 9 | P-d0e74b | all windows | Content uses only the left two thirds; right third is empty studs | Lay content out to the window width with the docs/232 helpers (grid columns grow, inset 16, gutter 12) or size the window to its content. | BD-1189 |
-| 9 | P-4a7f08 | all windows | The X hangs on the header corner | X fully inside the strip, centred, equal 8 px inset (in the BD-1189 pilot brief). | BD-1189 |
 | 9 | P-da0e02 | game | No daily login reward or streak | Daily streak calendar in the lobby: crystals and an egg on day 3 / 7, PROVISIONAL amounts, server time, flag-gated. | BD-1197 |
 | 9 | P-e96b77 | game | No playtime rewards | Playtime gift track on the HUD (small chest with a timer), rewards PROVISIONAL, flag-gated. | BD-1198 |
 | 9 | P-639327 | game | Runs are about 5 minutes (under 6 min = low Day-1) | One-tap "Play again" after the hatch, a run-streak bonus, and lobby goals so a session holds 3+ runs. | BD-1199 |
@@ -44,5 +43,5 @@ Screen scores (latest, 10 = top Roblox game): auras 4, collection 8, eggs 8, fus
 | 2 | P-1b1bb1 | hud | "BUILD" label alone under the eggs plate | Show the full build id or hide it outside Studio/admin. |  |
 | owner | P-51df6c | auras | Aura icons do not fit the icon set | Remake Meadow, Tidal, Royal in the batch-2 style (glossy chunky symbol, no medallion) via ChatGPT, owner picks. |  |
 
-25 open, 13 fixed.
+24 open, 14 fixed.
 <!-- polish-loop:end -->

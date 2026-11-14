@@ -26,10 +26,12 @@
   "kind": "layout",
   "needs_owner": false,
   "id": "P-4a7f08",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
   "seen": 1,
-  "row": "BD-1189"
+  "row": "BD-1189",
+  "note": "PR #583 pilot skin, X inside the strip in every window, seen in Studio runs 2-4",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "all windows",
