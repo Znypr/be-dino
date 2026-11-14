@@ -136,15 +136,15 @@ end
 -- Index species page (DinoIndexPanels) ---------------------------------------------------------------------------------
 -- One row of bars at y = top in the My dinos column. dinos = the player's copies (the Index's own list). open(stageId) is called
 -- on a tap. Returns the height used (0 = flag off or nothing to show), so the grid starts below it.
-function Client.indexRow(parent: GuiObject, dinos: any, speciesId: string, top: number, height: number, open: (string) -> ()): number
+function Client.indexRow(parent: GuiObject, dinos: any, speciesId: string, top: number, height: number, open: (string) -> (), rowWidth: number?, left: number?): number
     if not on() then return 0 end
     local steps = Dup.speciesSteps(dinos, speciesId)
     if #steps == 0 then return 0 end
     local W = require(script.Parent.FusionWidgets) :: any
-    local width, gap = 516, 8
+    local width, gap = rowWidth or 516, 8 -- BD-1189: the new detail page passes its panel width and left edge; nil = the old 516 at x 0
     local each = math.floor((width - gap * (#steps - 1)) / #steps)
     local row = Instance.new("Frame")
-    row.Name, row.BackgroundTransparency, row.Position, row.Size = "DupProgress", 1, UDim2.fromOffset(0, top), UDim2.fromOffset(width, height)
+    row.Name, row.BackgroundTransparency, row.Position, row.Size = "DupProgress", 1, UDim2.fromOffset(left or 0, top), UDim2.fromOffset(width, height)
     row.Parent = parent
     for i, step in steps do
         local bar = W.box(row, UDim2.fromOffset(each, height), UDim2.fromOffset((i - 1) * (each + gap), 0), C.outline, 5)
