@@ -208,6 +208,9 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | toybox_header_green | image, owner upload | - | 109012366281342 | src/shared/AssetSlots.luau:Images.toybox_header_green (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | toybox_header_purple | image, owner upload | - | 88724974778159 | src/shared/AssetSlots.luau:Images.toybox_header_purple (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 | toybox_button_dark | image, owner upload | - | 106800324793782 | src/shared/AssetSlots.luau:Images.toybox_button_dark (BD-1177 (kit and skin), BD-1178 (cards)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_tidal | image, owner upload | - | 107728346619328 | src/shared/AssetSlots.luau:Images.aura_tidal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_meadow | image, owner upload | - | 71681656262976 | src/shared/AssetSlots.luau:Images.aura_meadow (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
+| aura_royal | image, owner upload | - | 104133746888674 | src/shared/AssetSlots.luau:Images.aura_royal (BD-101 (aura part)) | uploaded 2026-11-14, source owner upload, bound (Studio check pending) |
 
 Notes
 

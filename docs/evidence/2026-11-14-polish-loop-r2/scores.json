@@ -1,0 +1,22 @@
+{
+ "hud": {
+  "score": 6,
+  "one_line": "rail fixed, mixed button styles remain"
+ },
+ "eggs": {
+  "score": 7,
+  "one_line": "clean, nest art contradicts Empty"
+ },
+ "collection": {
+  "score": 7,
+  "one_line": "fills the window, black silhouettes"
+ },
+ "auras": {
+  "score": 4,
+  "one_line": "price icon inside the word (regression)"
+ },
+ "fusion": {
+  "score": 4,
+  "one_line": "routes right, old layout"
+ }
+}

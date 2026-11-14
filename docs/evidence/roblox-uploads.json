@@ -85,7 +85,8 @@
     "bytes": 1227623,
     "sha256": "d9d03bcae38206cea70653494eb4835288d4ab51351a4e9352bff048a63ef61f",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T07:34:52Z"
+    "uploaded": "2026-11-14T07:34:52Z",
+    "imageId": "71681656262976"
   },
   {
     "assetId": "133703604729522",
@@ -95,7 +96,8 @@
     "bytes": 53974,
     "sha256": "4213510002886f9c02779cc6d8771eafa04a3dc440113a12aac59590a3752768",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T07:34:58Z"
+    "uploaded": "2026-11-14T07:34:58Z",
+    "imageId": "104133746888674"
   },
   {
     "assetId": "105324978830356",
@@ -105,7 +107,8 @@
     "bytes": 1101335,
     "sha256": "ea14625b4bfd9a380b9e7d34c8205cbd51234b60a47767327a1d0750567c9856",
     "moderation": "Approved",
-    "uploaded": "2026-11-14T07:35:06Z"
+    "uploaded": "2026-11-14T07:35:06Z",
+    "imageId": "107728346619328"
   },
   {
     "assetId": "131298963872227",
@@ -756,5 +759,38 @@
     "uploaded": "2026-11-14T06:48:13Z",
     "imageId": "107955739740363",
     "note": "Decal asset id; imageId found with InsertService:LoadAsset in Studio 2026-11-14. Bind imageId (BD-1068)."
+  },
+  {
+    "assetId": "125639181954512",
+    "assetType": "Decal",
+    "displayName": "aura_meadow",
+    "file": "aura_meadow.png",
+    "bytes": 48652,
+    "sha256": "eb0ed5c618ecef11d5f93326049598c9353dc1f3be5dcec44de3e1cd95425c3d",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T08:59:51Z",
+    "imageId": "71681656262976"
+  },
+  {
+    "assetId": "124214579511722",
+    "assetType": "Decal",
+    "displayName": "aura_tidal",
+    "file": "aura_tidal.png",
+    "bytes": 39200,
+    "sha256": "6d5932d74cc8d98433cd2ca3a982b4180bc502882753ff9e3c70bc2b9e18568d",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T08:59:57Z",
+    "imageId": "107728346619328"
+  },
+  {
+    "assetId": "74095129526969",
+    "assetType": "Decal",
+    "displayName": "aura_royal",
+    "file": "aura_royal.png",
+    "bytes": 52004,
+    "sha256": "c5a6d7c73f0a463eae023fb8d86ac87582583f30e873b34a1d03831ee39e95b8",
+    "moderation": "Approved",
+    "uploaded": "2026-11-14T09:00:02Z",
+    "imageId": "104133746888674"
   }
 ]
