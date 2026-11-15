@@ -31,6 +31,7 @@ local TagFit = require(Shared.TagFit) -- BD-1107: ribbons, the stop tag and the 
 local TagLayout = require(Shared.HatchTagLayout) -- BD-1107: where they go (stacked down the side columns, never over each other)
 local NewFinds = require(Shared.PatternColourIndex) -- BD-1039: "New pattern!" / "New colour!" ribbons (flag Config.PatternColourIndexEnabled)
 local PrivateState = require(script.Parent.PrivateState)
+local PlayAgain = require(Shared.PlayAgain) -- BD-1199 (docs/239): PLAY AGAIN / HOME at the end of a batch (flag Config.PlayAgainEnabled)
 local HttpService = game:GetService("HttpService")
 
 local Seq = {}
@@ -360,7 +361,7 @@ export type Args = {
     nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
     motion: boolean,
     alive: () -> boolean, flash: (Color3, number) -> (),
-    onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (), onAgain: (() -> ())?,
+    onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (), onAgain: ((boolean?) -> ())?,
     header: GuiObject?, -- BD-1019: the menu header strip (X lives there): the tap catcher starts below it
     onAbort: (() -> ())?, -- BD-1019: the menu was closed (X, tap outside, Escape) before the player continued: nothing more is coming from this egg
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
@@ -415,6 +416,7 @@ function Seq.play(args: Args): Handle
     local punchStart = 1 + esc.punch
     local connections: {RBXScriptConnection} = {}
     local finished = false
+    local playAction: (() -> ())? = nil -- BD-1199: PLAY AGAIN of the end row, when it exists
     local inspect: InspectView.Handle? = nil -- BD-149: drag to turn the revealed dino (never eats the continue tap)
     -- BD-1164: fastEgg = short timings, autoNext = it moves on by itself, specialLine = the words of the "something special" lead-in.
     local fastEgg, autoNext = false, false
@@ -918,7 +920,10 @@ function Seq.play(args: Args): Handle
     table.insert(connections, Input.InputBegan:Connect(function(input, processed)
         if processed then return end
         local k = input.KeyCode
-        if k == Enum.KeyCode.Space or k == Enum.KeyCode.Return or k == Enum.KeyCode.KeypadEnter or k == Enum.KeyCode.ButtonA then onTap() end
+        local endRow = a.body:FindFirstChild("EndButtons")
+        if playAction and not finished and (k == Enum.KeyCode.ButtonA or k == Enum.KeyCode.Return or k == Enum.KeyCode.KeypadEnter) and endRow and (endRow :: GuiObject).Visible then
+            (playAction :: () -> ())() -- BD-1199: with PLAY AGAIN on screen, A / Enter is PLAY AGAIN (the same path as the button)
+        elseif k == Enum.KeyCode.Space or k == Enum.KeyCode.Return or k == Enum.KeyCode.KeypadEnter or k == Enum.KeyCode.ButtonA then onTap() end
     end))
 
     local function place(f: Frame, x: number, y: number) f.Position = UDim2.fromOffset(x, y) end
@@ -1062,8 +1067,10 @@ function Seq.play(args: Args): Handle
         -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast >= 4.5:1); no dead end after a splat.
         local oldRow = a.body:FindFirstChild("EndButtons")
         if oldRow then oldRow:Destroy() end
+        playAction = nil
         autoNext = pace.auto
         local kinds = if autoNext then {} else Copy.hatchButtons(failed, r.remaining) -- BD-1164: an egg that moves on by itself needs no NEXT EGG button
+        if Config.PlayAgainEnabled == true and not autoNext then kinds = PlayAgain.endKinds(true, failed, r.remaining, kinds) end -- BD-1199: PLAY AGAIN + HOME at the end of a batch
         if pace.special and motion and state.lead > 0 then
             -- "Something special is coming": the egg holds still, the rings swell in the rarity colour, one soft existing cue, one short line.
             Sfx.play(Pacing.SpecialCue)
@@ -1077,24 +1084,35 @@ function Seq.play(args: Args): Handle
         if #kinds > 0 then
             local row = Instance.new("Frame")
             row.Name, row.BackgroundTransparency, row.Visible, row.ZIndex = "EndButtons", 1, false, a.body.ZIndex + 8
-            row.AnchorPoint, row.Position, row.Size, row.Parent = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 342), UDim2.fromOffset(#kinds * 246, 60), a.body
+            local special: any = (PlayAgain.Buttons :: any)[kinds[1]] -- BD-1199: PLAY AGAIN (big, green) + HOME (small, grey), centred; every other row keeps its 230 x 60 buttons
+            local xs, rowW = PlayAgain.layout(kinds)
+            if not special then rowW = #kinds * 246 end
+            row.AnchorPoint, row.Position, row.Size, row.Parent = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, if special then 334 else 342), UDim2.fromOffset(rowW, if special then special.h else 60), a.body
             for i, kind in kinds do
                 local b = Instance.new("TextButton")
-                b.Name, b.Text, b.AutoButtonColor, b.Font, b.TextSize = "End_" .. kind, Copy.ButtonText[kind], true, Enum.Font.FredokaOne, 30
-                local fill, ink = Copy.ButtonColors[kind], Copy.ButtonTextColor
+                local own = (PlayAgain.Buttons :: any)[kind]
+                b.Name, b.Text, b.AutoButtonColor, b.Font, b.TextSize = "End_" .. kind, (PlayAgain.ButtonText :: any)[kind] or Copy.ButtonText[kind], true, Enum.Font.FredokaOne, if own then own.textSize else 30
+                local fill, ink = if own then own.fill else Copy.ButtonColors[kind], Copy.ButtonTextColor
                 b.BackgroundColor3, b.TextColor3 = Color3.fromRGB(fill[1], fill[2], fill[3]), Color3.fromRGB(ink[1], ink[2], ink[3])
-                b.Position, b.Size, b.ZIndex, b.Parent = UDim2.fromOffset((i - 1) * 246, 0), UDim2.fromOffset(230, 60), row.ZIndex + 1, row
+                b.Position, b.Size, b.ZIndex, b.Parent = if own then UDim2.fromOffset(xs[i], if i == 1 then 0 else special.h - own.h) else UDim2.fromOffset((i - 1) * 246, 0), UDim2.fromOffset(if own then own.w else 230, if own then own.h else 60), row.ZIndex + 1, row
+                b.Selectable = true -- BD-1199: a gamepad cursor can land on it
                 local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 16) corner.Parent = b
                 local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = Theme.Colors.outline, 3, b
-                b.Activated:Connect(function()
-                    if kind == "again" then
+                local function act()
+                    if kind == "again" or kind == "play" then
                         if finished then return end
                         finish()
-                        if a.onAgain then (a.onAgain :: () -> ())() end
+                        if a.onAgain then (a.onAgain :: (boolean?) -> ())() end
+                    elseif kind == "home" then
+                        if finished then return end
+                        finish()
+                        if a.onAgain then (a.onAgain :: (boolean?) -> ())(false) end -- BD-1199: HOME closes the party and starts nothing
                     else
                         advance()
                     end
-                end)
+                end
+                b.Activated:Connect(act)
+                if kind == "play" then playAction = act end -- BD-1199: A / Enter does the same
             end
         end
         if r.remaining > 0 and not skipButton then

@@ -136,6 +136,14 @@ return table.freeze({
     -- is stored, never in the first session of a new save, once per join. false = no card, no remote data, the join is exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     WelcomeBackEnabled = false,
+    -- BD-1199 (docs/239, docs/235: sessions under 6 min lose Day 1, hits chain runs): true = after the last egg of a hatch a big green "PLAY AGAIN" button starts the next run through the
+    -- normal run-start remote (the server still checks everything) with a small grey "HOME" beside it, and runs started within RunStreakWindowSeconds of the last run end count a gentle
+    -- run streak 1..5 that pays a small crystal bonus in the existing settlement. Session-only state, nothing saved. false = no button, no streak, no bonus, the run flow is exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux. All numbers below are PROVISIONAL (docs/239).
+    PlayAgainEnabled = false,
+    RunStreakWindowSeconds = 120, -- PROVISIONAL: a run that starts within this many seconds of the previous run END continues the streak; later = it starts again at 1, quietly
+    RunStreakCrystals = {0, 5, 10, 15, 20}, -- PROVISIONAL: crystals at settlement for streak 1..5 (a longer streak stays at 5); same exactly-once settlement as the run crystals
+    RunStreakMinRunSeconds = 60, -- PROVISIONAL: the bonus needs a run of at least this long with one or more eggs caught (a run that ends at once earns no streak bonus)
     -- BD-1164 (owner decision 2026-11-10, docs/115, docs/226): true = in a hatch party the Common and Uncommon eggs take a FAST path (about 1 s each:
     -- short wobble, burst, name and rarity chip, then the next egg by itself), Rare and up keep the full slow show, and the first Rare+ egg after a
     -- fast run gets a short "something special" lead-in. Still one egg at a time; Shiny, BIG, mutation, Rainbow, Astra and secret finds and the first

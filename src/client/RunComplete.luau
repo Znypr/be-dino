@@ -3,6 +3,8 @@
 -- one row per fact with an icon (eggs, crystals, nests); no duplicate egg line; Growth hidden at 0 (docs/72, docs/114).
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Copy = require(Shared.FtueCopy)
+local Config = require(Shared.Config) :: any
+local Rules = require(Shared.PlayAgain) -- BD-1199
 
 local RunComplete = {}
 
@@ -30,6 +32,9 @@ function RunComplete.build(d: any)
     end
     local level = d.label(body, "Level " .. d.num("AccountLevel"), 30, 282, 220, 36, 24, C.gold)
     level.TextXAlignment = Enum.TextXAlignment.Center
+    -- BD-1199 (docs/239): the soft streak line under the level, only with Config.PlayAgainEnabled; the bonus is already inside the crystals row (the server paid it with the run)
+    local streak = if Config.PlayAgainEnabled == true then Rules.text(d.num("LastRunStreak")) else nil
+    if streak then d.label(body, streak, 30, 318, 220, 26, 20, C.accent).TextXAlignment = Enum.TextXAlignment.Center end
     -- BD-1163 (docs/225): on the starter run OPEN EGGS is the only big button ("openOnly"); "wait" = its eggs are still being saved
     local mode = require(script.Parent.StarterRunClient).resultsMode(d.hasEggs)
     if mode == "normal" then d.button(body, "Back home", if d.hasEggs then 30 else 212, 348, if d.hasEggs then 370 else 400, 48, C.accent, d.back) end
