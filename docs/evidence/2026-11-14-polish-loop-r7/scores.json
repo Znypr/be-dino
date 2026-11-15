@@ -1,0 +1,18 @@
+{
+ "auras": {
+  "score": 6,
+  "one_line": "rings load; overflow at 1914 wide, chip halo"
+ },
+ "potions": {
+  "score": 7,
+  "one_line": "full width, all icons, green prices"
+ },
+ "settings": {
+  "score": 7,
+  "one_line": "cream panel, chip halo"
+ },
+ "hud": {
+  "score": 6,
+  "one_line": "one style; key badges and chomp icon off"
+ }
+}

@@ -10,10 +10,12 @@
   "kind": "layout",
   "needs_owner": false,
   "id": "P-d0e74b",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
   "seen": 1,
-  "row": "BD-1189"
+  "row": "BD-1189",
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "all windows",
@@ -78,9 +80,11 @@
   "kind": "art",
   "needs_owner": false,
   "id": "P-476117",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "hud",
@@ -222,9 +226,11 @@
   "kind": "art",
   "needs_owner": false,
   "id": "P-6bd182",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "potions",
@@ -237,9 +243,11 @@
   "kind": "layout",
   "needs_owner": false,
   "id": "P-33416f",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "potions",
@@ -252,9 +260,11 @@
   "kind": "bug",
   "needs_owner": false,
   "id": "P-1b265a",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "fusion",
@@ -285,9 +295,11 @@
   "kind": "layout",
   "needs_owner": false,
   "id": "P-54d840",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "PR shop/potions branches, seen in Studio run 7",
+  "fixed": "2026-11-14"
  },
  {
   "screen": "game",
@@ -628,6 +640,76 @@
   "reach": 3,
   "kind": "retention",
   "id": "P-7691cc",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "all windows",
+  "role": "qa",
+  "title": "Chip words have a dark halo (hidden text keeps its UIStroke)",
+  "detail": "Shop and Settings tab chips: TextTransparency=1 but the button UIStroke (3 px) is still drawn around the invisible word.",
+  "fix": "Disable the button UIStroke when a chip draws its own word.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "bug",
+  "id": "P-4ba7c0",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "auras",
+  "role": "qa",
+  "title": "Shop grid overflows the window at 1914x841",
+  "detail": "BodyScroll 764 wide at x=531, Royal Nova card right edge at 1770, Styling chip outside the frame.",
+  "fix": "Grid and tab row from the real body width; add 1914x841 to the shop check.",
+  "severity": 3,
+  "reach": 2,
+  "kind": "bug",
+  "id": "P-72f8bb",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "hud",
+  "role": "art",
+  "title": "LEAP / CHOMP key badges clipped black blobs",
+  "detail": "E and F badges sit half outside the buttons as small black shapes.",
+  "fix": "Round cream badge with a dark letter fully inside.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "art",
+  "id": "P-89dc42",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "hud",
+  "role": "qa",
+  "title": "CHOMP icon overlaps its word",
+  "detail": "The bite icon covers the first letters of CHOMP.",
+  "fix": "Icon left, word right, measured.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "bug",
+  "id": "P-a42990",
+  "state": "open",
+  "first_seen": "2026-11-14",
+  "seen": 1
+ },
+ {
+  "screen": "potions",
+  "role": "ux",
+  "title": "Potion note on the studs",
+  "detail": "\"Rarer potions show up less often.\" is dark text straight on the studs.",
+  "fix": "Move into the header chip row or the owned panel.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "layout",
+  "id": "P-1a1d3c",
   "state": "open",
   "first_seen": "2026-11-14",
   "seen": 1

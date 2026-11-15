@@ -1,0 +1,52 @@
+[
+ {
+  "screen": "all windows",
+  "role": "qa",
+  "title": "Chip words have a dark halo (hidden text keeps its UIStroke)",
+  "detail": "Shop and Settings tab chips: TextTransparency=1 but the button UIStroke (3 px) is still drawn around the invisible word.",
+  "fix": "Disable the button UIStroke when a chip draws its own word.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "bug"
+ },
+ {
+  "screen": "auras",
+  "role": "qa",
+  "title": "Shop grid overflows the window at 1914x841",
+  "detail": "BodyScroll 764 wide at x=531, Royal Nova card right edge at 1770, Styling chip outside the frame.",
+  "fix": "Grid and tab row from the real body width; add 1914x841 to the shop check.",
+  "severity": 3,
+  "reach": 2,
+  "kind": "bug"
+ },
+ {
+  "screen": "hud",
+  "role": "art",
+  "title": "LEAP / CHOMP key badges clipped black blobs",
+  "detail": "E and F badges sit half outside the buttons as small black shapes.",
+  "fix": "Round cream badge with a dark letter fully inside.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "art"
+ },
+ {
+  "screen": "hud",
+  "role": "qa",
+  "title": "CHOMP icon overlaps its word",
+  "detail": "The bite icon covers the first letters of CHOMP.",
+  "fix": "Icon left, word right, measured.",
+  "severity": 2,
+  "reach": 3,
+  "kind": "bug"
+ },
+ {
+  "screen": "potions",
+  "role": "ux",
+  "title": "Potion note on the studs",
+  "detail": "\"Rarer potions show up less often.\" is dark text straight on the studs.",
+  "fix": "Move into the header chip row or the owned panel.",
+  "severity": 1,
+  "reach": 2,
+  "kind": "layout"
+ }
+]
