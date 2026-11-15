@@ -28,6 +28,7 @@ local keyFor = shared.keyFor
 local lastChestReadyAt = shared.lastChestReadyAt
 local migrateLegacyNests = shared.migrateLegacyNests
 local objectives = shared.objectives
+local runStreak = shared.runStreak -- BD-1199
 local ownSession = shared.ownSession
 local ownsAny = shared.ownsAny
 local pendingSettlements = shared.pendingSettlements
@@ -114,6 +115,15 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local outcome = RewardMath.computeRunReward(catchScore, runSeconds)
     local nestsEarned = outcome.nestCount -- hidden qualification (server run time + server catches), committed below
     outcome.crystalBox = 0 -- retired random crystal box; kept for client/operation compatibility
+    -- BD-1199 (docs/239, PROVISIONAL): the run-streak bonus joins the run crystals BEFORE the transaction, so the stored outcome carries it and the settlement ledger
+    -- (run id) makes it exactly-once; the server decides (session-only streak of THIS run id), the client never sends one. Flag off = nothing here runs.
+    -- A bug in this optional bonus must never block the settlement (BD-1096): the call is protected, a failure means no bonus.
+    local streakBonus = 0
+    if Config.PlayAgainEnabled == true then
+        local askedOk, asked = pcall(function() return runStreak().bonusFor(player, runId, catchScore, runSeconds) end)
+        if askedOk and typeof(asked) == "number" and asked >= 0 and asked == asked then streakBonus = math.floor(asked) end
+        outcome.crystals += streakBonus
+    end
     local eggCount = outcome.eggCount
     -- BD-1163 (docs/225): the starter run (a save with zero settled runs, only while Config.StarterRunEnabled) settles at least StarterRunMinEggs eggs
     -- when it caught one or more. Crystals, XP and nests stay those of the real catches. Decided from the cached save here and checked again against
@@ -290,6 +300,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         if committedOutcome.starter == true and (committedOutcome.eggCount or 0) > caughtEggs then player:SetAttribute("LastRunCatchScore", committedOutcome.eggCount) end
     end
     PrivateState.set(player, "LastSettledRunId", runId)
+    if Config.PlayAgainEnabled == true and not duplicate then pcall(function() runStreak().committed(player, runId, streakBonus) end) end -- BD-1199: paid once, shown on Run Complete
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     if Config.ObjectivesEnabled == true then -- BD-074: after the committed + adopted settlement (also for the in-call duplicate of a lost acknowledgement; the run id makes a replay count once)
         -- BD-1096: the run is already committed; an error in this hook must not abort the settlement call (the player would stay in "Ending").

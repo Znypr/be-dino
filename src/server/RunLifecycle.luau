@@ -94,6 +94,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     local startedNow = workspace:GetServerTimeNow()
     for id, at in runStartedAt do if startedNow - at > 6 * 3600 then runStartedAt[id] = nil runNestWeather[id] = nil end end -- BD-363: a run that never settled cannot pin its entry forever
     runStartedAt[newRunId] = startedNow
+    if Config.PlayAgainEnabled == true then pcall(function() require(script.Parent.RunStreakService).onBegin(player, newRunId, startedNow) end) end -- BD-1199 (docs/239): session-only streak, flag off = never loaded; protected: a failing optional streak never blocks a run start or end
     -- BD-479: a run that has catches but is still short of the minimum time finds its first nest at that mark, in that weather.
     task.delay(Config.NestMinRunSeconds + 0.25, function()
         if character:GetAttribute("RunId") == newRunId then RunLifecycle.noteNestWeather(character) end
@@ -262,6 +263,7 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     player:SetAttribute("LastRunId", snapshot.runId)
     player:SetAttribute("LastRunEndAt", workspace:GetServerTimeNow())
+    if Config.PlayAgainEnabled == true then pcall(function() require(script.Parent.RunStreakService).onEnd(player, snapshot.runId, workspace:GetServerTimeNow()) end) end -- BD-1199
     lastPredator[player] = sourceUserId or 0 -- BD-618 (e): server memory only (was a public Player attribute that told everyone who ate you)
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
