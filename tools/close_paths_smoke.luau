@@ -466,7 +466,9 @@ for _, kind in {{name = "last egg", failed = false, labels = {"End_done"}}, {nam
     check(catcher ~= nil and ModalClose.coverOf(menu.gui, menu.x) == nil, kind.name .. ": X is reachable")
     if row and catcher then
         check(catcher.AbsolutePosition.Y + catcher.AbsoluteSize.Y <= row.AbsolutePosition.Y + .01, kind.name .. ": the catcher stops above the end buttons")
-        for _, name in kind.labels do
+        local labels = kind.labels
+        if not kind.failed and row:FindFirstChild("End_play") then labels = {"End_play", "End_home"} end -- BD-1199: Config.PlayAgainEnabled (the switch-on rehearsal): PLAY AGAIN + HOME replace DONE on the last egg
+        for _, name in labels do
             local b = row:FindFirstChild(name)
             check(b ~= nil and ModalClose.coverOf(menu.gui, b) == nil, kind.name .. ": " .. name .. " is reachable")
             check(b ~= nil and b.AbsoluteSize.X >= Rules.MinTarget and b.AbsoluteSize.Y >= Rules.MinTarget, kind.name .. ": " .. name .. " is at least 44 px")
@@ -475,6 +477,10 @@ for _, kind in {{name = "last egg", failed = false, labels = {"End_done"}}, {nam
             local nexts0, agains0 = menu.nexts, menu.agains
             tapOn(menu, row:FindFirstChild("End_again"))
             check(menu.agains == agains0 + 1 and menu.nexts == nexts0, kind.name .. ": TRY AGAIN runs its own handler (it used to act as DONE)")
+        elseif row:FindFirstChild("End_play") then
+            local nexts0, agains0 = menu.nexts, menu.agains
+            tapOn(menu, row:FindFirstChild("End_play"))
+            check(menu.agains == agains0 + 1 and menu.nexts == nexts0, kind.name .. ": PLAY AGAIN runs the try-again handler (the normal run start), not DONE")
         else
             local nexts0 = menu.nexts
             tapOn(menu, row:FindFirstChild("End_done"))

@@ -29,6 +29,7 @@ MODULES = {
     'HatchPacing': 'src/shared/HatchPacing.luau',  # BD-1164: which egg of a batch takes the fast path (flag off in the smoke: every egg is the full show)
     'HatchV2Plan': 'src/shared/HatchV2Plan.luau',
     'FtueP1': 'src/shared/FtueP1.luau',
+    'PlayAgain': 'src/shared/PlayAgain.luau',  # BD-1199 (docs/239): PLAY AGAIN / HOME at the end of a batch (flag off in the smoke: the old buttons)
     'HatchFxPlan': 'src/shared/HatchFxPlan.luau',
     'FxRecipes': 'src/shared/FxRecipes.luau',
     'EggGenetics': 'src/shared/EggGenetics.luau',

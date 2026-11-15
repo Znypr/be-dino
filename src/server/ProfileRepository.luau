@@ -36,6 +36,13 @@ local function objectives(): any
     return objectiveService
 end
 
+-- BD-1199 (docs/239): the run-streak crystal bonus. Same lazy pattern: call sites are `if Config.PlayAgainEnabled == true then runStreak().x(...) end`.
+local runStreakService: any = nil
+local function runStreak(): any
+    if runStreakService == nil then runStreakService = require(script.Parent.RunStreakService) end
+    return runStreakService
+end
+
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
 local demoActive = localPreview and Config.DemoDirectorEnabled == true -- docs/133: Studio-only, unpublished, flag-gated demo triggers
@@ -1175,6 +1182,7 @@ local shared = {
     objectivePending = objectivePending,
     objectiveRules = objectiveRules,
     objectives = objectives,
+    runStreak = runStreak,
     ownSession = ownSession,
     ownsAny = ownsAny,
     pendingSettlements = pendingSettlements,

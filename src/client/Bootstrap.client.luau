@@ -506,10 +506,10 @@ render=function(name: string)
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onAbort=function() skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() skippedEntries={} end, -- BD-1019: X / tap outside / Escape mid-party: the rest stays in the queue
             onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" end end,
-            onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
+            onAgain=function(go) -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
                 autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
                 local character=player.Character
-                if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
+                if go~=false and character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
             end,
             onNext=function()
                 -- BD-170: Next egg stays inside the opening sequence; only the end of the batch returns to the Eggs screen.
@@ -676,6 +676,7 @@ local buffsText=label(timers,"",0,145,286,68,16,C.gold)
 require(script.Parent.PotionChips).attach(buffsText) -- BD-101: potion icons beside the active-potion timer lines
 require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num,timers=timers,leap=leapButton,leapText=leapText}) -- BD-1124 timer words
 require(script.Parent.WelcomeBackCue).attach(notify,open) -- BD-1168
+require(script.Parent.PlayAgainCue).attach(notify) -- BD-1199
 local function timerText(seconds) return UIFormat.duration(seconds) end
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
