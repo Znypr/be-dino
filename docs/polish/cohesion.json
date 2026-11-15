@@ -1,0 +1,526 @@
+{
+ "rules": [
+  {
+   "id": "R1",
+   "short": "cream",
+   "text": "Surfaces are cream panels / plates / chips with an ink outline; no dark navy or slate plates, boxes or loading screens"
+  },
+  {
+   "id": "R2",
+   "short": "text",
+   "text": "Two text kinds only: dark ink on cream, white with outline on colour or the world; never text on studs"
+  },
+  {
+   "id": "R3",
+   "short": "buttons",
+   "text": "One green main button per screen, every other button grey, red only for the X"
+  },
+  {
+   "id": "R4",
+   "short": "rarity",
+   "text": "Rarity colours only on rarity things (cards, rarity words, hatch rays)"
+  },
+  {
+   "id": "R5",
+   "short": "real art",
+   "text": "Real art only: no code-drawn icons, stand-ins or empty boxes"
+  },
+  {
+   "id": "R6",
+   "short": "font+copy",
+   "text": "One font and the 28/20/16/14 scale; kid copy (no 36.4000%, no 5m 0s)"
+  },
+  {
+   "id": "R7",
+   "short": "frame",
+   "text": "Windows: stud frame, glossy header in the place colour, X inside the strip; the hatch is a full stage, not a window"
+  },
+  {
+   "id": "R8",
+   "short": "fits",
+   "text": "Everything sits inside its screen/window; nothing clipped, floating outside or overlapping"
+  }
+ ],
+ "surfaces": [
+  {
+   "name": "Loading screen",
+   "group": "start",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/loading.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "P",
+    "R3": "P",
+    "R4": "-",
+    "R5": "F",
+    "R6": "F",
+    "R7": "F",
+    "R8": "-"
+   },
+   "note": "dark slate, no art, other font"
+  },
+  {
+   "name": "HUD in the world",
+   "group": "play",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "P",
+    "R5": "?",
+    "R6": "P",
+    "R7": "-",
+    "R8": "F"
+   },
+   "note": "navy plates, debug text, badges on words"
+  },
+  {
+   "name": "Welcome steps",
+   "group": "start",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/welcome.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "F",
+    "R5": "F",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "dark cards, coloured headings, no pictures"
+  },
+  {
+   "name": "Home (Sanctuary)",
+   "group": "home",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/sanctuary.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "P",
+    "R5": "F",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "text on studs, empty dino box"
+  },
+  {
+   "name": "Eggs screen",
+   "group": "home",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/eggs.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules (BD-1195)"
+  },
+  {
+   "name": "Dino Index list",
+   "group": "home",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/index.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules (BD-1194)"
+  },
+  {
+   "name": "Dino detail",
+   "group": "home",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/dino-detail.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules (BD-1189)"
+  },
+  {
+   "name": "Crystal Shop",
+   "group": "shop",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/shop.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules (BD-1178, PR #591)"
+  },
+  {
+   "name": "Potion Shop",
+   "group": "shop",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/potions.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules (BD-1205, PR #591)"
+  },
+  {
+   "name": "Egg chances",
+   "group": "shop",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/egg-odds.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "F",
+    "R4": "P",
+    "R5": "P",
+    "R6": "F",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "list on studs, 36.4000%, cyan buttons"
+  },
+  {
+   "name": "Fusion",
+   "group": "home",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/fusion.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "F"
+   },
+   "note": "empty donor bar"
+  },
+  {
+   "name": "Settings",
+   "group": "menu",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/settings.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "-",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "on the rules"
+  },
+  {
+   "name": "Food guide",
+   "group": "menu",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/food-page.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "P",
+    "R3": "P",
+    "R4": "F",
+    "R5": "F",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "rarity colours as food colours, code leaves"
+  },
+  {
+   "name": "Hatch: egg",
+   "group": "hatch",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-egg.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "-",
+    "R5": "P",
+    "R6": "P",
+    "R7": "F",
+    "R8": "P"
+   },
+   "note": "window on studs, dark chip"
+  },
+  {
+   "name": "Hatch: Common pop",
+   "group": "hatch",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-common.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "F",
+    "R8": "F"
+   },
+   "note": "text on studs, Drag pill outside"
+  },
+  {
+   "name": "Hatch: Legendary",
+   "group": "hatch",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-legendary.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "F",
+    "R7": "F",
+    "R8": "F"
+   },
+   "note": "purple banner, other style, pill outside"
+  },
+  {
+   "name": "Hatch batch end / Play again",
+   "group": "hatch",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not captured yet (BD-1199 buttons)"
+  },
+  {
+   "name": "Run complete",
+   "group": "run end",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/run-complete.jpg",
+   "marks": {
+    "R1": "F",
+    "R2": "F",
+    "R3": "P",
+    "R4": "F",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
+   },
+   "note": "text on studs, blue/amber words"
+  },
+  {
+   "name": "Weather title card",
+   "group": "play",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/weather-card.jpg",
+   "marks": {
+    "R1": "-",
+    "R2": "P",
+    "R3": "P",
+    "R4": "F",
+    "R5": "P",
+    "R6": "F",
+    "R7": "-",
+    "R8": "P"
+   },
+   "note": "other font, purple word"
+  },
+  {
+   "name": "World labels (+3 Crystals, names)",
+   "group": "play",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "marks": {
+    "R1": "P",
+    "R2": "P",
+    "R3": "-",
+    "R4": "P",
+    "R5": "?",
+    "R6": "P",
+    "R7": "-",
+    "R8": "P"
+   },
+   "note": "white outlined text, ok; check names/health"
+  },
+  {
+   "name": "Toasts / rare-find banner",
+   "group": "play",
+   "shot": null,
+   "marks": {
+    "R1": "F",
+    "R2": "?",
+    "R3": "P",
+    "R4": "?",
+    "R5": "P",
+    "R6": "F",
+    "R7": "-",
+    "R8": "?"
+   },
+   "note": "purple banner style (seen in hatch)"
+  },
+  {
+   "name": "Confirm popups (buy, replace)",
+   "group": "shop",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not captured yet"
+  },
+  {
+   "name": "Nest open / nest ready",
+   "group": "home",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not captured yet"
+  },
+  {
+   "name": "Defeat",
+   "group": "play",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not captured yet (combat flag off)"
+  },
+  {
+   "name": "Phone layout (touch)",
+   "group": "play",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not checked on a phone"
+  },
+  {
+   "name": "3D dinos (V3 low-poly)",
+   "group": "world",
+   "shot": null,
+   "marks": {
+    "R1": "-",
+    "R2": "-",
+    "R3": "-",
+    "R4": "-",
+    "R5": "?",
+    "R6": "-",
+    "R7": "-",
+    "R8": "-"
+   },
+   "note": "28 species on V3; check one style, Parasaurolophus odd (BD-1188)"
+  },
+  {
+   "name": "World props (trees, rocks, plants)",
+   "group": "world",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "marks": {
+    "R1": "-",
+    "R2": "-",
+    "R3": "-",
+    "R4": "-",
+    "R5": "?",
+    "R6": "-",
+    "R7": "-",
+    "R8": "-"
+   },
+   "note": "V3 trees approved; rocks/plants placeholder kit (BD-206)"
+  },
+  {
+   "name": "Food models in the world",
+   "group": "world",
+   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "marks": {
+    "R1": "-",
+    "R2": "-",
+    "R3": "-",
+    "R4": "-",
+    "R5": "?",
+    "R6": "-",
+    "R7": "-",
+    "R8": "-"
+   },
+   "note": "owner called food fine; check vs icons"
+  },
+  {
+   "name": "Sound and music",
+   "group": "feel",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "not judged (needs ears); loud run-end cue BD-166"
+  },
+  {
+   "name": "Motion and feedback",
+   "group": "feel",
+   "shot": null,
+   "marks": {
+    "R1": "?",
+    "R2": "?",
+    "R3": "?",
+    "R4": "?",
+    "R5": "?",
+    "R6": "?",
+    "R7": "?",
+    "R8": "?"
+   },
+   "note": "presets exist (BD-1182); check every tap / reward"
+  }
+ ]
+}
