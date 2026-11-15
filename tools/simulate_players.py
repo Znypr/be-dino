@@ -4,6 +4,8 @@
     python tools/simulate_players.py                  # every persona, 400 players each, 30 days
     python tools/simulate_players.py --days 60 --players 1000 --seed 7
     python tools/simulate_players.py --streak         # what-if: a daily-streak reward that counts as "something new" on days 3 and 7 (BD-1197)
+    python tools/simulate_players.py --play-again     # what-if: the PLAY AGAIN button (BD-1199, docs/239): +1 run a session, a run streak 3 / 5 counts as a small "new" moment
+    python tools/simulate_players.py --play-again --streak-first-only   # same, but only the FIRST time a kid ever reaches run streak 3 and 5 is "new" (the cautious reading)
 
 What it reads from src/shared/Config.luau (through tools/simulate_species_timing.py): the species weights, the rarity tiers and the
 run-size boost; FoodCatchRate (eggs per food) and RunEggMaxPerRun. What it ASSUMES (PROVISIONAL, written here, not data): the
@@ -89,7 +91,7 @@ def hatch(cfg: dict, run_size: int, rng: random.Random) -> tuple[str, int]:
     return pool[-1][0], tier
 
 
-def play(cfg: dict, p: Persona, days: int, rng: random.Random, streak: bool) -> dict:
+def play(cfg: dict, p: Persona, days: int, rng: random.Random, streak: bool, again: str = "") -> dict:
     owned: dict[str, int] = {}
     tiers_seen: set[int] = set()
     first: dict[str, float] = {}
@@ -97,6 +99,7 @@ def play(cfg: dict, p: Persona, days: int, rng: random.Random, streak: bool) -> 
     last_day = 0
     gold = False
     streak_days = 0
+    run_milestones: set[int] = set()  # BD-1199: run streaks 3 and 5 already seen (first-only reading)
     species_at = {}
     for day in range(1, days + 1):
         if rng.random() > p.days_per_week / 7:
@@ -106,7 +109,11 @@ def play(cfg: dict, p: Persona, days: int, rng: random.Random, streak: bool) -> 
         last_day = day
         for _ in range(p.sessions_per_day):
             new = False
-            for _ in range(p.runs_per_session):
+            runs = p.runs_per_session + (1 if again else 0)  # BD-1199: the button makes the next run one tap away (ASSUMPTION: +1 run a session)
+            for run_no in range(1, runs + 1):
+                if again and run_no in (3, 5) and (again == "every" or run_no not in run_milestones):
+                    run_milestones.add(run_no)  # run streak 3 / 5: the soft "Run streak 3!" and its crystals, a small new moment
+                    new = True
                 n = eggs_for(cfg, p.food_per_run, rng)
                 for _ in range(n):
                     sid, tier = hatch(cfg, n, rng)
@@ -132,9 +139,9 @@ def play(cfg: dict, p: Persona, days: int, rng: random.Random, streak: bool) -> 
     return {"first": first, "species": len(owned), "species_at": species_at, "longest": longest, "quit": None, "last": last_day}
 
 
-def summarize(cfg: dict, p: Persona, players: int, days: int, seed: int, streak: bool) -> dict:
-    rng = random.Random(f"{seed}-{p.name}-{streak}")
-    res = [play(cfg, p, days, rng, streak) for _ in range(players)]
+def summarize(cfg: dict, p: Persona, players: int, days: int, seed: int, streak: bool, again: str = "") -> dict:
+    rng = random.Random(f"{seed}-{p.name}-{streak}")  # the same seed with and without --play-again: only the what-if differs
+    res = [play(cfg, p, days, rng, streak, again) for _ in range(players)]
     def still(d):  # still playing on day d (has not quit before it)
         return sum(1 for r in res if r["quit"] is None or r["quit"] > d) / players
     def med_first(k):
@@ -153,9 +160,10 @@ def fmt_first(v):
     return "never" if day is None else f"day {day:g} ({share:.0%})"
 
 
-def render(rows: list[dict], cfg: dict, days: int, players: int, streak: bool) -> str:
+def render(rows: list[dict], cfg: dict, days: int, players: int, streak: bool, again: str = "") -> str:
     out = [f"Be Dino! player simulation (BD-1200), {players} players per persona, {days} days, catch {cfg['catch']*500:.0f} eggs per 500 food"
-           + (", WITH daily streak (days 3 and 7 count as new)" if streak else ""),
+           + (", WITH daily streak (days 3 and 7 count as new)" if streak else "")
+           + (", WITH PLAY AGAIN (+1 run a session; run streak 3 and 5 count as new" + (" every session)" if again == "every" else ", first time only)") if again else ""),
            "Still playing = has not quit by that day (quit = `patience` sessions in a row with nothing new). PROVISIONAL personas.", ""]
     out.append(f"{'persona':<7} {'still D1':>8} {'D7':>5} {'D30':>5}  {'first Rare':<16} {'first Epic':<16} {'first Legendary':<16} {'first Gold':<16} {'species D7/D30':>14} {'longest quiet':>13}")
     for r in rows:
@@ -175,10 +183,13 @@ def main(argv=None) -> int:
     ap.add_argument("--players", type=int, default=400)
     ap.add_argument("--seed", type=int, default=1200)
     ap.add_argument("--streak", action="store_true", help="what-if: daily streak reward on days 3 and 7 (BD-1197)")
+    ap.add_argument("--play-again", action="store_true", help="what-if: PLAY AGAIN button, +1 run a session, run streak 3 and 5 are a small new moment (BD-1199, docs/239)")
+    ap.add_argument("--streak-first-only", action="store_true", help="with --play-again: only the first time a kid reaches run streak 3 and 5 counts as new")
     a = ap.parse_args(argv)
     cfg = load()
-    rows = [summarize(cfg, p, a.players, a.days, a.seed, a.streak) for p in PERSONAS]
-    print(render(rows, cfg, a.days, a.players, a.streak))
+    again = ("first" if a.streak_first_only else "every") if a.play_again else ""
+    rows = [summarize(cfg, p, a.players, a.days, a.seed, a.streak, again) for p in PERSONAS]
+    print(render(rows, cfg, a.days, a.players, a.streak, again))
     return 0
 
 
