@@ -204,6 +204,8 @@ function WorldV3.surface(x: number, z: number, h: number): string?
     if WorldV3.path(x, z) > .5 and h < 30 then return "Limestone" end
     local c = WorldV3.inland(x, z)
     if c < 0 or (c < 30 and h < 2.4) then return "Sand" end
+    -- Volcano foot: warm dirt, not black basalt (the dark rock belongs to the cone itself).
+    if h < 12 and WorldV3.zoneAt(x, z).id == "volcano" then return if math.noise(x / 30, z / 30, 6.1) > .1 then "Ground" else "Grass" end
     -- Palm beach inland: sunny grass with sandy patches (not a desert).
     if WorldV3.zoneAt(x, z).id == "beach" then
         return if math.noise(x / 46, z / 46, 4.4) > -.18 then "Sand" else "Grass"

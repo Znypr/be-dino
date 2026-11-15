@@ -58,6 +58,8 @@ function Import.loadGeneratedWorld(): (number, number)
     for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     -- BD-1208: the V3 food pickups load only with Config.FoodV3Enabled (flag off = nothing extra is fetched).
     if require(ReplicatedStorage.Shared.Config).FoodV3Enabled then for key,asset in GeneratedMeshes.Food do table.insert(entries,{key=key,asset=asset}) end end
+    -- BD-1210: the zone landmarks of the redesigned island load only with Config.WorldV3Enabled; empty ids are skipped silently.
+    if require(ReplicatedStorage.Shared.Config).WorldV3Enabled then for key,asset in GeneratedMeshes.Landmarks do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1

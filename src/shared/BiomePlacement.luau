@@ -179,9 +179,9 @@ function BiomePlacement.useV3(V3: any)
     local rx, rz = site("volcano", -95)
     local fx, fz = site("giant_tree", -40)
     -- The stone arch (the "lone gate frame" of docs/241 s1) is not used; the step-3 lagoon arch replaces it.
-    local _ = ax + az
+    local _ = ax + az + sx + sz
     BiomePlacement.Landmarks = {
-        {id = "world_landmark_dino_statue", x = sx, z = sz},
+        -- the kit dino statue is not used: the generated fossil statue (BD-1210) stands on that site
         {id = "world_landmark_ruins_altar", x = rx, z = rz},
         {id = "world_landmark_fossil_display", x = fx, z = fz},
     }

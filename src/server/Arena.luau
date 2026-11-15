@@ -306,6 +306,68 @@ local function biomeKit(parent: Instance)
     workspace:SetAttribute("WorldKitMissing", missing)
     for layer, n in counts do workspace:SetAttribute("WorldKit_" .. layer, n) end
 end
+-- BD-1210 (docs/241 W4, Config.WorldV3Enabled): one big generated landmark per zone on its WorldV3 site, resting on the terrain, facing the
+-- plaza, scaled to its height; hidden boxes collide instead of the mesh (the arch stays walkable). The volcano is the terrain itself plus a
+-- calm crater smoke and glow. A landmark whose mesh failed to load leaves its site an open clearing.
+local function v3Landmarks(parent: Instance, V3: any)
+    local folder = Instance.new("Folder")
+    folder.Name, folder.Parent = "Landmarks", parent
+    local generated = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType, rayParams.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {workspace.Terrain}
+    local function groundAt(x: number, z: number): number
+        local hit = workspace:Raycast(Vector3.new(x, 200, z), Vector3.new(0, -260, 0), rayParams)
+        return if hit then hit.Position.Y else Layout.height(x, z)
+    end
+    local placed = 0
+    for key, entry in Generated.Landmarks do
+        local template = if generated then generated:FindFirstChild(key) else nil
+        local site = nil
+        for _, s in V3.Landmarks do if s.id == entry.site then site = s end end
+        if not template or not template:IsA("BasePart") or not site then continue end
+        local x, z = V3.polar(site.angle, site.r)
+        local mesh = template:Clone() :: BasePart
+        local factor = entry.height / mesh.Size.Y
+        mesh.Size *= factor
+        -- rest on the lowest of five ground samples under the footprint, sunk a little so no edge floats
+        local r = math.min(mesh.Size.X, mesh.Size.Z) * .35
+        local y = math.huge
+        for _, o in {{0, 0}, {r, 0}, {-r, 0}, {0, r}, {0, -r}} do y = math.min(y, groundAt(x + o[1], z + o[2])) end
+        y -= .6
+        local base = CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(V3.CenterX, y, V3.CenterZ))
+        if entry.flip then base *= CFrame.Angles(0, math.pi, 0) end -- a mesh whose front is +Z
+        mesh.CFrame = base * CFrame.new(0, mesh.Size.Y / 2, 0)
+        mesh.Anchored, mesh.CanCollide, mesh.CanQuery, mesh.CanTouch = true, false, false, false
+        mesh.Name = key
+        mesh.Parent = folder
+        for _, c in entry.colliders do
+            local box = part(folder, key .. "Collider", Vector3.new(c[4] * mesh.Size.X, c[5] * mesh.Size.Y, c[6] * mesh.Size.Z), Vector3.zero,
+                Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+            box.CFrame = base * CFrame.new(c[1] * mesh.Size.X, c[2] * mesh.Size.Y, c[3] * mesh.Size.Z)
+            box.Transparency = 1
+        end
+        placed += 1
+    end
+    -- Volcano crater: soft smoke and a warm glow (calm, docs/87), from the uploaded soft smoke sprite.
+    for _, s in V3.Landmarks do
+        if s.id ~= "volcano" then continue end
+        local x, z = V3.polar(s.angle, s.r)
+        local vent = part(folder, "VolcanoVent", Vector3.new(14, 1, 14), Vector3.new(x, groundAt(x, z) + 1, z), Color3.fromRGB(255, 120, 40), Enum.Material.Neon, false)
+        vent.Transparency = 1
+        local smoke = Instance.new("ParticleEmitter")
+        smoke.Texture = "rbxassetid://77674653002282"
+        smoke.Rate, smoke.Lifetime, smoke.Speed = 2.5, NumberRange.new(9, 13), NumberRange.new(4, 7)
+        smoke.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 10), NumberSequenceKeypoint.new(1, 34)})
+        smoke.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, .55), NumberSequenceKeypoint.new(.7, .75), NumberSequenceKeypoint.new(1, 1)})
+        smoke.Color = ColorSequence.new(Color3.fromRGB(150, 140, 136), Color3.fromRGB(220, 214, 208))
+        smoke.SpreadAngle, smoke.Acceleration, smoke.LightInfluence = Vector2.new(12, 12), Vector3.new(1.5, .6, 0), .6
+        smoke.Parent = vent
+        local glow = Instance.new("PointLight")
+        glow.Color, glow.Brightness, glow.Range = Color3.fromRGB(255, 130, 50), 3, 40
+        glow.Parent = vent
+    end
+    workspace:SetAttribute("WorldV3Landmarks", placed)
+end
 -- Flat water discs fill the marsh basins and the spring (decorative: they never block movement, like the old pool).
 local function pools(parent: Instance)
     for i, pool in Layout.Pools do
@@ -395,7 +457,7 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
-    if kitMode then biomeKit(world) else
+    if kitMode then biomeKit(world) if V3 then v3Landmarks(world, V3) end else
     for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         local center = c * S
         for i = 1, 4 do
