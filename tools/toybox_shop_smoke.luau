@@ -152,7 +152,7 @@ end
 
 -- ===== 3. flag on, ids bound: every size, mouse and touch, Auras then Trails =====
 local seen = {buy = 0, unequip = 0, locked = 0, tiers = {}, columns = {}}
-local EXTRA_SIZES = {{1280, 720}, {1274, 481}, {1920, 1080}}
+local EXTRA_SIZES = {{1280, 720}, {1274, 481}, {1920, 1080}, {1914, 841}}
 local ALL_SIZES = {}
 for _, s in SIZES do table.insert(ALL_SIZES, s) end
 for _, s in EXTRA_SIZES do table.insert(ALL_SIZES, s) end
@@ -194,6 +194,9 @@ for _, touch in {false, true} do
                     local word = childNamed(d, "ChipWord")
                     check(word ~= nil and word.Text == d.Text and sameColour(word.TextColor3, Color3.fromRGB(KitReal.Tone.value[1], KitReal.Tone.value[2], KitReal.Tone.value[3])) and word.TextStrokeTransparency == 1, tag .. ": tab " .. id .. " is dark ink without an outline")
                     check(word ~= nil and pxOf(word) >= 13.5, tag .. ": the tab word is at least 14 px")
+                    for _, s in d:GetChildren() do
+                        if s:IsA("UIStroke") then check(s.ApplyStrokeMode == Enum.ApplyStrokeMode.Border, tag .. ": the tab outline is a border line, not a stroke round the word") end
+                    end
                     check(pxOf(d) >= 13.5 and rectOf(d).h >= 43.5, string.format("%s: tab %s is %.1f px text, %d px high", tag, id, pxOf(d), rectOf(d).h + .5))
                 end
             end
@@ -363,6 +366,29 @@ check(seen.columns[4] and seen.columns[3], "the sweep saw 4 and 3 columns")
 local tierCount = 0
 for _ in seen.tiers do tierCount += 1 end
 check(tierCount >= 3, "the sweep saw at least three different tier pictures (" .. tierCount .. ")")
+
+-- ===== the window is resized while the shop is open: the page is drawn again for the new body =====
+for _, sizes in {{{1274, 481}, {1914, 841}}, {{1914, 841}, {667, 375}}, {{1280, 720}, {1914, 841}}} do
+    local world = buildWorld(sizes[1][1], sizes[1][2], false)
+    toybox(true) bind(true)
+    local shop = mountShop(world, {touch = false, level = 1})
+    showMenu(world) shop.open("auras") ModalCompact.enforce()
+    world.gui.ViewSize = Vector2.new(sizes[2][1], sizes[2][2])
+    ModalCompact.layout()
+    world.body.Position = ModalCompact.place(true, false)
+    ModalCompact.enforce()
+    local tag = string.format("Toybox resize %dx%d -> %dx%d", sizes[1][1], sizes[1][2], sizes[2][1], sizes[2][2])
+    local vis = visibleBox(world)
+    local gridFrame = childNamed(world.body, "ShopGrid")
+    check(gridFrame ~= nil and inside(rectOf(gridFrame), vis, 2), tag .. ": the grid is inside the body after the resize (" .. (if gridFrame then describe(rectOf(gridFrame)) else "no grid") .. " in " .. describe(vis) .. ")")
+    local styling = childNamed(world.body, "StylingChip")
+    check(styling ~= nil and inside(rectOf(styling), vis, 2), tag .. ": the Styling chip is inside the body after the resize")
+    for _, card in cardsOf(world, "AuraCard_") do
+        local cr = rectOf(card)
+        check(cr.x >= vis.x - 2 and cr.x + cr.w <= vis.x + vis.w + 2, tag .. ": " .. card.Name .. " is inside the body width (" .. describe(cr) .. ")")
+    end
+    world.gui:Destroy()
+end
 
 -- ===== the other tabs sit on a cream panel, in the same window =====
 for _, size in {{1280, 720}, {667, 375}} do

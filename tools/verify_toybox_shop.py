@@ -79,6 +79,8 @@ MUTANTS = {
     'the popup has no cream panel': {'ShopScreens': [('if onPanel then ToyboxPage.panel(body,0,', 'if false then ToyboxPage.panel(body,0,')]},
     'the aura card draws the old assembled art, not the ring': {'ShopToyboxCard': [('if type(ring) == "string" and ring ~= "" then', 'if false then')]},
     'the tab word is drawn outlined white': {'ShopToyboxPage': [('    ink(word)\n', '    word.TextColor3 = Color3.new(1, 1, 1)\n')]},
+    'the open shop is not drawn again after a resize': {'ShopScreens': [('if Compact.signature()~=signature and mark.Parent', 'if false and mark.Parent')]},
+    'the tab outline strokes the word too': {'ShopToyboxPage': [('Enum.ApplyStrokeMode.Border -- Border:', 'Enum.ApplyStrokeMode.Contextual -- Border:')]},
     'a tap on the price buys at once (no popup)': {'ShopScreens': [('                    else chosenAura=item.id open("auraConfirm") end\n                end,\n                onInfo=', '                    else transact(if isTrail then "buyTrail" else "buyAura",item.id) end\n                end,\n                onInfo=')]},
 }
 

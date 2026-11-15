@@ -128,6 +128,10 @@ function Shop.render(name: string)
                 onTab=function(tab) cosmeticTab=tab open("auras") end,onStyling=function() open("collection") end})
             cardsY=tabRows+12
             local mark=Instance.new("Frame") mark.Name,mark.BackgroundTransparency,mark.Size,mark.Parent="ShopWalletMark",1,UDim2.fromOffset(0,0),body
+            local Compact=require(script.Parent.ModalCompact)
+            local signature=Compact.signature() -- the window was resized while the shop is open: the cards and chips are drawn again for the new body
+            local stop=Compact.onLayout(function() if Compact.signature()~=signature and mark.Parent and isActive()=="auras" then body:ClearAllChildren() render("auras") end end)
+            mark.Destroying:Connect(stop)
             local parts=require(script.Parent.ModalCompact).parts()
             ToyboxPage.wallet({art=art,label=label},header,mark,num("Crystals"),if parts then parts.closeButton.Size.X.Offset else 48)
             if cosmeticTab~="auras" and cosmeticTab~="trails" then ToyboxPage.panel(body,cardsY-6,bodyW,require(script.Parent.ModalCompact).bodyHeight()-cardsY+6) end
