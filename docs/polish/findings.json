@@ -612,9 +612,11 @@
   "reach": 3,
   "kind": "layout",
   "id": "P-872266",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "auras",
@@ -626,9 +628,11 @@
   "reach": 2,
   "kind": "art",
   "id": "P-13ea1f",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "game",
@@ -654,9 +658,11 @@
   "reach": 3,
   "kind": "bug",
   "id": "P-4ba7c0",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "auras",
@@ -668,9 +674,11 @@
   "reach": 2,
   "kind": "bug",
   "id": "P-72f8bb",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "hud",
@@ -682,9 +690,11 @@
   "reach": 3,
   "kind": "art",
   "id": "P-89dc42",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "hud",
@@ -696,9 +706,11 @@
   "reach": 3,
   "kind": "bug",
   "id": "P-a42990",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
  },
  {
   "screen": "potions",
@@ -710,8 +722,24 @@
   "reach": 2,
   "kind": "layout",
   "id": "P-1a1d3c",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
+  "seen": 1,
+  "note": "shop + potions branches, seen in Studio run 8 (2026-11-15)",
+  "fixed": "2026-11-15"
+ },
+ {
+  "screen": "hud",
+  "role": "art",
+  "title": "HUD key badges cover the last letter",
+  "detail": "At 1914x793 the E and F badges sit over the P of LEAP and CHOMP.",
+  "fix": "Reserve the badge corner: word area ends before the badge, or badge outside the word box.",
+  "severity": 1,
+  "reach": 3,
+  "kind": "layout",
+  "id": "P-5eb0e4",
+  "state": "open",
+  "first_seen": "2026-11-15",
   "seen": 1
  }
 ]
