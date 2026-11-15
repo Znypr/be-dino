@@ -133,6 +133,8 @@ function BiomePlacement.useHub(rect: {minX: number, maxX: number, minZ: number, 
     BiomePlacement.Sanctuary = {minX = rect.minX, maxX = rect.maxX, minZ = rect.minZ, maxZ = rect.maxZ}
 end
 -- Dense lush groves (the lush groveBoost of v1) now supplement the noise forest field.
+-- BD-1209: WorldV3 clump strength for the tree layer (nil = the rule below, unchanged).
+BiomePlacement.TreeClump = nil :: any
 BiomePlacement.Groves = {
     {-168, 128}, {168, -128}, {-200, -160}, {205, 163}, {-304, 24}, {291, 32}, {0, -288}, {24, 304},
     {-60, -250}, {70, 255}, {-300, 300}, {330, -250},
@@ -176,12 +178,34 @@ function BiomePlacement.useV3(V3: any)
     local ax, az = site("lagoon_arch", 10)
     local rx, rz = site("volcano", -95)
     local fx, fz = site("giant_tree", -40)
+    -- The stone arch (the "lone gate frame" of docs/241 s1) is not used; the step-3 lagoon arch replaces it.
+    local _ = ax + az
     BiomePlacement.Landmarks = {
         {id = "world_landmark_dino_statue", x = sx, z = sz},
-        {id = "world_landmark_stone_arch", x = ax, z = az},
         {id = "world_landmark_ruins_altar", x = rx, z = rz},
         {id = "world_landmark_fossil_display", x = fx, z = fz},
     }
+    -- W5: trees in intentional clumps around the zone groves, open grass and clearings between (replace, don't add).
+    local groves = {}
+    for _, g in V3.Groves do table.insert(groves, {V3.polar(g[1], g[2])}) end
+    BiomePlacement.Groves = groves
+    BiomePlacement.TreeClump = {base = .04, gain = 2.6, power = 2.4, grove = 3.2, groveRadius = 42}
+    -- Palm beach: palm clumps (cycad = the palm family), sunny bushes and flowers, few rocks, no dead trees.
+    BiomePlacement.Biomes.badlands = {
+        tree = .8, colossal = .25, log = .1, rock = .35, shrub = .7, groundcover = .55,
+        trees = {{"cycad", .9}, {"canopy", .1}},
+        colossals = {{"cycad", 1}},
+        rocks = {{"bare", .6}, {"mossy", .4}},
+        shrubs = {{"world_bush_a", .35}, {"world_bush_b", .3}, {"world_fern_b", .2}, {"world_horsetail_a", .15}},
+        cover = {{"world_flowers_a", .45}, {"world_grass_a", .3}, {"world_grass_b", .25}},
+        bloom = .6,
+    }
+    -- Flower meadow: open grass and flowers with a few orchard clumps.
+    local meadow = BiomePlacement.Biomes.meadow
+    meadow.tree, meadow.log, meadow.rock, meadow.groundcover = .35, .15, .3, 1.5
+    meadow.trees = {{"canopy", .75}, {"cycad", .15}, {"conifer", .1}}
+    meadow.cover = {{"world_flowers_a", .55}, {"world_grass_a", .25}, {"world_grass_b", .2}}
+    meadow.bloom = 1
 end
 -- Layers: grid cell size, base acceptance chance (times biome weight, forest field and density), slope limit, cap, blocking.
 BiomePlacement.Layers = {
@@ -721,7 +745,12 @@ function BiomePlacement.generate(options): {Placement}
                 local grove = math.huge
                 for _, g in BiomePlacement.Groves do grove = math.min(grove, math.sqrt((x - g[1]) ^ 2 + (z - g[2]) ^ 2)) end
                 local chance = layer.chance * def[layer.name] * density
-                if layer.name == "tree" then
+                local clump = BiomePlacement.TreeClump
+                if layer.name == "tree" and clump then
+                    -- BD-1209 (WorldV3): stronger clumping, most trees gather around the zone groves
+                    chance *= (clump.base + clump.gain * forest ^ clump.power) * (1 + clump.grove * math.exp(-(grove / clump.groveRadius) ^ 2))
+                    if h > 52 and biome ~= "conifer" then chance *= .25 end
+                elseif layer.name == "tree" then
                     chance *= (.18 + 2.1 * forest ^ 1.7) * (1 + 1.4 * math.exp(-(grove / 30) ^ 2))
                     if h > 52 and biome ~= "conifer" then chance *= .25 end
                 elseif layer.name == "colossal" then

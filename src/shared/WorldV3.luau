@@ -23,15 +23,15 @@ WorldV3.Zones = {
 }
 -- Spoke paths from the plaza: angle and the radius where each ends (short where it meets the volcano or the pine hill).
 WorldV3.Spokes = {
-    {angle = -15, to = 320}, {angle = 70, to = 315}, {angle = 145, to = 200}, {angle = 215, to = 300}, {angle = 275, to = 165},
+    {angle = -15, to = 262}, {angle = 70, to = 236}, {angle = 145, to = 200}, {angle = 215, to = 238}, {angle = 275, to = 165},
 }
--- Landmark sites (W4; the models arrive in step 3). r = distance from the plaza centre.
+-- Landmark sites (W4; the models arrive in step 3). r = distance from the plaza centre. Each spoke path ends at its landmark.
 WorldV3.Landmarks = {
-    {id = "giant_tree", zone = "forest", angle = 70, r = 262},
+    {id = "giant_tree", zone = "forest", angle = 70, r = 268},
     {id = "waterfall", zone = "pine", angle = 150, r = 262},
-    {id = "lagoon_arch", zone = "beach", angle = 215, r = 262},
-    {id = "volcano", zone = "volcano", angle = 275, r = 268},
-    {id = "fossil_statue", zone = "meadow", angle = -35, r = 262},
+    {id = "lagoon_arch", zone = "beach", angle = 213, r = 285},
+    {id = "volcano", zone = "volcano", angle = 275, r = 300},
+    {id = "fossil_statue", zone = "meadow", angle = -15, r = 292},
 }
 local function polar(angle: number, r: number): (number, number)
     local a = math.rad(angle)
@@ -206,10 +206,17 @@ function WorldV3.surface(x: number, z: number, h: number): string?
     if c < 0 or (c < 30 and h < 2.4) then return "Sand" end
     -- Palm beach inland: sunny grass with sandy patches (not a desert).
     if WorldV3.zoneAt(x, z).id == "beach" then
-        return if math.noise(x / 26, z / 26, 4.4) > .12 then "Sand" else "Grass"
+        return if math.noise(x / 46, z / 46, 4.4) > -.18 then "Sand" else "Grass"
     end
     return nil
 end
 -- The path/plaza colour (Limestone is unused elsewhere on the island) and a lighter beach sand.
-WorldV3.Colors = {Limestone = {226, 204, 150}, Sand = {232, 212, 160}}
+WorldV3.Colors = {Limestone = {216, 186, 128}, Sand = {236, 216, 166}}
+-- Step 2 (W5): grove centres per zone (polar angle, radius): trees gather here in clumps with open grass between.
+WorldV3.Groves = {
+    {70, 300}, {50, 200}, {95, 165}, {100, 300}, {35, 290}, -- broadleaf forest
+    {130, 300}, {160, 225}, {175, 300}, {125, 200}, -- pine hill
+    {195, 310}, {232, 250}, {245, 315}, {222, 330}, -- palm beach
+    {-40, 200}, {10, 300}, -- meadow orchards
+}
 return WorldV3
