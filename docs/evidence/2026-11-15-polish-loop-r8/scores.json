@@ -1,0 +1,18 @@
+{
+ "auras": {
+  "score": 8,
+  "one_line": "matches the target, ring icons, clean chips"
+ },
+ "potions": {
+  "score": 8,
+  "one_line": "full width, note chip, owned panel"
+ },
+ "settings": {
+  "score": 8,
+  "one_line": "clean chips, one panel"
+ },
+ "hud": {
+  "score": 7,
+  "one_line": "one style; badges over the last letter"
+ }
+}

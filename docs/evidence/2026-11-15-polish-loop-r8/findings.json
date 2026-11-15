@@ -1,0 +1,12 @@
+[
+ {
+  "screen": "hud",
+  "role": "art",
+  "title": "HUD key badges cover the last letter",
+  "detail": "At 1914x793 the E and F badges sit over the P of LEAP and CHOMP.",
+  "fix": "Reserve the badge corner: word area ends before the badge, or badge outside the word box.",
+  "severity": 1,
+  "reach": 3,
+  "kind": "layout"
+ }
+]
