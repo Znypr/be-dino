@@ -72,6 +72,20 @@ Generated.CaveForms = {
     cave_rockform_terrace_v3 = {assetId = "", placed = false, tris = 362, size = {20.44, 7.58, 7.83}}, -- cave_rockform_terrace_v3.fbx, 362 tris
     cave_gate_arch_v3 = {assetId = "", placed = false, tris = 456, size = {39.79, 25.79, 9.77}}, -- cave_gate_arch_v3.fbx, 456 tris
 }
+-- BD-1208 (docs/241 W6, owner OK 2026-11-15): V3 food pickups generated with Roblox generate_mesh from text written off the approved food icons
+-- (docs/evidence/2026-11-15-food-v3/generated-food.json). Loaded only when Config.FoodV3Enabled; FoodService uses food_v3_<kind>_<a|b> as the pickup
+-- mesh. rotX = degrees about X that stand the mesh upright (the nests came in on their side); tint = SurfaceAppearance colour over the mesh's own
+-- texture (the generator paints amber pink and the orange peach); tris = triangles of the published mesh.
+Generated.Food = {
+    food_v3_berry_a = {assetId = "99045170762079", tris = 600, rotX = 0}, -- one big blueberry with a leaf
+    food_v3_berry_b = {assetId = "139581304104090", tris = 800, rotX = 0}, -- raspberry with a leaf cap
+    food_v3_fruit_a = {assetId = "129705634874362", tris = 800, rotX = 0}, -- red apple
+    food_v3_fruit_b = {assetId = "88917163545445", tris = 800, rotX = 0, tint = {255, 165, 50}}, -- orange
+    food_v3_egg_a = {assetId = "117479980654305", tris = 2000, rotX = 90}, -- teal-spotted egg in a twig nest
+    food_v3_egg_b = {assetId = "84298170121399", tris = 1500, rotX = 90}, -- purple-spotted egg in a twig nest
+    food_v3_amber_a = {assetId = "89498247826218", tris = 1500, rotX = 0, tint = {255, 172, 48}}, -- amber nugget, fern and bug fossil
+    food_v3_amber_b = {assetId = "113390214356638", tris = 1000, rotX = 0, tint = {255, 190, 50}}, -- amber nugget, fern fossil
+}
 -- BD-463/464 step 2: true for a pasted Roblox asset id (digits only, no leading zero, 9-18 long). "" and anything else mean "not uploaded yet".
 function Generated.validId(id: any): boolean
     if type(id) ~= "string" then return false end

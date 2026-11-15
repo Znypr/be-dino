@@ -254,46 +254,71 @@ def lens_point(L, a, d, b, x, z, lift=.01):
     t = max(0.0, 1 - (x / a) ** 2 - (z / b) ** 2)
     return Vector(L) + Vector((x, -d * math.sqrt(t) - lift, z))
 
-def fossil_fern(M, L, a, d, b, scale=1.0, seed=0, turn=.75):
-    """a tiny fern fossil inside the amber, lying diagonally on the lens face (never a centre line), dark amber"""
-    col = lambda p, n: FOSSIL
-    c, s_ = math.cos(turn), math.sin(turn)
-    rot = lambda x, z: (x * c - z * s_, x * s_ + z * c)
-    sp = [(-.04, -.36), (.02, -.16), (.05, .04), (.03, .22), (-.02, .34)]
-    path = [lens_point(L, a, d, b, *rot(x * scale, z * scale)) for x, z in sp]
-    v, f, ref = tube(path, (.032 * scale, .018 * scale), 5, tip=True, seed=seed); M.add(v, f, ref, col, seed=seed, smooth=True)
-    for k, (x, z) in enumerate(sp[1:4]):
-        for side in (-1, 1):
-            q = [lens_point(L, a, d, b, *rot((x + side * dx) * scale, (z + dz) * scale)) for dx, dz in ((0, 0), (.09, .06), (.17, .08))]
-            v, f, ref = tube(q, (.028 * scale, .012 * scale), 4, tip=True, seed=k); M.add(v, f, ref, col, seed=k, smooth=True)
+def smooth_stone(M, center, radii, seed, moss_above=None, top_flat=.55, subdiv=3):
+    """smooth river-stone pedestal: rounded, slightly lumpy, flat top and bottom (owner 2026-11-15: no low-poly stone)"""
+    bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
+    c = Vector(center); verts = []
+    for v in bm.verts:
+        d = v.co.normalized()
+        d *= 1 + .07 * noise.noise(d * 1.8 + Vector((seed, 0, 0)))
+        if d.z > top_flat: d.z = top_flat + (d.z - top_flat) * .25
+        if d.z < -.6: d.z = -.6
+        verts.append(c + Vector((d.x * radii[0], d.y * radii[1], d.z * radii[2])))
+    idx = {v.index: i for i, v in enumerate(bm.verts)}
+    faces = [tuple(idx[v.index] for v in f.verts) for f in bm.faces]; bm.free()
+    M.add(verts, faces, [c], stone_fn(c.z - radii[2], c.z + radii[2], moss_above), seed=seed, smooth=True)
+
+def nugget(center, radii, seed, lean=0.0):
+    """tumbled amber chunk: a rounded stone with a few broad polished flats (cut planes), smooth shaded so the flats read as
+    gem faces without hard low-poly facets"""
+    cuts = [((0, 0, 1), .8), ((1, .2, .6), .7), ((-1, .3, .5), .7), ((.2, -1, .4), .74), ((-.5, -.8, .6), .76), ((.6, .7, .3), .74), ((.7, -.6, .9), .76)]
+    rnd = random.Random(seed); cuts = [((n[0] + rnd.uniform(-.2, .2), n[1] + rnd.uniform(-.2, .2), n[2]), d) for n, d in cuts]
+    v, f, ref = G.rock(Vector((0, 0, 0)), radii, seed, 3, cuts, amp=.02, flat=.8, yaw=0.0, tol=0.0)
+    c, s_ = math.cos(lean), math.sin(lean)
+    verts = [Vector(center) + Vector((q.x * c - q.z * s_, q.y, q.x * s_ + q.z * c)) for q in v]
+    return verts, f, [Vector(center)]
+
+def amber_fn2(center, h):
+    """translucent-looking amber: bright golden core where the face looks at the viewer, deep red-orange at the edges, glint"""
+    view = Vector((0, -.75, .66)).normalized()
+    def f(p, n):
+        k = max(0.0, min(1.0, n.dot(view)))
+        col = mix(lin("#9C2E06"), lin("#E8700C"), k * 1.8) if k < .55 else mix(lin("#E8700C"), lin("#FFD34A"), (k - .55) * 2.4)
+        if n.dot(Vector((-.45, -.6, .65)).normalized()) > .95: col = mix(col, lin("#FFF6D2"), .75)
+        return col
+    return f
+
+def bug(M, p0, scale, yaw=0.0):
+    """a tiny insect trapped in the amber, seen from the front: dark body, head, six legs, two pale wings"""
+    dark = lambda p, n: FOSSIL * .8
+    wing = lambda p, n: mix(AMBER_HI, lin("#FFF2C0"), .5)
+    P0 = Vector(p0); s = scale
+    rx = lambda x, z: P0 + Vector((x * math.cos(yaw) - z * math.sin(yaw), 0, x * math.sin(yaw) + z * math.cos(yaw))) * s
+    v, f, ref = tube([rx(0, -.22), rx(0, -.05), rx(0, .1)], (.07, .05), 6, tip=True); M.add(v, f, ref, dark, smooth=True)
+    v, f, ref = ball(rx(0, .16), .05 * s, 2); M.add(v, f, ref, dark, smooth=True)
+    for side in (-1, 1):
+        for z in (-.12, -.02, .07):
+            v, f, ref = tube([rx(0, z), rx(side * .12, z + .04), rx(side * .2, z - .06)], (.02, .012), 4, tip=True); M.add(v, f, ref, dark, smooth=True)
+        v, f, ref = ball(rx(side * .12, -.02), 1.0, 2, lambda u: Vector((u.x * .1 * s, u.y * .02 * s, u.z * .2 * s)) if False else Vector((u.x * .1, u.y * .015, u.z * .2)) * s)
+        M.add(v, f, ref, wing, smooth=True)
 
 def build_amber(seed, variant):
-    """amber in rock (icon): an upright, chiselled grey boulder with a glossy amber window high on its face (fossil fern inside),
-    two small stones at its foot; ~1.5 x 1.1 x 1.6"""
+    if variant == 'a':
+        # one glossy amber chunk resting on a smooth stone, a bug inside (icon: amber with a fossil)
+        M = SMesh()
+        smooth_stone(M, (0, .05, .3), (.74, .6, .34), seed, top_flat=.35)
+        c = Vector((-.06, -.04, .92)); R = (.38, .32, .6)
+        v, f, ref = nugget(c, R, seed, lean=.18)
+        M.add(v, f, ref, amber_fn2(c, R[2]), seed=seed, smooth=True)
+        v, f, ref = nugget(Vector((.5, -.32, .5)), (.14, .13, .17), seed + 9, lean=-.4)
+        M.add(v, f, ref, amber_fn2((.5, -.32, .5), .17), seed=seed, smooth=True)
+        return M
+    # cluster of three amber drops on a mossy stone, sizes big / mid / small
     M = SMesh()
-    up = (.66, .5, .8) if variant == "a" else (.72, .48, .72)
-    cuts = [((0, 0, 1), .82), ((1, .2, .55), .72), ((-1, .3, .6), .7), ((.3, 1, .3), .78), ((.7, -.6, .25), .8), ((-.7, -.5, .3), .8),
-            ((.4, .3, 1), .78), ((-.5, .2, 1), .76)]
-    rc = Vector((0, .12, .78 if variant == 'a' else .7))
-    v, f, ref = G.rock(rc, up, seed, 2, cuts, amp=.05, flat=.95, yaw=0.0, tol=math.radians(7))
-    M.add(v, f, ref, stone_fn(0, 1.6, moss_above=1.18 if variant == 'b' else None), jit=.03, seed=seed)
-    for k, (c, r) in enumerate([((-.62, -.18, .2), (.3, .28, .22)), ((.6, -.05, .16), (.24, .26, .18))]):
-        v, f, ref = G.rock(Vector(c), r, seed + 3 + k, 1, [((0, 0, 1), .7), ((1, .2, .4), .8)], amp=.06, flat=.6, yaw=k)
-        M.add(v, f, ref, stone_fn(0, .45), jit=.03, seed=k)
-    # amber window: a domed slab set into the rock face, high up, slightly tilted to the sky
-    a, d, b = (.48, .22, .52) if variant == "a" else (.52, .22, .42)
-    L = Vector((.03, -.32, .84 if variant == "a" else .72))
-    tilt = math.radians(14)
-    def lens(u):
-        q = Vector((u.x * a, u.y * d, u.z * b))
-        return Vector((q.x, q.y * math.cos(tilt) - q.z * math.sin(tilt), q.y * math.sin(tilt) + q.z * math.cos(tilt)))
-    v, f, ref = ball(L, 1.0, 3, lens)
-    M.add(v, f, ref, amber_lens_fn(L, a, b), smooth=True)
-    fossil_fern(M, L, a, d * 1.05, b, scale=.74 if variant == "a" else .6, seed=seed, turn=.8 if variant == 'a' else -.7)
-    if variant == 'b':
-        for i, (c, r) in enumerate([((.5, -.42, .09), .1), ((-.32, -.48, .07), .08)]):
-            v, f, ref = ball(c, r, 2, lambda u: Vector((u.x, u.y, u.z * .7)), seed=i)
-            M.add(v, f, ref, amber_lens_fn(c, r, r * .7), seed=i, smooth=True)
+    smooth_stone(M, (0, .08, .3), (.82, .64, .34), seed, moss_above=.5, top_flat=.35)
+    for i, (c, R, lean) in enumerate([((-.18, -.05, .82), (.34, .3, .44), .25), ((.32, .06, .7), (.25, .23, .32), -.3), ((.12, -.36, .6), (.17, .16, .2), .1)]):
+        v, f, ref = nugget(Vector(c), R, seed + i, lean=lean)
+        M.add(v, f, ref, amber_fn2(c, R[2]), seed=i, smooth=True)
     return M
 
 FOODS = {

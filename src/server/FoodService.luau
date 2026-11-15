@@ -13,6 +13,11 @@ local FoodRespawn = require(ReplicatedStorage.Shared.FoodRespawn) -- BD-1081: re
 local MouthReach = require(ReplicatedStorage.Shared.MouthReach) -- BD-515: eating happens at the mouth (the same pure function a client preview can use)
 -- BD-381 rule: the LowPolyDinos flag is read only through LowPoly.enabled (verify_lowpoly_views); a test harness without it falls back to the root rule
 local lowPolyModule: any = false
+-- BD-1208: half the standing height of a pickup (a V3 food mesh turned upright stores it; everything else is Size.Y / 2 as before)
+local function halfHeight(part: BasePart): number
+    local h = part:GetAttribute("HalfHeight")
+    return if type(h) == "number" then h else part.Size.Y / 2
+end
 local function lowPolyOn(): boolean
     if lowPolyModule == false then
         local ok, lp = pcall(function() local shared: any = ReplicatedStorage.Shared return require(shared.LowPolyDinos) end)
@@ -126,7 +131,7 @@ function FoodService.start(dinosaur,repository)
             local z = math.clamp(food.center.Y + math.sin(angle) * radius, food.minZ + 1, food.maxZ - 1)
             local ground = groundAt(x, z)
             if ground then
-                food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
+                food.part.Position = ground + Vector3.new(0, halfHeight(food.part) + 0.35, 0)
                 if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
                 return true
             end
@@ -159,7 +164,7 @@ function FoodService.start(dinosaur,repository)
             layerRelocated += 1
         end
         food.fixed = true
-        food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
+        food.part.Position = ground + Vector3.new(0, halfHeight(food.part) + 0.35, 0)
         if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
         return true
     end
@@ -195,6 +200,12 @@ function FoodService.start(dinosaur,repository)
             local mesh = if model then model:FindFirstChildWhichIsA("MeshPart") else nil
             -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
             -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
+            -- BD-1208: with FoodV3Enabled the V3 icon food (WorldGeneratedMeshes.Food) is the mesh; a missing one keeps the kit mesh.
+            local v3 = Config.FoodV3Enabled and generated and generated:FindFirstChild("food_v3_" .. string.sub(artId, 6))
+            if v3 and v3:IsA("BasePart") then
+                if model then model:Destroy() end
+                model, mesh = nil, v3:Clone()
+            end
             local drum = generated and generated:FindFirstChild("food_drumstick")
             if (special or (kind.id == "fruit" and (sx + sz + itemIndex) % 2 == 1)) and drum and drum:IsA("MeshPart") then
                 if model then model:Destroy() end
@@ -204,7 +215,16 @@ function FoodService.start(dinosaur,repository)
             if mesh then
                 mesh.Parent = nil
                 mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then ScaleLadder.Food.drumstickScale else 1) * rng:NextNumber(ScaleLadder.Food.variety[1], ScaleLadder.Food.variety[2]) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
-                mesh.CFrame = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+                local meshSize = mesh:GetAttribute("MeshSize") -- BD-1208 tinted V3 food (a Part + SpecialMesh): the mesh scales with the part
+                if typeof(meshSize) == "Vector3" then
+                    local special = mesh:FindFirstChildOfClass("SpecialMesh")
+                    if special then special.Scale = mesh.Size / meshSize end
+                end
+                local rotX = math.rad(mesh:GetAttribute("RotX") or 0)
+                local yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+                mesh.CFrame = if rotX ~= 0 then yaw * CFrame.Angles(rotX, 0, 0) else yaw
+                -- BD-1208: half the upright height (a mesh turned 90 degrees about X stands on its local Z side)
+                mesh:SetAttribute("HalfHeight", (if rotX ~= 0 then math.abs(math.cos(rotX)) * mesh.Size.Y + math.abs(math.sin(rotX)) * mesh.Size.Z else mesh.Size.Y) / 2)
                 mesh.Name = kind.id
                 mesh.Color = Color3.new(1, 1, 1)
                 if not mesh:GetAttribute("Drumstick") then mesh.Material = Enum.Material.SmoothPlastic end
@@ -367,7 +387,7 @@ function FoodService.start(dinosaur,repository)
             local pickup, visual = makePickup(kind, false, false, sx, sz, count + 1, eventRandom) -- never the seeded map stream
             pickup:SetAttribute("OwnerUserId", player.UserId) -- other clients hide it (StarterRunClient); the server check in the tick is what counts
             addGlow(pickup, kind.color)
-            pickup.Position = ground + Vector3.new(0, pickup.Size.Y / 2 + 0.35, 0)
+            pickup.Position = ground + Vector3.new(0, halfHeight(pickup) + 0.35, 0)
             if visual then visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
             showPlaced(pickup, visual)
             local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind, fixed = true, owner = player, character = character}
