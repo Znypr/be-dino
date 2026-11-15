@@ -254,38 +254,46 @@ def lens_point(L, a, d, b, x, z, lift=.01):
     t = max(0.0, 1 - (x / a) ** 2 - (z / b) ** 2)
     return Vector(L) + Vector((x, -d * math.sqrt(t) - lift, z))
 
-def fossil_fern(M, L, a, d, b, scale=1.0, seed=0):
-    """a tiny fern fossil inside the amber: a curved spine and leaflet pairs, dark amber, lying on the lens face"""
+def fossil_fern(M, L, a, d, b, scale=1.0, seed=0, turn=.75):
+    """a tiny fern fossil inside the amber, lying diagonally on the lens face (never a centre line), dark amber"""
     col = lambda p, n: FOSSIL
-    sp = [(-.05, -.42), (.02, -.2), (.06, .02), (.04, .24), (-.02, .4)]
-    path = [lens_point(L, a, d, b, x * scale, z * scale) for x, z in sp]
-    v, f, ref = tube(path, (.035 * scale, .02 * scale), 5, tip=True, seed=seed); M.add(v, f, ref, col, seed=seed, smooth=True)
+    c, s_ = math.cos(turn), math.sin(turn)
+    rot = lambda x, z: (x * c - z * s_, x * s_ + z * c)
+    sp = [(-.04, -.36), (.02, -.16), (.05, .04), (.03, .22), (-.02, .34)]
+    path = [lens_point(L, a, d, b, *rot(x * scale, z * scale)) for x, z in sp]
+    v, f, ref = tube(path, (.032 * scale, .018 * scale), 5, tip=True, seed=seed); M.add(v, f, ref, col, seed=seed, smooth=True)
     for k, (x, z) in enumerate(sp[1:4]):
         for side in (-1, 1):
-            q = [lens_point(L, a, d, b, (x + side * dx) * scale, (z + dz) * scale) for dx, dz in ((0, 0), (.1, .05), (.2, .06))]
-            v, f, ref = tube(q, (.03 * scale, .012 * scale), 4, tip=True, seed=k); M.add(v, f, ref, col, seed=k, smooth=True)
+            q = [lens_point(L, a, d, b, *rot((x + side * dx) * scale, (z + dz) * scale)) for dx, dz in ((0, 0), (.09, .06), (.17, .08))]
+            v, f, ref = tube(q, (.028 * scale, .012 * scale), 4, tip=True, seed=k); M.add(v, f, ref, col, seed=k, smooth=True)
 
 def build_amber(seed, variant):
-    """amber in rock (icon): a chunky grey rock holding a glossy oval of amber with a fossil fern inside; ~1.6 x 1.2 x 1.3"""
+    """amber in rock (icon): an upright, chiselled grey boulder with a glossy amber window high on its face (fossil fern inside),
+    two small stones at its foot; ~1.5 x 1.1 x 1.6"""
     M = SMesh()
-    rock_c = Vector((0, .18, .5)); rr = (.82, .6, .62) if variant == 'a' else (.9, .55, .56)
-    v, f, ref = cluster(rock_c, rr, seed, amp=.16, flat_bottom=.75, subdiv=2)
-    M.add(v, f, ref, stone_fn(0, 1.1, moss_above=.85 if variant == 'b' else None), seed=seed, smooth=True)
-    # the amber lens set in the rock front, tilted back a little
-    a, d, b = (.44, .3, .5) if variant == 'a' else (.5, .28, .4)
-    L = Vector((.02, -.36, .56 if variant == "a" else .5))
-    v, f, ref = ball(L, 1.0, 3, lambda u: Vector((u.x * a, u.y * d, u.z * b)))
+    up = (.66, .5, .8) if variant == "a" else (.72, .48, .72)
+    cuts = [((0, 0, 1), .82), ((1, .2, .55), .72), ((-1, .3, .6), .7), ((.3, 1, .3), .78), ((.7, -.6, .25), .8), ((-.7, -.5, .3), .8),
+            ((.4, .3, 1), .78), ((-.5, .2, 1), .76)]
+    rc = Vector((0, .12, .78 if variant == 'a' else .7))
+    v, f, ref = G.rock(rc, up, seed, 2, cuts, amp=.05, flat=.95, yaw=0.0, tol=math.radians(7))
+    M.add(v, f, ref, stone_fn(0, 1.6, moss_above=1.18 if variant == 'b' else None), jit=.03, seed=seed)
+    for k, (c, r) in enumerate([((-.62, -.18, .2), (.3, .28, .22)), ((.6, -.05, .16), (.24, .26, .18))]):
+        v, f, ref = G.rock(Vector(c), r, seed + 3 + k, 1, [((0, 0, 1), .7), ((1, .2, .4), .8)], amp=.06, flat=.6, yaw=k)
+        M.add(v, f, ref, stone_fn(0, .45), jit=.03, seed=k)
+    # amber window: a domed slab set into the rock face, high up, slightly tilted to the sky
+    a, d, b = (.48, .22, .52) if variant == "a" else (.52, .22, .42)
+    L = Vector((.03, -.32, .84 if variant == "a" else .72))
+    tilt = math.radians(14)
+    def lens(u):
+        q = Vector((u.x * a, u.y * d, u.z * b))
+        return Vector((q.x, q.y * math.cos(tilt) - q.z * math.sin(tilt), q.y * math.sin(tilt) + q.z * math.cos(tilt)))
+    v, f, ref = ball(L, 1.0, 3, lens)
     M.add(v, f, ref, amber_lens_fn(L, a, b), smooth=True)
-    # stone lip around the lens so it sits IN the rock
-    ring = [Vector(L) + Vector((math.cos(t) * a * 1.02, .02 + .04 * math.sin(3 * t), math.sin(t) * b * 1.02)) for t in [k * 2 * math.pi / 18 for k in range(19)]]
-    v, f, ref = tube(ring, [.07] * 19, 6, tip=False, seed=seed, wob=.15)
-    M.add(v, f, ref, stone_fn(0, 1.1), seed=seed, smooth=True)
-    fossil_fern(M, L, a, d, b, scale=.78 if variant == "a" else .55, seed=seed)
-    # small amber chips at the foot (variant b) / one pebble (variant a)
-    chips = [((.62, -.38, .1), .12), ((-.58, -.34, .08), .09)] if variant == 'b' else [((-.68, -.3, .09), .14)]
-    for i, (c, r) in enumerate(chips):
-        v, f, ref = ball(c, r, 2, lambda u: Vector((u.x, u.y, u.z * .7)), seed=i)
-        M.add(v, f, ref, amber_lens_fn(c, r, r * .7) if variant == 'b' else stone_fn(0, .3), seed=i, smooth=True)
+    fossil_fern(M, L, a, d * 1.05, b, scale=.74 if variant == "a" else .6, seed=seed, turn=.8 if variant == 'a' else -.7)
+    if variant == 'b':
+        for i, (c, r) in enumerate([((.5, -.42, .09), .1), ((-.32, -.48, .07), .08)]):
+            v, f, ref = ball(c, r, 2, lambda u: Vector((u.x, u.y, u.z * .7)), seed=i)
+            M.add(v, f, ref, amber_lens_fn(c, r, r * .7), seed=i, smooth=True)
     return M
 
 FOODS = {
