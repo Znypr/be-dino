@@ -56,6 +56,8 @@ function Import.loadGeneratedWorld(): (number, number)
     for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     -- BD-474/BD-475: colossal ancient trees (LOD0 near and LOD1 far, used together as a pair by the colossal layer) load the same way; empty ids are skipped silently.
     for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    -- BD-1208: the V3 food pickups load only with Config.FoodV3Enabled (flag off = nothing extra is fetched).
+    if require(ReplicatedStorage.Shared.Config).FoodV3Enabled then for key,asset in GeneratedMeshes.Food do table.insert(entries,{key=key,asset=asset}) end end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1
@@ -73,6 +75,24 @@ function Import.loadGeneratedWorld(): (number, number)
                 local tone=GeneratedMeshes.Tone[key]
                 local surface=mesh:FindFirstChildOfClass("SurfaceAppearance")
                 if tone and surface then pcall(function() surface.Color=Color3.new(tone[1],tone[2],tone[3]) end) end
+                -- BD-1208: the upright turn FoodService applies (rotX, degrees about X). A tinted food becomes a Part with a FileMesh SpecialMesh of the
+                -- same mesh and texture: SpecialMesh.VertexColor tints the texture and, unlike a SurfaceAppearance map, a game script may set it (Studio
+                -- test 2026-11-15). MeshSize keeps the mesh's own size so FoodService can scale the SpecialMesh with the part.
+                local food=GeneratedMeshes.Food[key]
+                if food then
+                    mesh:SetAttribute("RotX",food.rotX)
+                    if food.tint then
+                        local part=Instance.new("Part")
+                        part.Size=mesh.MeshSize
+                        local special=Instance.new("SpecialMesh")
+                        special.MeshType=Enum.MeshType.FileMesh special.MeshId=mesh.MeshId special.TextureId=mesh.TextureID
+                        special.VertexColor=Vector3.new(food.tint[1]/255,food.tint[2]/255,food.tint[3]/255)
+                        special.Parent=part
+                        part:SetAttribute("MeshSize",mesh.MeshSize) part:SetAttribute("RotX",food.rotX)
+                        mesh:Destroy()
+                        mesh=part :: any
+                    end
+                end
                 mesh.Name=key
                 mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
                 mesh:SetAttribute("GeneratedAssetId",asset.assetId)

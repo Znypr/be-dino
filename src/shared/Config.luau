@@ -174,6 +174,11 @@ return table.freeze({
     -- sent or decided. false = every window, button and text is built exactly as before and Shared/ToyboxSkin is never required.
     -- Owner decision 2026-11-13: pinned off in the default profile until the owner has seen it in Studio, ON in the playtest profile. Free, no Robux.
     ToyboxUIEnabled = false,
+    -- BD-1208 (docs/241 W6): true = the food pickups use the V3 food meshes generated from the approved food icons (WorldGeneratedMeshes.Food:
+    -- blueberry, raspberry, apple, orange, two spotted eggs in twig nests, two amber nuggets with fossils), loaded into GeneratedWorld at start.
+    -- Needs FoodArtMode = "Kit". Visual only: the same kinds, points, sizes, placement, respawn and pickup rules; a mesh that fails to load keeps
+    -- today's kit mesh. false = nothing is loaded and the food is exactly as before. Pinned off in the default profile, ON in the playtest profile.
+    FoodV3Enabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

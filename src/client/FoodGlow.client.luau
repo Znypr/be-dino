@@ -12,6 +12,12 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
+-- BD-1208 (owner 2026-11-15: "a subtle outline around them which is glowing instead of this round sphere"): with Config.FoodV3Enabled the round
+-- halo and rim ring are not drawn; the OUTLINE_SLOTS nearest foods get a Highlight instead (a thin outline in the food's rarity colour and a faint
+-- fill). Roblox draws at most 31 Highlights per client, so only the nearest foods are outlined (the golden drumstick keeps its own server one).
+-- The sparkle, bob and spin stay. Flag off: everything below behaves exactly as before.
+local OUTLINE = require(Shared:WaitForChild("Config")).FoodV3Enabled == true
+local OUTLINE_SLOTS, OUTLINE_T, OUTLINE_FILL_T = 20, .05, .94
 
 local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 56, 130, .5, 1.3 -- BD-387: more and farther halos so food reads from afar
 local BOB, BOB_SPEED, SPIN_SPEED = .22, 1.6, .7
@@ -34,6 +40,19 @@ holder.Parent = player:WaitForChild("PlayerGui")
 type Slot = {gui: BillboardGui, glow: ImageLabel, ring: ImageLabel, star: ImageLabel, food: BasePart?, phase: number}
 type Food = {part: BasePart, target: Instance?, base: CFrame, written: CFrame?, scaled: boolean, tier: string, slot: Slot?, d: number}
 local slots: {Slot} = {}
+local outlines: {Highlight} = {}
+if OUTLINE then
+    local outlineFolder = Instance.new("Folder")
+    outlineFolder.Name = "FoodOutlines"
+    outlineFolder.Parent = workspace
+    for i = 1, OUTLINE_SLOTS do
+        local h = Instance.new("Highlight")
+        h.Name, h.Enabled, h.DepthMode = "FoodOutline" .. i, false, Enum.HighlightDepthMode.Occluded
+        h.OutlineTransparency, h.FillTransparency = OUTLINE_T, OUTLINE_FILL_T
+        h.Parent = outlineFolder
+        outlines[i] = h
+    end
+end
 local foods: {[BasePart]: Food} = {}
 local order: {Food} = {} -- reused every reassign, never reallocated
 
@@ -102,8 +121,8 @@ local function bind(slot: Slot, food: Food)
     slot.gui.Adornee = food.part
     slot.gui.Size = UDim2.fromScale(size, size)
     slot.gui.StudsOffsetWorldSpace = Vector3.new(0, -food.part.Size.Y * .35, 0)
-    slot.glow.ImageTransparency, slot.glow.ImageColor3 = tier.glow, CREAM
-    slot.ring.ImageTransparency, slot.ring.ImageColor3 = tier.ringT, tier.ring
+    slot.glow.ImageTransparency, slot.glow.ImageColor3 = if OUTLINE then 1 else tier.glow, CREAM
+    slot.ring.ImageTransparency, slot.ring.ImageColor3 = if OUTLINE then 1 else tier.ringT, tier.ring
     slot.star.ImageColor3 = tier.ring
 end
 
@@ -167,6 +186,19 @@ local function reassign()
             while free <= SLOTS and slots[free].food do free += 1 end
             if free > SLOTS then break end
             bind(slots[free], food)
+        end
+    end
+    -- BD-1208: the nearest foods get the glowing outline (rarity colour; Common uses a warm gold so it still glows on grass)
+    for i, h in outlines do
+        local food = order[i]
+        if food then
+            local tier = TIERS[food.tier] or TIERS.Common
+            h.Adornee = targetOf(food)
+            h.OutlineColor = if food.tier == "Common" then Color3.fromRGB(255, 226, 120) else tier.ring
+            h.FillColor = h.OutlineColor
+            h.Enabled = true
+        else
+            h.Enabled, h.Adornee = false, nil
         end
     end
     player:SetAttribute("FoodGlowSlots", math.min(n, SLOTS) .. "/" .. SLOTS)

@@ -1,0 +1,89 @@
+{
+  "note": "BD-1208 food v3, generated with Roblox Studio generate_mesh (text prompts written from the approved food icons, owner OK 2026-11-15). Assets are on the owner's account. rotX = degrees about X to stand the mesh upright; tint = colour over the mesh's own texture (the generator paints amber pink, the orange peach); in game a tinted food is a Part with a FileMesh SpecialMesh whose VertexColor is the tint, because a game script cannot set a SurfaceAppearance map (Studio test 2026-11-15).",
+  "items": {
+    "food_berry_a": {
+      "asset": 99045170762079,
+      "meshId": "rbxassetid://131700001172935",
+      "textureId": "rbxassetid://75171247010461",
+      "tris": 600,
+      "rotX": 0,
+      "tint": null,
+      "what": "one big blueberry with a leaf"
+    },
+    "food_berry_b": {
+      "asset": 139581304104090,
+      "meshId": "rbxassetid://134949165047908",
+      "textureId": "rbxassetid://105917952616802",
+      "tris": 800,
+      "rotX": 0,
+      "tint": null,
+      "what": "raspberry with a leaf cap"
+    },
+    "food_fruit_a": {
+      "asset": 129705634874362,
+      "meshId": "rbxassetid://91341970994442",
+      "textureId": "rbxassetid://77940101358523",
+      "tris": 800,
+      "rotX": 0,
+      "tint": null,
+      "what": "red apple"
+    },
+    "food_fruit_b": {
+      "asset": 88917163545445,
+      "meshId": "rbxassetid://111503097724763",
+      "textureId": "rbxassetid://94149431992326",
+      "tris": 800,
+      "rotX": 0,
+      "tint": [
+        255,
+        165,
+        50
+      ],
+      "what": "orange"
+    },
+    "food_egg_a": {
+      "asset": 117479980654305,
+      "meshId": "rbxassetid://114963120060436",
+      "textureId": "rbxassetid://119213336495774",
+      "tris": 2000,
+      "rotX": 90,
+      "tint": null,
+      "what": "teal-spotted egg in a twig nest"
+    },
+    "food_egg_b": {
+      "asset": 84298170121399,
+      "meshId": "rbxassetid://82730173171620",
+      "textureId": "rbxassetid://131507491315544",
+      "tris": 1500,
+      "rotX": 90,
+      "tint": null,
+      "what": "purple-spotted egg in a twig nest"
+    },
+    "food_amber_a": {
+      "asset": 89498247826218,
+      "meshId": "rbxassetid://123485182435692",
+      "textureId": "rbxassetid://89154552591612",
+      "tris": 1500,
+      "rotX": 0,
+      "tint": [
+        255,
+        172,
+        48
+      ],
+      "what": "amber nugget, fern and bug fossil"
+    },
+    "food_amber_b": {
+      "asset": 113390214356638,
+      "meshId": "rbxassetid://104990698696591",
+      "textureId": "rbxassetid://133420763604051",
+      "tris": 1000,
+      "rotX": 0,
+      "tint": [
+        255,
+        190,
+        50
+      ],
+      "what": "amber nugget, fern fossil"
+    }
+  }
+}

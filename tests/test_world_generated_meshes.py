@@ -21,6 +21,8 @@ BARE = ["world_boulder_bare_s", "world_boulder_bare_m", "world_boulder_bare_l"]
 BARE_KINDS = {"rock_crystal", "rock_lava", "rock_pebbles", "rock_sand_cliff", "rock_mossy_boulder"}
 
 
+FOOD_V3 = {"99045170762079", "139581304104090", "129705634874362", "88917163545445", "117479980654305", "84298170121399", "89498247826218", "113390214356638"}  # BD-1208: V3 food meshes (FoodV3Enabled), placed by the food layer, not the world
+
 class WorldGeneratedMeshTests(unittest.TestCase):
     def setUp(self):
         self.assets = dict(re.findall(r'^\s{4}(\w+) = \{assetId = "(\d+)"', SRC, re.M))
@@ -29,10 +31,10 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         self.kitmap = dict(re.findall(r'(world_\w+) = "(\w+)"', table))
 
     def test_ids_are_numeric_unique_and_exactly_the_published_set(self):
-        self.assertEqual(len(self.assets), 17)
-        self.assertEqual(len(set(self.assets.values())), 17, "duplicated asset id")
-        self.assertEqual(set(self.assets.values()), EXPECTED)
-        self.assertEqual(len(re.findall(r'assetId = "', ASSETS_BLOCK)), 17)
+        self.assertEqual(len(self.assets), 25)
+        self.assertEqual(len(set(self.assets.values())), 25, "duplicated asset id")
+        self.assertEqual(set(self.assets.values()), EXPECTED | FOOD_V3)
+        self.assertEqual(len(re.findall(r'assetId = "', ASSETS_BLOCK)), 17)  # the world block; food V3 lives after it
         for value in self.assets.values():
             self.assertRegex(value, r"^[1-9][0-9]{8,17}$")
 
@@ -48,7 +50,7 @@ class WorldGeneratedMeshTests(unittest.TestCase):
             self.assertIn(f'"{kind}"', SRC.split("function Generated.visualFor")[1])
 
     def test_unplaced_kinds_are_the_food_and_nest_ones(self):
-        self.assertEqual(set(self.assets) - self.placed, {"food_drumstick", "food_egg", "nest"})
+        self.assertEqual(set(self.assets) - self.placed, {"food_drumstick", "food_egg", "nest"} | {k for k in self.assets if k.startswith("food_v3_")})
 
     def test_every_id_has_an_asset_registry_line(self):
         for key, asset_id in self.assets.items():
