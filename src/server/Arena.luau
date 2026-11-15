@@ -332,6 +332,7 @@ function Arena.build()
     local caveHub = CaveHubLayout.hub(Config)
     Terrain.build(if caveHub.enabled then CaveTerrain.build else nil)
     if caveHub.enabled then Biome.useHub(caveHub.biome) end
+    if (Layout :: any).V3 then Biome.useV3(BiomeMap.V3) end -- BD-1209: routes, keep-outs and landmark sites of the round island
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do
@@ -347,7 +348,28 @@ function Arena.build()
     local random = Random.new(1404)
     local S = Layout.Scale
     local kitMode = Config.WorldArtMode == "BiomeKit"
-    for side = 1, 4 do
+    -- BD-1209 (Config.WorldV3Enabled): the round island. A hidden wall follows the coast out in the shallow sea, an ocean plane reaches the
+    -- horizon past the terrain square, and the square-edge boulder ring, the old stone arch and the jump stones are not built.
+    local V3 = if (Layout :: any).V3 then BiomeMap.V3 else nil
+    if V3 then
+        local segments, previous = 72, nil
+        for i = 0, segments do
+            local angle = i * 360 / segments
+            local x, z = V3.polar(angle, V3.coast(angle) + 14)
+            local point = Vector3.new(x, 60, z)
+            if previous then
+                local mid, span = (previous + point) / 2, (point - previous)
+                local wall = part(world, "CoastBoundary", Vector3.new(span.Magnitude + 3, 160, 4), mid, Color3.fromRGB(81, 106, 116), Enum.Material.Rock, true)
+                wall.CFrame = CFrame.lookAt(mid, mid + Vector3.new(-span.Z, 0, span.X))
+                wall.Transparency = 1
+            end
+            previous = point
+        end
+        local ocean = part(world, "Ocean", Vector3.new(6000, 1, 6000), Vector3.new(0, V3.SeaLevel - .9, 0), Color3.fromRGB(64, 170, 206), Enum.Material.SmoothPlastic, false)
+        ocean.CanCollide, ocean.CanQuery, ocean.CanTouch, ocean.CastShadow = false, false, false, false
+        ocean.Transparency = .05
+    end
+    for side = 1, if V3 then 0 else 4 do
         -- BiomeKit: every third legacy ring slot, as kit boulders (one MeshPart each, no 41-part legacy rock); Legacy: all.
         local slots = if kitMode then 5 else 11
         for i = 0, slots do
@@ -397,15 +419,17 @@ function Arena.build()
     end
     end -- Legacy dressing
     -- Stone arch landmark (1.6x with the island) with an open passage.
+    if not V3 then
     local archZ = -15 * S
     for _, x in {-96 * S, -64 * S} do
         local y = Layout.height(x, archZ)
         part(world,"ArchPillar",Vector3.new(7,23,8) * S,Vector3.new(x,y+11.5*S,archZ),Color3.fromRGB(142,153,140),Enum.Material.Rock,true)
     end
     part(world,"ArchTop",Vector3.new(42,6,9) * S,Vector3.new(-80*S,Layout.height(-80*S,archZ)+24*S,archZ),Color3.fromRGB(148,157,139),Enum.Material.Rock,true)
+    end -- not V3 (arch)
     -- Spring and marsh water; neither blocks navigation.
     pools(world)
-    for i = 1, 4 do
+    for i = 1, if V3 then 0 else 4 do
         local x,z = 30+i*10,-30
         part(world,"JumpStone",Vector3.new(6,1.2+i*.4,6),Vector3.new(x,Layout.height(x,z)+.6+i*.2,z),Color3.fromRGB(133,147,143),Enum.Material.Slate,true)
     end

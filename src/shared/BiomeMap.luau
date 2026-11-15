@@ -121,4 +121,11 @@ function BiomeMap.surface(weights: {[string]: number}, h: number, slope: number,
     end
     return BiomeMap.Ground[biome][#BiomeMap.Ground[biome]][1]
 end
+-- BD-1209: with Config.WorldV3Enabled the zones are the five sectors of the redesigned island (Shared/WorldV3.luau, docs/241 W3).
+local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end) -- offline runners have no script: stays off
+if okConfig and type(Config) == "table" and (Config :: any).WorldV3Enabled == true then
+    local V3 = require(script.Parent.WorldV3) :: any
+    BiomeMap.V3 = V3
+    BiomeMap.weights = V3.weights
+end
 return BiomeMap

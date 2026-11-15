@@ -144,6 +144,45 @@ BiomePlacement.Landmarks = {
     {id = "world_landmark_ruins_altar", x = -64, z = -192},
 }
 BiomePlacement.LandmarkScale = 1.4
+-- BD-1209 (Config.WorldV3Enabled): the redesigned island's routes, keep-outs and landmark sites (Shared/WorldV3.luau, docs/241 W2/W4).
+-- Arena calls this before generate(); the spokes and the ring road stay free of blocking props, the plaza stays open, every landmark
+-- site is reserved, and the kit landmarks move onto their zone sites (the big step-3 landmarks replace them later).
+function BiomePlacement.useV3(V3: any)
+    local paths = {}
+    for _, spoke in V3.Spokes do
+        local x1, z1 = V3.polar(spoke.angle, spoke.to)
+        table.insert(paths, {width = 15, points = {{V3.CenterX, V3.CenterZ}, {x1, z1}}})
+    end
+    local ring = {}
+    for i = 0, 48 do table.insert(ring, {V3.polar(i * 7.5, V3.RingRadius)}) end
+    table.insert(paths, {width = 14, points = ring})
+    BiomePlacement.Paths = paths
+    local keep = {
+        {x = V3.CenterX, z = V3.CenterZ, radius = V3.PlazaRadius + 12, all = false},
+        {x = V3.CenterX, z = V3.CenterZ, radius = V3.PlazaRadius, all = true},
+        {x = 0, z = 400, radius = 40, all = true},
+    }
+    for _, site in V3.Landmarks do
+        local x, z = V3.polar(site.angle, site.r)
+        table.insert(keep, {x = x, z = z, radius = if site.id == "volcano" then 60 else 34, all = true})
+    end
+    for _, pool in V3.Pools do table.insert(keep, {x = pool.x, z = pool.z, radius = math.max(pool.rx, pool.rz) + 10, all = true}) end
+    BiomePlacement.KeepOuts = keep
+    local function site(id: string, dr: number): (number, number)
+        for _, s in V3.Landmarks do if s.id == id then return V3.polar(s.angle + 8, s.r + dr) end end
+        return 0, 0
+    end
+    local sx, sz = site("fossil_statue", 0)
+    local ax, az = site("lagoon_arch", 10)
+    local rx, rz = site("volcano", -95)
+    local fx, fz = site("giant_tree", -40)
+    BiomePlacement.Landmarks = {
+        {id = "world_landmark_dino_statue", x = sx, z = sz},
+        {id = "world_landmark_stone_arch", x = ax, z = az},
+        {id = "world_landmark_ruins_altar", x = rx, z = rz},
+        {id = "world_landmark_fossil_display", x = fx, z = fz},
+    }
+end
 -- Layers: grid cell size, base acceptance chance (times biome weight, forest field and density), slope limit, cap, blocking.
 BiomePlacement.Layers = {
     {name = "tree", cell = 10, chance = .105, maxSlope = 32, cap = 560, blocking = true},

@@ -179,6 +179,11 @@ return table.freeze({
     -- Needs FoodArtMode = "Kit". Visual only: the same kinds, points, sizes, placement, respawn and pickup rules; a mesh that fails to load keeps
     -- today's kit mesh. false = nothing is loaded and the food is exactly as before. Pinned off in the default profile, ON in the playtest profile.
     FoodV3Enabled = false,
+    -- BD-1209 (BD-1208 step 1, docs/241 W1-W3): true = the island is the redesigned round island (Shared/WorldV3.luau): beach and soft
+    -- cliffs with sea around it, a paved spawn plaza, five spoke paths and a ring road, five zones (meadow, broadleaf forest, pine hill, palm
+    -- beach with a lagoon, volcano corner). Terrain shape, ground colours and where props may grow change; no save, economy or reward change.
+    -- false = the island is exactly as before. Pinned off in the default profile, ON in the playtest profile.
+    WorldV3Enabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
