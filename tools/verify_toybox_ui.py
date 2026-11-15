@@ -152,7 +152,6 @@ def static_checks(read):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
         elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES and 'Toybox' in text:
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP and 'Toybox' in text:
             raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
