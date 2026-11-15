@@ -91,6 +91,7 @@ function Screens.render(name: string)
         -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
         local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
         if tab=="help" then
+        local body=require(script.Parent.SettingsMenu).helpHost(body) -- BD-1205: Toybox look = inside the cream panel (the body itself with the flag off)
         button(body,"How to play",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
         button(body,"FOOD GUIDE",424,70,400,76,C.accent,function() open("food") end).TextSize=26
         label(body,"Auto-open eggs",0,172,824,40,28).TextXAlignment=Enum.TextXAlignment.Left
@@ -104,6 +105,7 @@ function Screens.render(name: string)
             end).TextSize=22
         end
         label(body,"Shiny, BIG and special eggs always show.",0,324,824,60,20)
+        require(script.Parent.SettingsMenu).inkHelp(body)
         end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent

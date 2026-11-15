@@ -56,10 +56,18 @@ end
 
 -- Re-lay the panel for the current canvas. Safe to call often (open, resize).
 -- BD-1177: `screen` is the name Bootstrap's open(name) shows (nil for a plain re-layout); the Toybox skin recolours the header by its place.
-function M.layout(screen: string?)
+local function doLayout(screen: string?)
     local c = ctx
     if not c then return end
     if screen and Theme.Toybox then Theme.Toybox.place(screen) end
+    if screen then
+        -- Opening any shared-window screen closes the Fusion Menu first (it is its own window: two windows never stack). Flag on and off.
+        local fusionModule = script.Parent:FindFirstChild("FusionMenu")
+        if fusionModule then
+            local ok, fusion = pcall(require, fusionModule)
+            if ok and type(fusion) == "table" and fusion.isOpen and fusion.isOpen() then fusion.close() end
+        end
+    end
     local m = M.model()
     model = m
     c.scale.Scale = m.scale
@@ -97,6 +105,28 @@ function M.layout(screen: string?)
     end
     lastMode = "compact"
     task.defer(M.enforce) -- the canvas may have been resized while a screen is open
+end
+
+-- BD-1178: a screen that was drawn for one window size asks to be told when the panel is laid out for another (the window was resized while it is open).
+local listeners: {[number]: () -> ()} = {}
+local nextListener = 0
+function M.layout(screen: string?)
+    doLayout(screen)
+    local copy = {}
+    for _, fn in listeners do table.insert(copy, fn) end
+    for _, fn in copy do fn() end
+end
+-- What the panel is laid out for: changes when the mode, the body width or height or the scale it renders at changes.
+function M.signature(): string
+    local m = model or M.model()
+    return string.format("%s:%d:%d:%.3f", m.mode, math.floor(m.innerW), math.floor(m.innerH), m.effScale)
+end
+-- Calls fn after every layout; returns the function that stops it.
+function M.onLayout(fn: () -> ()): () -> ()
+    nextListener += 1
+    local id = nextListener
+    listeners[id] = fn
+    return function() listeners[id] = nil end
 end
 
 -- BD-531: the body height (design px) that is on screen without scrolling: 402 on desktop, the scroller height on a phone canvas. Screens that
@@ -238,6 +268,14 @@ function M.attach(context: Ctx)
     context.body.ChildAdded:Connect(schedule)
     if Theme.Toybox then Theme.Toybox.window({panel = context.panel, header = context.header, heading = context.heading, closeButton = context.closeButton, scale = context.scale}) end -- BD-1177
     M.layout()
+end
+
+-- The shared window as it is on screen (px, after its UIScale) and how far its centre sits right of the screen centre. nil before attach().
+-- The Fusion Menu uses this under the Toybox flag so it is exactly as big and as centred as every other menu window.
+function M.frame(): (Vector2?, number)
+    if not ctx then return nil, 0 end
+    local m = M.model()
+    return Vector2.new(math.floor(m.panelW * m.scale), math.floor(m.panelH * m.scale)), m.centerDx
 end
 
 -- BD-1039: the pieces of the Bootstrap modal for a screen that decorates its header (the Index tabs). nil before attach().

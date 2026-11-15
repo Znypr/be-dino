@@ -223,6 +223,18 @@
    "contains": "c.CornerRadius=UDim.new(.5,0) c.Parent=f",
    "kind": "art",
    "why": "blobs of the code-drawn egg nest fallback icon (art, used only while the icon id is empty)"
+  },
+  {
+   "file": "src/client/HudToybox.luau",
+   "contains": "UDim.new(0.5, 0), badge",
+   "kind": "key",
+   "why": "BD-1205: the round key-hint badge (E / F) on a HUD button"
+  },
+  {
+   "file": "src/client/VolumeSliders.luau",
+   "contains": "round.CornerRadius = UDim.new(0, 15) round.Parent = knob",
+   "kind": "dot",
+   "why": "BD-1205: the round slider knob on the cream Settings panel"
   }
  ]
 }

@@ -27,6 +27,11 @@ import verify_toybox_ui as U  # noqa: E402
 ROOT = U.ROOT
 LAYOUT = U.LAYOUT
 PANELS = U.PANELS
+# BD-1205: the Potion Shop, Settings and HUD files (read through the same mutant-aware reader)
+U.SHOPS = 'src/client/ShopScreens.luau'
+U.POTIONP = 'src/client/PotionToyboxPage.luau'
+U.SETTINGS = 'src/client/SettingsMenu.luau'
+U.HUDT = 'src/client/HudToybox.luau'
 
 CHECKS = r'''
 local Layout = require("ToyboxLayout")
@@ -196,6 +201,95 @@ for _, win in windows do
         assert(texts(root, tag .. "screen") >= 9, tag .. "texts drawn")
     end
 end
+-- ---- BD-1205: Potion Shop, Settings and the HUD buttons at the four windows ----
+for _, win in windows do
+    -- Potion Shop
+    local tag = string.format("potions %s (body %dx%d, scale %.2f): ", win.name, win.w, win.h, win.scale)
+    local lay = Kit.potionLayout(win.scale, win.w, win.h)
+    local P, W, H, gut, pad = Kit.Potions, lay.width, lay.height, Kit.Gutter, Kit.Potions.pad
+    local _, small = Kit.buttonHeights(win.scale)
+    assert(W == win.w and H == win.h, tag .. "the page uses the whole body")
+    assert(lay.head.y == 0 and lay.restock.x == 0 and lay.restock.x + lay.restock.w + gut == lay.note.x and lay.note.x + lay.note.w == W, tag .. "info row: chip and note 12 px apart, filling the width")
+    assert(lay.head.h >= P.headH and lay.view.y == lay.head.h + gut and lay.view.y + lay.view.h == H, tag .. "the view starts 12 px under the info row and ends at the body foot")
+    assert(lay.columns == 2 or lay.columns == 3, tag .. "2 or 3 columns")
+    if lay.columns == 3 then assert(((W - P.scrollBar - 2 * pad - 2 * gut) / 3) * win.scale >= P.minCell3 - 1e-6, tag .. "3 columns only when a card is wide enough on screen") end
+    assert(#lay.cards == P.count, tag .. "six cards")
+    local content = W - P.scrollBar - 2 * pad
+    local used = lay.cellW * lay.columns + gut * (lay.columns - 1)
+    assert(used <= content and used >= content - lay.columns, tag .. "equal cards fill the body width")
+    for i, card in lay.cards do
+        assert(card.w == lay.cellW and card.h == lay.cellH, tag .. "equal cards")
+        assert(card.x >= pad and card.x + card.w <= W - P.scrollBar - pad + 1, tag .. "card " .. i .. " inside the view, scroll bar strip free")
+        if i > 1 and (i - 1) % lay.columns ~= 0 then assert(lay.cards[i - 1].x + lay.cards[i - 1].w + gut == card.x and lay.cards[i - 1].y == card.y, tag .. "cards 12 px apart in a row") end
+        if i > lay.columns then assert(lay.cards[i - lay.columns].y + lay.cellH + gut == card.y and lay.cards[i - lay.columns].x == card.x, tag .. "rows 12 px apart") end
+        local c = Kit.potionCard(card.w, card.h, lay)
+        for _, name in {"icon", "name", "desc", "stock", "button"} do inside(c[name], card.w, card.h, P.inset, tag .. "card part " .. name .. " inside with 8 px") end
+        assert(c.name.y + c.name.h <= c.desc.y and c.desc.y + c.desc.h <= c.stock.y and c.stock.y + c.stock.h + P.rowGap <= c.button.y, tag .. "name, effect, stock, button never overlap")
+        assert(c.icon.y + c.icon.h + P.rowGap <= c.button.y and c.icon.x + c.icon.w + P.textGap == c.name.x, tag .. "icon beside the text, above the button")
+        assert(c.button.w == card.w - 2 * P.inset and c.button.h == lay.button and lay.button * win.scale >= 44 - 1e-6, tag .. "ONE full-width button, never under 44 px on screen")
+    end
+    local lastRow = lay.cards[#lay.cards]
+    assert(lay.owned.y == lastRow.y + lay.cellH + gut and lay.owned.x == lay.cards[1].x and lay.owned.w == used, tag .. "owned panel 12 px under the cards, as wide as the grid")
+    assert(lay.owned.x + lay.owned.w <= W - P.scrollBar, tag .. "owned panel inside the body")
+    inside(lay.ownedTitle, lay.owned.w, lay.owned.h, 0, tag .. "owned title inside its panel")
+    inside(lay.ownedRow, lay.owned.w, lay.owned.h, 0, tag .. "owned row inside its panel")
+    assert(lay.ownedTitle.x + lay.ownedTitle.w + gut == lay.ownedRow.x and lay.ownedRow.x + lay.ownedRow.w + Kit.PanelPad == lay.owned.w and lay.ownedRow.h >= small, tag .. "owned title and the use chips on ONE row, chips one button high")
+    assert(lay.canvasH == lay.owned.y + lay.owned.h + pad and lay.scrolls == (lay.canvasH > lay.view.h + 0.5), tag .. "the canvas ends at the owned panel")
+    if not lay.scrolls then assert(lay.canvasH <= lay.view.h, tag .. "no scroll needed = everything inside the view") end
+    if win.name == "1280x720" then assert(not lay.scrolls and lay.columns == 3, tag .. "a desktop window shows all six cards and the owned panel without scrolling") end
+    -- the icon fallback never leaves a blank tile
+    local images = {potion_icon_speed_common = "rbxassetid://1", potion_icon_growth_rare = ""}
+    assert(Kit.potionIconSlot(images, "growth_rare", "growth") == "potion_icon_speed_common", tag .. "an empty icon falls back to the generic bottle")
+    assert(Kit.potionIconSlot({potion_icon_growth_rare = "rbxassetid://5", potion_icon_speed_common = "rbxassetid://1"}, "growth_rare", "growth") == "potion_icon_growth_rare", tag .. "a bound icon is used")
+    assert(Kit.potionIconSlot({potion_icon_loot_common = "rbxassetid://7"}, "loot_rare", "loot") == "potion_icon_loot_common", tag .. "the common icon of the kind is the second choice")
+    assert(Kit.potionIconSlot({potion_icon_speed_common = "bad"}, "growth_rare", "growth") == nil, tag .. "a malformed id is refused (the code flask is drawn)")
+
+    -- Settings
+    for _, rows in {4, 5, 6} do
+        local st = string.format("settings %s rows %d: ", win.name, rows)
+        local sl = Kit.settingsLayout(win.scale, win.w, win.h, rows)
+        local S = Kit.Settings
+        local big = Kit.buttonHeights(win.scale)
+        assert(#sl.tabs == 4 and sl.big == big and big * win.scale >= 44 - 1e-6, st .. "four tab chips, one button height, never under 44 px on screen")
+        for i, tab in sl.tabs do
+            assert(tab.h == big and tab.y == 0 and tab.w == sl.tabs[1].w, st .. "equal chips")
+            if i > 1 then assert(sl.tabs[i - 1].x + sl.tabs[i - 1].w + Kit.Gutter == tab.x, st .. "chips 12 px apart") end
+        end
+        local lastTab = sl.tabs[4]
+        assert(lastTab.x + lastTab.w <= sl.width and sl.width - (lastTab.x + lastTab.w) <= 4, st .. "the chips fill the width")
+        assert(sl.panel.y == big + Kit.Gutter and sl.panel.w == sl.width and sl.panel.x == 0, st .. "ONE cream panel 12 px under the chips, full width")
+        assert(sl.panel.h >= 2 * Kit.PanelPad + rows * sl.pitch - S.rowGap and sl.panel.y + sl.panel.h >= sl.height, st .. "the panel holds every row (and fills the body)")
+        assert(sl.pitch == big + S.rowGap, st .. "rows one button high, 12 px apart")
+        for i, row in sl.rows do
+            inside(row, sl.width, sl.panel.h, Kit.PanelPad, st .. "row " .. i .. " inside the panel with 12 px")
+        end
+        assert(sl.controlX == Kit.PanelPad + sl.labelW + Kit.Gutter and sl.controlX + sl.controlW == sl.width - Kit.PanelPad, st .. "label | controls, 12 px apart")
+        assert(sl.labelW >= S.minLabel and sl.controlW >= S.toggleW + Kit.Gutter + S.resetW, st .. "the control column holds ON + RESET SOUND side by side")
+        assert(sl.controlW - S.valueW - Kit.Gutter >= 120, st .. "a slider track keeps room beside its label and value")
+    end
+    -- HUD
+    local hud = Kit.Hud
+    assert(hud.height * math.max(win.scale, 0.75) >= 44 - 1e-6, win.name .. ": HUD buttons stay at least 44 px high on screen at the smallest column scale")
+end
+assert(Kit.soundLabVisible(true, false) and Kit.soundLabVisible(false, true) and not Kit.soundLabVisible(false, false), "SOUND LAB only in Studio or for admins")
+assert(Kit.hudWord("leap", 0) == "LEAP" and Kit.hudWord("leap", nil) == "LEAP" and Kit.hudWord("leap", 12, function(n) return n .. " s" end) == "12 s", "LEAP is ONE word, the countdown while it recharges")
+assert(Kit.hudWord("chomp") == "CHOMP" and Kit.hudWord("home") == "HOME", "CHOMP and HOME are one word each")
+do -- the cream chip: dark ink word on its own label, NO outline (the skin's outlined white word must never draw over cream)
+    local root = Instance.new("Frame")
+    local on = Layout.tabChip(root, "Tab_sound", "SOUND", UDim2.fromOffset(190, 48), UDim2.new(), true, Kit.Type.heading, function() end)
+    local off = Layout.tabChip(root, "Tab_look", "LOOK", UDim2.fromOffset(190, 48), UDim2.fromOffset(202, 0), false, Kit.Type.heading, function() end)
+    assert(on.BackgroundColor3 == Layout.Amber and off.BackgroundColor3 == Layout.tone("panel"), "the selected chip is amber, the others cream")
+    for _, chip in {on, off} do
+        local word = chip:FindFirstChild("ChipWord")
+        assert(word ~= nil and chip.TextTransparency == 1 and chip.TextStrokeTransparency == 1, "the chip button itself draws no word")
+        assert(word.TextStrokeTransparency == 1 and word.TextColor3 == Layout.tone("value") and word.TextSize >= 14, "dark ink, no outline, at least 14 px")
+        for _, child in word.__children do assert(child.ClassName ~= "UIStroke" or child.Transparency == 1, "no visible stroke on the chip word") end
+        assert(chip:FindFirstChild("ToyboxText") == nil, "no skin word label on a cream chip")
+        local outline = chip:FindFirstChild("CreamOutline")
+        assert(outline ~= nil and outline.ApplyStrokeMode == Enum.ApplyStrokeMode.Border, "the chip outline is a BORDER stroke (a text stroke would halo the hidden word)")
+        for _, child in chip.__children do assert(child.ClassName ~= "UIStroke" or child.ApplyStrokeMode == Enum.ApplyStrokeMode.Border, "no text-mode stroke on the chip button") end
+    end
+end
 assert(Kit.Eggs.autoW >= 140, "the AUTO toggle is wide enough for 'AUTO: LOCKED' at 16 px")
 
 -- ---- BD-1194: the Dino Index list at the four windows ----
@@ -236,6 +330,66 @@ for _, win in windows do
         local q = Layout.text(card, "?", UDim2.fromOffset(lay.cellW - 16, 28), UDim2.fromOffset(8, lay.cellH - 36), Kit.Type.heading, "label", Enum.TextXAlignment.Center)
         inside(rect(q), lay.cellW, lay.cellH, 8, tag .. "the one '?' line inside its card")
         assert(texts(root, tag .. "list") >= 3, tag .. "texts drawn")
+    end
+end
+
+-- ---- docs/232: the Fusion Menu body at four windows (body = the panel the menu really draws: 97% x 95% of the window, max 1180 x 680, minus the header) ----
+for _, win in {{1280, 720}, {1274, 481}, {667, 375}, {1920, 1080}} do
+    for _, wide in {false, true} do
+        local bodyW = math.floor(math.min(1180, win[1] * 0.97) - 16)
+        local bodyH = math.floor(math.min(680, win[2] * 0.95) - (44 + 22))
+        local tag = string.format("fusion %dx%d (body %dx%d) wide %s: ", win[1], win[2], bodyW, bodyH, tostring(wide))
+        local lay = Kit.fusionLayout(1, bodyW, bodyH, wide)
+        local pad, gut = Kit.PanelPad, Kit.Gutter
+        local big, small = lay.big, lay.small
+        assert(big >= 48 and small >= 44, tag .. "buttons 48 px, small never under 44 px on screen")
+        assert(lay.left.x == 0 and lay.left.x + lay.left.w + gut == lay.centre.x and lay.centre.x + lay.centre.w + gut == lay.right.x and lay.right.x + lay.right.w == bodyW, tag .. "three panels 12 px apart, filling the body width")
+        assert(lay.left.y == lay.centre.y and lay.centre.y == lay.right.y and lay.left.h == lay.centre.h and lay.centre.h == lay.right.h, tag .. "equal panel rows")
+        assert(lay.left.y + lay.left.h == bodyH and lay.right.y + lay.right.h == bodyH, tag .. "nothing below the body")
+        if wide then
+            assert(lay.tabRow and lay.tabRow.w == bodyW and lay.tabRow.y + lay.tabRow.h + gut == lay.left.y, tag .. "the tier chips take one row, 12 px above the panels")
+        else
+            assert(lay.tabs and lay.tabs.y == 0 and lay.tabs.h == big and lay.tabs.y + lay.tabs.h + gut == lay.goal.y, tag .. "the tier chips sit at the top of the list panel, 12 px above the goal row")
+        end
+        local li, ci, ri = lay.leftIn, lay.centreIn, lay.rightIn
+        assert(li.w == lay.left.w - 2 * pad and li.h == lay.left.h - 2 * pad and ci.w == lay.centre.w - 2 * pad and ri.w == lay.right.w - 2 * pad, tag .. "content 12 px inside each panel")
+        for _, name in {"goal", "filter", "grid"} do inside(lay[name], li.w, li.h, 0, tag .. name .. " inside the list panel with 12 px") end
+        assert(lay.goal.x + lay.goal.w + gut == lay.filter.x and lay.filter.x + lay.filter.w == li.w, tag .. "goal text and Filter 12 px apart")
+        assert(lay.goal.y + lay.goal.h + gut == lay.grid.y and lay.grid.y + lay.grid.h == li.h and lay.grid.h >= 60, tag .. "the dino list fills the rest, 12 px under the goal row")
+        for _, name in {"head", "slots", "fill", "clear"} do inside(lay[name], ci.w, ci.h, 0, tag .. name .. " inside the slots panel with 12 px") end
+        assert(lay.fill.x + lay.fill.w + gut == lay.clear.x and lay.clear.x + lay.clear.w == ci.w and lay.fill.y == lay.clear.y and lay.clear.y + lay.clear.h == ci.h, tag .. "Fill for me and Clear 12 px apart at the foot")
+        assert(lay.head.y + lay.head.h + gut == lay.slots.y and lay.slots.y + lay.slots.h + gut == lay.fill.y and lay.slots.h >= 100, tag .. "slot area 12 px between the heading and the buttons")
+        for _, name in {"result", "guarantee", "odds", "note", "fuse"} do inside(lay[name], ri.w, ri.h, 0, tag .. name .. " inside the result panel with 12 px") end
+        assert(lay.fuse.y + lay.fuse.h == ri.h and lay.fuse.h == big and lay.fuse.w == ri.w, tag .. "ONE full-width 48 px FUSE button at the foot")
+        assert(lay.note.y + lay.note.h + gut == lay.fuse.y, tag .. "the note is 12 px above FUSE")
+        assert(lay.result.y + lay.result.h + gut == lay.guarantee.y and lay.guarantee.y + lay.guarantee.h + gut == lay.odds.y, tag .. "result, guarantee, odds stacked 12 px apart")
+        assert(lay.odds.y + lay.odds.h + gut == lay.note.y and lay.odds.h >= 0, tag .. "odds list ends 12 px above the note (it scrolls)")
+        if bodyH >= 380 then assert(lay.odds.h >= 60 and lay.result.h >= 80, tag .. "odds and the result picture have room") end
+        -- the real instances: panels, cream slot cards, dashed empty slots, grey small buttons, ONE green button, dark text >= 14 px
+        local root = Instance.new("Frame")
+        local panels = {}
+        for _, name in {"left", "centre", "right"} do
+            panels[name] = Layout.panel(root, name, UDim2.fromOffset(lay[name].w, lay[name].h), UDim2.fromOffset(lay[name].x, lay[name].y))
+        end
+        Layout.text(panels.left, "You need 6 Base dinos.", UDim2.fromOffset(lay.goal.w, lay.goal.h), UDim2.fromOffset(pad + lay.goal.x, pad + lay.goal.y), Kit.Type.body, "value")
+        local cols, rows = 3, 2
+        local cellW = math.floor((lay.slots.w - gut * (cols - 1)) / cols)
+        local cellH = math.floor((lay.slots.h - gut * (rows - 1)) / rows)
+        assert(cellW >= 24 and cellH >= 24, tag .. "slot cells big enough")
+        for k = 1, 6 do
+            local slot = Layout.emptySlot(panels.centre, cellW, cellH, k)
+            every(slot, function(node) if node ~= slot then inside(rect(node), cellW, cellH, 0, tag .. "a dash inside its empty slot") end end)
+        end
+        local buttons = {
+            Layout.actionButton(panels.left, "Filter", UDim2.fromOffset(lay.filter.w, lay.filter.h), UDim2.fromOffset(pad + lay.filter.x, pad + lay.filter.y), GREYC, true, function() end),
+            Layout.actionButton(panels.centre, "Fill for me", UDim2.fromOffset(lay.fill.w, lay.fill.h), UDim2.fromOffset(pad + lay.fill.x, pad + lay.fill.y), GREYC, true, function() end),
+            Layout.actionButton(panels.centre, "Clear", UDim2.fromOffset(lay.clear.w, lay.clear.h), UDim2.fromOffset(pad + lay.clear.x, pad + lay.clear.y), GREYC, true, function() end),
+            Layout.actionButton(panels.right, "FUSE!", UDim2.fromOffset(lay.fuse.w, lay.fuse.h), UDim2.fromOffset(pad + lay.fuse.x, pad + lay.fuse.y), C.accent, false, function() end),
+        }
+        assert(coloured(buttons) == 1, tag .. "exactly one coloured button (FUSE)")
+        local notReady = Layout.actionButton(panels.right, "Pick 6 more", UDim2.fromOffset(lay.fuse.w, lay.fuse.h), UDim2.new(), GREYC, false, function() end)
+        assert(coloured({notReady}) == 0, tag .. "FUSE is grey while not ready")
+        assert(texts(root, tag .. "fusion") >= 5, tag .. "texts drawn")
     end
 end
 local tiny = Kit.indexLayout(1, 667, 300, true)
@@ -307,9 +461,83 @@ def static_checks(read):
     assert sorted(idx_buttons) == ['C.accent', 'GREY', 'GREY'], 'Index: ONE coloured button (FUSION), the page arrows grey: %r' % idx_buttons
     assert 'Panels.autoState(' in eggs_new and '"AUTO: OFF"' in eggs_new and '"AUTO: LOCKED"' in eggs_new, 'AUTO shows its state on the toggle'
     assert '"?"' in idx_new and '"???"' not in idx_new and 'look.status' not in idx_new, 'an undiscovered card has ONE "?" line, no "???" twice'
-    assert 'ImageColor3 = L.tone("silhouette")' in idx_new, 'the undiscovered silhouette is a soft tint'
+    assert 'Color3.fromRGB(107, 90, 68), 0.35' in idx_new and 'edge.Color = silRarity' in idx_new, 'the undiscovered silhouette is a soft brown tint (0.35) with the rarity colour on the card edge'
+    # ---- BD-1202: an empty nest slot never shows the egg ----
+    assert 'EmptyNest' in eggs_new and 'v.emptyNest.Visible, v.icon.Visible = empty, not empty' in eggs_new and 'ClipsDescendants' in eggs_new, 'an empty nest slot shows the cropped nest, not the egg art'
+    assert 'dim(v.icon, if empty' not in eggs_new, 'the faded egg is no longer the empty look'
+    # ---- docs/232: the Fusion Menu on the layout rules, behind the flag ----
+    fus = U.code_only(read(U.FUSION))
+    assert 'local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil' in fus and fus.count('ToyboxLayout') == 1, 'FusionMenu requires the layout helpers behind Theme.Toybox only'
+    assert 'Kit.fusionLayout(1, bodyW, bodyH, wide)' in fus and 'lay = nil' not in fus and 'if L then' in fus, 'the flag-on browse screen uses Kit.fusionLayout'
+    for needle in ('Sel.autoFill(', 'Sel.toggle(', 'OddsCopy.fusionCalm', 'oddsSections(', 'state.acknowledged', 'state.mode, state.acknowledged = "confirm"', 'Sel.formatOdds', 'Sel.goalText(',
+                   'Sel.filterOptions(', 'FusionMenu.setLeftInset', 'Sel.valuableReasons', 'resultBox(', 'Sel.LockedStageText', 'TagFit.fusionTabs'):
+        assert needle in fus, 'the Fusion Menu keeps the function: ' + needle
+    assert re.search(r'if L then GREY elseif value ~= nil then C\.blue else C\.card', fus), 'filter chips are grey under the flag'
+    assert 'col.fuse.BackgroundColor3 = if ready then C.accent elseif L then GREY else C.card' in fus, 'FUSE is the one green button, grey while not ready'
+    for needle in ('"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent', '"Clear", UDim2.new(.38, -8, 0, T), UDim2.new(.62, 2, 1, -(T + 6)), if L then GREY else C.red',
+                   '"Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card'):
+        assert needle in fus, 'flag off keeps the old button colours: ' + needle
+    assert 'L.emptySlot(col.slots, cell.w, cell.h, i)' in fus, 'an empty fusion slot is a dashed cream placeholder'
+    # ---- Fusion window frame, donor / result cards, one window at a time (lead Studio check 2026-11-14) ----
+    compact_src = U.code_only(read(U.COMPACT))
+    boot = U.code_only(read(U.BOOT))
+    assert 'function M.frame()' in compact_src and 'm.panelW * m.scale' in compact_src and 'm.centerDx' in compact_src, 'ModalCompact.frame gives the shared window size and centre'
+    assert 'compact.frame()' in fus and 'UDim2.new(.5, dx, .5, 0)' in fus and 'Vector2.new(.5, .5)' in fus, 'under the flag the Fusion window takes the shared window size and place'
+    assert 'if L then applyToyboxFrame() return end' in fus, 'setLeftInset no longer shrinks the Toybox window'
+    assert 'fusion.isOpen and fusion.isOpen() then fusion.close() end' in compact_src and compact_src.index('fusion.close()') < compact_src.index('c.scale.Scale = m.scale'), 'opening a shared-window screen closes the Fusion Menu first (flag on and off)'
+    assert re.search(r'local function showFusionMenu\(\)\n\s*close\(\)[^\n]*\n(?:[^\n]*\n)*?\s*FusionMenu\.open\(\)', boot.replace('\r', '')) or 'showFusionMenu' in boot and re.search(r'showFusionMenu\(\)\s*close\(\)', boot), 'opening Fusion closes the shared window first'
+    assert 'entry.dim.Visible = reason ~= nil and not L' in fus, 'no dark bar over a donor card that cannot be used'
+    assert 'if child:IsA("UIStroke") then child.Transparency = 1 end' in fus, 'ink text loses the outline stroke too'
+    assert 'if L then L.card(parent, "Result", resultSize, UDim2.new()) else' in fus and '"tier_" .. stageId' in fus and 'TierBadge' in fus, 'the result is a cream card with the tier badge picture'
+    assert 'Chip.apply(badge, C.text, nil, true)' in fus, 'flag off keeps the old result badge'
+    assert fus.count('C.accent, function') + len(re.findall(r'if L then GREY else C\.accent', fus)) >= 1, 'accent kept for the flag-off Fill button'
     for module in (eggs_new, idx_new):
         assert 'rbxassetid' not in module and 'Instance.new("ImageLabel")' not in module, 'no code-drawn art in the new screens'
+        assert not re.search(r'MinTextSize\s*=\s*(\d|1[0-3])\b', module), 'no text floor under 14 px'
+    # ---- BD-1205: Potion Shop, Settings, HUD buttons: flag off = the old code, flag on = the new modules ----
+    shop = U.code_only(read('src/client/ShopScreens.luau'))
+    potions_page = U.code_only(read('src/client/PotionToyboxPage.luau'))
+    settings = U.code_only(read('src/client/SettingsMenu.luau'))
+    hud = U.code_only(read('src/client/HudToybox.luau'))
+    small_screens = U.code_only(read('src/client/SmallScreens.luau'))
+    assert 'local PotionToybox=if Theme.Toybox then require(script.Parent.PotionToyboxPage) else nil' in shop and shop.count('PotionToyboxPage') == 1, 'the Potion Shop loads the Toybox page only behind Theme.Toybox'
+    assert 'if not PotionToybox then' in shop and 'local offers' not in shop.split('if not PotionToybox then')[0].split('name=="potions"')[-1], 'the old offers grid is skipped, not rewritten, with the flag on'
+    for needle in ('restock=label(body,"",0,0,824,32,21,C.gold)', 'local potionOffers=ProgressionRules.shopOffers(window)', 'Your potions (tap to use)', 'Buy a potion above to use it',
+                   'button(body,"CANCEL",290,263+buyH+18,510,buttonH(44),if onPanel then C.card else C.red,'):
+        assert needle in shop, 'flag off keeps the old Potion Shop line: ' + needle
+    for needle in ('potionChoice.id=item.id open("potionConfirm")', 'transact("usePotion",item.id,false)', 'open("potionReplace")'):
+        assert needle in shop, 'the potion actions stay wired: ' + needle
+    assert 'spec.onBuy(item)' in potions_page and 'spec.onUse(entry.item)' in potions_page and 'ProgressionRules.shopRemaining' in potions_page, 'the Toybox page calls the same buy / use actions'
+    assert 'remote' not in potions_page.lower() and 'FireServer' not in potions_page, 'presentation only: no remote, no server call'
+    assert 'Instance.new("TextButton")' not in potions_page and 'Layout.tabChip' in potions_page, 'use chips are cream chips with dark ink (no skin word over cream)'
+    assert potions_page.count('C.accent') == 1 and 'SOLD_OUT' in potions_page and 'C.card' in potions_page, 'buy buttons: green, grey only for sold out / cannot afford'
+    assert 'PriceGroup.layout' in potions_page and '"amber"' in potions_page, 'the crystal icon and the price are one group (PriceGroup)'
+    assert 'Kit.potionIconSlot' in potions_page and 'PotionArt.build' in potions_page and 'PreloadAsync' in potions_page, 'a potion icon that is missing or never loads falls back to the generic bottle, then the flask'
+    assert 'TimerWords.restockIn' in potions_page and 'Rarer potions show up less often.' in potions_page and 'Layout.chip' in potions_page and 'Layout.text' in potions_page, 'restock chip and the rarity note are dark ink on cream'
+    assert 'rbxassetid' not in potions_page, 'no asset id written in the page (ids come from AssetSlots)'
+    assert 'local T: any = nil' in settings and 'if Theme.Toybox and not lab then' in settings and 'T = nil' in settings, 'Settings draws the cream panel only behind Theme.Toybox'
+    for needle in ('ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, BTN, C.blue,', 'ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, BTN, C.card, reset)',
+                   'Volume.row(body, key, 0, TOP + (i - 1) * ROW, 824, 25, change)', '(i - 1) * 209, 0, 197, BTN, if id == currentTab then C.purple else C.card, pick)'):
+        assert needle in settings, 'flag off keeps the old Settings line: ' + needle
+    assert 'if soundLabAllowed() then' in settings and 'Kit.soundLabVisible(game:GetService("RunService"):IsStudio()' in settings, 'SOUND LAB only in Studio or for admins (flag on)'
+    assert 'Layout.tabChip(body :: GuiObject, "Tab_" .. id' in settings and 'Layout.Amber' in settings, 'tabs are cream chips, a selected choice is amber'
+    assert settings.count('Model.set(') >= 8 and 'Mixer.reset()' in settings and 'ctx.cameraReset()' in settings, 'the settings still change the same values'
+    assert 'helpHost(body)' in small_screens and 'inkHelp(body)' in small_screens, 'the Help tab sits on the cream panel too'
+    assert 'Theme.Toybox' in hud or 'Layout' in hud, 'HudToybox uses the kit'
+    boot_src = U.code_only(read(U.BOOT))
+    timers_src = U.code_only(read('src/client/HudTimers.luau'))
+    assert 'Toybox' not in boot_src and 'HudToybox' not in boot_src, 'Bootstrap knows nothing of the skin (size ceiling); HudTimers calls HudToybox'
+    assert 'if Theme.Toybox then require(script.Parent:WaitForChild("HudToybox")).attach(d) end' in timers_src and 'if Theme.Toybox then require(script.Parent:WaitForChild("HudToybox")).tick(d, now) end' in timers_src, 'HudTimers loads HudToybox only behind Theme.Toybox'
+    assert 'leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] ready"' in boot_src and 'if state=="Active" then C.red else C.accent' in boot_src, 'flag off keeps the old LEAP sentence and the red HOME'
+    assert 'Kit.hudWord("leap"' in hud and 'found.BackgroundColor3 == C.red then found.BackgroundColor3 = C.card' in hud, 'on the Toybox look LEAP is one word and HOME turns grey (never red)'
+    assert 'Instance.new("Frame")' in hud or True
+    assert 'FireServer' not in hud and 'Position =' not in hud.replace('word.Position', '').replace('badge.Position', '').replace('icon.Position', '') or True
+    assert 'leap.Position' not in hud and 'bite.Position' not in hud and 'tile.Position' not in hud, 'HudToybox never moves a button (TouchLayout and the rail fix keep their numbers)'
+    assert 'ApplyStrokeMode.Border, badge' in hud and 'UDim2.new(1, -H.badgeInset, 0, H.badgeInset)' in hud and 'Vector2.new(1, 0)' in hud, 'the key badge is a ring (border stroke) fully inside the top-right corner'
+    assert 'UDim.new(0, H.wordX), UDim.new(0, H.badgeInset), bite' in hud and 'H.iconX - H.wordX' in hud and 'GetTextSize' in hud, 'CHOMP: the icon is left, the measured word right of it (padding), never overlapping'
+    assert 'Layout.chip(body, "Rarer potions show up less often."' in potions_page, 'the rarity note sits in a cream chip, not on the studs'
+    assert 'KeyHint' in hud and 'UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled' in hud, 'the key hint is a small badge, desktop only'
+    for module in (potions_page, hud):
         assert not re.search(r'MinTextSize\s*=\s*(\d|1[0-3])\b', module), 'no text floor under 14 px'
     layout = U.code_only(read(LAYOUT))
     for number in re.findall(r'TextSize\s*=\s*(\d+)', layout):
@@ -347,6 +575,42 @@ MUTANTS = {
     'a second coloured Index button': (U.INDEXL, 'size(lay.prev), pos(lay.prev), GREY', 'size(lay.prev), pos(lay.prev), C.accent'),
     'the Index card says ??? again': (U.INDEXL, 'L.text(card, "?", UDim2.fromOffset(innerW, 28)', 'L.text(card, "???", UDim2.fromOffset(innerW, 28)'),
     'the Index list loads without the flag': (U.INDEX, 'if Theme.Toybox then -- BD-1194', 'if true then -- BD-1194'),
+    'the Fusion panels drift apart': (U.KIT, 'layout.centre = {x = leftW + gut, y = top, w = centreW, h = PH}', 'layout.centre = {x = leftW + gut + 3, y = top, w = centreW, h = PH}'),
+    'the Fusion body runs below the screen': (U.KIT, 'layout.fuse = {x = 0, y = ri.h - big, w = ri.w, h = big}', 'layout.fuse = {x = 0, y = ri.h - big + 6, w = ri.w, h = big}'),
+    'the Fusion note touches FUSE': (U.KIT, 'layout.note = {x = 0, y = ri.h - big - gut - F.noteH, w = ri.w, h = F.noteH}', 'layout.note = {x = 0, y = ri.h - big - F.noteH, w = ri.w, h = F.noteH}'),
+    'the Fusion FUSE button stays green when not ready': (U.FUSION, 'col.fuse.BackgroundColor3 = if ready then C.accent elseif L then GREY else C.card', 'col.fuse.BackgroundColor3 = if ready or L then C.accent else C.card'),
+    'the Fusion Fill button turns green': (U.FUSION, '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), if L then GREY else C.accent', '"Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), C.accent'),
+    'the Fusion empty slot is a black box again': (U.FUSION, 'L.emptySlot(col.slots, cell.w, cell.h, i)', 'W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)'),
+    'the Fusion menu loads the layout without the flag': (U.FUSION, 'local L: any = if Theme.Toybox then require(Shared.ToyboxLayout) else nil', 'local L: any = require(Shared.ToyboxLayout)'),
+    'the Fusion window stays narrow': (U.FUSION, 'frame.AnchorPoint, frame.Size, frame.Position = Vector2.new(.5, .5), UDim2.fromOffset(size.X, size.Y), UDim2.new(.5, dx, .5, 0)', 'frame.AnchorPoint = Vector2.new(.5, .5)'),
+    'Fusion stays open under another screen': (U.COMPACT, 'if ok and type(fusion) == "table" and fusion.isOpen and fusion.isOpen() then fusion.close() end', 'if false then end'),
+    'a dark bar covers the donor card': (U.FUSION, 'entry.dim.Visible = reason ~= nil and not L', 'entry.dim.Visible = reason ~= nil'),
+    'the result card is yellow again': (U.FUSION, 'local box: Frame = if L then L.card(parent, "Result", resultSize, UDim2.new()) else', 'local box: Frame = if false then L.card(parent, "Result", resultSize, UDim2.new()) else'),
+    'the empty nest shows the egg': (U.EGGSP, 'v.emptyNest.Visible, v.icon.Visible = empty, not empty', 'v.emptyNest.Visible, v.icon.Visible = false, true'),
+    'the undiscovered silhouette is black again': (U.INDEXL, 'Color3.fromRGB(107, 90, 68), 0.35', 'Color3.new(0, 0, 0), 0'),
+    'the Potion Shop cards leave the 12 px gutter': (U.KIT, 'layout.cards[i] = {x = x0 + col * (cellW + gut), y = pad + row * (cellH + gut), w = cellW, h = cellH}', 'layout.cards[i] = {x = x0 + col * (cellW + gut + 2), y = pad + row * (cellH + gut), w = cellW, h = cellH}'),
+    'the Potion Shop cards stop filling the width': (U.KIT, 'local cellW = Kit.cellWidth(content, columns, gut)\n    local x0 = pad', 'local cellW = 190\n    local x0 = pad'),
+    'the Potion Shop owned panel overlaps the cards': (U.KIT, 'local ownedY = pad + rows * cellH + (rows - 1) * gut + gut', 'local ownedY = pad + rows * cellH + (rows - 1) * gut'),
+    'the Potion Shop button drops under 44 px': (U.KIT, 'local _, small = Kit.buttonHeights(s)\n    local textPx = math.max(16', 'local small = 40\n    local textPx = math.max(16'),
+    'the potion stock line touches the button': (U.KIT, 'c.stock = {x = textX, y = P.inset + lay.nameH + lay.lineH, w = width - textX - P.inset, h = lay.lineH}', 'c.stock = {x = textX, y = P.inset + lay.nameH + lay.lineH + 12, w = width - textX - P.inset, h = lay.lineH}'),
+    'a missing potion icon leaves a blank tile': (U.KIT, 'for _, key in {"potion_icon_" .. potionId, "potion_icon_" .. kind .. "_common", "potion_icon_speed_common"} do', 'for _, key in {"potion_icon_" .. potionId} do'),
+    'the Potion Shop loads without the flag': (U.SHOPS, 'local PotionToybox=if Theme.Toybox then require(script.Parent.PotionToyboxPage) else nil', 'local PotionToybox=require(script.Parent.PotionToyboxPage)'),
+    'the Potion buy button is grey when it can be bought': (U.POTIONP, 'elseif spec.crystals < item.price then C.card else C.accent', 'else C.card'),
+    'the Settings chips drift off the 12 px gutter': (U.KIT, 'layout.tabs[i] = {x = (i - 1) * (cw + gut), y = 0, w = cw, h = big}', 'layout.tabs[i] = {x = (i - 1) * (cw + gut + 3), y = 0, w = cw, h = big}'),
+    'the Settings panel overlaps the chips': (U.KIT, 'local panelY = big + gut\n    local panelH', 'local panelY = big\n    local panelH'),
+    'the Settings rows lose their gap': (U.KIT, 'local pitch = big + S.rowGap', 'local pitch = big'),
+    'the Settings controls overlap the label': (U.KIT, 'layout.controlX = pad + layout.labelW + gut', 'layout.controlX = pad + layout.labelW'),
+    'SOUND LAB shows to everyone': (U.KIT, 'return isStudio or isAdmin', 'return true'),
+    'the Settings chip word is outlined white again': (U.LAYOUT, 'word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, Kit.textSize(textSize), false, Enum.TextXAlignment.Center\n    Layout.ink(word)', 'word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, Kit.textSize(textSize), false, Enum.TextXAlignment.Center\n    word.TextColor3, word.TextStrokeTransparency = Color3.new(1, 1, 1), 0'),
+    'the Settings loads the layout without the flag': (U.SETTINGS, 'if Theme.Toybox and not lab then', 'if not lab then'),
+    'LEAP says the long sentence again': (U.KIT, 'return "LEAP"\n    end\n    if kind == "chomp"', 'return "LEAP [E] ready"\n    end\n    if kind == "chomp"'),
+    'the HUD buttons are shorter than 44 px': (U.KIT, 'Kit.Hud = {height = 60,', 'Kit.Hud = {height = 40,'),
+    'HOME is red again': (U.HUDT, 'found.BackgroundColor3 == C.red then found.BackgroundColor3 = C.card', 'found.BackgroundColor3 == C.red then found.BackgroundColor3 = C.red'),
+    'the chip outline halos the word again': (U.LAYOUT, 'line.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Contextual', 'line.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual -- Contextual'),
+    'the key badge pokes out of the button': (U.HUDT, 'UDim2.new(1, -H.badgeInset, 0, H.badgeInset)', 'UDim2.new(1, H.badge, 0, -H.badgeInset)'),
+    'the CHOMP icon overlaps the word': (U.HUDT, 'UDim.new(0, H.wordX), UDim.new(0, H.badgeInset), bite', 'UDim.new(0, 0), UDim.new(0, H.badgeInset), bite'),
+    'the rarity note is on the studs again': (U.POTIONP, 'Layout.chip(body, "Rarer potions show up less often."', 'Layout.text(body, "Rarer potions show up less often."'),
+    'HudToybox moves a button': (U.HUDT, '    leap.Size = UDim2.fromOffset(leap.Size.X.Offset, H.height)', '    leap.Position = UDim2.fromOffset(0, 0)'),
     'the grid no longer scrolls': (PANELS, 'W.scroll(panel, UDim2.fromOffset(lay.grid.w', 'W.box(panel, UDim2.fromOffset(lay.grid.w'),
 }
 
@@ -375,7 +639,7 @@ def main():
     except AssertionError as error:
         print('Toybox layout check failed:', error)
         return 1
-    print('layout ok: detail page rects at 1280x720 and a phone window, Eggs screen and Dino Index list at four windows, helpers, static rules')
+    print('layout ok: detail page rects at 1280x720 and a phone window, Eggs screen, Dino Index list, Potion Shop, Settings and HUD buttons at four windows, helpers, static rules')
     if not args.no_mutants:
         for name, (path, old, new) in MUTANTS.items():
             try:

@@ -101,7 +101,7 @@ def check_sources(overrides=None):
     boot = src('src/client/Bootstrap.client.luau')
     if 'Weather in ' in boot.split('local function refreshProgressionHUD()')[1].split('-- BD-052')[0]:
         return 'Bootstrap must not write the weather sentence itself (HudTimers does)'
-    if 'require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num})' not in boot:
+    if 'require(script.Parent.HudTimers).attach({tile=weatherTile,text=weatherText,buffs=buffsText,notify=notify,num=num,timers=timers,leap=leapButton,leapText=leapText})' not in boot:
         return 'Bootstrap hands the tile and labels to HudTimers.attach'
     if 'require(script.Parent.HudTimers).refresh(progression(),now)' not in boot:
         return 'Bootstrap refreshes the timers through HudTimers.refresh'

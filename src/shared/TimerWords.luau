@@ -35,6 +35,11 @@ function W.restock(crystals: any, secondsLeft: number, short: boolean): string
     return string.format(if short then "Crystals: %s  •  New in %s" else "Crystals: %s  •  New offers in %s", tostring(crystals), UIFormat.duration(secondsLeft))
 end
 
+-- BD-1205: the restock chip of the Toybox Potion Shop (the crystal wallet is in the window header there): just "New in 56 s".
+function W.restockIn(secondsLeft: number): string
+    return "New in " .. UIFormat.duration(secondsLeft)
+end
+
 -- The Index count on the big bar: "Found 1/22".
 function W.found(found: number, total: number): string
     return string.format("Found %d/%d", found, total)
