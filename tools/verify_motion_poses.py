@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POSE = 'src/shared/LowPolyPose.luau'
 ANIM = 'src/client/LowPolyAnimator.client.luau'
 NPC = 'src/shared/NpcLowPoly.luau'
+CLIPS = 'src/shared/LowPolyClips.luau'  # BD-1217: the animator's authored clips (pure data, loaded as is)
 
 # id -> what it proves. "py" ids are static checks done in Python; the rest are printed by the Luau chunks.
 CHECKS = {
@@ -895,6 +896,7 @@ local function boot(opts)
         UITheme = env.theme,
         EffectAssets = {isSheet = function() return false end, isAdditive = function() return false end, resolve = function() return "x" end, Builtin = {smoke = "smoke"}},
         NpcLowPoly = NpcLowPoly,
+        LowPolyClips = LowPolyClips,
     }
     local Terrain = {}
     env.workspace = {Terrain = Terrain, CurrentCamera = {CFrame = {Position = V3.zero}}}
@@ -1432,6 +1434,7 @@ def run_all(runner, pose_text, anim_text, npc_text, config_text, quiet=False):
     ok = code == 0 and 'pose checks passed' in out
     # Chunk 2: the real animator, unmodified, against engine stand-ins (HARNESS).
     anim_chunk = ('local RealPose = (function()\n' + pose_text + '\nend)()\nlocal NpcLowPoly = (function()\n' + npc_text + '\nend)()\n'
+                  + 'local LowPolyClips = (function()\n' + (ROOT / CLIPS).read_text(encoding='utf-8') + '\nend)()\n'
                   + 'local P = RealPose\n' + PRELUDE
                   + 'local ANIM = function(game, workspace, os, Instance, CFrame, Vector3, Enum, require, NumberSequence, NumberSequenceKeypoint, NumberRange, ColorSequence, Color3, Vector2, RaycastParams)\n'
                   + anim_text + '\nend\n' + HARNESS)
@@ -1460,7 +1463,7 @@ MUTANTS = [
     ('Water surge no longer goes forward', POSE, 'lunge = math.sin(math.pi * p)\n            snap', 'lunge = 0\n            snap', 1),
     ('Fly wings stay shut in the air', POSE, 'elseif ph == "air" then W = 1', 'elseif ph == "air" then W = 0', 1),
     ('head peck 0.4 -> 0.9 stud', POSE, 'Pose.PeckStuds = 0.4', 'Pose.PeckStuds = 0.9', 1),
-    ('animator plays actions under Reduce Motion', ANIM, 'if amp == 0 then rig.act = nil elseif', 'if false then rig.act = nil elseif', 1),
+    ('animator plays actions under Reduce Motion', ANIM, 'if amp == 0 then rig.act, rig.clip = nil, nil elseif', 'if false then rig.act, rig.clip = nil, nil elseif', 1),
     ('animator splash counts swapped (jump 9, leap 5)', ANIM, 'if leaping then 9 else 5', 'if leaping then 5 else 9', 1),
     ('animator never reads the leap stamp', ANIM, 'num(character, "LeapPredictAt")', 'num(character, "LeapPredictAtX")', 1),
     ('Fly landing ignores the carried wing opening again (60 degree pop)', POSE, 'math.clamp(finite(ctx.wing or 1), 0, 1) * (1 - ease(p))', '(1 - ease(p))', 1),
