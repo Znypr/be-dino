@@ -9,6 +9,7 @@
 local TweenService = game:GetService("TweenService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Effects = require(Shared:WaitForChild("EffectAssets"))
+local Chip = require(Shared:WaitForChild("ChipStyle")) -- BD-1070: every tag on the stage is the one chip style
 
 local Stage = {}
 Stage.Cream = Color3.fromRGB(255, 247, 227)
@@ -71,14 +72,8 @@ local function style(o: Instance, stop: Instance)
                 return
             end
         end
-        local stroke = o:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
-        stroke.Color, stroke.Thickness, stroke.ApplyStrokeMode, stroke.Transparency = Stage.Ink, 2, Enum.ApplyStrokeMode.Border, 0
-        stroke.Parent = o
-        if not o:FindFirstChildOfClass("UICorner") then
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0, 10)
-            corner.Parent = o
-        end
+        for _, old in o:GetChildren() do if old:IsA("UIStroke") and old.ApplyStrokeMode == Enum.ApplyStrokeMode.Border then old:Destroy() end end
+        Chip.apply(o, o.BackgroundColor3, Stage.Ink)
     end
     if o:IsA("TextButton") and (o.Name == "ResetView" or o.Text == "RESET") then o.Visible = false return end
     -- the "Drag to turn" hint floats outside the stage (docs/240 R8); dragging still turns the dino
@@ -195,10 +190,7 @@ function Stage.apply(p: Parts)
         o.TextXAlignment, o.TextSize = Enum.TextXAlignment.Center, 22
         o.BackgroundColor3, o.BackgroundTransparency = Stage.Cream, 0
         o.TextColor3, o.TextStrokeTransparency = Stage.Ink, 1
-        if not o:FindFirstChildOfClass("UICorner") then local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 18) c.Parent = o end
-        local stroke = o:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
-        stroke.Color, stroke.Thickness, stroke.ApplyStrokeMode = Stage.Ink, 2, Enum.ApplyStrokeMode.Border
-        stroke.Parent = o
+        Chip.apply(o, Stage.Cream, Stage.Ink)
     end
     -- everything the hatch builds now and later (buckets, labels, the end buttons, the Skip layer) follows the style
     local layer = p.gui:FindFirstChild("HatchUiLayer")
@@ -265,12 +257,7 @@ local function chip(parent: Instance, text: string, order: number): TextLabel
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 14), UDim.new(0, 14)
     pad.Parent = c
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = c
-    local stroke = Instance.new("UIStroke")
-    stroke.Color, stroke.Thickness, stroke.ApplyStrokeMode = Stage.Ink, 2.5, Enum.ApplyStrokeMode.Border
-    stroke.Parent = c
+    Chip.apply(c, Stage.Cream, Stage.Ink)
     c.Parent = parent
     return c
 end
