@@ -46,15 +46,24 @@ function Service.record(player: Player, outcome: any)
         -- SecretSpeciesConfig is required only then, so with the flag off this function is exactly what it was.
         local secret: any = if Config.SecretSpeciesEnabled == true and outcome.secret == true then require(ReplicatedStorage.Shared.SecretSpeciesConfig) else nil
         local secretId = if secret ~= nil and secret.isSecret(species) then species else nil
-        local info = Rare.classify(outcome, Config.SpeciesRarities[species], secretId ~= nil)
+        local info: any = Rare.classify(outcome, Config.SpeciesRarities[species], secretId ~= nil)
+        -- BD-1227: with Config.RareHatchNewsEnabled an Epic species also makes news for the others (no own celebration: newsOnly)
+        local news = Config.RareHatchNewsEnabled == true
+        local newsOnly = false
+        if not info and news then
+            info = Rare.epicNews(outcome, Config.SpeciesRarities[species])
+            newsOnly = info ~= nil
+        end
         if not info then return end
         local speciesName = Config.SpeciesDisplayNames[species] or (if secretId then secret.name(secretId) else species)
         local event = getRemote()
         local eggId = tostring(outcome.eggId or "")
         if eggId == "" or state.seen[eggId] then return end -- one celebration and one announcement per egg
-        event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or (if secretId then secret.displayTier(secretId) else 1),
-            mutation = info.mutation, mutationId = if info.mutation then tostring(outcome.eventMutationId) else nil}) -- BD-433: lets the client light the own dino's rim
-        local text = Rare.text(player.DisplayName, info, speciesName)
+        if not newsOnly then
+            event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or (if secretId then secret.displayTier(secretId) else 1),
+                mutation = info.mutation, mutationId = if info.mutation then tostring(outcome.eventMutationId) else nil}) -- BD-433: lets the client light the own dino's rim
+        end
+        local text = if newsOnly then (Rare.newsLine(player.DisplayName, info, "Epic", speciesName) or "") else Rare.text(player.DisplayName, info, speciesName)
         info.tier, info.speciesName = Config.SpeciesRarities[species], if info.secret then nil else speciesName -- BD-1121: for the two-line look (sent only with Config.RareFindBannerEnabled); a secret's name never goes out (BD-606 SS9)
         local flushAt = nil
         if os.clock() - announced.last(player.UserId, ANNOUNCE_KEY) >= Rare.Cooldown then
@@ -70,7 +79,10 @@ function Service.record(player: Player, outcome: any)
                 announced.mark(userId, ANNOUNCE_KEY, os.clock())
                 for _, other in Players:GetPlayers() do
                     if other ~= player then
-                        if Config.RareFindBannerEnabled == true then -- BD-1121: the same announcement plus what the two-line look needs (no player name in it)
+                        if news then -- BD-1227: the two-line look with the hatcher's display name (cut and cleaned here, checked again on the client)
+                            event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text, tier = out.info.tier, species = out.info.speciesName, shiny = out.info.shiny, mutation = out.info.mutation,
+                                name = Rare.cleanName(player.DisplayName)})
+                        elseif Config.RareFindBannerEnabled == true then -- BD-1121: the same announcement plus what the two-line look needs (no player name in it)
                             event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text, tier = out.info.tier, species = out.info.speciesName, shiny = out.info.shiny, mutation = out.info.mutation})
                         else
                             event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text})

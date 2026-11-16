@@ -441,7 +441,21 @@ for _, mode in {"legacy", "kit"} do
         clock += 100000
         ticks(tick, 2, {}) -- the eaten map food respawns: this draws from the seeded stream
         assert(seededDraws > builtDraws, "the respawn drew from the seeded stream (the scenario exercises it)")
-        return table.concat(fingerprint(mark, true), "\n"), seededDraws, seededSum, builtDraws, builtSum
+        -- Foods that respawn in the same tick come back in the order of a hash set (`for food in hiddenFoods`): unspecified, and with
+        -- the all-on rehearsal's wider mouth reach two or more are eaten together. Two foods then trade the draws for their look
+        -- (art id, size) between runs, while the places stay the same. So the places and the looks are compared as two sorted sets
+        -- (a food that is missing, added or moved still differs); the seeded stream is still compared by draw count and sum below.
+        local places, looks = {}, {}
+        for _, line in fingerprint(mark, true) do
+            local fields = string.split(line, "|")
+            local xyz = string.split(fields[5], ",") -- the height follows the look (half height of the model), x and z are the place
+            table.insert(places, xyz[1] .. "," .. xyz[3])
+            fields[5] = xyz[2]
+            table.insert(looks, table.concat(fields, "|"))
+        end
+        table.sort(places)
+        table.sort(looks)
+        return table.concat(places, "\n") .. "\n--\n" .. table.concat(looks, "\n"), seededDraws, seededSum, builtDraws, builtSum
     end
     local plain, draws, sum, builtDraws, builtSum = scenario(false)
     local trail, draws2, sum2, builtDraws2, builtSum2 = scenario(true)
@@ -574,6 +588,11 @@ def script(replacements=None, dump=False, food_source=None):
         for old, new in (replacements or {}).get(path, []):
             assert old in text, 'mutant target missing in %s: %s' % (path, old)
             text = text.replace(old, new)
+        if replacements is not None and path == CONFIG:
+            # World V3 (rehearsal, Config.WorldV3Enabled on) is an island ringed by sea, where inPool() already refuses every spot past the map
+            # edge, so the FoodService extent check cannot be told apart from the sea check there. Mutants therefore run on the square legacy
+            # island (the committed Config), where the extent check is the only guard; the unmutated run above keeps the V3 world covered.
+            text = text.replace('Rehearsal.WorldV3Enabled = true', 'Rehearsal.WorldV3Enabled = false')
         return text
     out = [PRELUDE, 'local DUMP = %s\n' % ('true' if dump else 'false')]
     for name in closure():

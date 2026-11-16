@@ -5,6 +5,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local Sea = require(ReplicatedStorage.Shared.WorldSea)
+local Toon = require(ReplicatedStorage.Shared.WorldToon)
 local IslandTerrain = {}
 -- World v2: the surface material per column comes from the sub-biome map (BiomeMap) dithered with multi-octave noise, so a
 -- single grass material no longer tiles flat across the map: Grass/LeafyGrass/Mud/Ground/Sand/Sandstone/Slate/Basalt mix in
@@ -65,6 +66,23 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
             terrain:SetMaterialColor((Enum.Material :: any)[name], Color3.fromRGB(c[1], c[2], c[3]))
         end
         pcall(function() terrain.WaterColor, terrain.WaterTransparency, terrain.WaterWaveSize = Color3.fromRGB(64, 182, 214), .35, .08 end)
+    end
+    -- BD-1223 (Config.ToonWorldEnabled, Shared/WorldToon): the place carries one flat MaterialVariant per island material (authored at build
+    -- time, unbound: resources/world-materials.rbxmx); with the flag on they become the overrides, so the ground shows only its flat toon
+    -- colour (no photo grass, sand or rock). The Enum materials stay the same for footsteps, food and placement.
+    if V3 and Toon.enabled(Config) then
+        local MaterialService = game:GetService("MaterialService")
+        local bound = 0
+        for _, name in Toon.materials() do
+            local c = Toon.Palette[name]
+            local material = (Enum.Material :: any)[name] :: Enum.Material
+            terrain:SetMaterialColor(material, Color3.fromRGB(c[1], c[2], c[3]))
+            if MaterialService:FindFirstChild(Toon.VariantPrefix .. name) then
+                local ok = pcall(function() MaterialService:SetBaseMaterialOverride(material, Toon.VariantPrefix .. name) end)
+                if ok then bound += 1 end
+            end
+        end
+        workspace:SetAttribute("WorldToonVariants", bound)
     end
     -- Roblox's own grass decoration adds real 3D tufts on Grass terrain for free (no parts); not scriptable everywhere.
     pcall(function() (terrain :: any).Decoration = true end)

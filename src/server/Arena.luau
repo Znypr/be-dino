@@ -14,6 +14,8 @@ local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local WorldSea = require(ReplicatedStorage.Shared.WorldSea)
+local WorldToon = require(ReplicatedStorage.Shared.WorldToon)
+local PlazaHubLayout = require(ReplicatedStorage.Shared.PlazaHubLayout)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
@@ -396,6 +398,7 @@ function Arena.build()
     Terrain.build(if caveHub.enabled then CaveTerrain.build else nil)
     if caveHub.enabled then Biome.useHub(caveHub.biome) end
     if (Layout :: any).V3 then Biome.useV3(BiomeMap.V3) end -- BD-1209: routes, keep-outs and landmark sites of the round island
+    if WorldToon.enabled(Config) then Biome.useToonPlants(WorldToon.Swaps, WorldToon.swapList) end -- BD-1224: round glossy bushes, no spiky fronds
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do
@@ -462,6 +465,7 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
+    if V3 and PlazaHubLayout.enabled(Config) then require(script.Parent.PlazaHub).build(world, V3.CenterX, V3.CenterZ) end -- BD-1221: stalls on the plaza
     if kitMode then biomeKit(world) if V3 then v3Landmarks(world, V3) end else
     for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         local center = c * S

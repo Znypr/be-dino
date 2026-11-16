@@ -629,6 +629,8 @@ local function syncAttributes(player: Player, profile: any)
         table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
     PrivateState.set(player, "NestsJson", HttpService:JSONEncode(nestSummary))
+    -- BD-1230: the Dino Index milestones this save already got (additive field, absent = none); only with the flag on
+    if Config.IndexMilestonesEnabled == true then PrivateState.set(player, "IndexMilestonesJson", HttpService:JSONEncode(if typeof(profile.indexMilestones) == "table" then profile.indexMilestones else {})) end
     PrivateState.set(player, "RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
     PrivateState.set(player, "SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
@@ -1211,5 +1213,7 @@ require(script.Parent.ProfileShop)(ProfileRepository, shared)
 require(script.Parent.ProfileObjectives)(ProfileRepository, shared)
 require(script.Parent.ProfileGifts)(ProfileRepository, shared)
 require(script.Parent.ProfileSkins)(ProfileRepository, shared)
+-- BD-1233: one-use codes and the group gift chest (inert while Config.CodesEnabled is false)
+require(script.Parent.ProfileCodes)(ProfileRepository, shared)
 
 return ProfileRepository

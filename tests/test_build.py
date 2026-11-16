@@ -54,10 +54,20 @@ class BuildTests(unittest.TestCase):
         service = next(n for n in root.findall("Item") if n.attrib["class"] == "MaterialService")
         variants = service.findall("Item")
         # 2026-10-17: BeDino_MeadowV2 (BD-461) is packaged now that its three maps are uploaded; it has NO metalness map and stays unbound.
-        self.assertEqual(len(variants), 4)
+        # BD-1223 (2026-11-16): + ten flat toon variants BeDinoToon_<Material> (colour map only, one white image), unbound; the server binds
+        # them at runtime only with Config.ToonWorldEnabled.
+        toon = [v for v in variants if v.find("Properties/string[@name='Name']").text.startswith("BeDinoToon_")]
+        self.assertEqual(len(toon), 10)
+        self.assertEqual(len(variants), 4 + len(toon))
         for variant in variants:
             self.assertEqual(variant.attrib["class"], "MaterialVariant")
-            maps = ("ColorMap", "NormalMap", "RoughnessMap") if variant.find("Properties/string[@name='Name']").text == "BeDino_MeadowV2" else ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap")
+            name = variant.find("Properties/string[@name='Name']").text
+            if name.startswith("BeDinoToon_"):
+                self.assertEqual(variant.find("Properties/Content[@name='ColorMap']/url").text, "rbxassetid://86126915537669")
+                self.assertIsNone(variant.find("Properties/Content[@name='NormalMap']"))
+                self.assertNotIn(name, [s.text for s in service.findall("Properties/string")])  # unbound: no <Material>Name points at it
+                continue
+            maps = ("ColorMap", "NormalMap", "RoughnessMap") if name == "BeDino_MeadowV2" else ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap")
             for key in maps:
                 self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
         # BD-460 (docs/138): the BeDino_Meadow variant stays packaged with all its IDs but is NOT bound: the island uses the built-in Grass.

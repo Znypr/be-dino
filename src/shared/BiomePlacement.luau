@@ -149,6 +149,15 @@ BiomePlacement.LandmarkScale = 1.4
 -- BD-1209 (Config.WorldV3Enabled): the redesigned island's routes, keep-outs and landmark sites (Shared/WorldV3.luau, docs/241 W2/W4).
 -- Arena calls this before generate(); the spokes and the ring road stay free of blocking props, the plaza stays open, every landmark
 -- site is reserved, and the kit landmarks move onto their zone sites (the big step-3 landmarks replace them later).
+-- BD-1224 (Config.ToonWorldEnabled, Shared/WorldToon): the spiky flat-shaded ferns and horsetail leave every shrub list (also the tree-foot
+-- undergrowth and the marsh pool edge); the round glossy bushes take their share. swaps = WorldToon.Swaps, swapList = WorldToon.swapList.
+BiomePlacement.ToonSwaps = nil :: {[string]: string}?
+function BiomePlacement.useToonPlants(swaps: {[string]: string}, swapList: ({{any}}) -> {{any}})
+    BiomePlacement.ToonSwaps = swaps
+    for _, def in BiomePlacement.Biomes do
+        if def.shrubs then def.shrubs = swapList(def.shrubs) end
+    end
+end
 function BiomePlacement.useV3(V3: any)
     local paths = {}
     for _, spoke in V3.Spokes do
@@ -798,6 +807,7 @@ function BiomePlacement.generate(options): {Placement}
                 elseif lay == "shrub" then
                     id = pick(def.shrubs, n)
                     if layout and biome == "marsh" and n > .75 and layout.poolProximity(x, z) > .15 then id = "world_horsetail_a" end
+                    if BiomePlacement.ToonSwaps then id = BiomePlacement.ToonSwaps[id] or id end -- BD-1224
                     -- BD-463 step 2: in fern and conifer biomes about 1 in 3 old ferns becomes the fern plant, the rest are dropped (the plant has 4x the triangles)
                     if hasFern and Plants.fern.biomes[biome] and (id == "world_fern_a" or id == "world_fern_b") then
                         if BiomePlacement.hash(seed, li, ix, iz, 92) < Plants.fern.keep then id, replaced = Plants.fern.key, true else dropOld = true end

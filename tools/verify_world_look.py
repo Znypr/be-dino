@@ -7,6 +7,18 @@ column is Sand under the floor and Water up to sea level 0; the deeper floor is 
 column past FlatFrom is at SeaFloor; phones keep their classic fog. Source guards: the flag ships false once, is pinned off in the default
 profile and ON in the playtest profile, is in the rehearsal list and the manifest; the square ocean plate is only built with the flag off; the
 Atmosphere is set in the server Bootstrap before any client joins; Bootstrap.client and the hatch files are untouched.
+
+BD-1223 + BD-1224 one toy style (Config.ToonWorldEnabled, src/shared/WorldToon.luau): every island terrain material (the BiomeMap and
+WorldV3 colour tables) has a toon colour, the flat map is a real image id listed in docs/77, the palette stays soft (no channel 0 or 255);
+after useToonPlants no shrub list (every biome, the V3 beach and meadow) names a fern or horsetail, each list keeps its total weight, and the
+marsh pool edge is swapped too. Source guards: the variants are made only with the flag on and only in IslandTerrain; the swap runs after
+useV3 in Arena.
+
+BD-1221 plaza hub (Config.PlazaHubEnabled, src/shared/PlazaHubLayout.luau): four stalls, one per home station with a menu, each screen is
+the rail destination of its station (HubTravelClientRules.Stations); every piece and its prompt stands on the plaza (inside PlazaRadius - 6,
+outside the spawn circle), off the spoke paths, and stalls keep apart; every mesh key is a published CaveHubProps asset (docs/77), the sign
+word exists. Source guards: the client script returns at once with the flag off and opens only through HubTravelClient.press then
+openScreen (the rail's own "At home" rule); the server builds no visible Part (only hidden colliders and prompt anchors).
 Usage: python tools/verify_world_look.py --runner luau.exe"""
 from pathlib import Path
 import argparse
@@ -16,7 +28,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-FLAGS = {'RealSeaEnabled': 'BD-1220'}
+FLAGS = {'RealSeaEnabled': 'BD-1220', 'ToonWorldEnabled': 'BD-1223', 'PlazaHubEnabled': 'BD-1221'}
 
 
 def read(path):
@@ -77,6 +89,69 @@ for a = 0, 355, 5 do
     check(math.abs(V3.height(fx, fz) - Sea.SeaFloor) < 1e-6, "flat past FlatFrom, angle " .. a)
 end
 V3.SeaFloor, V3.SeaSlope = oldFloor, oldSlope
+-- BD-1223 ground palette
+for name in BiomeMap.Colors do check(Toon.Palette[name] ~= nil, "toon colour for island material " .. name) end
+for name in V3.Colors do check(Toon.Palette[name] ~= nil, "toon colour for V3 material " .. name) end
+for name, c in Toon.Palette do
+    for i = 1, 3 do check(c[i] >= 40 and c[i] <= 245, "soft toon colour " .. name) end
+end
+check(string.match(Toon.FlatMap, "^rbxassetid://[1-9]%d+$") ~= nil, "flat map is an image id")
+check(Toon.enabled({WorldV3Enabled = true, ToonWorldEnabled = true}) and not Toon.enabled({ToonWorldEnabled = true}), "toon flag needs World V3")
+-- BD-1224 plants
+local SPIKY = {world_fern_a = true, world_fern_b = true, world_horsetail_a = true}
+for id in SPIKY do check(Toon.Swaps[id] ~= nil and not SPIKY[Toon.Swaps[id]], "spiky plant swapped to a round one: " .. id) end
+Biome.useV3(V3) -- the V3 beach and meadow lists too
+local before = {}
+for name, def in Biome.Biomes do
+    local total = 0 for _, e in def.shrubs or {} do total += e[2] end
+    before[name] = total
+end
+Biome.useToonPlants(Toon.Swaps, Toon.swapList)
+for name, def in Biome.Biomes do
+    local total = 0
+    for _, e in def.shrubs or {} do
+        total += e[2]
+        check(not SPIKY[e[1]], "no spiky plant left in " .. name .. ": " .. e[1])
+    end
+    check(math.abs(total - before[name]) < 1e-9, "shrub weight kept in " .. name)
+end
+check(Biome.ToonSwaps == Toon.Swaps, "marsh pool edge swap is on")
+-- BD-1221 plaza hub
+local seen, points = {}, {}
+for _, st in Plaza.Stalls do
+    check(Travel.Stations[st.screen] == st.station, "stall screen is the rail destination of its station: " .. st.station)
+    check(not seen[st.station], "one stall per station") seen[st.station] = true
+    check(Signs.Signs[st.station] ~= nil and Signs.Signs[st.station] ~= "", "sign word for " .. st.station)
+    local list = {Plaza.Sign, {at = Plaza.PromptAt}}
+    for _, p in st.props do table.insert(list, p) check(Hub.assetId(p.key) ~= nil, "published mesh: " .. p.key) end
+    for _, p in list do
+        local x, z = Plaza.place(st, p.at, V3.CenterX, V3.CenterZ)
+        local r = math.sqrt((x - V3.CenterX) ^ 2 + (z - V3.CenterZ) ^ 2)
+        check(r < V3.PlazaRadius - 6 and r > 24, "on the plaza, clear of the spawn: " .. st.station .. " r=" .. math.floor(r))
+        check(V3.path(x, z) < .5 or r < V3.PlazaRadius, "off the spoke paths: " .. st.station)
+        for _, sp in V3.Spokes do
+            local a = math.rad(sp.angle)
+            local across = math.abs(-(x - V3.CenterX) * math.sin(a) + (z - V3.CenterZ) * math.cos(a))
+            local along = (x - V3.CenterX) * math.cos(a) + (z - V3.CenterZ) * math.sin(a)
+            check(along < 0 or across > V3.PathHalfWidth + 3, "not on the spoke line " .. sp.angle .. ": " .. st.station)
+        end
+    end
+    local cx, cz = Plaza.place(st, {0, 0}, V3.CenterX, V3.CenterZ)
+    for _, q in points do check((q[1] - cx) ^ 2 + (q[2] - cz) ^ 2 > 30 * 30, "stalls keep apart") end
+    table.insert(points, {cx, cz})
+end
+check(#Plaza.Stalls == 4 and Hub.assetId(Plaza.Sign.key) ~= nil, "four stalls and a published sign mesh")
+-- LEAD 2026-11-16 option A: in a run only POTIONS opens; the home-only stalls say the HOME line
+local homeOnly = 0
+for _, st in Plaza.Stalls do
+    local dim = Travel.dimmed(st.screen, true, "Active")
+    if dim then homeOnly += 1 end
+    check(Plaza.promptText(dim) == (if dim then Plaza.HomeLine else "Open"), "prompt words for " .. st.station)
+    check(not Travel.dimmed(st.screen, true, "Sanctuary"), "at home every stall says Open: " .. st.station)
+end
+check(homeOnly == 3 and not Travel.dimmed("potions", true, "Active"), "in a run three stalls are home-only, POTIONS opens")
+check(#Plaza.HomeLine <= Signs.BubbleLineMax and string.find(Plaza.HomeLine, "HOME", 1, true) ~= nil, "short HOME line that names the HOME button")
+check(Plaza.enabled({WorldV3Enabled = true, PlazaHubEnabled = true}) and not Plaza.enabled({PlazaHubEnabled = true}), "plaza flag needs World V3")
 if #fails > 0 then for _, f in fails do print("FAIL: " .. f) end error("world look checks failed") end
 print("World look checks passed")
 '''
@@ -100,6 +175,45 @@ def static_checks():
     boot = read('src/server/Bootstrap.server.luau')
     if 'if Sea.enabled(Config) then local A = Sea.Atmosphere' not in boot or boot.index('Sea.Atmosphere') > boot.index('Arena.build()'):
         errors.append('the Atmosphere must be set in the server Bootstrap before Arena.build (before a client joins)')
+    terrain_src = read('src/server/IslandTerrain.luau')
+    if 'if V3 and Toon.enabled(Config) then' not in terrain_src or 'SetBaseMaterialOverride(material, Toon.VariantPrefix .. name)' not in terrain_src:
+        errors.append('IslandTerrain must bind the toon variants only with ToonWorldEnabled (and World V3)')
+    for path in (ROOT / 'src').rglob('*.luau'):
+        rel = path.relative_to(ROOT).as_posix()
+        if 'Instance.new("MaterialVariant")' in read(rel):
+            errors.append('%s: game scripts cannot write MaterialVariant.BaseMaterial; author variants in resources/world-materials.rbxmx' % rel)
+    import json
+    bindings = json.loads(read('resources/visual-upgrade-bindings.json'))['worldMaterials']
+    toon_names = re.findall(r'^    (\w+) = \{\d+, \d+, \d+\},', read('src/shared/WorldToon.luau'), re.M)
+    flat = re.search(r'rbxassetid://(\d+)', read('src/shared/WorldToon.luau')).group(1)
+    for name in toon_names:
+        entry = [m for m in bindings if m['name'] == 'BeDinoToon_' + name]
+        if len(entry) != 1 or entry[0]['base'] != name or entry[0]['color'] != flat or entry[0].get('bound', True) is not False:
+            errors.append('worldMaterials needs one unbound BeDinoToon_%s on %s with the flat map %s' % (name, name, flat))
+    if len(toon_names) != 10 or read('resources/world-materials.rbxmx').count('BeDinoToon_') < 10:
+        errors.append('world-materials.rbxmx must carry the 10 toon variants (python tools/bind_visual_assets.py)')
+    arena_src = read('src/server/Arena.luau')
+    swap = 'if WorldToon.enabled(Config) then Biome.useToonPlants(WorldToon.Swaps, WorldToon.swapList) end'
+    if swap not in arena_src or arena_src.index(swap) < arena_src.index('Biome.useV3(BiomeMap.V3)'):
+        errors.append('Arena must swap the plants with ToonWorldEnabled, after useV3')
+    toon = read('src/shared/WorldToon.luau')
+    image = re.search(r'rbxassetid://(\d+)', toon).group(1)
+    decal = re.search(r'Decal (\d+)', toon).group(1)
+    registry = read('docs/77-asset-registry.md')
+    if image not in registry or decal not in registry:
+        errors.append('the flat map ids (image %s, decal %s) need a docs/77 line' % (image, decal))
+    client = read('src/client/PlazaHub.client.luau')
+    head = '\n'.join(client.split('\n')[:10])
+    if 'if not Layout.enabled(Config) then return end' not in head:
+        errors.append('PlazaHub.client must return on its first lines with the flag off')
+    if 'if Travel.press(screen, true) then return end' not in client or 'Travel.openScreen(screen)' not in client:
+        errors.append('the plaza prompts must open through HubTravelClient.press then openScreen (the rail rule)')
+    for banned in ('RemoteEvent', 'FireServer', 'InvokeServer', 'DataStore'):
+        if banned in client:
+            errors.append('PlazaHub.client is presentation only: %s found' % banned)
+    server = read('src/server/PlazaHub.luau')
+    if server.count('Instance.new("Part")') != 2 or 'Instance.new("MeshPart")' in server:
+        errors.append('PlazaHub builds no visible Part: only the hidden collider and the prompt anchor')
     weather = read('src/client/WeatherVisuals.client.luau')
     if 'Sea.enabled(require(Shared.Config)) and Sea.clearFog(deviceClass)' not in weather:
         errors.append('WeatherVisuals must take the clear fog from WorldSea only with the flag on')
@@ -131,7 +245,11 @@ def main():
     problems = static_checks()
     for p in problems:
         print('FAIL:', p)
-    source = ('local V3=' + module(read('src/shared/WorldV3.luau')) + '\nlocal Sea=' + module(read('src/shared/WorldSea.luau')) + '\n' + LUAU)
+    source = ('local V3=' + module(read('src/shared/WorldV3.luau')) + '\nlocal Sea=' + module(read('src/shared/WorldSea.luau')) +
+              '\nlocal Toon=' + module(read('src/shared/WorldToon.luau')) + '\nlocal BiomeMap=' + module(read('src/shared/BiomeMap.luau')) +
+              '\nlocal Biome=' + module(read('src/shared/BiomePlacement.luau')) + '\nlocal Plaza=' + module(read('src/shared/PlazaHubLayout.luau')) +
+              '\nlocal Hub=' + module(read('src/shared/CaveHubProps.luau')) + '\nlocal Signs=' + module(read('src/shared/HubSignCopy.luau')) +
+              '\nlocal Travel=' + module(read('src/shared/HubTravelClientRules.luau')) + '\n' + LUAU)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'world_look.luau'
         path.write_text(source, encoding='utf-8')
