@@ -212,6 +212,11 @@ return table.freeze({
     -- nest egg finishes during play (src/client/EggReadyCue.client.luau, in game only). Client presentation only: nothing is stored, sent or
     -- decided. false = the game exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     PlayCuesEnabled = false,
+    -- BD-1220 (docs/242 benchmark gap 5, rule W9): true = with WorldV3Enabled the sea is real terrain water out to the fog (Shared/WorldSea):
+    -- a deeper floor past the beach, no 6000-stud square ocean plate, and in clear weather on desktop and tablet the classic fog sits past
+    -- the sea while the Atmosphere gives the depth (phones keep their tight fog). Terrain and lighting only: no save, economy or reward change.
+    -- false = the sea exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    RealSeaEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

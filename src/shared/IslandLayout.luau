@@ -92,5 +92,8 @@ if okConfig and type(Config) == "table" and (Config :: any).WorldV3Enabled == tr
     IslandLayout.V3 = true
     IslandLayout.height, IslandLayout.inPool, IslandLayout.poolProximity = V3.height, V3.inPool, V3.poolProximity
     IslandLayout.Pools, IslandLayout.Basins, IslandLayout.Peaks, IslandLayout.Hills = V3.Pools, {}, {}, {}
+    -- BD-1220 (Config.RealSeaEnabled): a deeper sea floor past the beach (Shared/WorldSea); off = the -6 shelf as before.
+    local Sea = require(script.Parent.WorldSea) :: any
+    if Sea.enabled(Config) then V3.SeaFloor, V3.SeaSlope = Sea.SeaFloor, Sea.SeaSlope end
 end
 return IslandLayout

@@ -63,6 +63,12 @@ local fogCap=(function():number
     if not culling or not culling.Enabled then return WL.fogCap(nil) end
     return WL.capFor(deviceClass,culling[deviceClass].radius)
 end)()
+-- BD-1220 (Config.RealSeaEnabled, Shared/WorldSea): clear weather has no classic fog on desktop and tablet; the Atmosphere gives the depth
+local seaClear:any=nil
+do
+    local Sea=require(Shared.WorldSea) local far=Sea.enabled(require(Shared.Config)) and Sea.clearFog(deviceClass)
+    if far then seaClear=table.clone(CLEAR) seaClear.fogStart,seaClear.vis=far.fogStart,far.fogEnd CLEAR=seaClear fogCap=math.max(fogCap,far.fogEnd) end
+end
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
 
 -- ---------------------------------------------------------------- weather parts (docs/153); the flash / shake / pulse the one-shots raise are shared through fx
@@ -117,6 +123,7 @@ RunService.Heartbeat:Connect(function(dt)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
+    if seaClear and look==WL.Looks.clear then look=seaClear end -- BD-1220: the same clear look with the far fog
     local outside=1-Cave.amount() -- BD-383: weather grade, bloom, rays, haze, exposure and lamps fade to nothing inside the cave hall
     local t=WL.strength(k,Theme.MotionEnabled)*outside
     local animT=if Theme.MotionEnabled then now else 0
