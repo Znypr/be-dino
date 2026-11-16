@@ -253,66 +253,66 @@
   {
    "name": "Hatch: egg",
    "group": "hatch",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-egg.jpg",
+   "shot": "docs/evidence/2026-11-16-hatch-finish/bucket-2-can-pour.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
     "R4": "-",
     "R5": "P",
     "R6": "P",
-    "R7": "F",
+    "R7": "P",
     "R8": "P"
    },
-   "note": "window on studs, dark chip"
+   "note": "full stage; 3D pail and can pour the egg colours; cream chips"
   },
   {
    "name": "Hatch: Common pop",
    "group": "hatch",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-common.jpg",
+   "shot": "docs/evidence/2026-11-16-hatch-finish/hatch-common.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
     "R4": "P",
     "R5": "P",
     "R6": "P",
-    "R7": "F",
-    "R8": "F"
+    "R7": "P",
+    "R8": "P"
    },
-   "note": "text on studs, Drag pill outside"
+   "note": "ribbon, big dino on pedestal, name plate, one green NEXT"
   },
   {
    "name": "Hatch: Legendary",
    "group": "hatch",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/hatch-legendary.jpg",
+   "shot": "docs/evidence/2026-11-16-hatch-finish/hatch-legendary.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
     "R4": "P",
     "R5": "P",
-    "R6": "F",
-    "R7": "F",
-    "R8": "F"
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
    },
-   "note": "purple banner, other style, pill outside"
+   "note": "gold build-up first (legendary-buildup.jpg), then gold ribbon"
   },
   {
    "name": "Hatch batch end / Play again",
    "group": "hatch",
-   "shot": null,
+   "shot": "docs/evidence/2026-11-16-hatch-finish/batch-end.jpg",
    "marks": {
-    "R1": "?",
-    "R2": "?",
-    "R3": "?",
-    "R4": "?",
-    "R5": "?",
-    "R6": "?",
-    "R7": "?",
-    "R8": "?"
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
    },
-   "note": "not captured yet (BD-1199 buttons)"
+   "note": "PLAY AGAIN green, HOME grey, under the name plate"
   },
   {
    "name": "Run complete",

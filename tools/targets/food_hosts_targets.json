@@ -1,0 +1,13 @@
+{
+  "about": "BD-1238 (docs/241 W6 + W7): written targets for the V3 food map with the food at matching hosts (src/shared/FoodLayerDataV3Hosts.luau, tools/food_hosts.py), checked by tools/verify_food_hosts.py. Host shares are measured from the world geometry of the toon island: a berry inside a round bush footprint grown by bush_edge studs, a fruit under a tree crown, an amber or egg within rock_reach studs of a rock footprint or within landmark_band studs outside a landmark keep-out disc, an egg also within tree_foot_reach studs of a trunk. PROVISIONAL numbers, measured on the committed map and kept a little loose.",
+  "spacing_min": 2.8,
+  "gap_max": 25.0,
+  "gap_p95_max": 14.0,
+  "hosts": {
+    "bush_edge": 1.8,
+    "rock_reach": 3.0,
+    "landmark_band": 5.0,
+    "tree_foot_reach": 3.5,
+    "share_min": {"berry": 0.75, "fruit": 0.65, "egg": 0.62, "amber": 0.68}
+  }
+}

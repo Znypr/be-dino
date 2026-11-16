@@ -56,7 +56,8 @@ end
 local function style(o: Instance, stop: Instance)
     if not o:IsA("GuiObject") then return end
     -- the old window's flat backdrop behind the egg (HatchFx) would read as a pale box on the stage
-    if o.Name == "Backdrop" and o.Parent and o.Parent.Name == "HatchFxBack" then
+    -- (and its podium pill: the pedestal picture replaces it; on a short window it sat beside the pedestal, BD-1211)
+    if (o.Name == "Backdrop" or string.match(o.Name, "^Podium%d")) and o.Parent and o.Parent.Name == "HatchFxBack" then
         o.Visible = false -- the hatch tweens its transparency, never Visible; keep it hidden if something shows it again
         if not o:GetAttribute("StageHidden") then
             o:SetAttribute("StageHidden", true)
@@ -140,7 +141,11 @@ function Stage.apply(p: Parts)
     backdrop.Parent = p.gui.Parent
     table.insert(restore, function() backdrop:Destroy() end)
     task.delay(.2, function()
-        if state and state.restore == restore then keep(p.shade, "BackgroundTransparency", 1) end
+        if not (state and state.restore == restore) then return end
+        keep(p.shade, "BackgroundTransparency", 1)
+        table.insert(conns, p.shade:GetPropertyChangedSignal("BackgroundTransparency"):Connect(function()
+            if state and state.conns == conns and p.shade.BackgroundTransparency < 1 then p.shade.BackgroundTransparency = 1 end
+        end))
     end)
     -- a soft warm glow behind the egg (real art: the uploaded neutral radial glow plate); it breathes gently, still with Reduce Motion
     local rays = Instance.new("ImageLabel")
@@ -149,10 +154,11 @@ function Stage.apply(p: Parts)
     rays.ImageColor3, rays.ImageTransparency, rays.ZIndex = Color3.fromRGB(255, 244, 200), .35, 1 -- behind the egg and the dino, never over them
     rays.Parent = p.panel
     table.insert(restore, function() rays:Destroy() end)
+    local breathe: Tween? = nil
     if not p.reduceMotion then
-        local spin = TweenService:Create(rays, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {ImageTransparency = .55})
-        spin:Play()
-        table.insert(restore, function() spin:Cancel() end)
+        breathe = TweenService:Create(rays, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {ImageTransparency = .55})
+        breathe:Play()
+        table.insert(restore, function() if breathe then breathe:Cancel() end end)
     end
     -- BD-1212 full screen: the Blender sunburst fills the whole screen behind the egg (a child of the scrim, under the panel), turning slowly
     local sun = Instance.new("ImageLabel")
@@ -161,10 +167,11 @@ function Stage.apply(p: Parts)
     sun.Size, sun.ZIndex, sun.ImageColor3, sun.ImageTransparency = UDim2.fromScale(1.5, 1.5), 2, Color3.new(1, 1, 1), .45
     sun.Parent = backdrop
     table.insert(restore, function() sun:Destroy() end)
+    -- degrees per second (one turn a minute); the Legendary / Mythic build-up spins it up (BD-1211). Reduce Motion: it stands still.
+    local spin = {speed = 6}
     if not p.reduceMotion then
-        local turn = TweenService:Create(sun, TweenInfo.new(60, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), {Rotation = 360})
-        turn:Play()
-        table.insert(restore, function() turn:Cancel() end)
+        local turn = RunService.RenderStepped:Connect(function(dt) sun.Rotation = (sun.Rotation + spin.speed * dt) % 360 end)
+        table.insert(restore, function() turn:Disconnect() end)
     end
     -- the HUD steps aside (only the crystal counter stays, docs/240 s2 board 2): every other top-level UI piece hides while the stage is up
     for _, child in p.gui:GetChildren() do
@@ -186,7 +193,9 @@ function Stage.apply(p: Parts)
     for _, b in p.header:GetDescendants() do
         if b:IsA("GuiButton") then keep(b, "Visible", false) end
     end
-    stageParts = {gui = p.gui, shade = p.shade, panel = p.panel, body = p.body, sun = sun, glow = rays, veil = veil, reduceMotion = p.reduceMotion, restore = restore}
+    stageParts = {gui = p.gui, shade = p.shade, panel = p.panel, body = p.body, sun = sun, glow = rays, veil = veil, reduceMotion = p.reduceMotion, restore = restore,
+        spin = spin, breathe = breathe, builtUp = false, charge = 1}
+    Stage.mirrorBuckets(stageParts, keep, conns)
     -- "Egg N of M": the counter HatchSequence puts in the header becomes a cream chip at the top centre of the stage
     local function chipCounter(o: Instance)
         if o.Name ~= "EggCounter" or not o:IsA("TextLabel") then return end
@@ -218,7 +227,7 @@ function Stage.apply(p: Parts)
             end))
         end
     end
-    if not layer then
+    do -- a new HatchUiLayer (every egg of a batch builds its own) follows the style too
         table.insert(conns, p.gui.ChildAdded:Connect(function(o)
             if o.Name == "HatchUiLayer" then
                 task.defer(function() Stage.styleTree(o) end)
@@ -227,6 +236,129 @@ function Stage.apply(p: Parts)
         end))
     end
     state = {restore = restore, conns = conns}
+end
+
+-- BD-1211: the two generated 3D paint buckets (ReplicatedStorage.HatchStageBuckets, ImportedResources.loadHatchBuckets, docs/77
+-- hatch_bucket_*) replace the 2D bucket pictures. Each one follows its PaintBucket group every frame (place, tip, fade), so it stays in time
+-- with the sequence and the paint flipbooks, and its paint takes the colour the sequence gives that bucket. Bucket 1 is the tin pail, bucket 2
+-- the paint can (the two pours look different). No 3D bucket loaded = the 2D picture stays.
+Stage.BucketModels = {"pail", "can"}
+Stage.BucketView = {side = 2.3, fov = 30, lift = .55, yaw = {math.rad(-30), math.rad(30)}} -- view side in bucket sizes; camera a little above
+local function bucketView(template: BasePart, s: any, i: number): any
+    local frame = Instance.new("ViewportFrame")
+    frame.Name, frame.BackgroundTransparency, frame.AnchorPoint = "HatchStageBucket" .. i, 1, Vector2.new(.5, .5)
+    frame.ZIndex, frame.Visible = s.panel.ZIndex + 12, false
+    frame.Ambient, frame.LightColor, frame.LightDirection = Color3.fromRGB(170, 170, 170), Color3.new(1, 1, 1), Vector3.new(-.3, -1, -.5)
+    local world = Instance.new("WorldModel")
+    world.Parent = frame
+    local part = template:Clone()
+    part.Parent = world
+    local radius = part.Size.Magnitude / 2
+    local base = CFrame.Angles(0, Stage.BucketView.yaw[i] or 0, 0)
+    part.CFrame = base
+    local camera = Instance.new("Camera")
+    camera.FieldOfView = Stage.BucketView.fov
+    local distance = radius / math.tan(math.rad(Stage.BucketView.fov / 2)) * 1.05
+    camera.CFrame = CFrame.lookAt(Vector3.new(0, distance * Stage.BucketView.lift, distance), Vector3.zero)
+    camera.Parent = frame
+    frame.CurrentCamera = camera
+    frame.Parent = s.shade
+    table.insert(s.restore, function() frame:Destroy() end)
+    return {frame = frame, part = part, base = base, axis = camera.CFrame.LookVector}
+end
+function Stage.mirrorBuckets(s: any, keep: (Instance, string, any) -> (), conns: {RBXScriptConnection})
+    local folder = game:GetService("ReplicatedStorage"):FindFirstChild("HatchStageBuckets")
+    if not folder then return end
+    local views = {}
+    table.insert(conns, RunService.RenderStepped:Connect(function()
+        local front = s.panel:FindFirstChild("HatchFxFront")
+        for i = 1, 2 do
+            local group = front and front:FindFirstChild("PaintBucket" .. i)
+            local template = folder:FindFirstChild(Stage.BucketModels[i])
+            if not (group and group:IsA("CanvasGroup") and template and template:IsA("BasePart")) then continue end
+            local v = views[i]
+            if not v then
+                v = bucketView(template, s, i)
+                views[i] = v
+                for _, d in group:GetChildren() do if d:IsA("GuiObject") then keep(d, "Visible", false) end end -- the 2D picture steps aside
+            end
+            local show = group.Visible and group.GroupTransparency < .99
+            v.frame.Visible = show
+            if show then
+                local c = group.AbsolutePosition + group.AbsoluteSize / 2 - s.shade.AbsolutePosition
+                local side = group.AbsoluteSize.X * Stage.BucketView.side
+                v.frame.Position, v.frame.Size, v.frame.ImageTransparency = UDim2.fromOffset(c.X, c.Y), UDim2.fromOffset(side, side), group.GroupTransparency
+                -- the same tip as the picture: a turn about the camera's line of sight (screen clockwise = positive Rotation)
+                v.part.CFrame = CFrame.fromAxisAngle(v.axis, math.rad(group.Rotation)) * v.base
+                local cap = group:FindFirstChild("BucketPaintCap", true)
+                if cap and cap:IsA("GuiObject") then v.part.Color = cap.BackgroundColor3 end
+            end
+        end
+    end))
+end
+-- BD-1211 Legendary / Mythic build-up before the burst (calm, docs/87): the stage dims to a warm dark, the sunburst turns gold and spins up,
+-- a gold glow swells behind the egg and the egg's shake builds a little more. Reduce Motion: only the dim and the gold (no spin, no pulse,
+-- no extra shake). The watcher calls it when the rattle starts; HatchSequence puts the rarity on the body (HatchStageRarity).
+Stage.BuildUp = {ramp = 1.8, veil = .38, veilColor = Color3.fromRGB(28, 16, 4), sun = .16, glow = 1080, spinTo = 230,
+    gold = Color3.fromRGB(255, 205, 70), mythic = Color3.fromRGB(255, 110, 130), shake = 1.7}
+function Stage.buildUp()
+    local s = stageParts
+    if not s or not state or s.builtUp then return end
+    local rank = s.body:GetAttribute("HatchStageRarity")
+    if type(rank) ~= "number" or rank < 5 then return end
+    s.builtUp = true
+    local b = Stage.BuildUp
+    local tint = if rank >= 6 then b.mythic else b.gold
+    if s.breathe then s.breathe:Cancel() end
+    s.buildTweens = {}
+    local function to(o: Instance, props: {[string]: any})
+        if s.reduceMotion then for k, v in props do (o :: any)[k] = v end return end
+        local tween = TweenService:Create(o, TweenInfo.new(b.ramp, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), props)
+        table.insert(s.buildTweens, tween) -- the burst stops them (it sets its own veil and rays)
+        tween:Play()
+    end
+    to(s.veil, {BackgroundColor3 = b.veilColor, BackgroundTransparency = b.veil})
+    to(s.sun, {ImageColor3 = tint, ImageTransparency = b.sun})
+    s.glow.ImageColor3 = tint
+    to(s.glow, {Size = UDim2.fromOffset(b.glow, b.glow), ImageTransparency = .05})
+    if s.reduceMotion then return end
+    s.charge = b.shake
+    task.spawn(function()
+        local t = 0
+        while stageParts == s and s.builtUp do
+            t += task.wait()
+            s.spin.speed = 6 + (b.spinTo - 6) * math.min(1, t / b.ramp) ^ 2
+        end
+    end)
+end
+-- The dino is the star (target: about half the screen tall, reveal-target-chatgpt.png). The sequence tweens its own UIScale on the view, so
+-- the stage grows the view's SIZE (in body pixels, through the body's fit scale). Returns the view's centre and height on the screen.
+-- The reveal stack in shares of the screen height (target picture: ribbon at the top, dino, pedestal, name plate, NEXT at the bottom).
+Stage.Layout = {dinoY = .39, dinoYBig = .37, dinoH = .5, dinoHBig = .54, pedestalY = .655, plateY = .755, nextY = .885}
+function Stage.growDino(s: any, rank: number): (Vector2?, number?)
+    local v = s.body:FindFirstChild("DinosaurPreview", true)
+    if not (v and v:IsA("GuiObject")) then return nil, nil end
+    local fit = s.body:FindFirstChild("HatchBodyFit")
+    local k = if fit and fit:IsA("UIScale") then fit.Scale else 1
+    local L = Stage.Layout
+    local want = s.shade.AbsoluteSize.Y * (if rank >= 5 then L.dinoHBig else L.dinoH)
+    if v.AnchorPoint == Vector2.zero then -- grow around the middle, not the top-left corner
+        v.AnchorPoint = Vector2.new(.5, .5)
+        v.Position = v.Position + UDim2.new(v.Size.X.Scale / 2, v.Size.X.Offset / 2, v.Size.Y.Scale / 2, v.Size.Y.Offset / 2)
+    end
+    -- centre the view on the stage's dino line (the UIScale the sequence tweens scales around this centre)
+    local centre = v.AbsolutePosition + v.AbsoluteSize / 2
+    local goal = s.shade.AbsolutePosition + Vector2.new(s.shade.AbsoluteSize.X / 2, s.shade.AbsoluteSize.Y * (if rank >= 5 then L.dinoYBig else L.dinoY))
+    local move = (goal - centre) / k
+    if move.Magnitude > 1 then v.Position = v.Position + UDim2.fromOffset(move.X, move.Y) end
+    local h = math.max(1, v.Size.Y.Offset)
+    if h * k < want - 2 then
+        local before = v.Size
+        local ratio = want / k / h
+        v.Size = UDim2.fromOffset(v.Size.X.Offset * ratio, want / k)
+        table.insert(s.restore, function() if v.Parent and v.Size ~= before then v.Size = before end end)
+    end
+    return goal - s.shade.AbsolutePosition, want
 end
 
 -- BD-1212: Bootstrap hands over what the egg holds as soon as the server answer arrives (before the burst).
@@ -273,7 +405,11 @@ function Stage.reveal()
     pcall(Stage.crackBurst)
     local rank = math.clamp(info.rarity or 1, 1, #Stage.Ladder)
     local tier = Stage.Ladder[rank]
-    local restore = s.restore
+    -- everything this reveal adds is undone by the next egg (Stage.nextEgg) or when the stage closes
+    if s.reveal then Stage.clearReveal(s) end
+    local restore: {() -> ()} = {}
+    s.reveal, s.revealConns = restore, {}
+    table.insert(s.restore, function() Stage.clearReveal(s) end)
     local color: Color3 = if info.failed then Color3.fromRGB(220, 220, 220) else (info.color or Color3.new(1, 1, 1))
     s.sun.ImageColor3 = if rank <= 1 then Color3.new(1, 1, 1) else color:Lerp(Color3.new(1, 1, 1), .15)
     s.sun.ImageTransparency = tier.rays
@@ -281,9 +417,10 @@ function Stage.reveal()
     s.veil.BackgroundTransparency = tier.veil
     if rank >= 5 then s.veil.BackgroundColor3 = Color3.fromRGB(60, 34, 0) end
     -- keep something hidden for the rest of this reveal even if the sequence shows it again (it fades labels in after the burst)
-    local function hold(o: GuiObject)
+    -- forever = for as long as the stage is up (the "You hatched a ..." plate is the ribbon's job on every egg of a batch)
+    local function hold(o: GuiObject, forever: boolean?)
         o.Visible = false
-        table.insert(state.conns, o:GetPropertyChangedSignal("Visible"):Connect(function() if o.Visible and stageParts == s then o.Visible = false end end))
+        table.insert(if forever then state.conns else s.revealConns, o:GetPropertyChangedSignal("Visible"):Connect(function() if o.Visible and stageParts == s then o.Visible = false end end))
     end
     -- the big word replaces the "You hatched a ..." banner and the "Egg N of M" chip while the dino is shown
     local function scan()
@@ -291,7 +428,7 @@ function Stage.reveal()
         for _, d in s.panel:GetDescendants() do
             if d:IsA("TextLabel") and d.Visible and (string.find(d.Text, "You hatched a", 1, true) or d.Name == "EggCounter") then
                 local plate = d.Parent
-                hold(if plate and plate:IsA("Frame") and plate ~= s.panel and plate ~= s.body and plate.AbsoluteSize.X < 700 then plate else d)
+                hold(if plate and plate:IsA("Frame") and plate ~= s.panel and plate ~= s.body and plate.AbsoluteSize.X < 700 then plate else d, d.Name ~= "EggCounter")
             end
         end
     end
@@ -322,7 +459,9 @@ function Stage.reveal()
         end)
     end
     local bannerTint = if info.failed then Color3.fromRGB(200, 200, 200) elseif rank <= 1 then Color3.fromRGB(255, 205, 70) else color:Lerp(Color3.new(1, 1, 1), .12)
-    local bw = math.min(screen.X * .3, 520)
+    -- sizes follow the shorter side too, so the stack (ribbon, dino, pedestal, plate, NEXT) fits a short phone-landscape screen
+    local fitY = math.min(1, screen.Y / 793)
+    local bw = math.min(screen.X * .3, 520 * fitY)
     local banner = art("HatchStageBanner", Stage.Art.ribbon, Vector2.new(bw, bw * 167 / 444), Vector2.new(screen.X / 2, bw * 167 / 444 / 2 + 6), s.panel.ZIndex + 30, bannerTint)
     banner.Rotation = tier.tilt * .5
     local word = Instance.new("TextLabel")
@@ -335,32 +474,23 @@ function Stage.reveal()
     outline.Parent = word
     word.Parent = banner
     pop(banner, 0)
-    -- the dino is the star: its 3D view grows by a third on the stage (more for Legendary and up), with a little overshoot
-    for _, v in s.body:GetDescendants() do
-        if v:IsA("ViewportFrame") and v.AbsoluteSize.X > 200 and not v:FindFirstChild("StageGrow") then
-            if v.AnchorPoint == Vector2.zero then -- grow around the middle, not the top-left corner
-                v.AnchorPoint = Vector2.new(.5, .5)
-                v.Position = v.Position + UDim2.new(v.Size.X.Scale / 2, v.Size.X.Offset / 2, v.Size.Y.Scale / 2, v.Size.Y.Offset / 2)
-            end
-            local grow = Instance.new("UIScale")
-            grow.Name, grow.Scale = "StageGrow", if s.reduceMotion then (if rank >= 5 then 1.85 else 1.6) else 1
-            grow.Parent = v
-            if not s.reduceMotion then
-                TweenService:Create(grow, TweenInfo.new(.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = if rank >= 5 then 1.85 else 1.6}):Play()
-            end
-        end
-    end
+    -- the dino is the star: its view grows to about half the screen (Stage.growDino); the Legendary build-up calms down into the reveal
+    for _, tween in s.buildTweens or {} do tween:Cancel() end
+    s.buildTweens = nil
+    s.builtUp = false
+    s.charge = 1
+    if not s.reduceMotion then s.spin.speed = if rank >= 5 then 14 else 6 end
+    s.glow.Size, s.glow.ImageTransparency = UDim2.fromOffset(760, 760), .35
     -- the dino stands on a glowing pedestal in the rarity colour (behind the panel, so behind the dino)
-    local view = s.body:FindFirstChild("DinosaurPreview", true) :: GuiObject?
-    local vc = if view then view.AbsolutePosition + view.AbsoluteSize / 2 - base else Vector2.new(screen.X / 2, screen.Y * .48)
-    local vh = if view then view.AbsoluteSize.Y else screen.Y * .4
-    local pw = math.min(screen.X * .2, 340)
-    local pedestalY = vc.Y + vh * .6 -- under the feet (the view grows around its middle)
+    local grownC = Stage.growDino(s, rank)
+    local vc = grownC or Vector2.new(screen.X / 2, screen.Y * Stage.Layout.dinoY)
+    local pw = math.min(screen.X * .2, 340 * fitY)
+    local pedestalY = screen.Y * Stage.Layout.pedestalY -- under the feet
     local pedestal = art("HatchStagePedestal", Stage.Art.pedestal, Vector2.new(pw, pw * 212 / 429), Vector2.new(vc.X, pedestalY), s.panel.ZIndex - 1,
         if rank <= 1 then Color3.fromRGB(150, 225, 255) else color:Lerp(Color3.new(1, 1, 1), .35))
     pop(pedestal, .05)
     for _, l in {info.nameLabel, info.oddsLabel, info.detailLabel} do if l then hold(l) end end
-    for _, plate in {s.body:FindFirstChild("RarityPill"), s.body:FindFirstChild("NameShine")} do
+    for _, plate in {s.body:FindFirstChild("RarityPill"), s.body:FindFirstChild("NameShine"), s.body:FindFirstChild("ClassBadge")} do
         if plate and plate:IsA("GuiObject") then hold(plate) end
     end
     -- "New pattern!" / "New colour!" ribbons become one NEW! sticker on the name plate
@@ -374,9 +504,9 @@ function Stage.reveal()
     end
     if not info.failed then
         local name = plain(if info.nameLabel then info.nameLabel.Text else "")
-        local plateW = math.min(screen.X * .2, 300)
+        local plateW = math.min(screen.X * .2, 300 * fitY)
         local plateH = plateW * 137 / 439
-        local plateC = Vector2.new(vc.X + 26, pedestalY + pw * 212 / 429 * .45 + plateH * .55)
+        local plateC = Vector2.new(vc.X + 26, screen.Y * Stage.Layout.plateY)
         local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.BackgroundTransparency, nameLabel.AnchorPoint = 1, Vector2.new(.5, .5)
@@ -406,7 +536,7 @@ function Stage.reveal()
         end
     end
     -- one big glossy NEXT exactly where "Tap for next egg" was (a picture only: the tap goes through to the hatch's own tap catcher)
-    local nextShown = false
+    local nextShown, endMoved = false, false
     local function placeNext()
     if stageParts ~= s then return end
     -- SKIP is one short word, and the dino-view RESET button never covers the stage (both are rebuilt after the burst)
@@ -414,33 +544,40 @@ function Stage.reveal()
         if (b:IsA("TextButton") or b:IsA("TextLabel")) and string.upper(b.Text) == "SKIP THE REST" then b.Text = "SKIP" end
         if b:IsA("TextButton") and (b.Name == "ResetView" or b.Text == "RESET") and b.Visible then hold(b) end
     end
-    -- the dino is the star (target: about 40% of the screen): its view grows once it exists
-    for _, v in s.body:GetDescendants() do
-        if v:IsA("ViewportFrame") and v.Name == "DinosaurPreview" and not v:GetAttribute("StageGrown") then
-            v:SetAttribute("StageGrown", true)
-            if v.AnchorPoint == Vector2.zero then
-                v.AnchorPoint = Vector2.new(.5, .5)
-                v.Position = v.Position + UDim2.new(v.Size.X.Scale / 2, v.Size.X.Offset / 2, v.Size.Y.Scale / 2, v.Size.Y.Offset / 2)
+    -- the last egg of a batch shows PLAY AGAIN / HOME instead of the tap hint: they move under the name plate (where NEXT goes)
+    local ends = s.body:FindFirstChild("EndButtons", true)
+    if not endMoved and ends and ends:IsA("GuiObject") and ends.Visible and ends.AbsoluteSize.X > 0 then
+        endMoved = true
+        local fit = s.body:FindFirstChild("HatchBodyFit")
+        local k = if fit and fit:IsA("UIScale") then fit.Scale else 1
+        local goal = s.shade.AbsolutePosition + Vector2.new(screen.X / 2, screen.Y * Stage.Layout.nextY)
+        local move = (goal - (ends.AbsolutePosition + ends.AbsoluteSize / 2)) / k
+        local before = ends.Position
+        ends.Position = ends.Position + UDim2.fromOffset(move.X, move.Y)
+        table.insert(restore, function() if ends.Parent then ends.Position = before end end)
+        -- the same glossy kit face as NEXT (green PLAY AGAIN, grey HOME)
+        local ok, Skin = pcall(require, Shared:WaitForChild("ToyboxSkin"))
+        if ok and Skin.ready("button") then
+            for _, b in ends:GetChildren() do
+                if b:IsA("TextButton") then
+                    if not Stage.isGreen(b.BackgroundColor3) then b.BackgroundColor3 = Stage.Grey end
+                    b.Text, b.TextColor3 = string.upper(b.Text), Color3.new(1, 1, 1) -- white word with the kit's ink drop, like NEXT
+                    pcall(Skin.button, b, b:FindFirstChildOfClass("UIStroke"))
+                end
             end
-            -- Roblox uses only ONE UIScale per object: grow the view's own one (or add one if it has none)
-            local grow = v:FindFirstChildOfClass("UIScale")
-            if not grow then grow = Instance.new("UIScale") grow.Parent = v end
-            local target = grow.Scale * 1.6
-            if s.reduceMotion then grow.Scale = target
-            else TweenService:Create(grow, TweenInfo.new(.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target}):Play() end
         end
     end
     if nextShown then return end
     local hint = s.body:FindFirstChild("TapHint", true) :: TextLabel?
     if hint and hint.Visible and hint.Text ~= "" then
         nextShown = true
-        local hc = hint.AbsolutePosition + hint.AbsoluteSize / 2 - base
+        local hc = Vector2.new(screen.X / 2, screen.Y * Stage.Layout.nextY) -- under the name plate (the old hint sat on it)
         hold(hint)
         local ok, Skin = pcall(require, Shared:WaitForChild("ToyboxSkin"))
         local next = Instance.new("TextButton")
         next.Name, next.Text, next.AutoButtonColor = "HatchStageNext", "NEXT", false
-        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250, 66), UDim2.fromOffset(hc.X, hc.Y)
-        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, 34, Color3.new(1, 1, 1), s.panel.ZIndex + 32
+        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250 * fitY, 66 * fitY), UDim2.fromOffset(hc.X, hc.Y)
+        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, math.max(20, math.floor(34 * fitY)), Color3.new(1, 1, 1), s.panel.ZIndex + 32
         next.Parent = s.shade
         next.Activated:Connect(function()
             -- the same tap as on the egg (HatchSequence's StageTap), never the backdrop's close
@@ -603,7 +740,7 @@ function Stage.crackCharge()
         while f.Parent and stageParts == s do
             t += task.wait()
             local k = math.min(1, t / 2.5) -- builds up over ~2.5 s, then stays at full strength
-            f.Rotation = math.sin(t * (24 + 30 * k)) * (2 + 5 * k)
+            f.Rotation = math.sin(t * (24 + 30 * k)) * (2 + 5 * k) * (s.charge or 1) -- Legendary / Mythic shake a little more (Stage.buildUp)
             glow.ImageTransparency = .9 - .75 * k
             glow.Size = UDim2.fromScale(.9 + .7 * k + .08 * math.sin(t * 9), .9 + .7 * k + .08 * math.sin(t * 9))
         end
@@ -722,12 +859,26 @@ function Stage.paintDone()
 end
 
 -- Next egg: back to the calm egg look (word gone, white rays, light veil).
+function Stage.clearReveal(s: any)
+    local list, conns = s.reveal, s.revealConns
+    s.reveal, s.revealConns = nil, nil
+    for _, c in conns or {} do c:Disconnect() end
+    if list then for i = #list, 1, -1 do pcall(list[i]) end end
+    -- the counter chip comes back for the next egg ("Egg 2 of 5"); the sequence shows its own lines again at its reveal
+    for _, d in s.panel:GetDescendants() do if d.Name == "EggCounter" and d:IsA("GuiObject") then d.Visible = true end end
+end
 function Stage.nextEgg()
     local s = stageParts
     if not s or not state then return end
+    if s.reveal then Stage.clearReveal(s) end
+    s.shade.BackgroundTransparency = 1
     for _, o in s.shade:GetChildren() do if o.Name == "HatchStageWord" or o.Name == "HatchStageWordDrop" then o:Destroy() end end
     s.sun.ImageColor3, s.sun.ImageTransparency = Color3.new(1, 1, 1), .45
     s.veil.BackgroundColor3, s.veil.BackgroundTransparency = Color3.new(0, 0, 0), Stage.Veil
+    -- back from a Legendary / Mythic build-up: calm spin, the warm glow at its normal size
+    for _, tween in s.buildTweens or {} do tween:Cancel() end
+    s.builtUp, s.charge, s.spin.speed, s.buildTweens = false, 1, 6, nil
+    s.glow.Size, s.glow.ImageColor3, s.glow.ImageTransparency = UDim2.fromOffset(760, 760), Color3.fromRGB(255, 244, 200), .35
     pending = nil
 end
 

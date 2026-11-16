@@ -829,6 +829,15 @@ Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questio
 - **Zone ambience (BD-1225):** five ProSoundEffects loops (Roblox-licensed, docs/77) per World V3 zone, crossfaded over 3 s, through the Weather (ambience) group, island runs only, quiet while a menu is open. **Unheard**: the owner judges by ear (docs/87). The volcano rumble is kept very low (0.1) because the loop reads dark when loud.
 
 
+## BD-1238: food at matching hosts on the V3 island (2026-11-16, LEAD decision, owner delegated 2026-10-16, PROVISIONAL numbers)
+- **Behind `FoodHostsEnabled`** (needs `WorldV3Enabled` and `ToonWorldEnabled`, because the round bushes only stand where the map expects them with the toon swap; off in the default build, on in the playtest profile per docs/157, in the rehearsal list). docs/241 W6 (berries on bushes, fruit under trees, eggs in nests, amber in rocks) and W7 (rarer food near rocks and landmarks).
+- **Reuse, not new parts:** the phone budget is already over (BD-1222: 4,989 parts within 300 studs vs about 3,000), so the hosts are the bushes, trees, rocks and landmark sites already placed. The V3 egg mesh is already an egg in a twig nest, so the generated `world_gen_nest` mesh stays unplaced.
+- **How:** `tools/food_hosts.py` takes the committed V3 map and moves each food to a free slot on a matching host in its own zone (berries 30 studs reach, fruit 30, eggs 45, amber 80), rare kinds first; foods with no free host stay; a gap guard sends movers back where a hole would open. Starter patches and the four lone hill-top ambers stay put.
+- **Result:** at a matching host (measured from the world geometry): berry 82% (V3 map 26%), fruit 68% (18%), egg 68% (2%), amber 73% (1%); per-zone kind counts identical; gap max 22.2 studs (V3 map 22.2); food parts within 300 studs of the plaza 2,764 -> 2,746, all parts 4,937 -> 4,941 (Studio server count, NPC noise).
+- **Not picked:** placing nest meshes (adds parts); berries raised onto the bush tops (FoodService puts food on the terrain; reach and catch rules would change).
+- **Known:** the V3 map itself is checked against the non-toon world colliders (one rock and one log differ from the toon world); the hosts map uses the toon world.
+- **Not checked on a phone** (BD-1222).
+
 ## BD-1237: cohesion step 4 (Egg chances, Food guide, weather card, toasts, confirm popups) and the step-5 UI fixes (2026-11-16, LEAD decision, owner delegated 2026-10-16)
 - **One flag, off in the default build, ON in the playtest profile** per docs/157 and in the rehearsal list: `MenusCohesionEnabled`. docs/240 order step 4 (owner 2026-11-16: "continue until everything is done"). Client presentation only; free, no Robux, no odds or economy change. Check: `tools/verify_menus_cohesion.py` (CI).
 - **Egg chances:** kid words ("1 in 4", "8 in 10", two figures) on a cream panel; the exact list stays one tap away (EXACT %), only trailing zeros dropped (36.4000% -> 36.4%, nothing rounded). Not picked: rarity chips per species (the shop egg has no rarity table today).

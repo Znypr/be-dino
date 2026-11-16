@@ -22,10 +22,10 @@
 | Fusion | home | P | P | P | P | P | P | P | P | P | BD-1237: no empty colour bar on an older dino (the card line already says Older dino) |
 | Settings | menu | P | P | P | P | - | P | P | P | P | on the rules; BD-1237: Help tab How to play grey beside the one green FOOD GUIDE (docs/evidence/2026-11-16-menus-style/after-settings-help.jpg) |
 | Food guide | menu | P | P | P | P | P | P | P | P | P | BD-1237: real V3 food meshes on cream cards, ink names and grow chips; the egg mesh now gets its RotX turn (re-capture BD-1243) |
-| Hatch: egg | hatch | F | F | P | - | P | P | F | P | F | window on studs, dark chip |
-| Hatch: Common pop | hatch | F | F | P | P | P | P | F | F | F | text on studs, Drag pill outside |
-| Hatch: Legendary | hatch | F | F | P | P | P | F | F | F | F | purple banner, other style, pill outside |
-| Hatch batch end / Play again | hatch | ? | ? | ? | ? | ? | ? | ? | ? | ? | not captured yet (BD-1199 buttons) |
+| Hatch: egg | hatch | P | P | P | - | P | P | P | P | P | full stage; 3D pail and can pour the egg colours; cream chips |
+| Hatch: Common pop | hatch | P | P | P | P | P | P | P | P | P | ribbon, big dino on pedestal, name plate, one green NEXT |
+| Hatch: Legendary | hatch | P | P | P | P | P | P | P | P | P | gold build-up first (legendary-buildup.jpg), then gold ribbon |
+| Hatch batch end / Play again | hatch | P | P | P | P | P | P | P | P | P | PLAY AGAIN green, HOME grey, under the name plate |
 | Run complete | run end | P | P | P | P | P | P | P | P | P | BD-1214: facts panel + eggs panel, real art, one green button; defeat variant not captured (combat off) |
 | Weather title card | play | P | P | - | P | P | P | - | P | P | BD-1237: white word with an ink outline and the weather icon, line in a cream chip, placed clear of the HUD plates and the toast |
 | World labels (+3 Crystals, names) | play | P | P | - | P | P | P | - | P | P | +3 Crystals above its amber, one label per close group (BD-1213); dino names/health not judged |
