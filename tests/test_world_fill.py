@@ -1,10 +1,11 @@
 """BD-1245 + BD-1246 world fill: offline source checks (the Luau checks are tools/verify_world_fill.py, in CI)."""
-import importlib.util
 import pathlib
 import re
+import sys
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools'))
 
 
 def read(path):
@@ -14,9 +15,7 @@ def read(path):
 class WorldFillTests(unittest.TestCase):
     def test_flags_ship_off_and_playtest_turns_them_on(self):
         text = read('src/shared/Config.luau')
-        spec = importlib.util.spec_from_file_location('release_profiles', ROOT / 'tools' / 'release_profiles.py')
-        profiles = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(profiles)
+        import release_profiles as profiles
         playtest = profiles.apply_profile(text, 'playtest')[0]
         for flag in ('GroundDetailEnabled', 'ThingsToDoEnabled'):
             self.assertIn(f'    {flag} = false,\n', text)
@@ -24,10 +23,10 @@ class WorldFillTests(unittest.TestCase):
             self.assertIn(flag, [key for key, _ in profiles.REHEARSAL_ON])
         self.assertEqual(profiles.verify_source(text, 'default').errors, [])
 
-    def test_nine_published_ids_with_registry_lines(self):
+    def test_eight_published_ids_with_registry_lines(self):
         items = re.findall(r'((?:fill|set)_\w+) = \{assetId = "(\d+)"', read('src/shared/WorldFill.luau'))
-        self.assertEqual(len(items), 9)
-        self.assertEqual(len({i for _, i in items}), 9)
+        self.assertEqual(len(items), 8)  # + the edge stones, which show the vegetation v2 mossy rock (lead review of #623)
+        self.assertEqual(len({i for _, i in items}), 8)
         registry = read('docs/77-asset-registry.md')
         for key, aid in items:
             self.assertIn(f'| world_gen_{key} |', registry)

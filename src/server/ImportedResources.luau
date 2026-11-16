@@ -69,7 +69,7 @@ function Import.loadGeneratedWorld(): (number, number)
     local fillGround,fillThings=Fill.groundEnabled(require(ReplicatedStorage.Shared.Config)),Fill.thingsEnabled(require(ReplicatedStorage.Shared.Config))
     for key,asset in Fill.Assets do
         local wanted=if string.sub(key,1,4)=="set_" then fillThings else fillGround
-        if wanted and Fill.ready(key) then table.insert(entries,{key=key,asset=asset}) end
+        if wanted and not asset.use and Fill.ready(key) then table.insert(entries,{key=key,asset=asset}) end
     end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset

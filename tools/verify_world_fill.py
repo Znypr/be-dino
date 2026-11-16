@@ -15,7 +15,7 @@ placements (tools/world_colliders.dump) in the pinned Luau runtime and checks:
   * the part bill near spawn (BD-1222 phone budget): ground cover dropped by the lower CoverKeep within 300 studs of spawn is more than the
     pieces added there (set pieces with their collider included), so the count goes down.
 Source guards: both flags ship false, are pinned off in the default profile, ON in the playtest profile and in the rehearsal list; Arena,
-IslandTerrain, FoodLayer, FoodGlow and the loader act only through the flag checks; Bootstrap.client is untouched; the nine generated ids
+IslandTerrain, FoodLayer, FoodGlow and the loader act only through the flag checks; Bootstrap.client is untouched; the eight generated ids
 are real, distinct and listed in docs/77; the evidence pictures exist.
 Usage: python tools/verify_world_fill.py --runner luau.exe"""
 from pathlib import Path
@@ -57,24 +57,30 @@ check(not Fill.thingsEnabled({WorldV3Enabled = true, ToonWorldEnabled = true, Ve
 check(not Fill.groundEnabled(nil) and not Fill.thingsEnabled(nil), "off for nil")
 for key in Fill.Assets do check(Fill.ready(key), "published id for " .. key) end
 
--- surface
-local changed, edge = 0, 0
+-- surface (lead review of #623: no brown on the path rim, only the grass varies)
+local changed, rim = 0, 0
 for x = -300, 300, 7 do
     for z = -270, 330, 7 do
         local h = V3.height(x, z)
         local zone = V3.zoneAt(x, z).id
-        check(Fill.surface(V3, x, z, h, "Sand") == nil and Fill.surface(V3, x, z, h, "Limestone") == nil and Fill.surface(V3, x, z, h, "Rock") == nil, "only grass columns change")
-        local s = Fill.surface(V3, x, z, h, "Grass")
-        if s then
-            changed += 1
-            check(zone == "meadow" or zone == "forest" or zone == "pine", "grass zones only (" .. zone .. ")")
-            check(s == "Ground" or s == "LeafyGrass", "earth or the other green")
-            if V3.path(x, z) > .04 then edge += 1 check(s == "Ground", "the path rim is worn earth") end
+        local onRim = V3.path(x, z) > .04
+        for _, pick in {"Grass", "LeafyGrass", "Ground", "Mud", "Sand", "Rock", "Limestone"} do
+            local s = Fill.surface(V3, x, z, h, pick)
+            check(s ~= "Ground" and s ~= "Mud", "never paints earth")
+            if s then
+                changed += 1
+                check(zone == "meadow" or zone == "forest" or zone == "pine", "grass zones only (" .. zone .. ")")
+                if onRim then
+                    check(pick ~= "Grass" and pick ~= "LeafyGrass" and s == "Limestone", "the path rim takes the path colour, grass stays grass")
+                    rim += 1
+                else
+                    check((pick == "Grass" and s == "LeafyGrass") or (pick == "LeafyGrass" and s == "Grass"), "away from the path only the grass varies")
+                end
+            end
         end
-        if Fill.surface(V3, x, z, h, "LeafyGrass") == "LeafyGrass" then check(false, "LeafyGrass never maps to itself") end
     end
 end
-check(changed > 300 and edge > 20, string.format("surface changes some grass (%d, rim %d)", changed, edge))
+check(changed > 300 and rim > 20, string.format("surface changes some grass and the rim (%d, rim %d)", changed, rim))
 
 -- ground detail and set pieces against the real island
 local blockers = {}
@@ -213,9 +219,12 @@ def source_checks():
     if 'WorldFill' in boot or 'GroundDetail' in boot or 'ThingsToDo' in boot:
         errors.append('Bootstrap.client must not change')
     registry = read('docs/77-asset-registry.md')
-    items = re.findall(r'((?:fill|set)_\w+) = \{assetId = "(\d+)"', read('src/shared/WorldFill.luau'))
-    if len(items) != 9 or len({i for _, i in items}) != 9:
-        errors.append('9 distinct published ids expected (%d)' % len(items))
+    fill = read('src/shared/WorldFill.luau')
+    items = re.findall(r'((?:fill|set)_\w+) = \{assetId = "(\d+)"', fill)
+    if len(items) != 8 or len({i for _, i in items}) != 8:
+        errors.append('8 distinct published ids expected (%d)' % len(items))
+    if 'fill_edge_stones = {assetId = "", use = "veg2_rock_mossy"' not in fill or '| world_gen_fill_edge_stones |' not in registry:
+        errors.append('the edge stones show the vegetation v2 mossy rock (the blocky generated row is rejected, still listed in docs/77)')
     for key, aid in items:
         if f'| world_gen_{key} |' not in registry or f'| {aid} |' not in registry:
             errors.append(f'docs/77 line missing for {key} ({aid})')

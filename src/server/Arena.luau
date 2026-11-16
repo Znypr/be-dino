@@ -258,7 +258,7 @@ end
 local fillCache: {[string]: Model} = {}
 local function fillModel(key: string): Model?
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
-    local template = if folder and Fill.ready(key) then folder:FindFirstChild(key) else nil
+    local template = if folder and Fill.ready(key) then folder:FindFirstChild(Fill.Assets[key].use or key) else nil
     if not template or not template:IsA("MeshPart") then return nil end
     if not fillCache[key] then
         local want, size = Fill.Assets[key].size, template.Size

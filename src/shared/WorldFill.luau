@@ -15,7 +15,9 @@ local WorldFill = {}
 -- the size it is fitted into (studs: longest side, height cap, shorter side; the longest side lies along the path) and what it is.
 WorldFill.Assets = {
     fill_pebbles = {assetId = "118507450426245", size = {5, 1.3, 4}, what = "cluster of five smooth pebbles"},
-    fill_edge_stones = {assetId = "73588589747994", size = {6, 2.4, 3}, what = "row of four rounded path edge stones with moss caps"},
+    -- Lead review of #623: the generated edge-stone row (73588589747994) came out as sharp blocky cubes, so the edge stones show the rounded
+    -- vegetation v2 mossy rock instead (use = a GeneratedWorld key loaded by VegetationV2; nothing new is uploaded or fetched for it).
+    fill_edge_stones = {assetId = "", use = "veg2_rock_mossy", size = {4.2, 2.2, 3.6}, what = "rounded mossy rock (vegetation v2) along the path edge"},
     fill_flower_patch = {assetId = "121062536751756", size = {8, 1.9, 8}, what = "round patch of soft grass clumps with daisies, buttercups and pink flowers"},
     fill_log = {assetId = "76677189977321", size = {8, 4, 3}, what = "short fallen log with moss and a red mushroom"},
     set_egg_nest = {assetId = "100943523462285", size = {12, 7, 12}, what = "twig nest with two cracked dino egg shells"},
@@ -55,6 +57,7 @@ function WorldFill.thingsEnabled(c: any): boolean return config(c, "ThingsToDoEn
 function WorldFill.ready(key: string): boolean
     local entry = WorldFill.Assets[key]
     if not entry then return false end
+    if entry.use then return true end -- shown with another family's loaded mesh (fetched by that family)
     local id = entry.assetId
     return #id >= 9 and #id <= 18 and string.match(id, "^[1-9]%d*$") == id
 end
@@ -67,18 +70,19 @@ local function hash(a: number, b: number, c: number): number
 end
 WorldFill.hash = hash
 
--- Terrain surface for a column the World V3 rules left to the biome bands (nil = keep the biome pick). Only grass zones (meadow, forest, pine);
--- the beach and the volcano keep theirs. A worn warm-earth edge along every path (one voxel wide), soft blotches of the OTHER green (the meadow
--- is mostly Grass, the forest mostly LeafyGrass, so each gets the other one) and a few small earth spots in the open grass.
+-- Terrain surface for a column the World V3 rules left to the biome bands (nil = keep the biome pick). Only the grass zones (meadow, forest, pine);
+-- the beach and the volcano keep theirs. Lead review of #623: earth on the path rim showed as hard brown voxel hexagons on the sand, so the rim
+-- takes the path colour (a brown or rock biome pick there becomes Limestone, grass stays grass) and only the grass varies: soft blotches of the
+-- OTHER green (the meadow is mostly Grass, the forest mostly LeafyGrass). No earth spots.
+local GREENS = {Grass = "LeafyGrass", LeafyGrass = "Grass"}
 function WorldFill.surface(V3: any, x: number, z: number, h: number, picked: string): string?
-    if picked ~= "Grass" and picked ~= "LeafyGrass" then return nil end
     if h > 30 then return nil end
     local zone = V3.zoneAt(x, z).id
     if zone ~= "meadow" and zone ~= "forest" and zone ~= "pine" then return nil end
-    if V3.path(x, z) > .04 then return "Ground" end -- the worn edge between the sand path and the grass
-    if math.noise(x / 13, z / 13, 5.3) > .5 then return "Ground" end -- small earth spots
+    if V3.path(x, z) > .04 then return if GREENS[picked] then nil else "Limestone" end -- the path rim: grass or path colour, never brown
+    if not GREENS[picked] then return nil end
     local blotch = math.noise(x / 34, z / 34, 9.7) + math.noise(x / 11, z / 11, 2.9) * .25
-    if blotch > .28 then return if picked == "Grass" then "LeafyGrass" else "Grass" end
+    if blotch > .28 then return GREENS[picked] end
     return nil
 end
 
