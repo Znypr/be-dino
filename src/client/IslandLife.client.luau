@@ -5,7 +5,7 @@
 -- (the V3 low-poly dinos posed with the BD-1217 clips through Shared/LowPolyPose, LowPolyGait and LowPolyClips; those files are only called).
 -- Cheap on purpose (docs/107, BD-1222): models are pooled and exist only within IslandLife.CullRadius of the camera, capped per device
 -- class; everything is anchored, CanCollide / CanTouch / CanQuery off, no Humanoid, no physics. Nothing here talks to the server, so the
--- babies can never be caught, eaten, hit or counted by the NPC predators (they live in workspace.IslandLife, not BeDinoNpcs).
+-- babies can never be caught, eaten, hit or counted by the NPC predators (they live in workspace.IslandLife, not in the NPC folder).
 -- Data and pure rules: src/shared/IslandLife.luau (tools/verify_island_life.py). Reduce Motion: no flying critters, babies stand still.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
