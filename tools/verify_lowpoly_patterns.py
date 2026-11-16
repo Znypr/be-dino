@@ -138,9 +138,9 @@ for _, id in Tier.Order do
     local e = Tier.get(id) assert(e and e.id == id, id)
     assert(e.amount > 0 and e.amount <= Tier.MaxAmount and e.trimAmount <= Tier.MaxAmount, id .. " tint pull bounded")
     assert(e.reflectance >= 0 and e.reflectance <= Tier.MaxReflectance, id .. " gloss bounded")
-    assert(e.amount >= 0.35 and e.amount <= 0.5 and e.trimAmount > e.amount, id .. " BD-326: readable at preview size, trim stronger, still calm")
+    assert(e.amount >= 0.45 and e.amount <= 0.65 and e.trimAmount > e.amount, id .. " 2026-10-16: strong enough to read at a glance, trim stronger")
     assert(e.material ~= "Neon" and e.material ~= "ForceField", id .. " no neon")
-    assert(e.sparkleRate >= 0 and e.sparkleRate <= 4, id .. " sparkle stays soft")
+    assert(e.sparkleRate > 0 and e.sparkleRate <= Tier.MaxSparkleRate and e.sparkleSize > 0 and e.sparkleSize <= 2, id .. " sparkle bounded")
     for i = 1, 3 do assert(e.tint[i] >= 0 and e.tint[i] <= 255 and e.sparkle[i] >= 0 and e.sparkle[i] <= 255) end
     -- the gene colour must still dominate: a red dino stays mostly red under every tier
     local r, g, b = Tier.blend(0.9, 0.15, 0.15, e, false)
@@ -152,8 +152,7 @@ for _, id in Tier.Order do
     -- Studio look check 2026-10-16: Diamond reads as a pale frosted version of the gene colour (satKeep) on warm species, never grey
     local dr0, dg0, db0 = Tier.blend(0.80, 0.50, 0.36, Tier.get("diamond"), false)
     local dmx, dmn = math.max(dr0, dg0, db0), math.min(dr0, dg0, db0)
-    assert((dmx - dmn) / dmx < 0.55 * 0.8 and (dmx - dmn) / dmx > 0.1, "diamond is pale but not grey")
-    assert(dmx - dmn < 0.8 - 0.36, "diamond is paler than the base colour")
+    assert((dmx - dmn) / dmx > 0.1 and dmx >= 0.7, "diamond keeps the warm colour, brighter, never grey")
     -- BD-308 baked sheen: bounded, only lifts facets the source lit (k > 1), never darkens, never pushes past white
     assert(e.sheen > 0 and e.sheen <= Tier.MaxSheen, id .. " sheen bounded")
     local lr, lg, lb = Tier.lift(0.5, 0.3, 0.2, 1.4, e)
@@ -162,6 +161,83 @@ for _, id in Tier.Order do
     assert(dr == 0.5 and dg == 0.3 and db == 0.2, id .. " shadow facets untouched")
     assert(select(1, Tier.lift(1, 1, 1, 1.6, e)) <= 1, "white stays white")
 end
+-- 2026-10-16 "Shiny + sparkles": strictly growing presence per tier, and Diamond never looks weaker than Gold
+local function hueOf(r, g, b)
+    local mx, mn = math.max(r, g, b), math.min(r, g, b)
+    local d = mx - mn
+    if d < 1e-4 or d / math.max(mx, 1e-6) < 0.12 then return -1 end
+    local h = if mx == r then ((g - b) / d) % 6 elseif mx == g then (b - r) / d + 2 else (r - g) / d + 4
+    return h / 6
+end
+local function luma(r, g, b) return 0.2126 * r + 0.7152 * g + 0.0722 * b end
+local function sat(r, g, b) local mx, mn = math.max(r, g, b), math.min(r, g, b) return if mx > 0 then (mx - mn) / mx else 0 end
+local prev = nil
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    if prev then
+        assert(e.reflectance > prev.reflectance and e.sheen > prev.sheen and e.sparkleRate > prev.sparkleRate and e.sparkleSize > prev.sparkleSize, id .. " gloss/sheen/sparkle grow per tier")
+        assert(e.sparkleCount > prev.sparkleCount and e.sparkleCount <= Tier.MaxSparkleCount, id .. " concurrent twinkles grow per tier")
+    end
+    prev = e
+end
+local gold, emerald, diamond = Tier.get("gold"), Tier.get("emerald"), Tier.get("diamond")
+assert(gold.accentMaterial == "Metal" and emerald.accentMaterial == "Glass" and diamond.accentMaterial == "Glass" and diamond.reflectance == Tier.MaxReflectance, "glossy accent materials")
+-- 2026-10-16 FINAL owner rule: a translucent glossy tier layer exists per tier, in range, tier coloured; Diamond is icy white-blue
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    assert(e.shellTransparency >= Tier.ShellTransparency[1] and e.shellTransparency <= Tier.ShellTransparency[2], id .. " shell transparency in 0.8..0.95")
+    assert(e.shellReflectance > 0 and e.shellReflectance <= Tier.MaxShellReflectance and Tier.ShellScale > 1 and Tier.ShellScale <= 1.02, id .. " shell gloss / scale")
+    assert(e.shellMaterial ~= "Neon" and e.shellMaterial ~= "ForceField", id .. " shell not neon")
+end
+local gs, es, ds = gold.shell, emerald.shell, diamond.shell
+assert(gs[1] == 255 and gs[3] == 30 and es[2] == 255 and ds[3] == 255, "round 9: shell is the tier colour")
+local gr, er, dr = gold.rim, emerald.rim, diamond.rim
+assert(gr[1] > gr[3] + 100 and er[2] > er[1] + 80 and er[2] > er[3] and dr[3] >= dr[1] and dr[1] >= 190, "rim colours: warm gold, jewel green, icy white-cyan")
+assert(diamond.shimmer and #diamond.shimmer >= 3 and not gold.shimmer and not emerald.shimmer and diamond.shimmerSpeed > 0, "only Diamond has the rainbow shimmer")
+for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
+    local gr, gg, gb = Tier.blend(grey, grey, grey, gold, false)
+    local er, eg, eb = Tier.blend(grey, grey, grey, emerald, false)
+    local dr, dg, db = Tier.blend(grey, grey, grey, diamond, false)
+    assert(luma(dr, dg, db) >= luma(gr, gg, gb), "diamond is not darker than gold at grey " .. grey)
+    assert(sat(gr, gg, gb) >= 0.2 and sat(er, eg, eb) >= 0.2 and sat(dr, dg, db) >= 0.04, "every tier stays coloured at grey " .. grey)
+    assert(sat(gr, gg, gb) > sat(dr, dg, db) and sat(er, eg, eb) > sat(dr, dg, db), "diamond is the iciest, with the rainbow shimmer on top")
+    assert(luma(Tier.lift(dr, dg, db, 1.5, diamond)) >= luma(Tier.lift(gr, gg, gb, 1.5, gold)), "diamond highlights at least as bright as gold's")
+end
+-- accents: pattern / horn / claw pixels become the tier metal or gem, body colour keeps its hue, tiers differ clearly
+assert(gold.sparkleCount == 4 and emerald.sparkleCount == 6 and diamond.sparkleCount == 8 and gold.sparkleSize >= 1.4, "4 / 6 / 8 big twinkles")
+local blueBody = {0.15, 0.35, 0.9}
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    local br, bg, bb = Tier.blend(blueBody[1], blueBody[2], blueBody[3], e, false)
+    assert(Tier.hueDistance(hueOf(blueBody[1], blueBody[2], blueBody[3]), hueOf(br, bg, bb)) <= Tier.HueDelta + 1e-6, id .. " body hue unchanged")
+    local ar, ag, ab = Tier.accent(0.9, 0.9, 0.9, e, 1.0, 0.1)
+    local ec = e.accent
+    local want = hueOf(ec[1] / 255, ec[2] / 255, ec[3] / 255)
+    if id ~= "diamond" then
+        assert(Tier.hueDistance(hueOf(ar, ag, ab), want) <= 0.03, id .. " accent is in the tier colour")
+    else
+        assert(luma(ar, ag, ab) >= 0.6, "diamond accent icy bright")
+    end
+    assert(Tier.isAccentName("front claw_geom") and Tier.isAccentName("left horn") and not Tier.isAccentName("left eye"), "accent part names")
+end
+local ar1, ag1, ab1 = Tier.accent(0.5, 0.5, 0.5, diamond, 1, 0.0)
+local ar2, ag2, ab2 = Tier.accent(0.5, 0.5, 0.5, diamond, 1, 0.5)
+assert(math.abs(ar1 - ar2) + math.abs(ag1 - ag2) + math.abs(ab1 - ab2) > 0.05, "diamond accents are prismatic across the texture")
+-- accents are far from base: gold vs emerald vs diamond accents are mutually distinct
+local gA, eA, dA = {Tier.accent(0.5, 0.5, 0.5, gold, 1)}, {Tier.accent(0.5, 0.5, 0.5, emerald, 1)}, {Tier.accent(0.5, 0.5, 0.5, diamond, 1)}
+for _, pr in {{gA, eA}, {gA, dA}, {eA, dA}} do assert(math.abs(pr[1][1] - pr[2][1]) + math.abs(pr[1][2] - pr[2][2]) + math.abs(pr[1][3] - pr[2][3]) > 0.4, "tier accents distinct") end
+-- hue rule (coordinator, Studio evidence): blue / red / green / purple dinos keep their hue under every tier, body and pattern pixels alike
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    for _, c in {{0.15, 0.35, 0.9}, {0.9, 0.15, 0.15}, {0.2, 0.75, 0.3}, {0.6, 0.25, 0.8}, {0.9, 0.9, 0.95}, {0.1, 0.1, 0.1}, {0.84, 0.28, 0.58}} do
+        for _, sec in {false, true} do
+            local nr, ng, nb = Tier.blend(c[1], c[2], c[3], e, sec)
+            local d = Tier.hueDistance(hueOf(c[1], c[2], c[3]), hueOf(nr, ng, nb))
+            assert(d <= Tier.HueDelta + 1e-6, id .. " hue moved " .. d .. " for " .. c[1] .. "," .. c[2] .. "," .. c[3])
+        end
+    end
+end
+assert(luma(diamond.tint[1] / 255, diamond.tint[2] / 255, diamond.tint[3] / 255) > luma(gold.tint[1] / 255, gold.tint[2] / 255, gold.tint[3] / 255), "diamond tint brighter than gold tint")
 assert(Recolor.shade(0.9, 0.9, 0.9, base) == 1.6 and Recolor.shade(0.01, 0.01, 0.01, base) == 0.3, "shade clamp")
 assert(Tier.get("base") == nil and Tier.get(nil) == nil and Tier.get(false) == nil and Tier.get(true) == Tier.get("gold"), "stage mapping")
 -- 3. the cheap fallback tint keeps black black and reproduces the gene colour on the base colour
@@ -169,6 +245,63 @@ local fr, fg, fb = Recolor.flatTint(base, 0.9, 0.2, 0.2)
 assert(fr >= 0 and fr <= 1 and fg >= 0 and fg <= 1 and fb >= 0 and fb <= 1)
 assert(fr == 1 and math.abs(base[2] * fg - 0.2) < 0.02 and math.abs(base[3] * fb - 0.2) < 0.02, "fallback tint off") -- a multiply can only darken: red stays the texture red, green/blue drop to the gene value
 assert(0 * fr == 0, "eyes stay black")
+-- 2026-10-16 round 3: accent regions (horns / frill / crest / spikes / claws baked into the textures)
+for _, sp in {"compy", "raptor", "triceratops", "tyrannosaurus", "stegosaurus", "ankylosaurus", "pteranodon"} do
+    local list = Tier.AccentRegions[sp]
+    assert(list and #list >= 1, sp .. " has horn / claw regions")
+    for _, bx in list do
+        assert(#bx == 6 and bx[1] >= 0 and bx[1] < bx[2] and bx[3] < bx[4] and bx[5] < bx[6], sp .. " box well formed")
+        assert(bx[2] <= 0.6 and bx[4] <= 0.6 and bx[3] >= -0.6 and bx[5] >= -0.6 and bx[6] <= 0.6, sp .. " box inside the normalised model")
+        local cx, cy, cz = (bx[1] + bx[2]) / 2, (bx[3] + bx[4]) / 2, (bx[5] + bx[6]) / 2
+        assert(Tier.inAccentRegion(sp, cx, cy, cz) and Tier.inAccentRegion(sp, -cx, cy, cz), sp .. " accent texels exist (and mirror)")
+        assert(not Tier.inAccentRegion(sp, cx, cy + 5, cz), sp .. " outside is not accent")
+        -- accent texels take the tier colour, body texels (blue triceratops) keep their hue
+        for _, id in Tier.Order do
+            local e = Tier.get(id)
+            local ar, ag, ab = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, cy, cx, cz)
+            local want = hueOf(e.accent[1] / 255, e.accent[2] / 255, e.accent[3] / 255)
+            if id ~= "diamond" then assert(Tier.hueDistance(hueOf(ar, ag, ab), want) <= 0.05, sp .. " " .. id .. " region is tier coloured") end
+            assert(ar >= 0 and ar <= 1 and ag >= 0 and ag <= 1 and ab >= 0 and ab <= 1)
+            local br, bg, bb = Tier.blend(0.35, 0.45, 0.8, e, false)
+            assert(Tier.hueDistance(hueOf(0.35, 0.45, 0.8), hueOf(br, bg, bb)) <= Tier.HueDelta + 1e-6, sp .. " body hue unchanged")
+        end
+    end
+end
+-- round 4: shiny accents have a dark -> bright ramp and a crisp highlight band, not flat paint
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    local lo, hi, bandMax, bandMin = 2, -1, 0, 1
+    for i = 0, 40 do
+        local y = -0.4 + i * 0.02
+        local rr, gg, bb = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, y, 0.1, 0.05)
+        local l = luma(rr, gg, bb)
+        lo, hi = math.min(lo, l), math.max(hi, l)
+        local h = Tier.highlight(0.1, y, 0.05)
+        bandMax, bandMin = math.max(bandMax, h), math.min(bandMin, h)
+    end
+    assert(hi - lo >= 0.12, id .. " accent has a brightness ramp")
+    assert(bandMax >= 0.95 and bandMin <= 0.05, id .. " accent has a crisp specular band")
+    local dr, dg, db = Tier.regionColor(0.5, 0.5, 0.5, e, 0.6, 0.3, -0.4, 0.1, 0.05)
+    local br2, bg2, bb2 = Tier.regionColor(0.5, 0.5, 0.5, e, 1.6, 0.3, 0.4, 0.1, 0.05)
+    assert(luma(br2, bg2, bb2) > luma(dr, dg, db) + 0.1, id .. " dark -> bright")
+end
+local g1 = {Tier.regionColor(0.5, 0.5, 0.5, Tier.get("gold"), 1, 0.3, 0.1, 0.1, 0.05)}
+assert(g1[1] > g1[3] + 0.2, "gold ramp is warm")
+local e1 = {Tier.regionColor(0.5, 0.5, 0.5, Tier.get("emerald"), 1, 0.3, 0.1, 0.1, 0.05)}
+assert(e1[2] > e1[1] + 0.1 and e1[2] > e1[3], "emerald ramp is green")
+assert(Tier.isAccentName("Triceratops horn") and Tier.Ramps.diamond, "horn parts are tinted per tier")
+assert(not Tier.inAccentRegion("nope", 0, 0, 0) and not Tier.inAccentRegion(nil, 0, 0, 0), "unknown species: no accent")
+assert(Tier.sparkleAlive(diamond, true) * 2 == Tier.sparkleAlive(diamond, false) and Tier.sparkleAlive(diamond, false) <= 12, "sparkle count bounded")
+-- final rule: only horns and claws / toes are accent regions (every box is small; frill / nose / feet / plates are not listed)
+for sp, list in Tier.AccentRegions do assert(#list <= 2, sp .. " only horn / claw boxes") end
+assert(not Tier.isAccentName("frill") and not Tier.isAccentName("crest"), "frill / crest are body")
+-- round 6: Gold / Diamond shells clearly visible (<= 0.55), brow horns (|x| .07-.17, z -.40..-.22, y .18-.35) covered, nose box small
+for _, pt in {{0.08, 0.30, -0.37}, {0.13, 0.33, -0.37}, {0.16, 0.25, -0.30}, {0.10, 0.20, -0.24}, {-0.15, 0.30, -0.36}} do
+    assert(Tier.inAccentRegion("triceratops", pt[1], pt[2], pt[3]), "brow horn texel covered " .. pt[1] .. "," .. pt[2] .. "," .. pt[3])
+end
+local nose = Tier.AccentRegions.triceratops[2]
+assert(nose[2] <= 0.06 and nose[4] - nose[3] <= 0.12 and nose[6] - nose[5] <= 0.16, "nose box limited to the nose horn")
+assert(not Tier.inAccentRegion("triceratops", 0.0, 0.0, -0.46), "snout tip is body")
 print("lowpoly pattern tests passed")
 '''
 
@@ -182,6 +315,33 @@ def check_key():
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'Enum.Material.Plastic, 0' in dinos and 'Tier.MaxReflectance' in dinos, "base matte / tier gloss bounded (BD-173)"
     assert 'function LowPoly.applyTier' in dinos
+    paint = text[text.index('function Texture.paint'):text.index('local function yielder')]
+    for banned in ('Tier.blend', 'Tier.lift', 'Tier.accent('):
+        assert banned not in paint, f"2026-10-16: body/pattern texels must stay the dino's own colours (no {banned} in Texture.paint)"
+    assert 'Tier.regionColor' in paint, "horn / claw texels are painted in the tier ramp"
+    assert 'LPTierShell' in dinos and 'Tier.ShellScale' in dinos and 'Transparency = math.clamp(entry.shellTransparency' in dinos, "translucent glossy shell per textured part"
+    tier = (ROOT / 'src/shared/LowPolyTier.luau').read_text(encoding='utf-8')
+    assert 'Tier.ShellTransparency = {0.4, 0.95}' in tier, "round 9: shell is a translucent tier-coloured coat"
+    for tid, rimc in (('gold', '255, 190, 60'), ('emerald', '40, 255, 140'), ('diamond', '200, 245, 255')):
+        m = re.search(tid + r' = \{id.*?shell = \{([^}]*)\}', tier, re.S)
+        assert m.group(1).strip() == {'gold': '255, 170, 30', 'emerald': '40, 255, 120', 'diamond': '150, 200, 255'}[tid], f"{tid} shell is the tier colour (round 9 live tuning)"
+        assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
+    assert 'Tier.RimTransparency = {0.1, 0.25}' in tier
+    for tid in ('gold', 'emerald', 'diamond'):  # 2026-10-17: the v2 coat maps carry the colour, so the Highlight fill starts faint (0.85) for every tier
+        blk = re.search(tid + r' = \{id = "' + tid + r'".*?\n(?=    \w+ = \{id|\})', tier, re.S).group(0)
+        assert 'outline = {' in blk and 'rimFill = 0.85' in blk, f"{tid} Highlight outline + rimFill 0.85"
+    assert re.search(r'roughness = \{gold = "rbxassetid://96432641754187", emerald = "rbxassetid://134658233071230", diamond = "rbxassetid://134658233071230"\}', tier), "per-tier roughness: gold shared, emerald / diamond gem"
+    assert 'Highlight' in dinos and 'Tier.HighlightFill, 0' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
+    assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos and 'Tier.GlowLayers' in dinos and 'Tier.BodyGloss' in dinos, "Neon glow shells on every textured part + body gloss"
+    assert 'Tier.GlowLayers[2]' in dinos and 'Tier.UseGlowShells = false' in tier, "glow shells kept but OFF (round 9), Lite: single layer"
+    assert 'BodyGloss = 0.2' in tier and 'GlowLayers' in tier, "glow layers / gloss constants"
+    lod = (ROOT / 'src/shared/EffectsLod.luau').read_text(encoding='utf-8')
+    m = re.search(r'RimHighlights = table.freeze\(\{full = (\d+), lite = (\d+), off = (\d+)\}\)', lod)
+    assert m and int(m.group(1)) < 31 and int(m.group(3)) == 0 and 'RimHighlightHardCap = 31' in lod, "Highlight budget below Roblox's 31"
+    for flag in ('CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless', 'WeldConstraint'):
+        assert flag in dinos, f"shell must set {flag}"
+    assert 'Tier.inAccentRegion' in text and 'src.pos, speciesId' in text, "Texture.paint must paint accent regions from the position map"
+    assert 'NumberSequenceKeypoint.new(0.12, sz * 1.5)' in dinos, "sparkle glint flash"
     for path in ('src/client/ResourceVisuals.client.luau', 'src/shared/DinosaurPreview.luau'):
         assert 'LowPoly.applyTier' in (ROOT / path).read_text(encoding='utf-8'), f"{path} must use the shared tier path"
     config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
