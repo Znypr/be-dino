@@ -119,6 +119,7 @@ function Screens.render(name: string)
         label(body,string.format("Eat 500 food for %d eggs. Weather can add more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
+        if Config.ScreensCohesionEnabled==true then return require(script.Parent.ScreensCohesion).tutorial({body=body,play=function() markTutorialSeen() open("home") end}) end -- BD-1214
         local steps=require(Shared.FtueCopy).tutorialSteps
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)

@@ -179,6 +179,12 @@ return table.freeze({
     -- Needs FoodArtMode = "Kit". Visual only: the same kinds, points, sizes, placement, respawn and pickup rules; a mesh that fails to load keeps
     -- today's kit mesh. false = nothing is loaded and the food is exactly as before. Pinned off in the default profile, ON in the playtest profile.
     FoodV3Enabled = false,
+    -- BD-1214 (docs/240 order step 3): true = Run complete, Home (Sanctuary), the Welcome steps and the Loading screen follow the style rules
+    -- R1-R8 (style tile v2 board 6, v3 boards 8-10): cream panels with an ink outline (no text on the studs, no dark loading screen), one green
+    -- main button, real pictures only, the 28 / 20 / 16 / 14 type scale, short kid copy; src/client/ScreensCohesion.luau. Client presentation
+    -- only: nothing is stored, sent or decided, the buttons do what they did. false = the four screens are built exactly as before and
+    -- ScreensCohesion is never required. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    ScreensCohesionEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

@@ -385,7 +385,7 @@ def check_sources(overrides=None):
             return 'no timer or auto-start in HatchSequence: ' + word
     if 'onAgain=function(go) -- BD-371' not in boot or 'if go~=false and character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end' not in boot:
         return 'Bootstrap onAgain starts the normal run only for PLAY AGAIN and only in the Sanctuary'
-    if boot.count('startRun:FireServer()') != 4:
+    if (boot + src('src/client/HomeScreen.luau').replace('d.startRun:', 'startRun:')).count('startRun:FireServer()') != 4:  # BD-1214: Home's Explore call moved to HomeScreen
         return 'Bootstrap still has exactly the four existing start calls'
     # the server decides: the bonus is asked from the service memory, never from an argument or a client value
     for needle in ('    if Config.PlayAgainEnabled == true then\n        local askedOk', 'local askedOk, asked = pcall(function() return runStreak().bonusFor(player, runId, catchScore, runSeconds) end)', 'outcome.crystals += streakBonus',
