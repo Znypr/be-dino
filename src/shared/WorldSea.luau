@@ -43,7 +43,9 @@ function WorldSea.tiles(cx: number, cz: number, half: number): {{number}}
     return out
 end
 
--- True when a block (minimum corner {x, z}, Tile wide) overlaps the box {minX, minZ, maxX, maxZ} (the cave home's terrain box).
+-- The home's terrain box {minX, minZ, maxX, maxZ} (the cave hall shell, CaveTerrainRules XMin/ZMin/XMax/ZMax; verify_world_look checks they match).
+WorldSea.HomeBox = {-148, 452, 148, 708}
+-- True when a block (minimum corner {x, z}, Tile wide) overlaps the box {minX, minZ, maxX, maxZ} (the home's terrain box).
 function WorldSea.overlaps(tile: {number}, box: {number}): boolean
     return tile[1] < box[3] and tile[1] + WorldSea.Tile > box[1] and tile[2] < box[4] and tile[2] + WorldSea.Tile > box[2]
 end
