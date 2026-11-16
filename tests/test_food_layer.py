@@ -12,6 +12,7 @@ import compare_food_layers as cmp  # noqa: E402
 import food_pace  # noqa: E402
 import verify_food_layer as vfl  # noqa: E402
 import food_layer_data  # noqa: E402
+import food_layer_data_v3  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
 import world_colliders as wc  # noqa: E402
@@ -253,6 +254,53 @@ class CompareToolTests(unittest.TestCase):
 
     def test_the_old_and_new_layouts_share_one_total(self):
         self.assertEqual(sum(gen.COUNTS.values()), 3600)
+
+
+class V3FoodMapTests(unittest.TestCase):
+    """BD-1208 (docs/241 W8): the second food map, for the redesigned round island. tools/verify_food_layer_v3.py covers the Luau runner side."""
+    INFO = {'centre': (0.0, 30.0), 'plaza': 72.0, 'ring': 205.0, 'spokes': [(0.0, 200.0)], 'half_width': 7.0}
+
+    def test_python_copy_matches_the_luau_module_and_the_totals(self):
+        layer = worldlayer.decode(food_layer_data_v3.TEXT)
+        self.assertEqual((layer.width, layer.height, layer.world_half_width), (1000, 1000, 416.0))
+        self.assertEqual(gen.committed_text(gen.LUAU_PATH_V3), food_layer_data_v3.TEXT)
+        self.assertEqual(food_layer_data_v3.COUNTS, gen.COUNTS)
+        self.assertEqual(layer.count(), 3600)
+        self.assertNotEqual(food_layer_data_v3.TEXT, food_layer_data.TEXT)
+
+    def test_starter_patches_sit_just_outside_the_plaza_edge(self):
+        centres = gen.v3_starter_centres(self.INFO)
+        self.assertEqual(tuple(food_layer_data_v3.STARTER_CENTRES), centres)
+        for cx, cz in centres:
+            edge = math.hypot(cx, cz - 30.0) - 72.0
+            self.assertGreater(edge, 0)
+            self.assertLess(edge, 30.0)
+
+    def test_luau_data_carries_the_starter_centres_the_reader_uses(self):
+        luau = gen.LUAU_PATH_V3.read_text(encoding='utf-8')
+        for cx, cz in food_layer_data_v3.STARTER_CENTRES:
+            self.assertIn('{%g, %g}' % (cx, cz), luau)
+        self.assertIn('StarterRadius = %g' % gen.STARTER_RADIUS, luau)
+
+    def test_reader_switches_on_the_flag_and_keeps_the_old_map_otherwise(self):
+        luau = (ROOT / 'src/shared/FoodLayer.luau').read_text(encoding='utf-8')
+        self.assertIn('FoodLayerDataV3', luau)
+        self.assertIn('WorldV3Enabled == true', luau)
+        self.assertIn('FoodLayerData.Map', luau)  # flag off: the old map, as before
+
+    def test_path_distance_follows_the_ring_and_the_spokes(self):
+        self.assertAlmostEqual(gen.path_distance(self.INFO, 205.0, 30.0), 0.0)            # on the ring road
+        self.assertAlmostEqual(gen.path_distance(self.INFO, 100.0, 30.0 + 12.0), 12.0)    # beside the spoke along +x
+        self.assertAlmostEqual(gen.path_distance(self.INFO, 0.0, 30.0 + 205.0 - 15.0), 15.0)
+
+    def test_density_prefers_the_path_band(self):
+        f = gen.v3_density(self.INFO)
+        self.assertGreater(f(100.0, 30.0 + 20.0), f(100.0, 30.0 + 80.0))
+        self.assertGreater(f(0.0, 30.0 + 205.0 + 20.0), f(0.0, 30.0 + 205.0 + 80.0))
+
+    def test_default_world_is_still_the_old_island(self):
+        main = (ROOT / 'tools/generate_food_layer.py').read_text(encoding='utf-8')
+        self.assertIn("default='old'", main)
 
 
 if __name__ == '__main__':

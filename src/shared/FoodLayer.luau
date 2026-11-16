@@ -26,16 +26,30 @@ for k = 1, 24 do
 end
 FoodLayer.FallbackOffsets = table.freeze(offsets)
 
+-- BD-1208 (docs/241 W8): while Config.WorldV3Enabled is true the map is the one made for the redesigned round island (FoodLayerDataV3, same format, its own
+-- starter patches just outside the plaza edge). Flag off (or an offline runner without `script`): FoodLayerData, exactly as before.
+local function v3Data(): any?
+    local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end)
+    if okConfig and type(Config) == "table" and (Config :: any).WorldV3Enabled == true then
+        return require((script :: any).Parent.FoodLayerDataV3)
+    end
+    return nil
+end
+
 function FoodLayer.isStarter(x: number, z: number): boolean
-    for _, centre in FoodLayer.StarterCentres do
-        if (x - centre[1]) ^ 2 + (z - centre[2]) ^ 2 <= FoodLayer.StarterRadius ^ 2 then return true end
+    local v3 = v3Data()
+    local centres: any = if v3 then v3.StarterCentres else FoodLayer.StarterCentres
+    local radius: number = if v3 then v3.StarterRadius else FoodLayer.StarterRadius
+    for _, centre in centres do
+        if (x - centre[1]) ^ 2 + (z - centre[2]) ^ 2 <= radius ^ 2 then return true end
     end
     return false
 end
 
 -- The decoded map (nil and a reason when the text is not a valid layer).
 function FoodLayer.load(text: string?): (WorldLayer.Layer?, string?)
-    return WorldLayer.decode(text or FoodLayerData.Map)
+    local v3 = v3Data()
+    return WorldLayer.decode(text or (if v3 then v3.Map else FoodLayerData.Map))
 end
 
 -- Items per sector: plan[sx * sectorCount + sz] = {Item} (row by row inside a sector), and the total. Sectors are the FoodService squares:
