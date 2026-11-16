@@ -65,6 +65,13 @@ function Import.loadGeneratedWorld(): (number, number)
     -- BD-1239: the vegetation v2 family loads only with VegetationV2Enabled (+ WorldV3 + ToonWorld); an id not published yet is skipped silently.
     local Veg2=require(ReplicatedStorage.Shared.VegetationV2)
     if Veg2.enabled(require(ReplicatedStorage.Shared.Config)) then for key,asset in Veg2.Assets do if Veg2.ready(key) then table.insert(entries,{key=key,asset=asset}) end end end
+    -- BD-1245 / BD-1246: ground detail and set pieces load only with GroundDetailEnabled / ThingsToDoEnabled (ground pieces fill_*, set pieces set_*).
+    local Fill=require(ReplicatedStorage.Shared.WorldFill)
+    local fillGround,fillThings=Fill.groundEnabled(require(ReplicatedStorage.Shared.Config)),Fill.thingsEnabled(require(ReplicatedStorage.Shared.Config))
+    for key,asset in Fill.Assets do
+        local wanted=if string.sub(key,1,4)=="set_" then fillThings else fillGround
+        if wanted and not asset.use and Fill.ready(key) then table.insert(entries,{key=key,asset=asset}) end
+    end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1

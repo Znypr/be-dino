@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Lead's Studio test loop in one plain command (no shell variables, so the app's allow list can match it):
 compile every Luau source, build the playtest place to build/BeDino-WorldV3-test.rbxlx, close ONLY a Studio window that shows that
-test file (never the owner's Place1 or any other window), open the new build and wait until it is loaded.
+test file (never the owner's Place1 or any other window), open the new build on the virtual monitor (tools/monitor4.py, owner rule
+2026-11-16: Studio only there or hidden) and wait until it is loaded.
 
     python tools/studio_cycle.py            # compile + build + restart the test Studio
     python tools/studio_cycle.py --no-studio  # compile + build only
@@ -16,7 +17,6 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LUAU = pathlib.Path.home() / ".cache/be-dino/luau-0.741"
 TEST = ROOT / "build/BeDino-WorldV3-test.rbxlx"
-STUDIO_GLOB = pathlib.Path.home() / "AppData/Local/Roblox/Versions"
 
 
 def run(cmd):
@@ -51,13 +51,16 @@ def main():
     closed = powershell("Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*" + TEST.name +
                         "*' } | ForEach-Object { $_.Id; Stop-Process -Id $_.Id -Force }")
     print("closed test Studio:", closed or "none")
-    exes = sorted(STUDIO_GLOB.glob("*/RobloxStudioBeta.exe"), key=lambda p: p.stat().st_mtime, reverse=True)
-    if not exes:
-        sys.exit("Roblox Studio not found")
     time.sleep(3)
-    subprocess.Popen([str(exes[0]), str(TEST)], close_fds=True)
+    # owner 2026-11-16: test Studio windows only on the virtual monitor (or hidden); monitor4 launches, places and maximises it there
+    out = subprocess.run([sys.executable, "tools/monitor4.py", "launch", "studio", str(TEST)], cwd=ROOT, capture_output=True, text=True)
+    print((out.stdout.strip().splitlines() or [""])[-1])
+    if out.returncode != 0:
+        print(out.stderr[-800:])
+        sys.exit(out.returncode)
     time.sleep(a.wait)
-    print("Studio opened", TEST.name)
+    subprocess.run([sys.executable, "tools/monitor4.py", "place"], cwd=ROOT, capture_output=True, text=True)  # in case Studio moved itself while loading
+    print("Studio opened on the virtual monitor:", TEST.name)
 
 
 if __name__ == "__main__":

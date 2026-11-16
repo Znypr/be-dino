@@ -115,6 +115,7 @@ jobs:
           python tools/verify_vegetation_v2.py --runner /tmp/luau/luau
           python tools/verify_island_life.py --runner /tmp/luau/luau
           python tools/verify_warm_light.py --runner /tmp/luau/luau
+          python tools/verify_world_fill.py --runner /tmp/luau/luau
           python tools/verify_colossal_lod.py --runner /tmp/luau/luau
           python tools/verify_scale_ladder.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau

@@ -257,6 +257,16 @@ return table.freeze({
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     WarmLightEnabled = false,
+    -- BD-1245 (owner 2026-11-16 "game still looks empty"): true = with WorldV3Enabled, ToonWorldEnabled and VegetationV2Enabled the ground gets detail
+    -- (Shared/WorldFill): a darker grass lip along the paths and soft grass / earth patches (terrain only), generated edge stones, pebbles and a log
+    -- along each spoke, flower-and-grass patches (one mesh each) in the open grass; the single ground cover clumps are thinned to pay for them
+    -- (fewer parts near spawn overall). false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    GroundDetailEnabled = false,
+    -- BD-1246 (owner 2026-11-16 "game still looks empty"): true = with the same three flags something to do in every view (Shared/WorldFill): food
+    -- moved inside the food map grid from the far edge of each zone to little clusters along the first stretch of each spoke path (same foods, kinds
+    -- and per-zone counts; needs FoodLayerEnabled), and one generated set piece beside each spoke (egg nest, signpost, campfire, log jetty, fossil
+    -- dig). false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    ThingsToDoEnabled = false,
     -- BD-1221 (docs/242 benchmark gap 4, extends BD-1181): true = with WorldV3Enabled four stalls with big signs stand on the spawn plaza
     -- (nests, potions, shop, dinos; the cave home's own generated meshes, Shared/PlazaHubLayout) and a walk-up prompt opens that screen through
     -- the rail's own path (HubTravelClient.press, then openScreen), so a run keeps its "At home" rule. No save, economy or reward change.
