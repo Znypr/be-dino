@@ -41,6 +41,7 @@ SWP_NOZORDER = 0x0004
 SWP_NOACTIVATE = 0x0010
 SW_SHOWMAXIMIZED = 3
 SW_SHOWNORMAL = 1
+SW_SHOWNOACTIVATE = 4
 MAXIMIZE_KINDS = ("studio", "blender")  # never "edge" (the owner's browser), never Place1 (classify returns None for it)
 VIRTUAL_SIZE = (1280, 720)
 STUDIO_EXE_GLOB = "C:/Users/{user}/AppData/Local/Roblox/Versions"
@@ -175,14 +176,15 @@ def place(args) -> int:
     maximised = 0
     want_max = getattr(args, "maximize", False)
     for w in top_windows(args.edge_title):
-        if is_splash(w["title"]):
-            continue  # the Studio splash window goes away by itself
+        splash = is_splash(w["title"])  # owner 2026-11-16: the splash is moved too (it showed on the owner's screen); never maximised
         cx, cy = (w["rect"][0] + w["rect"][2]) // 2, (w["rect"][1] + w["rect"][3]) // 2
         on_virtual = contains(virt["rect"], cx, cy)
-        do_max = want_max and may_maximize(w["kind"], w["title"]) and not (on_virtual and w["maximised"])
+        do_max = want_max and not splash and may_maximize(w["kind"], w["title"]) and not (on_virtual and w["maximised"])
         if on_virtual and not do_max:
             continue
-        if w["foreground"] and not args.force_foreground:
+        # owner 2026-11-16 "stop putting them in my face": an agent Studio window (never Place1, classify() drops that one) is moved even
+        # when it has focus - a freshly launched Studio grabs focus, and skipping it left it on the owner's screen
+        if w["foreground"] and not args.force_foreground and w["kind"] != "studio":
             print("skip (has focus, owner may be using it): %s" % w["title"][:70])
             continue
         if not on_virtual:
@@ -248,16 +250,31 @@ def launch(args) -> int:
         print("STOP: could not find %s" % args.what)
         return 2
     print("starting:", " ".join(cmd))
-    subprocess.Popen(cmd)
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    si.wShowWindow = SW_SHOWNOACTIVATE  # first window shows without taking focus from the owner
+    subprocess.Popen(cmd, startupinfo=si)
     if args.what == "edge":
         args.edge_title = "*"  # a window we start ourselves is ours
-    if not getattr(args, "no_maximize", False) and args.what == "studio":
-        args.maximize = True  # BD-995: a maximised Studio gives a real 1280 x 720 style viewport instead of 500 x 465
-    for _ in range(40):  # wait up to ~2 minutes for the window
-        time.sleep(3)
+    want_max = not getattr(args, "no_maximize", False) and args.what == "studio"
+    # owner 2026-11-16 "stop putting them in my face": move the window the moment it appears (every 0.5 s, quietly), not after it loaded
+    quiet = argparse.Namespace(**{**vars(args), "maximize": False})
+    deadline = time.time() + 150
+    seen_real = None
+    while time.time() < deadline:
+        time.sleep(0.5)
+        with open(os.devnull, "w") as null:
+            old, sys.stdout = sys.stdout, null
+            try:
+                place(quiet)
+            finally:
+                sys.stdout = old
         if any(w["kind"] == args.what and not (args.what == "studio" and is_splash(w["title"])) for w in top_windows(args.edge_title)):
-            break
-    time.sleep(2)  # let the real window settle (Studio resizes itself while it loads)
+            seen_real = seen_real or time.time()
+            if time.time() - seen_real > 4:  # keep re-placing a few seconds while Studio resizes itself while it loads
+                break
+    if want_max:
+        args.maximize = True  # BD-995: a maximised Studio gives a real 1280 x 720 style viewport instead of 500 x 465
     return place(args)
 
 
