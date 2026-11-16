@@ -82,5 +82,115 @@
         </Content>
       </Properties>
     </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Basalt">
+      <Properties>
+        <string name="Name">BeDinoToon_Basalt</string>
+        <token name="BaseMaterial">788</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Grass">
+      <Properties>
+        <string name="Name">BeDinoToon_Grass</string>
+        <token name="BaseMaterial">1280</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Ground">
+      <Properties>
+        <string name="Name">BeDinoToon_Ground</string>
+        <token name="BaseMaterial">1360</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_LeafyGrass">
+      <Properties>
+        <string name="Name">BeDinoToon_LeafyGrass</string>
+        <token name="BaseMaterial">1284</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Limestone">
+      <Properties>
+        <string name="Name">BeDinoToon_Limestone</string>
+        <token name="BaseMaterial">820</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Mud">
+      <Properties>
+        <string name="Name">BeDinoToon_Mud</string>
+        <token name="BaseMaterial">1344</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Rock">
+      <Properties>
+        <string name="Name">BeDinoToon_Rock</string>
+        <token name="BaseMaterial">896</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Sand">
+      <Properties>
+        <string name="Name">BeDinoToon_Sand</string>
+        <token name="BaseMaterial">1296</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Sandstone">
+      <Properties>
+        <string name="Name">BeDinoToon_Sandstone</string>
+        <token name="BaseMaterial">912</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDinoToon_Slate">
+      <Properties>
+        <string name="Name">BeDinoToon_Slate</string>
+        <token name="BaseMaterial">800</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">64</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://86126915537669</url>
+        </Content>
+      </Properties>
+    </Item>
   </Item>
 </roblox>
