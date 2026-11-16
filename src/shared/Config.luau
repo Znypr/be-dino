@@ -206,6 +206,12 @@ return table.freeze({
     -- Client sound only: nothing is stored, sent or decided. Unheard by agents: the owner judges by ear before it ships (docs/87).
     -- false = the game sounds exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     AudioPolishEnabled = false,
+    -- BD-1226 + BD-1231 + BD-1234 (docs/242 benchmark gaps 11, 15 and 19): true = three small play cues (Shared/PlayCuesRules): a bobbing chip
+    -- on the first food, the nest with a ready egg and a stall for a new player (src/client/PointAtCue.client.luau); a "+N" rising at the dino
+    -- when it eats and a short word banner at each SIZE quarter (src/client/GrowthPop.client.luau); a toast and a number badge on EGGS when a
+    -- nest egg finishes during play (src/client/EggReadyCue.client.luau, in game only). Client presentation only: nothing is stored, sent or
+    -- decided. false = the game exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    PlayCuesEnabled = false,
     -- BD-1227 (docs/242 gap 17): true = the rare hatch news names the hatcher by Roblox display name ("Mia hatched a Legendary T-Rex!") in the
     -- two-line banner plus one plain chat line, and an Epic species makes news too. Same server rate limits as BD-428; nothing stored.
     -- false = the BD-428 / BD-1121 announcement exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free.
