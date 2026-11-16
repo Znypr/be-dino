@@ -1,0 +1,60 @@
+Action "land" in DinoClips.blend (Blender 5.1.2)
+Contact sheet: Blender Workbench renders, side view, 8 frames
+Picture: the strip png next to this file
+
+Verdicts (ok = fine, check = look at this, n/a = cannot be measured from this input)
+
+  frame rate              OK     30.00 frames per second
+  duration                OK     18 frames = 0.60 s per loop (frames 1 to 19)
+  loop continuity         CHECK  last frame repeats the first (seam step is 0.00x what its neighbours give): looping plays that pose twice
+  joint angle range       OK     biggest turn 8 degrees (tail)
+  joint speed             OK     fastest 88 degrees per second (tail)
+  jerkiness               OK     no sudden acceleration spikes
+  foot sliding            N/A    the feet hardly move (0.0% of body height): a standing clip
+  ground penetration      OK     nothing goes below the ground (lowest mesh point 0.0% above it)
+  floating                OK     the lowest point is 0.0% of body height above the ground at its closest
+  left/right foot timing  N/A    not a walk or run cycle
+  left/right swing size   OK     paired bones swing within 15% of each other
+  easing                  OK     eased (starts and stops softly): peak speed is 1.58x the average inside a move; key interpolation: bezier 100%
+
+Joint angles (degrees away from the rest pose; speed in degrees per second), biggest movers first
+  bone   min  max  range  peak speed  average speed
+  tail   0    8    8      88          41           
+  head   0    6    6      58          26           
+  arm_R  0    5    5      44          17           
+  arm_L  0    5    5      44          17           
+  neck   0    4    4      35          16           
+
+Feet (bones named like a foot): share of the cycle planted, lowest point above ground
+  foot   planted  lowest
+  neck   0%       60.5% 
+  head   0%       78.9% 
+  arm_L  100%     46.1% 
+  arm_R  100%     46.1% 
+
+Left / right pairs (how far the bone tip travels, as a share of body height; foot timing offset as a share of the cycle)
+  pair             left / right  ratio
+  arm_L / arm_R    1% / 1%       1.00 
+  leg_L / leg_R    0% / 0%       1.00 
+  wing_L / wing_R  0% / 0%       1.00 
+
+Notes
+  - Body height 3.800 units (from the standing mesh box); ground at z = 0.000.
+  - Typical frame-to-frame pose change 0.0005 body heights.
+
+Limits used (the THRESHOLDS table in tools/animation_strip.py; judgement calls, each with its reason)
+
+  frame rate              common frame rates; others get resampled on export
+  duration                seconds: shorter than 0.2 is a blink, longer than 5 is probably the wrong range selected
+  loop continuity         seam step between 10% and 2x of its neighbours, no joint jumping
+  joint angle range       under 170 degrees
+  joint speed             under 1200 degrees per second
+  jerkiness               spike over 8x average and over 2% of body height
+  foot sliding            walk and run cycles only
+  ground penetration      under 2% of body height
+  floating                under 3% (flyers and swimmers can ignore this)
+  left/right foot timing  walk and run cycles only
+  left/right swing size   ratio 0.85 to 1.15
+  easing                  between 1.15 and 2.2 (linear is 1.0, a sine is 1.57)
+
+Not judged here: feel, weight, appeal, character. Measured, not watched.
