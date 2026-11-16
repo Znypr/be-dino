@@ -59,9 +59,25 @@ local function hostsMap(): string?
     return nil
 end
 
+-- BD-1246 (Config.ThingsToDoEnabled, Shared/WorldFill): food readable from spawn. Inside the decoded grid, berries and some fruit move from the far
+-- edge of their own zone to little clusters along the first stretch of each spoke path (same foods, kinds and per-zone counts). Only the game's
+-- own map (text == nil); a map handed in by a check is returned exactly as decoded.
+local function thingsOn(): boolean
+    local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end)
+    if not okConfig or type(Config) ~= "table" or (Config :: any).FoodLayerEnabled ~= true then return false end
+    local okFill, Fill = pcall(function() return require((script :: any).Parent.WorldFill) end)
+    return okFill and Fill.thingsEnabled(Config)
+end
+FoodLayer.TrailMoved = 0
+
 function FoodLayer.load(text: string?): (WorldLayer.Layer?, string?)
     local v3 = v3Data()
-    return WorldLayer.decode(text or (if v3 then (hostsMap() or v3.Map) else FoodLayerData.Map))
+    local layer, reason = WorldLayer.decode(text or (if v3 then (hostsMap() or v3.Map) else FoodLayerData.Map))
+    if layer and text == nil and v3 and thingsOn() then
+        local Fill = require((script :: any).Parent.WorldFill)
+        FoodLayer.TrailMoved = Fill.moveFood(require((script :: any).Parent.WorldV3), WorldLayer, layer, FoodLayer.isStarter)
+    end
+    return layer, reason
 end
 
 -- Items per sector: plan[sx * sectorCount + sz] = {Item} (row by row inside a sector), and the total. Sectors are the FoodService squares:

@@ -6,6 +6,7 @@ local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local Sea = require(ReplicatedStorage.Shared.WorldSea)
 local Toon = require(ReplicatedStorage.Shared.WorldToon)
+local Fill = require(ReplicatedStorage.Shared.WorldFill) -- BD-1245
 local IslandTerrain = {}
 -- World v2: the surface material per column comes from the sub-biome map (BiomeMap) dithered with multi-octave noise, so a
 -- single grass material no longer tiles flat across the map: Grass/LeafyGrass/Mud/Ground/Sand/Sandstone/Slate/Basalt mix in
@@ -89,6 +90,7 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
     local resolution = Config.TerrainResolution
     local extent = Config.ArenaHalfWidth + 8
     local realSea = V3 ~= nil and Sea.enabled(Config)
+    local fillGround = V3 ~= nil and Fill.groundEnabled(Config)
     local floorLow = if realSea then Sea.FloorLow else -16
     local seed = Config.WorldArtSeed
     local o = .5 + (seed * .137) % 47
@@ -121,7 +123,12 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
                 local name = BiomeMap.surface(weights, height, slope, pickRoll, band, smooth(wx, wz, 21, o + 11))
                 local wet = Layout.poolProximity(wx, wz)
                 if wet > .55 and height < 3 then name = if weights.marsh > .35 then "Mud" else "Sand" end
-                if V3 then name = V3.surface(wx, wz, height) or name end
+                if V3 then
+                    local fixed = V3.surface(wx, wz, height)
+                    -- BD-1245 (Config.GroundDetailEnabled): grass lip along the paths, soft darker grass and earth patches (0 parts)
+                    if not fixed and fillGround then fixed = Fill.surface(V3, wx, wz, height, name) end
+                    name = fixed or name
+                end
                 local surface = (Enum.Material :: any)[name] :: Enum.Material
                 local deep = (Enum.Material :: any)[BiomeMap.Rock[dominant]] :: Enum.Material
                 biomeCells += 1
