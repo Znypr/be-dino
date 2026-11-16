@@ -1,0 +1,25 @@
+<roblox version="4">
+  <Item class="Model" referent="HATCH_BUCKET_SURFACES">
+    <Properties>
+      <string name="Name">HatchBucketSurfaces</string>
+    </Properties>
+    <Item class="SurfaceAppearance" referent="HATCH_BUCKET_PAIL">
+      <Properties>
+        <string name="Name">pail</string>
+        <token name="AlphaMode">0</token>
+        <Content name="ColorMap">
+          <url>rbxassetid://102974019477955</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="HATCH_BUCKET_CAN">
+      <Properties>
+        <string name="Name">can</string>
+        <token name="AlphaMode">0</token>
+        <Content name="ColorMap">
+          <url>rbxassetid://105558778837923</url>
+        </Content>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

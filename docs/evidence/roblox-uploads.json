@@ -1236,5 +1236,29 @@
     "uploaded": "2026-11-14T09:33:15Z",
     "imageId": "124623556754819",
     "note": "RGBA re-upload 2026-11-14 (the palette PNG upload never loaded); bind imageId"
+  },
+  {
+    "assetId": "132171574931097",
+    "assetType": "Decal",
+    "displayName": "bucket-pail-paintable-v1",
+    "file": "bucket-pail-paintable-v1.png",
+    "bytes": 1336939,
+    "sha256": "0fa69084506512125a1a65da7a17dc9cde2f9179ef176788dfff4d9b4aa98643",
+    "moderation": "Approved",
+    "uploaded": "2026-11-16T13:39:34Z",
+    "imageId": "102974019477955",
+    "note": "BD-1211 hatch pail: paint area see-through, SurfaceAppearance ColorMap (resources/roblox/HatchBucketSurfaces.rbxmx)"
+  },
+  {
+    "assetId": "85544584978899",
+    "assetType": "Decal",
+    "displayName": "bucket-can-paintable-v1",
+    "file": "bucket-can-paintable-v1.png",
+    "bytes": 1366436,
+    "sha256": "721ed71152d2126bbe5b7e93c171eb47493384225835d40e8b6c6ee8f2e0933e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-16T13:39:47Z",
+    "imageId": "105558778837923",
+    "note": "BD-1211 hatch can: paint area see-through, SurfaceAppearance ColorMap (resources/roblox/HatchBucketSurfaces.rbxmx)"
   }
 ]

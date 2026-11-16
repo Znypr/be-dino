@@ -939,6 +939,7 @@ function Seq.play(args: Args): Handle
         for k, v in r :: any do a[k] = v end
         rarity = math.clamp(r.rarity, 1, 5)
         failed = r.failed
+        a.body:SetAttribute("HatchStageRarity", if failed then 0 else r.rarity) -- BD-1211: the full-screen stage builds up before a Legendary / Mythic burst
         -- BD-1164: flag off = the plan is always the full show and nothing below changes. The plan reads only what the server already committed.
         local pace = Pacing.plan(Config.HatchFastCommonsEnabled == true, batch, {rarity = rarity, failed = failed, remaining = r.remaining,
             outcome = {failed = failed, shiny = r.shiny, big = r.big, eventMutationId = r.mutationId, genes = r.genes,

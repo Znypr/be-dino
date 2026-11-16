@@ -20,17 +20,23 @@ local player = Players.LocalPlayer
 task.spawn(function()
     local shards = ReplicatedStorage:WaitForChild("HatchStageShards", 60)
     if shards then pcall(function() game:GetService("ContentProvider"):PreloadAsync(shards:GetChildren()) end) end
+    -- BD-1211: the same for the two 3D paint buckets (mesh and the overlay map of their paint)
+    local buckets = ReplicatedStorage:WaitForChild("HatchStageBuckets", 60)
+    if buckets then pcall(function() game:GetService("ContentProvider"):PreloadAsync(buckets:GetDescendants()) end) end
 end)
 local gui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI") :: ScreenGui
 local shade = gui:WaitForChild("ModalScrim") :: GuiObject
 local panel = shade:FindFirstChildWhichIsA("Frame") :: Frame
 -- the header strip sits at the top of the panel, the body under it (Bootstrap builds them in that order)
+-- Bootstrap: header = box(panel, 4, 4, ...); body = the 824 x 402 content frame at (18, 98) on desktop, moved into BodyScroll on a compact
+-- (phone landscape) window by ModalCompact (BD-1211: the stage used to look for y = 98 only and never ran on a small window). Both keep the
+-- default name "Frame" (FossilTexture / HatchFx* do not).
 local header, body
 for _, child in panel:GetChildren() do
-    -- Bootstrap: header = box(panel, 4, 4, ...), body at (18, 98); both keep the default name "Frame" (FossilTexture / HatchFx* do not)
-    if child:IsA("Frame") and child.Name == "Frame" then
-        if child.Position.Y.Offset == 4 then header = child elseif child.Position.Y.Offset == 98 then body = child end
-    end
+    if child:IsA("Frame") and child.Name == "Frame" and child.Position.Y.Offset == 4 and child.Position.X.Offset == 4 then header = child end
+end
+for _, d in panel:GetDescendants() do
+    if d:IsA("Frame") and d.Name == "Frame" and d.Size == UDim2.fromOffset(824, 402) and (d.Parent == panel or d.Parent.Name == "BodyScroll") then body = d break end
 end
 assert(header and body, "hatch stage: menu window not found")
 local heading = header:FindFirstChildWhichIsA("TextLabel") :: TextLabel
@@ -65,6 +71,8 @@ local current: Instance? = nil -- the HatchFxBack of the egg on stage
 local mode = "" -- "", "hatch" or "summary"
 local WAITING = "An egg is hatching..."
 heading:GetPropertyChangedSignal("Text"):Connect(function()
+    -- BD-1211: the next egg of a batch reuses the stage: clear the last reveal (ribbon, plate, NEXT) and the build-up
+    if mode == "hatch" and heading.Text == WAITING then Stage.nextEgg() end
     if mode == "hatch" and heading.Text ~= WAITING and heading.Text ~= "" then
         local l = lines()
         if #l >= 3 then
@@ -110,9 +118,11 @@ RunService.Heartbeat:Connect(function()
                         minimal(chip)
                         if i == 1 then
                             pcall(Stage.playPaint, "pour", {colors[1]})
+                            task.delay(.6, function() if current == fx and not colors[2] then Stage.buildUp() end end) -- Legendary / Mythic: the stage starts to dim
                             task.delay(1.6, function() if current == fx and not colors[2] then Stage.crackCharge() end end)
                         else
                             pcall(Stage.playPaint, "spots", {colors[1] or colors[2], colors[2]})
+                            Stage.buildUp() -- Legendary / Mythic: the stage dims and the rays spin up while the second colour lands (about 2.4 s before the burst)
                             task.delay(1.05, function() if current == fx then Stage.crackCharge() end end) -- the 2D egg stays and starts to crack
                         end
                     end)
