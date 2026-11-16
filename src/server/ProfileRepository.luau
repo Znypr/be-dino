@@ -1211,5 +1211,7 @@ require(script.Parent.ProfileShop)(ProfileRepository, shared)
 require(script.Parent.ProfileObjectives)(ProfileRepository, shared)
 require(script.Parent.ProfileGifts)(ProfileRepository, shared)
 require(script.Parent.ProfileSkins)(ProfileRepository, shared)
+-- BD-1233: one-use codes and the group gift chest (inert while Config.CodesEnabled is false)
+require(script.Parent.ProfileCodes)(ProfileRepository, shared)
 
 return ProfileRepository
