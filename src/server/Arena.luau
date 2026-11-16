@@ -15,6 +15,7 @@ local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local WorldSea = require(ReplicatedStorage.Shared.WorldSea)
 local WorldToon = require(ReplicatedStorage.Shared.WorldToon)
+local PlazaHubLayout = require(ReplicatedStorage.Shared.PlazaHubLayout)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
@@ -464,6 +465,7 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
+    if V3 and PlazaHubLayout.enabled(Config) then require(script.Parent.PlazaHub).build(world, V3.CenterX, V3.CenterZ) end -- BD-1221: stalls on the plaza
     if kitMode then biomeKit(world) if V3 then v3Landmarks(world, V3) end else
     for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         local center = c * S
