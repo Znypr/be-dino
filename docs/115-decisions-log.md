@@ -777,6 +777,7 @@ Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questio
 - **LEAP is grey** so CHOMP is the one green button (R3). Not picked: LEAP green too (two green buttons) or gold (gold reads as a reward).
 - **Key badges (E / F) hang on the top edge** of their button instead of sitting on the word. Not picked: hiding them (desktop players lose the key hint).
 - **"+3 Crystals" floats above its amber**, and of two labels that would touch on the screen only the nearer shows. Not picked: always-on-top labels (they show through trees and could not be checked in the Studio capture).
+
 ## BD-1214: Run complete, Home, Welcome and Loading on the style rules (2026-11-16, LEAD decision, owner delegated 2026-10-16)
 - **Behind `ScreensCohesionEnabled`** (off in the default build, on in the playtest profile per docs/157, in the rehearsal list). Step 3 of the docs/240 cohesion order; mockups style tile v2 board 6 and v3 boards 8-10.
 - **Kept, not taken from the mockups:** the window titles stay "Sanctuary" and "Run Complete!" and the buttons stay "Explore", "Back home", "OPEN EGGS", "Let's play" (the regression walk and other checks find screens by these words; the mockup's "Home", "Great run!" header, "HATCH EGGS" were not worth breaking them). "Great run!" moved under the trophy instead. Overturn: rename in `ScreensCohesion.luau` and the walk together.
