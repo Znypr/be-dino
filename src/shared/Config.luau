@@ -179,6 +179,12 @@ return table.freeze({
     -- Needs FoodArtMode = "Kit". Visual only: the same kinds, points, sizes, placement, respawn and pickup rules; a mesh that fails to load keeps
     -- today's kit mesh. false = nothing is loaded and the food is exactly as before. Pinned off in the default profile, ON in the playtest profile.
     FoodV3Enabled = false,
+    -- BD-1213 (docs/240 step 2, style tile v2 board 1): true = the in-run HUD and the world labels on the style rules R1-R8
+    -- (src/client/HudCohesion.client.luau, Shared/HudCohesionRules): cream plates with an ink outline for the eggs, SIZE, crystals and goal,
+    -- no debug lines on the HUD (one small "Test game: not saved" chip in an unsaved Studio preview), LEAP grey (CHOMP the one green button),
+    -- key badges on the button edge, "+3 Crystals" above its amber. Client presentation only. false = the HUD exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157).
+    HudCohesionEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
