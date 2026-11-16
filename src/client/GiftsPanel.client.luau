@@ -11,14 +11,13 @@ if Config.CodesEnabled ~= true then return end
 
 local Players = game:GetService("Players")
 local Chip = require(Shared:WaitForChild("ChipStyle"))
-local Kit = require(Shared:WaitForChild("ToyboxKit")) :: any
 local Theme = require(Shared:WaitForChild("UITheme")) :: any
 local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("CodeAction", 60)
 if not (remote and remote:IsA("RemoteFunction")) then return end
 
 local player = Players.LocalPlayer
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
-local CREAM, INK, LINE = rgb(Kit.Tone.panel), rgb(Kit.Tone.value), rgb(Kit.Outline)
+local CREAM, INK, LINE = rgb({255, 247, 227}), rgb({58, 47, 30}), Theme.Colors.outline -- the style tile cream panel and ink (the kit panel and value tones), the shared dark outline
 local GREEN, GOLD = Theme.Colors.accent, Theme.Colors.gold
 
 local gui = Instance.new("ScreenGui")

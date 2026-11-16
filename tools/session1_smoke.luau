@@ -412,9 +412,11 @@ runScenario(function(env, server)
     for _, f in server.fired do
         if f.remote == "RareHatch" and f.msg.k == "all" then
             -- BD-1121: with Config.RareFindBannerEnabled the announcement also carries the tier number, the species display name and two booleans (no egg id, no user id, no player name)
-            local allowedKeys = {k = true, kind = true, text = true, tier = true, species = true, shiny = true, mutation = true}
+            -- BD-1227: with Config.RareHatchNewsEnabled it also carries `name`, the hatcher's cleaned Roblox DISPLAY name (never the user id or the user name)
+            local allowedKeys = {k = true, kind = true, text = true, tier = true, species = true, shiny = true, mutation = true, name = true}
             for key, value in f.msg do
                 if not allowedKeys[key] then leakedAll = true end
+                if key == "name" and (type(value) ~= "string" or #value > 20 or string.find(value, "smoke%-") or string.find(value, "300%d")) then leakedAll = true end
                 if key == "species" and (type(value) ~= "string" or string.find(value, "smoke%-") or string.find(value, "300%d")) then leakedAll = true end
                 if (key == "tier" and type(value) ~= "number") or ((key == "shiny" or key == "mutation") and type(value) ~= "boolean") then leakedAll = true end
             end

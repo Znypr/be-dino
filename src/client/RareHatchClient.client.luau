@@ -201,11 +201,12 @@ remote.OnClientEvent:Connect(function(data)
     if type(data) ~= "table" or type(data.text) ~= "string" then return end
     if #data.text > 80 then return end
     if data.k == "me" then celebrate(data)
+    elseif data.k == "all" and Config.RareHatchNewsEnabled == true then
+        -- BD-1227: the two lines with the hatcher's display name (a payload that fails the name check falls back to the no-name lines, then the strip), plus one plain chat line
+        if not FindBanner.show(gui, data, Settings.get().calm, true) then banner(data.text, false) end
+        require(script.Parent:WaitForChild("HatchNewsChat")).post(data)
     elseif data.k == "all" then
         -- BD-1121: flag on and a payload that passes the checks = two lines, no panel, no name; otherwise the strip exactly as before
-        local news = Config.RareHatchNewsEnabled == true -- BD-1227: the hatcher's display name in the line, plus one plain chat line
-        local shown = news and FindBanner.show(gui, data, Settings.get().calm, true)
-        if not shown and not (Config.RareFindBannerEnabled == true and FindBanner.show(gui, data, Settings.get().calm)) then banner(data.text, false) end
-        if news then require(script.Parent:WaitForChild("HatchNewsChat")).post(data) end
+        if not (Config.RareFindBannerEnabled == true and FindBanner.show(gui, data, Settings.get().calm)) then banner(data.text, false) end
     end
 end)
