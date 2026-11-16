@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "src" / "client"
 BOOTSTRAP = "Bootstrap.client.luau"
-MODULES = ("ShopScreens.luau", "Toasts.luau", "DinoIndexScreens.luau", "SmallScreens.luau")
+MODULES = ("ShopScreens.luau", "Toasts.luau", "DinoIndexScreens.luau", "SmallScreens.luau", "HomeScreen.luau")
 # The ratchet for Bootstrap's own top-level `local` lines (every verifier that counts them reads this one number). Luau allows 200 locals per
 # function; the main chunk had 188 such lines on 2026-10-18, 174 after the shop screens and 168 after the toast stack and 165 after the Dino Index screens and 163 after the small screens moved out. Lower it when more code moves out,
 # never raise it: new client features go into their own module (docs/160 section 10).

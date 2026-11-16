@@ -373,20 +373,7 @@ end
 local refreshEggs
 render=function(name: string)
     if name=="home" then
-        heading.Text,header.BackgroundColor3="Sanctuary",C.accent
-        local heroCard=box(body,0,0,290,330,C.card,24)
-        local id=str("EquippedSpeciesId","compy")
-        hero(heroCard,id,8,8,274,230,bestMutation(id))
-        label(heroCard,Config.SpeciesDisplayNames[id] or require(Shared.SecretSpeciesConfig).name(id),0,244,290,42,30)
-        label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
-        label(body,"Ready for an adventure?",320,0,495,58,32)
-        label(body,require(Shared.FtueCopy).sanctuaryTip1,330,74,474,85,22)
-        label(body,require(Shared.FtueCopy).sanctuaryTip2,330,170,474,75,22,C.gold)
-        button(body,"Explore",340,280,460,68,C.accent,function()
-            local character=player.Character
-            if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
-            else close() notify("You are already exploring",C.blue) end
-        end)
+        require(script.Parent.HomeScreen).render({body=body,heading=heading,header=header,C=C,label=label,box=box,button=button,hero=hero,bestMutation=bestMutation,str=str,num=num,decoded=decoded,close=close,notify=notify,open=open,startRun=startRun}) -- BD-1214
 
     elseif ShopScreens.names[name] then ShopScreens.render(name)
     elseif DinoIndexScreens.names[name] then DinoIndexScreens.render(name)

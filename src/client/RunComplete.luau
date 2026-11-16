@@ -12,6 +12,12 @@ local ICON = {eggs = "egg", crystals = "amber", nests = "egg_nest", nestCrystals
 
 -- d: {body, C, label, box, art, button, num, oops, hasEggs, back, openEggs}
 function RunComplete.build(d: any)
+    if Config.ScreensCohesionEnabled == true then -- BD-1214 (docs/240 step 3): the same facts and buttons on the style rules
+        d.mode = require(script.Parent.StarterRunClient).resultsMode(d.hasEggs)
+        d.streak = (Config.PlayAgainEnabled == true and Rules.text(d.num("LastRunStreak"))) or nil -- the soft streak line, only with PlayAgainEnabled
+        d.eggsWaiting = d.num("ActiveChestCount") + d.num("QueuedEggsWaiting") -- eggs to open, the same sum the HUD reads
+        return require(script.Parent.ScreensCohesion).results(d)
+    end
     local body, C, oops = d.body, d.C, d.oops
     local slot = d.box(body, 30, 46 + oops, 220, 220, C.panel, body.ZIndex + 1) -- reserved: sized before the trophy image loads
     d.art(slot, "trophy", 10, 10, 200)
