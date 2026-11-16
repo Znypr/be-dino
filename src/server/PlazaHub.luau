@@ -56,7 +56,9 @@ local function addSignText(mesh: MeshPart, text: string)
     end
     local b = Props.SignBillboard
     local board = Instance.new("BillboardGui")
-    board.Name, board.Size = "SignBillboard", UDim2.fromOffset(b.width * 1.5, b.height * 1.5)
+    -- BD-1239 (owner screenshot 2026-11-16: NESTS and POTIONS overlapped): sized in studs, not pixels, so a far stall's word shrinks with its
+    -- sign instead of staying 180 px wide on top of the nearer one. 12 x 3.6 studs = the old pixel size at about 45 studs (the walk-up range).
+    board.Name, board.Size = "SignBillboard", UDim2.fromScale(Layout.Sign.size[1] * .86, Layout.Sign.size[1] * .26)
     board.StudsOffsetWorldSpace = Vector3.new(0, mesh.Size.Y / 2 + b.lift * 2, 0)
     board.MaxDistance, board.AlwaysOnTop, board.LightInfluence, board.Brightness = 160, false, 0, 1.2
     signWord(text, 0).Parent = board

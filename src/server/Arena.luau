@@ -15,6 +15,7 @@ local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local WorldSea = require(ReplicatedStorage.Shared.WorldSea)
 local WorldToon = require(ReplicatedStorage.Shared.WorldToon)
+local Veg2 = require(ReplicatedStorage.Shared.VegetationV2) -- BD-1239
 local PlazaHubLayout = require(ReplicatedStorage.Shared.PlazaHubLayout)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
@@ -95,8 +96,39 @@ end
 -- invisible kit colliders still match, pivot = bottom centre. nil (flag off, id not mapped, mesh failed to load) means the
 -- caller keeps the current kit model, so a failed asset never leaves a hole.
 local generatedCache: {[string]: Model} = {}
+-- BD-1239: the vegetation v2 mesh for a kit id (Shared/VegetationV2), fitted into the kit box by kind (Veg2.fit), pivot = bottom centre.
+-- nil (flag off, kit id not in the family, id not published or the load failed) = the rules of generatedProp below, exactly as before.
+local veg2On = Veg2.enabled(Config)
+local function veg2Prop(id: string, biome: string, roll: number): Model?
+    local key = Veg2.visualFor(id, biome, roll)
+    local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local template = if key and Veg2.ready(key) and folder then folder:FindFirstChild(key) else nil
+    if not key or not template or not template:IsA("MeshPart") or not KitData[id] then return nil end
+    local cacheKey = key .. "|" .. id
+    if not generatedCache[cacheKey] then
+        local size = template.Size
+        local mesh = template:Clone()
+        mesh.Size = size * Veg2.fit(KitData[id].kind, KitData[id].extent, {size.X, size.Y, size.Z})
+        mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
+        mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0)
+        mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0)
+        local model = Instance.new("Model")
+        mesh.Parent = model
+        model.PrimaryPart = mesh
+        model.WorldPivot = CFrame.new()
+        model.Name = id
+        model:SetAttribute("GeneratedMesh", key)
+        generatedCache[cacheKey] = model
+    end
+    workspace:SetAttribute("WorldGeneratedProps", (workspace:GetAttribute("WorldGeneratedProps") or 0) + 1)
+    return generatedCache[cacheKey]:Clone()
+end
 local function generatedProp(id: string, biome: string, roll: number, layer: string?): Model?
     if not Config.WorldGeneratedMeshes then return nil end
+    if veg2On then
+        local v2 = veg2Prop(id, biome, roll)
+        if v2 then return v2 end
+    end
     local key = Generated.visualFor(id, biome, roll)
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
     local template = nil
@@ -243,6 +275,7 @@ local function biomeKit(parent: Instance)
     meshes = Biome.propMeshes(meshes, propEntries)
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
         extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout, props = propEntries})
+    if veg2On then placed = Veg2.thin(placed) end -- BD-1239: fewer, fuller ground cover clumps (the other layers and the food hosts are untouched)
     local missing = 0
     local counts = {tree = 0, colossal = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
     -- BD-395: trees, colossal trees and shrubs rest ON the real voxel terrain: five rays (centre + around the trunk) from above, the
