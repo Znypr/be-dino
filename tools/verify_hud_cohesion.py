@@ -56,8 +56,14 @@ local H = Kit.Hud
 local anchor, x, y = Rules.badgeSpot(H.badgeInset)
 check(anchor.Y == 0.5 and y == 0 and x < 0, "badge hangs on the top edge")
 check(Rules.badgeClear(H.height, H.badge, H.word), "badge clear of the word")
-check(Rules.labelLift(12, 10) >= 2 + 1, "label above the model top")
-check(Rules.labelLift(5, 10) >= 1, "label never inside the part")
+check(Rules.labelLift(12, 10) >= 2 + 0.5, "label above the model top")
+check(Rules.labelLift(5, 10) >= 0.5, "label never inside the part")
+local B = Rules.LabelBox
+local shown = Rules.declutter({{x = 500, y = 300, depth = 20, on = true}, {x = 520, y = 290, depth = 12, on = true}, {x = 900, y = 300, depth = 15, on = true}, {x = 510, y = 300, depth = 5, on = false}}, B.w, B.h)
+check(shown[2] and not shown[1] and shown[3] and not shown[4], "touching labels: the nearer one shows")
+local alone = Rules.declutter({{x = 0, y = 0, depth = 1, on = false}, {x = 3, y = 0, depth = 9, on = true}}, B.w, B.h)
+check(alone[2] == true, "a label that is off never hides another")
+check(B.w >= 100 and B.h >= 28, "the box is the label size (100 x 28)")
 local blue, grey, green = Color3.fromRGB(46, 206, 255), Color3.fromRGB(128, 142, 158), Color3.fromRGB(93, 237, 31)
 check(Rules.leapColour(blue, blue, grey) == grey, "LEAP blue becomes grey")
 check(Rules.leapColour(green, blue, grey) == green, "other colours stay")
@@ -120,6 +126,9 @@ MUTANTS = {
     'the badge sits on the word again': ('rules', 'return Vector2.new(1, 0.5), -inset, 0', 'return Vector2.new(1, 0), -inset, inset'),
     'the world label is off the scale': ('rules', 'worldLabel = 20}', 'worldLabel = 18}'),
     'the label sits inside its amber': ('rules', 'return math.max(modelTop - anchorY, 0) + Rules.LabelGap', 'return 0'),
+    'touching labels all show': ('rules', 'if clear then show[i] = true table.insert(kept, i) end', 'show[i] = true table.insert(kept, i)'),
+    'the farther label wins': ('rules', 'return spots[a].depth < spots[b].depth', 'return spots[a].depth > spots[b].depth'),
+    'an off label hides another': ('rules', 'for i, spot in spots do if spot.on then table.insert(order, i) end end', 'for i, spot in spots do table.insert(order, i) end'),
     'LEAP stays blue': ('rules', 'return if current == blue then grey else current', 'return current'),
     'the flag is ignored': ('client', 'if (Config :: any).HudCohesionEnabled ~= true then return end', ''),
     'the script calls the server': ('client', 'local player = Players.LocalPlayer', 'local player = Players.LocalPlayer\nReplicatedStorage.X:FireServer()'),

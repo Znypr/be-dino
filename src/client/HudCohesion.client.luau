@@ -98,7 +98,7 @@ local function crystals(frame: Frame)
     for _, child in frame:GetChildren() do
         if child:IsA("TextLabel") then
             ink(child)
-            child.TextSize = Rules.Text.crystals
+            child.TextSize, child.TextXAlignment = Rules.Text.crystals, Enum.TextXAlignment.Left -- the number sits beside the crystal picture
             local function group()
                 local amount = Rules.crystalsFrom(child.Text)
                 if amount then child.Text = Rules.grouped(amount) end
@@ -208,11 +208,13 @@ local function pass(): boolean
     return all and leapFound
 end
 
+local boards: {BillboardGui} = {}
 -- World labels: "+3 Crystals" floats above the top of its amber (server-built BillboardGui on a CrystalPickup part; the change is local only).
 local function crystalLabel(board: BillboardGui)
     local part = board.Parent
     if not (part and part:IsA("BasePart") and part.Name == "CrystalPickup") or done[board] then return end
     done[board] = true
+    table.insert(boards, board)
     local function lift()
         local model = part:FindFirstChildWhichIsA("Model") or part:FindFirstChildWhichIsA("BasePart")
         local top = part.Position.Y + part.Size.Y / 2
@@ -243,4 +245,30 @@ for _, item in workspace:GetDescendants() do
 end
 workspace.DescendantAdded:Connect(function(item)
     if item:IsA("BillboardGui") then task.defer(crystalLabel, item) end
+end)
+-- R8: two labels that would print on top of each other on the screen (an amber behind another): the nearer one shows its words (4 times a second).
+task.spawn(function()
+    while true do
+        task.wait(0.25)
+        for i = #boards, 1, -1 do
+            if boards[i].Parent == nil then table.remove(boards, i) end
+        end
+        local camera = workspace.CurrentCamera
+        if camera then
+            local spots = {}
+            for i, board in boards do
+                local part = board.Parent :: BasePart
+                local at = part.Position + board.StudsOffsetWorldSpace
+                local point, onScreen = camera:WorldToViewportPoint(at)
+                local depth = (camera.CFrame.Position - at).Magnitude
+                spots[i] = {x = point.X, y = point.Y, depth = depth, on = board.Enabled and onScreen and depth <= board.MaxDistance}
+            end
+            local show = Rules.declutter(spots, Rules.LabelBox.w, Rules.LabelBox.h)
+            for i, board in boards do
+                for _, label in board:GetChildren() do
+                    if label:IsA("TextLabel") and label.Visible ~= (show[i] == true) then label.Visible = show[i] == true end
+                end
+            end
+        end
+    end
 end)

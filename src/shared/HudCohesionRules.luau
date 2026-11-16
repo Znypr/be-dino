@@ -54,9 +54,29 @@ function Rules.badgeClear(height: number, badge: number, word: number): boolean
 end
 
 -- R8 world labels: "+3 Crystals" floats above the top of its pickup model (the model hid the middle of the words: "+3 C...tals").
-Rules.LabelGap = 1.2
+Rules.LabelGap = 0.7
 function Rules.labelLift(modelTop: number, anchorY: number): number
     return math.max(modelTop - anchorY, 0) + Rules.LabelGap
+end
+
+-- R8: two "+3 Crystals" labels whose boxes (w x h px on the screen) would touch: the nearer one shows its words, the farther stays quiet.
+-- A label that is off (picked up, behind the camera or too far) never hides another. spots = {{x, y, depth, on}} in screen px and studs;
+-- returns {[index] = true} for the shown ones.
+Rules.LabelBox = {w = 100, h = 28}
+function Rules.declutter(spots: {{x: number, y: number, depth: number, on: boolean}}, w: number, h: number): {[number]: boolean}
+    local order = {}
+    for i, spot in spots do if spot.on then table.insert(order, i) end end
+    table.sort(order, function(a, b) return spots[a].depth < spots[b].depth end)
+    local show: {[number]: boolean} = {}
+    local kept = {}
+    for _, i in order do
+        local spot, clear = spots[i], true
+        for _, j in kept do
+            if math.abs(spot.x - spots[j].x) < w and math.abs(spot.y - spots[j].y) < h then clear = false break end
+        end
+        if clear then show[i] = true table.insert(kept, i) end
+    end
+    return show
 end
 
 -- R3: one green main button. LEAP is the blue button today; it becomes grey like HOME, CHOMP stays the one green button.
