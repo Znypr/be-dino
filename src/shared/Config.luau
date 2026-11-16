@@ -234,6 +234,12 @@ return table.freeze({
     -- patches and respawn rules, the same count of every kind in every zone. false = the V3 map exactly as before. Pinned off in the default
     -- profile, ON in the playtest profile (docs/157). Free, no Robux.
     FoodHostsEnabled = false,
+    -- BD-1239 (owner 2026-11-16 "vegetation looks cheap", approved concept sheet docs/evidence/2026-11-16-vegetation-v2): true = with WorldV3Enabled
+    -- and ToonWorldEnabled the island plants show the vegetation v2 family (Shared/VegetationV2: chunky toy trees, pines, palms, berry bushes,
+    -- flower clusters, soft grass clumps, ferns and mossy rocks; generate_mesh, docs/77). Same kit ids, placement and colliders (the meshes are
+    -- fitted into the kit boxes, so the food hosts stay put); the flat spiky grass tufts are gone and the ground cover is thinned (fewer parts).
+    -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    VegetationV2Enabled = false,
     -- BD-1221 (docs/242 benchmark gap 4, extends BD-1181): true = with WorldV3Enabled four stalls with big signs stand on the spawn plaza
     -- (nests, potions, shop, dinos; the cave home's own generated meshes, Shared/PlazaHubLayout) and a walk-up prompt opens that screen through
     -- the rail's own path (HubTravelClient.press, then openScreen), so a run keeps its "At home" rule. No save, economy or reward change.

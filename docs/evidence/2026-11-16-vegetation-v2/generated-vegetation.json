@@ -1,0 +1,113 @@
+{
+  "note": "BD-1239 vegetation v2: Roblox Studio generate_mesh (text prompts written from the approved ChatGPT concept sheet, one magenta reference per object in refs/), published to the owner's account 2026-11-16 (publishedAssetId of each job). tris = the maxTriangles cap given to the generator.",
+  "items": {
+    "veg2_tree_flower": {
+      "asset": 77092440397911,
+      "maxTriangles": 1500,
+      "reference": "refs/ref-tree_flower.png",
+      "what": "rounded flower tree, white blossoms, mushrooms at the foot"
+    },
+    "veg2_tree_twisty": {
+      "asset": 76763874077682,
+      "maxTriangles": 2500,
+      "reference": "refs/ref-tree_twisty_landmark.png",
+      "what": "big twisty-trunk tree with vines and pink flowers"
+    },
+    "veg2_tree_fruit": {
+      "asset": 109141890199115,
+      "maxTriangles": 1500,
+      "reference": "refs/ref-tree_fruit_orange.png",
+      "what": "fruit tree with oranges"
+    },
+    "veg2_pine_a": {
+      "asset": 104792252201636,
+      "maxTriangles": 900,
+      "reference": "refs/ref-pine_a.png",
+      "what": "dark four-layer pine with mushrooms"
+    },
+    "veg2_pine_b": {
+      "asset": 77837197584497,
+      "maxTriangles": 900,
+      "reference": "refs/ref-pine_b.png",
+      "what": "young three-layer pine with a lime tip"
+    },
+    "veg2_palm_coconut": {
+      "asset": 87978584265482,
+      "maxTriangles": 1200,
+      "reference": "refs/ref-palm_coconut.png",
+      "what": "coconut palm with a hibiscus at the foot"
+    },
+    "veg2_palm_flower": {
+      "asset": 131648210939538,
+      "maxTriangles": 1200,
+      "reference": "refs/ref-palm_flower.png",
+      "what": "flower palm with a vine and a pink bloom"
+    },
+    "veg2_bush_red": {
+      "asset": 72154567844680,
+      "maxTriangles": 700,
+      "reference": "refs/ref-bush_berry_red.png",
+      "what": "berry bush with red berries"
+    },
+    "veg2_bush_blue": {
+      "asset": 136045157829017,
+      "maxTriangles": 700,
+      "reference": "refs/ref-bush_berry_blue.png",
+      "what": "berry bush with blueberries"
+    },
+    "veg2_bush_grape": {
+      "asset": 133674054493602,
+      "maxTriangles": 800,
+      "reference": "refs/ref-bush_grape_purple.png",
+      "what": "low bush with purple grape bunches"
+    },
+    "veg2_flowers_daisy": {
+      "asset": 116872167176322,
+      "maxTriangles": 500,
+      "reference": "refs/ref-flowers_a.png",
+      "what": "purple, yellow and white daisies"
+    },
+    "veg2_flowers_hibiscus": {
+      "asset": 115140435674207,
+      "maxTriangles": 500,
+      "reference": "refs/ref-flowers_hibiscus.png",
+      "what": "pink and yellow hibiscus in broad leaves"
+    },
+    "veg2_grass_a": {
+      "asset": 125477923669500,
+      "maxTriangles": 400,
+      "reference": "refs/ref-grass_a.png",
+      "what": "soft round grass clump with a white flower"
+    },
+    "veg2_grass_b": {
+      "asset": 106175427368675,
+      "maxTriangles": 400,
+      "reference": "refs/ref-grass_b.png",
+      "what": "tall grass clump with a flower and a mushroom"
+    },
+    "veg2_fern_a": {
+      "asset": 107416773840661,
+      "maxTriangles": 500,
+      "reference": "refs/ref-fern_a.png",
+      "what": "round lime fern with fiddleheads"
+    },
+    "veg2_fern_b": {
+      "asset": 83786014984437,
+      "maxTriangles": 500,
+      "reference": "refs/ref-fern_b.png",
+      "what": "upright fern with one big fiddlehead"
+    },
+    "veg2_rock_mossy": {
+      "asset": 123042036522291,
+      "maxTriangles": 600,
+      "reference": "refs/ref-rock_mossy_a.png",
+      "what": "grey boulder with a moss cap and a mushroom"
+    },
+    "veg2_rock_spiral": {
+      "asset": 110545121175304,
+      "maxTriangles": 700,
+      "reference": "refs/ref-rock_mossy_spiral.png",
+      "what": "mossy stone with a carved spiral"
+    }
+  }
+}
