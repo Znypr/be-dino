@@ -64,10 +64,11 @@ FULL_SCREEN_REVIEWED = {
 def module_part(name, source):
     """One entry of the mock's module table. BD-1164: the hatch smokes check the close paths of the FULL show, so their copy of the
     Config has Config.HatchFastCommonsEnabled off whatever the tree says (the all-on rehearsal included, docs/152); the fast path runs
-    in this same mock in tools/verify_hatch_pacing.py, which switches the flag on in that copy."""
+    in this same mock in tools/verify_hatch_pacing.py, which switches the flag on in that copy. BD-1237: MenusCohesionEnabled too: these
+    smokes measure the old screens; the cohesive ones are proved by tools/verify_menus_cohesion.py."""
     if name == 'Config':
         return ('Config=function(script, require)\nlocal real = (function()\n' + source + '\nend)()\n'
-                'local copy = table.clone(real) copy.HatchFastCommonsEnabled = false return copy\nend,\n')
+                'local copy = table.clone(real) copy.HatchFastCommonsEnabled = false copy.MenusCohesionEnabled = false return copy\nend,\n')
     return name + '=function(script, require)\n' + source + '\nend,\n'
 
 

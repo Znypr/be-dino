@@ -48,7 +48,7 @@ stubs.ConditionStage = {hero = function() return nil end}
 stubs.FxUi = {mount = function() return nil end}
 stubs.FusionSelection = {eggSlotLook = function() return "plain" end}
 stubs.ChipStyle = nil
-local clientNames = {IndexTabs = true, PatternColourCards = true, PatternColourDetail = true, ModalCompact = true, EggsScreen = true, EggPicture = true, ConditionStage = true, HatchSequence = true, ModalClose = true, InspectView = true,
+local clientNames = {MenusCohesion = true, IndexTabs = true, PatternColourCards = true, PatternColourDetail = true, ModalCompact = true, EggsScreen = true, EggPicture = true, ConditionStage = true, HatchSequence = true, ModalClose = true, InspectView = true,
     HatchFx = true, MutationReveal = true, HatchEggV2 = true, PrivateState = true}
 -- BD-1107: a class badge like the real one: an icon and the class word (the real root grows to the right with its word, anchored by its left edge here)
 stubs.ClassBadge = {create = function(parent, _, size)
@@ -70,6 +70,7 @@ stubs.PrivateState = {str = function(_, fallback) return fallback or "" end, isR
 -- BD-1083 / BD-1082: the REAL IndexTabs runs here; the cards and the detail it draws are checked elsewhere (verify_pattern_colour_index.py)
 stubs.PatternColourCards = {build = function() end}
 stubs.PatternColourDetail = {open = function() end}
+stubs.MenusCohesion = {chances = function() end, exact = function() end, food = function() end, confirm = function() end} -- BD-1237: the cohesive screens (MenusCohesionEnabled, all-on rehearsal) are visual; tools/verify_menus_cohesion.py proves their rects and wiring
 stubs.SettingsModel = {set = function() end, indexSeen = function() return nil end, onChange = function() end}
 stubs.AssetSlots = {image = function() return nil end}
 stubs.SecretSpeciesConfig = {indexOrder = function(base) return base end, name = function(id) return id end}

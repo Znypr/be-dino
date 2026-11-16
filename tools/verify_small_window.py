@@ -37,6 +37,8 @@ MODULES = {
     'RarityWord': 'src/shared/RarityWord.luau',
     'HubTravelClientRules': 'src/shared/HubTravelClientRules.luau',
     'IndexTabs': 'src/client/IndexTabs.luau',
+    'MenusCohesionRules': 'src/shared/MenusCohesionRules.luau',  # BD-1237: ShopTiles / ShopScreens read it while MenusCohesionEnabled is on (all-on rehearsal)
+    'ToyboxKit': 'src/shared/ToyboxKit.luau',
 }
 MODULES.update({k: v for k, v in cp.MODULES.items() if k not in MODULES})
 

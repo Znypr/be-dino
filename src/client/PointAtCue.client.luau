@@ -63,6 +63,9 @@ local function marker(name: string, icon: string?, onTop: boolean): Marker
     if icon then
         local art = Theme.icon(chip, icon)
         if art then art.Position, art.Size, art.ZIndex = UDim2.fromOffset(4, 4), UDim2.fromOffset(40, 40), 3 end
+        -- BD-1237 (R8, Studio 2026-11-16: "Eggs ready!" lost its E under the nest icon): the word gets the room right of the icon, not a
+        -- box centred on the chip that spills under the icon on both sides.
+        label.Position, label.Size = UDim2.fromOffset(48, 2), UDim2.new(1, -54, 1, -4)
     end
     board.Parent = playerGui
     return {board = board, label = label, lift = 0, target = nil}

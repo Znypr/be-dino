@@ -12,6 +12,10 @@ local NotifyQueue = require(Shared.NotifyQueue)
 local RarityWord = require(Shared.RarityWord) -- BD-1120: a toast that names a rarity shows the word in its colour
 local ToastSlot = require(Shared.ToastSlot) -- BD-1102: where the stack goes (clear of the rail, the Crystals plate and, with a menu open, the top of the menu)
 local C = Theme.Colors
+-- BD-1237 (docs/240 step 4, style tile v2 board 7): with Config.MenusCohesionEnabled the cards are cream with an ink outline and ink words on the
+-- 20 / 14 scale (R1, R2, R6); the kind (or rarity) colour stays only on the thin bar at the left edge. Flag off: nil, the navy cards as before.
+local Cohesion = if (require(Shared.Config) :: any).MenusCohesionEnabled == true then require(Shared.MenusCohesionRules) else nil
+local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
 
 local Toasts: any = {}
 
@@ -34,7 +38,7 @@ drawToasts=function()
         slot.frame.Visible=entry~=nil
         if entry then
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
-            slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
+            slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,if Cohesion then rgb(Cohesion.Card) else C.panel:Lerp(color,.35)
             RarityWord.set(slot.title,entry.text) RarityWord.set(slot.detail,entry.body or "")
             slot.plate.Visible=entry.icon~=nil -- BD-304: no empty icon box
             local textX=if entry.icon then 68 else 22
@@ -134,6 +138,20 @@ function Toasts.attach(d: any)
             if entry and entry.action and NotifyQueue.dismiss(notifyQueue,entry) then drawToasts() task.spawn(entry.action) return end
             if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end
         end)
+        if Cohesion then -- BD-1237: cream card, ink words (a flat fill: the old gradient goes, the outline stays ink)
+            for _,f in {card,plate} do
+                local g=f:FindFirstChildOfClass("UIGradient") if g then g:Destroy() end
+                local line=f:FindFirstChildOfClass("UIStroke") if line then line.Color,line.Thickness=rgb(Cohesion.Outline),Cohesion.Toast.stroke end
+            end
+            card.BackgroundColor3=rgb(Cohesion.Cream)
+            local g=bar:FindFirstChildOfClass("UIGradient") if g then g:Destroy() end
+            for _,t in {{title,Cohesion.Toast.title,Cohesion.Ink},{detail,Cohesion.Toast.detail,Cohesion.Muted},{count,Cohesion.Toast.count,Cohesion.Ink}} do
+                local word,px,tone=t[1],t[2],t[3]
+                word.TextSize,word.TextColor3,word.TextStrokeTransparency=px,rgb(tone),1
+                for _,child in word:GetChildren() do if child:IsA("UIStroke") then child.Enabled=false end end
+                word.ChildAdded:Connect(function(child) if child:IsA("UIStroke") then child.Enabled=false end end)
+            end
+        end
         toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0,tap=tap}
     end
     Toasts.layer, Toasts.scale = toastLayer, toastScale

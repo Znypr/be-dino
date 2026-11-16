@@ -42,6 +42,8 @@ Today: **6 surfaces pass, 13 fail, 11 not checked** (30 surfaces: start, play, h
 4. Egg chances, food guide, weather card, toasts / banners, popups.
 5. Capture and judge the "not checked" rows (nests, defeat, phone, 3D, sound, motion).
 
+Progress 2026-11-16: steps 1-3 merged (hatch stage, HUD BD-1213, screens BD-1214); step 4 and the UI fixes of step 5 in BD-1237 (`MenusCohesionEnabled`, pictures `docs/evidence/2026-11-16-menus-style/`, matrix there: 20 pass, 4 fail, 6 not checked). Every row that is not a pass has a board row: hatch rows BD-1211, props BD-206 / BD-1239, defeat BD-1240, phone BD-1241, sound and motion BD-1242, 3D re-captures BD-1243.
+
 ## 5. In the loop (docs/234)
 
 Every polish run re-renders the matrix; a change that turns a surface red does not merge. The target is every row green. The per-screen score stays, but the matrix is the whole-game check.

@@ -144,9 +144,11 @@ function Shop.render(name: string)
         end
         if cosmeticTab=="eggs" then
             if not ShopTiles.eggProduct(body,20,cardsY+12,220) then art(body,"egg",20,cardsY+12,220) end
-            label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
-            label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
-            button(body,"Chances",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
+            local menus=Config.MenusCohesionEnabled==true -- BD-1237 (docs/240 step 4): ink words on the cream card, a grey Chances button, a grouped balance
+            local eggTitle=label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
+            local eggPrice=label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..(if menus then require(Shared.MenusCohesionRules).grouped(num("Crystals")) else tostring(num("Crystals"))).."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
+            if menus and toybox then ToyboxPage.ink(eggTitle) ToyboxPage.ink(eggPrice) end
+            button(body,"Chances",270,cardsY+119,535,targetHeight,if menus then C.card else C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             if randomBlocked then -- BD-532: greyed out, no confirm, nothing to tap
                 local soon=button(body,string.upper(PaidRandomGate.ComingSoon),270,cardsY+targetHeight+130,535,targetHeight,C.card,function() end)
                 soon.Name,soon.AutoButtonColor,soon.TextTransparency="BuyEggComingSoon",false,.15
@@ -314,6 +316,11 @@ function Shop.render(name: string)
         local upgradeOdds=oddsLevelOverride~=nil
         heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Chances" else "Egg Chances",C.blue
         local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0,require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting"))) -- BD-365: the safe-eggs line only while true
+        if Config.MenusCohesionEnabled==true then -- BD-1237 (docs/240 step 4): kid words on a cream panel, the exact numbers one tap away
+            local notes=OddsCopy.notes(not upgradeOdds)
+            if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do table.insert(notes,note) end end
+            return require(script.Parent.MenusCohesion).chances({body=body,groups=groups,notes=notes,exact=function() open("eggOdds") end,back=function() open(if upgradeOdds then "conditionConfirm" else "eggPurchase") end})
+        end
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.ScrollBarThickness,list.ZIndex,list.Parent="OddsSimple",1,0,UDim2.fromOffset(824,308),8,24,body
         local lineY=0
         for _,group in groups do
@@ -336,6 +343,7 @@ function Shop.render(name: string)
         heading.Text,header.BackgroundColor3="Egg Chances",C.blue
         local level=oddsLevelOverride or progression().conditionLevel or 0
         local lines=ShopOdds.lines(level)
+        if Config.MenusCohesionEnabled==true then return require(script.Parent.MenusCohesion).exact({body=body,lines=lines,outcomes=function() open("eggOutcomes") end,back=function() open("auras") end}) end -- BD-1237
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.CanvasSize,list.ScrollBarThickness,list.ZIndex,list.Parent="EggOdds",1,0,UDim2.fromOffset(824,308),UDim2.fromOffset(0,#lines*46),8,24,body
         local lineY=0
         for _,line in lines do
@@ -357,6 +365,15 @@ function Shop.render(name: string)
         heading.Text,header.BackgroundColor3=if isEgg then "Buy Random Egg?" else "Upgrade Conditions?",C.gold
         local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
         local OddsCopy=require(Shared.OddsCopy)
+        if Config.MenusCohesionEnabled==true then -- BD-1237 (docs/240 step 4): cream panels, CONFIRM the one green button, Chances and CANCEL grey
+            local Rules=require(Shared.MenusCohesionRules)
+            local line=if isEgg then OddsCopy.hatchSentence(p.conditionLevel or 0) else OddsCopy.upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel"))..(if upgrade then " Only new eggs get better chances." else "")
+            return require(script.Parent.MenusCohesion).confirm({body=body,picture="egg",title=if isEgg then "Random Egg" else "Better eggs",
+                rows={{"Price",Rules.grouped(price).." Crystals"},{"After",Rules.grouped(num("Crystals")-price)}},line=line,buttons={
+                {"Chances",function() oddsLevelOverride=if isEgg then nil else (if upgrade then upgrade.level else nil) outcomeState={page=1,filters={}} open("oddsSimple") end,false},
+                {"CANCEL",function() open("auras") end,false},
+                {"CONFIRM",function() transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras") end,true}}})
+        end
         if isEgg or not upgrade then art(body,"egg",20,15,200)
         else -- BD-303: show the egg whose chance grows most, not a plain egg
             local tile=box(body,20,15,200,175,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)

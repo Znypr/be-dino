@@ -43,7 +43,8 @@ local function button(parent: Instance, name: string, words: string, fill: Color
 end
 
 -- The Gifts button: right edge, under the crystals plate and the friend chip slot (44 px target).
-local open = button(gui, "GiftsButton", "Codes", GOLD, UDim2.fromOffset(110, 44), UDim2.new(1, -128, 0, 162)) -- under the crystals plate and the friend chip
+-- BD-1237 (docs/240 R3): with Config.MenusCohesionEnabled the HUD button is the kit grey (gold is a rarity colour and CHOMP / Explore is the one green)
+local open = button(gui, "GiftsButton", "Codes", if (Config :: any).MenusCohesionEnabled == true then Color3.fromRGB(128, 142, 158) else GOLD, UDim2.fromOffset(110, 44), UDim2.new(1, -128, 0, 162)) -- under the crystals plate and the friend chip
 
 -- The panel: centred, cream with an ink outline.
 local panel = Instance.new("Frame")

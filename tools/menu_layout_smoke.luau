@@ -48,6 +48,7 @@ function Theme.decorate() end
 function Theme.texture() end
 function Theme.icon() return nil end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
+stubs.MenusCohesion = {chances = function() end, exact = function() end, food = function() end, confirm = function() end} -- BD-1237: visual, proved by tools/verify_menus_cohesion.py
 stubs.UITheme = Theme
 stubs.Sfx = {play = function() end, playLayers = function() end, playCue = function() end}
 stubs.ModelPreview = {add = function() return nil end}
@@ -63,7 +64,7 @@ stubs.HudSettings = nil
 -- the switch-on rehearsal of docs/152 has both on). The real module needs the hub world, so this stands in for it; section 3b runs both answers.
 local fastTravelOwned = false
 stubs.HubTravelClient = {ownsFastTravel = function() return fastTravelOwned end}
-local clientNames = {SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopToyboxPage = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
+local clientNames = {MenusCohesion = true, SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopToyboxPage = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
