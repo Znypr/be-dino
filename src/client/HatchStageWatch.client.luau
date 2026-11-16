@@ -16,6 +16,11 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Stage = require(script.Parent:WaitForChild("HatchStage"))
 
 local player = Players.LocalPlayer
+-- BD-1212: have the 3D egg shards' meshes downloaded before the first burst (a view does not redraw when a mesh arrives late)
+task.spawn(function()
+    local shards = ReplicatedStorage:WaitForChild("HatchStageShards", 60)
+    if shards then pcall(function() game:GetService("ContentProvider"):PreloadAsync(shards:GetChildren()) end) end
+end)
 local gui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI") :: ScreenGui
 local shade = gui:WaitForChild("ModalScrim") :: GuiObject
 local panel = shade:FindFirstChildWhichIsA("Frame") :: Frame
@@ -105,10 +110,10 @@ RunService.Heartbeat:Connect(function()
                         minimal(chip)
                         if i == 1 then
                             pcall(Stage.playPaint, "pour", {colors[1]})
-                            task.delay(1.6, function() if current == fx and not colors[2] then Stage.paintDone() end end)
+                            task.delay(1.6, function() if current == fx and not colors[2] then Stage.crackCharge() end end)
                         else
                             pcall(Stage.playPaint, "spots", {colors[1] or colors[2], colors[2]})
-                            task.delay(1.05, function() if current == fx then Stage.paintDone() end end)
+                            task.delay(1.05, function() if current == fx then Stage.crackCharge() end end) -- the 2D egg stays and starts to crack
                         end
                     end)
                 end

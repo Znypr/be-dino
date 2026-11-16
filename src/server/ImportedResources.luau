@@ -44,6 +44,7 @@ end
 -- BD-206: Roblox-generated world meshes (WorldGeneratedMeshes.Assets) as one MeshPart each in ReplicatedStorage.GeneratedWorld.
 -- A failed load only logs and counts; Arena then keeps the current kit model for that prop (same fallback as loadWorldKit).
 function Import.loadGeneratedWorld(): (number, number)
+    if require(ReplicatedStorage.Shared.Config).HatchStageEnabled then task.spawn(Import.loadHatchShards) end -- BD-1212 (defined below)
     local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
     if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
     local loaded,failed,pending=0,0,0
@@ -113,6 +114,29 @@ end
 -- BD-397 (docs/118): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
 -- ReplicatedStorage.HatchV2Models. Only called while Config.HatchV2 is true. A failed egg load leaves the folder without "egg":
 -- the client then runs the shipped v1 sequence; a failed bucket load only hides the bucket.
+-- BD-1212: the 3D egg shards of the full-screen hatch (tools/blender/egg_shards.py, docs/77 hatch_egg_shards), one Model of MeshParts in
+-- ReplicatedStorage.HatchStageShards. Only with Config.HatchStageEnabled; a failed load leaves the burst without shards (flash and sparkles stay).
+Import.HatchShardsAsset=72971857567912
+function Import.loadHatchShards()
+    if ReplicatedStorage:FindFirstChild("HatchStageShards") then return end
+    local ok,err=pcall(function()
+        local container=InsertService:LoadAsset(Import.HatchShardsAsset)
+        local model=Instance.new("Model")
+        model.Name="HatchStageShards"
+        for _,item in container:GetDescendants() do
+            if item:IsA("MeshPart") then
+                local part=item:Clone()
+                for _,child in part:GetChildren() do child:Destroy() end
+                part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.Massless=true,false,false,false,true
+                part.Parent=model
+            end
+        end
+        container:Destroy()
+        assert(#model:GetChildren()>0,"shard model has no MeshParts")
+        model.Parent=ReplicatedStorage
+    end)
+    if not ok then warn("[Be Dino] hatch shards unavailable: "..tostring(err)) end
+end
 function Import.loadHatchV2(): (number, number)
     local Assets=require(ReplicatedStorage.Shared.HatchV2Assets)
     local folder=ReplicatedStorage:FindFirstChild(Assets.FolderName)

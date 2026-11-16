@@ -7,6 +7,7 @@
 -- Bootstrap calls apply() when the hatch opens and restore() whenever any screen opens or the modal closes, so every other screen keeps its
 -- window exactly as before. Flag off = this file is never required.
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Effects = require(Shared:WaitForChild("EffectAssets"))
 local Chip = require(Shared:WaitForChild("ChipStyle")) -- BD-1070: every tag on the stage is the one chip style
@@ -269,6 +270,7 @@ end
 function Stage.reveal()
     local s, info = stageParts, pending
     if not s or not info or not state then return end
+    pcall(Stage.crackBurst)
     local rank = math.clamp(info.rarity or 1, 1, #Stage.Ladder)
     local tier = Stage.Ladder[rank]
     local restore = s.restore
@@ -516,6 +518,7 @@ end
 Stage.Paint = {
     pour = {egg = "rbxassetid://92069732192394", paint1 = "rbxassetid://73353455894694", frame = .09},
     spots = {egg = "rbxassetid://81242850190606", paint1 = "rbxassetid://135360744887859", paint2 = "rbxassetid://81436669855366", frame = .09},
+    crack = {egg = "rbxassetid://128268812904756", paint1 = "rbxassetid://86542718494821", paint2 = "rbxassetid://131196554258662", frame = .07},
 }
 local paintOverlay: Frame? = nil
 Stage.lastColors = {} :: {Color3} -- the colours the paint beat used, shown as dots on the reveal
@@ -558,6 +561,137 @@ local function layer(parent: Frame, name: string, image: string, color: Color3?,
     return l
 end
 -- Play one flipbook (8 frames, then hold the last). colors = {paint1, paint2?}
+-- Play frames [from..to] of a flipbook (0-based, 4 x 2 cells), each `frameTime` seconds; afterDone runs after the last frame.
+function Stage.playBook(kind: string, colors: {Color3}, from: number, to: number, frameTime: number, afterDone: ((Frame) -> ())?)
+    local s = stageParts
+    if not s or not state then return end
+    local book = Stage.Paint[kind]
+    if not book or book.egg == "" then return end
+    hideOldPaint(s)
+    local f = overlayFor(s)
+    f:ClearAllChildren()
+    f.Rotation = 0
+    local z = f.ZIndex
+    local layers = {layer(f, "Paint1", book.paint1, colors[1], z + 1)}
+    if book.paint2 then table.insert(layers, layer(f, "Paint2", book.paint2, colors[2] or colors[1], z + 2)) end
+    table.insert(layers, layer(f, "Egg", book.egg, nil, z + 3))
+    task.spawn(function()
+        for i = from, to do
+            if not f.Parent then return end
+            local offset = Vector2.new((i % 4) * 256, math.floor(i / 4) * 256)
+            for _, l in layers do l.ImageRectOffset = offset end
+            hideOldPaint(s)
+            task.wait(if s.reduceMotion then 0 else frameTime)
+        end
+        if afterDone and f.Parent then afterDone(f) end
+    end)
+end
+-- BD-1212 shell break (ChatGPT sheet continuing the spot spray): frames 1-4 = cracks with white light (during the rattle, the last one
+-- held with a soft shake), frames 5-8 = flash and painted shards flying out (at the burst, under the ribbon and the dino).
+-- BD-1212 3D egg break (owner 2026-11-16: the drawn break looked bad -> "Yes, 3D shards").
+-- Charge (during the rattle): the painted egg shakes harder and harder and a white glow swells behind it.
+function Stage.crackCharge()
+    local s, f = stageParts, paintOverlay
+    if not s or not f or s.reduceMotion then return end
+    local glow = Instance.new("ImageLabel")
+    glow.Name, glow.BackgroundTransparency, glow.Image = "ChargeGlow", 1, Effects.Requested.glowPlate.id
+    glow.AnchorPoint, glow.Position, glow.Size, glow.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromScale(.9, .9), f.ZIndex
+    glow.ImageTransparency = .9
+    glow.Parent = f
+    task.spawn(function()
+        local t = 0
+        while f.Parent and stageParts == s do
+            t += task.wait()
+            local k = math.min(1, t / 2.5) -- builds up over ~2.5 s, then stays at full strength
+            f.Rotation = math.sin(t * (24 + 30 * k)) * (2 + 5 * k)
+            glow.ImageTransparency = .9 - .75 * k
+            glow.Size = UDim2.fromScale(.9 + .7 * k + .08 * math.sin(t * 9), .9 + .7 * k + .08 * math.sin(t * 9))
+        end
+    end)
+end
+-- Burst (at the reveal): a white flash, then the 3D shell shards in the egg's colour fly out with spin, gravity and fade, plus sparkles.
+function Stage.crackBurst()
+    local s, f = stageParts, paintOverlay
+    if not s or not f then return end
+    local center = f.AbsolutePosition + f.AbsoluteSize / 2 - s.shade.AbsolutePosition
+    local side = f.AbsoluteSize.X
+    f:Destroy()
+    paintOverlay = nil
+    if s.reduceMotion then return end
+    local colour = Stage.lastColors[1] or Color3.fromRGB(245, 236, 214)
+    -- flash
+    local flash = Instance.new("ImageLabel")
+    flash.Name, flash.BackgroundTransparency, flash.Image = "BurstFlash", 1, Effects.Requested.glowPlate.id
+    flash.AnchorPoint, flash.Position, flash.Size, flash.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(center.X, center.Y), UDim2.fromOffset(side, side), s.panel.ZIndex + 40
+    flash.ImageColor3 = Color3.new(1, 1, 1)
+    flash.Parent = s.shade
+    TweenService:Create(flash, TweenInfo.new(.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(side * 3.2, side * 3.2), ImageTransparency = 1}):Play()
+    task.delay(.4, function() flash:Destroy() end)
+    -- sparkles flying out
+    local sheet = Effects.Sheets and Effects.Sheets.starFour
+    for i = 1, 10 do
+        local star = Instance.new("ImageLabel")
+        star.BackgroundTransparency, star.Image, star.ZIndex = 1, Effects.Requested.starFour.id, s.panel.ZIndex + 41
+        if sheet then
+            local cell = sheet.size / sheet.grid
+            star.ImageRectSize, star.ImageRectOffset = Vector2.new(cell, cell), Vector2.new(cell * 2, cell)
+        end
+        star.AnchorPoint, star.Size, star.Position = Vector2.new(.5, .5), UDim2.fromOffset(34, 34), UDim2.fromOffset(center.X, center.Y)
+        star.Parent = s.shade
+        local a = i / 10 * math.pi * 2
+        local d = side * (1.1 + (i % 3) * .25)
+        TweenService:Create(star, TweenInfo.new(.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = UDim2.fromOffset(center.X + math.cos(a) * d, center.Y + math.sin(a) * d), ImageTransparency = 1, Rotation = 180}):Play()
+        task.delay(.75, function() star:Destroy() end)
+    end
+    -- 3D shards
+    local template = game:GetService("ReplicatedStorage"):FindFirstChild("HatchStageShards")
+    if not template then return end
+    local view = Instance.new("ViewportFrame")
+    view.Name, view.BackgroundTransparency, view.ZIndex = "BurstShards", 1, s.panel.ZIndex + 39
+    view.AnchorPoint, view.Position, view.Size = Vector2.new(.5, .5), UDim2.fromOffset(center.X, center.Y), UDim2.fromOffset(side * 3, side * 3)
+    view.Ambient, view.LightColor, view.LightDirection = Color3.fromRGB(150, 150, 150), Color3.new(1, 1, 1), Vector3.new(-.4, -1, -.6)
+    view.Parent = s.shade
+    local world = Instance.new("WorldModel")
+    world.Parent = view
+    local model = template:Clone()
+    model.Parent = world
+    local cf, size = model:GetBoundingBox()
+    local radius = math.max(size.X, size.Y, size.Z) / 2
+    local camera = Instance.new("Camera")
+    camera.FieldOfView = 40
+    camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, radius * .2, radius * 3 * 3.2), cf.Position)
+    camera.Parent = view
+    view.CurrentCamera = camera
+    local shards = {}
+    for i, part in model:GetChildren() do
+        if part:IsA("BasePart") then
+            part.Color, part.Material, part.Reflectance = colour, Enum.Material.SmoothPlastic, .15
+            local out = part.Position - cf.Position
+            if out.Magnitude < 1e-3 then out = Vector3.new(0, 1, 0) end
+            local dir = out.Unit
+            table.insert(shards, {part = part, start = part.CFrame,
+                vel = dir * radius * (5 + (i % 4)) + Vector3.new(0, radius * 3, radius * 2),
+                spin = Vector3.new((i * 1.3) % 6 - 3, (i * 2.1) % 6 - 3, (i * .7) % 6 - 3)})
+        end
+    end
+    local t, duration = 0, .9
+    local conn
+    conn = RunService.RenderStepped:Connect(function(dt)
+        t += dt
+        if t >= duration or not view.Parent then
+            conn:Disconnect()
+            view:Destroy()
+            return
+        end
+        for _, sh in shards do
+            local pos = sh.start.Position + sh.vel * t + Vector3.new(0, -radius * 14, 0) * t * t * .5
+            sh.part.CFrame = CFrame.new(pos) * (sh.start - sh.start.Position) * CFrame.Angles(sh.spin.X * t * 3, sh.spin.Y * t * 3, sh.spin.Z * t * 3)
+            sh.part.Transparency = math.clamp((t - duration * .55) / (duration * .45), 0, 1)
+        end
+    end)
+    table.insert(s.restore, function() if view.Parent then view:Destroy() end end)
+end
 function Stage.playPaint(kind: string, colors: {Color3})
     local s = stageParts
     if not s or not state then return end
