@@ -200,6 +200,12 @@ return table.freeze({
     -- only: nothing is stored, sent or decided, the buttons do what they did. false = the four screens are built exactly as before and
     -- ScreensCohesion is never required. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     ScreensCohesionEnabled = false,
+    -- BD-1237 (docs/240 order step 4, style tile v3 boards 11-13, v2 board 7): true = Egg chances, the Food guide, the weather title card, the toast
+    -- cards and the Fusion colour bar follow the style rules R1-R8 (src/client/MenusCohesion.luau, Shared/MenusCohesionRules): cream panels with
+    -- ink words (no text on the studs, no navy toast), chances in kid words with the exact numbers one tap away ("36.4%", never "36.4000%"), grey
+    -- buttons, the real V3 food meshes instead of code-drawn leaves, a white weather word with its icon (no rarity colour), no empty colour bar.
+    -- Client presentation only. false = these screens exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157).
+    MenusCohesionEnabled = false,
     -- BD-1218 + BD-1219 (docs/242 benchmark gaps 3 and 4): true = calm music beds (island, home, a softer hatch bed) with crossfades, sounds for
     -- the 14 silent Sfx slots (Roblox-licensed Creator Store audio, docs/77), a soft window open/close pop, a soft defeat and nest-open cue
     -- and soft dino footsteps by surface instead of the human ones; src/client/AudioPolish.client.luau + src/shared/AudioPolish.luau.

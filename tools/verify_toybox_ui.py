@@ -52,6 +52,7 @@ ART = 'resources/ui/v2/toybox/final'
 # BD-1178 (docs/231): the Crystal Shop in the Toybox look reads the kit through its own verifier, tools/verify_toybox_shop.py
 POLISH_FILES = tuple('src/client/' + n + '.luau' for n in ('PotionToyboxPage', 'SettingsMenu', 'HudToybox', 'HudTimers', 'VolumeSliders', 'SmallScreens')) + ('src/shared/TimerWords.luau', 'src/client/HudCohesion.client.luau', 'src/client/PointAtCue.client.luau')  # BD-1226: the point-at chips read the kit cream / ink (own flag); BD-1205 (docs/236): Potion Shop, Settings, HUD buttons; BD-1213: the HUD cohesion script reads the ToyboxKit numbers (its own flag)
 SCREENS_COHESION = ('src/client/ScreensCohesion.luau', 'src/shared/ScreensCohesionLayout.luau', 'src/loading/Loading.client.luau')  # BD-1214 (docs/240 step 3): Run complete, Home, Welcome, Loading on the kit numbers
+MENUS_COHESION = ('src/client/MenusCohesion.luau', 'src/shared/MenusCohesionRules.luau', 'src/client/ShopTiles.luau')  # BD-1237 (docs/240 step 4): Egg chances, Food guide, weather card, toasts on the kit numbers
 CRYSTAL_SHOP = ('src/shared/ToyboxShop.luau', 'src/client/ShopToyboxCard.luau', 'src/client/ShopToyboxPage.luau', 'src/client/ShopCards.luau', 'src/client/ShopScreens.luau')
 
 # The hook lines. Removing them gives "today's files"; check 2 compares the flag-off build against that.
@@ -152,7 +153,7 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES + SCREENS_COHESION + ('src/client/HatchStage.luau',) and 'Toybox' in text:  # BD-1212: the hatch stage gives Skip the kit button
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES + SCREENS_COHESION + MENUS_COHESION + ('src/client/HatchStage.luau',) and 'Toybox' in text:  # BD-1212: the hatch stage gives Skip the kit button
             raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout, HatchStage and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)

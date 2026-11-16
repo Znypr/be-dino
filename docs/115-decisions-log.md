@@ -837,3 +837,12 @@ Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questio
 - **Not picked:** placing nest meshes (adds parts); berries raised onto the bush tops (FoodService puts food on the terrain; reach and catch rules would change).
 - **Known:** the V3 map itself is checked against the non-toon world colliders (one rock and one log differ from the toon world); the hosts map uses the toon world.
 - **Not checked on a phone** (BD-1222).
+
+## BD-1237: cohesion step 4 (Egg chances, Food guide, weather card, toasts, confirm popups) and the step-5 UI fixes (2026-11-16, LEAD decision, owner delegated 2026-10-16)
+- **One flag, off in the default build, ON in the playtest profile** per docs/157 and in the rehearsal list: `MenusCohesionEnabled`. docs/240 order step 4 (owner 2026-11-16: "continue until everything is done"). Client presentation only; free, no Robux, no odds or economy change. Check: `tools/verify_menus_cohesion.py` (CI).
+- **Egg chances:** kid words ("1 in 4", "8 in 10", two figures) on a cream panel; the exact list stays one tap away (EXACT %), only trailing zeros dropped (36.4000% -> 36.4%, nothing rounded). Not picked: rarity chips per species (the shop egg has no rarity table today).
+- **Food guide:** the four V3 food meshes (BD-1208, owner-approved) in small 3D views instead of code-drawn leaves; "Amber" as in the approved mockup (the game's kind id is amber). No new uploads: the food icon candidates (BD-1094) still wait for the owner's pick.
+- **Weather card:** white word, ink outline, the weather's own icon, the line in a cream chip; the block slides clear of the HUD plates and of the "Rain started!" toast that arrives at the same moment (Studio 2026-11-16: at 1274x481 the icon sat on the goal line).
+- **Confirm popups, shop tiles, shop egg card, Settings Help, Codes, Tell us!:** cream panels, ink words, one green button per screen, everything else grey (R3: the four green OPEN buttons were four main buttons; gold and purple are rarity colours). Admin stays purple (admin only).
+- **Fusion R8:** an older dino has no saved colours: no empty dark bar. **Eggs ready! chip:** the word sits right of the nest icon.
+- **Not done here (rows):** defeat picture BD-1240, phone emulator / phone BD-1241, sound and motion BD-1242, 3D re-captures BD-1243. The four hatch rows are the hatch session's (BD-1211).
