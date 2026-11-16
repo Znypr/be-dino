@@ -18,6 +18,14 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
     for name, c in BiomeMap.Colors do
         terrain:SetMaterialColor((Enum.Material :: any)[name], Color3.fromRGB(c[1], c[2], c[3]))
     end
+    -- BD-1209: the redesigned island (Config.WorldV3Enabled, Layout.V3) paints the plaza, paths, beach and sea floor itself and fills the sea.
+    local V3 = if (Layout :: any).V3 then BiomeMap.V3 else nil
+    if V3 then
+        for name, c in V3.Colors do
+            terrain:SetMaterialColor((Enum.Material :: any)[name], Color3.fromRGB(c[1], c[2], c[3]))
+        end
+        pcall(function() terrain.WaterColor, terrain.WaterTransparency, terrain.WaterWaveSize = Color3.fromRGB(64, 182, 214), .35, .08 end)
+    end
     -- Roblox's own grass decoration adds real 3D tufts on Grass terrain for free (no parts); not scriptable everywhere.
     pcall(function() (terrain :: any).Decoration = true end)
     local resolution = Config.TerrainResolution
@@ -53,13 +61,21 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
                 local name = BiomeMap.surface(weights, height, slope, pickRoll, band, smooth(wx, wz, 21, o + 11))
                 local wet = Layout.poolProximity(wx, wz)
                 if wet > .55 and height < 3 then name = if weights.marsh > .35 then "Mud" else "Sand" end
+                if V3 then name = V3.surface(wx, wz, height) or name end
                 local surface = (Enum.Material :: any)[name] :: Enum.Material
                 local deep = (Enum.Material :: any)[BiomeMap.Rock[dominant]] :: Enum.Material
                 biomeCells += 1
                 for y = 1, size.Y do
                     local wy = low.Y + (y - .5) * resolution
-                    occupancy[x][y][z] = math.clamp((height - wy) / resolution + .5, 0, 1)
-                    materials[x][y][z] = if wy < height - 6 then deep else surface
+                    local solid = math.clamp((height - wy) / resolution + .5, 0, 1)
+                    if V3 and solid < .5 and wy - resolution / 2 < V3.SeaLevel then
+                        -- sea water above the shelf (the top cell holds only the part under sea level)
+                        occupancy[x][y][z] = math.clamp((V3.SeaLevel - (wy - resolution / 2)) / resolution, 0, 1)
+                        materials[x][y][z] = Enum.Material.Water
+                    else
+                        occupancy[x][y][z] = solid
+                        materials[x][y][z] = if wy < height - 6 then deep else surface
+                    end
                 end
             end
             if x % 8 == 0 then task.wait() end

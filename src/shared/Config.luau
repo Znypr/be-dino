@@ -179,6 +179,15 @@ return table.freeze({
     -- Needs FoodArtMode = "Kit". Visual only: the same kinds, points, sizes, placement, respawn and pickup rules; a mesh that fails to load keeps
     -- today's kit mesh. false = nothing is loaded and the food is exactly as before. Pinned off in the default profile, ON in the playtest profile.
     FoodV3Enabled = false,
+    -- BD-1209 (BD-1208 step 1, docs/241 W1-W3): true = the island is the redesigned round island (Shared/WorldV3.luau): beach and soft
+    -- cliffs with sea around it, a paved spawn plaza, five spoke paths and a ring road, five zones (meadow, broadleaf forest, pine hill, palm
+    -- beach with a lagoon, volcano corner). Terrain shape, ground colours and where props may grow change; no save, economy or reward change.
+    -- false = the island is exactly as before. Pinned off in the default profile, ON in the playtest profile.
+    WorldV3Enabled = false,
+    -- BD-1211 (docs/240 R7, style tile v2 boards 2-4): true = the hatch is a full stage over the world (no stud window, a light veil with soft
+    -- rays, "Egg 2 of 5" in a cream chip, cream chips with ink text, grey buttons, the green NEXT EGG kept). Client presentation only; every
+    -- other screen keeps its window. false = the hatch window exactly as before. Pinned off in the default profile, ON in the playtest profile.
+    HatchStageEnabled = false,
     -- BD-1213 (docs/240 step 2, style tile v2 board 1): true = the in-run HUD and the world labels on the style rules R1-R8
     -- (src/client/HudCohesion.client.luau, Shared/HudCohesionRules): cream plates with an ink outline for the eggs, SIZE, crystals and goal,
     -- no debug lines on the HUD (one small "Test game: not saved" chip in an unsaved Studio preview), LEAP grey (CHOMP the one green button),

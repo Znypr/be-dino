@@ -31,7 +31,7 @@ class RehearsalProfileTests(unittest.TestCase):
         for key, _why in profiles.REHEARSAL_ON:
             self.assertIs(values[key], True, key)
         for key in ("ObjectivesEnabled", "GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled", "FoodPickupAtMouth", "PredationAtMouth",
-                    "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk", "GeneBoostEnabled", "FoodLayerEnabled", "FoodRespawnTiersEnabled", "PatternColourIndexEnabled", "ShopPromptBubbleEnabled", "RareFindBannerEnabled", "HudRailWordsEnabled", "ShopCardPriceButtonEnabled", "TimerChipsEnabled", "WelcomeBackEnabled", "PlayAgainEnabled", "HatchFastCommonsEnabled", "StarterRunEnabled", "DupProgressEnabled", "MotionPresetsEnabled", "ToyboxUIEnabled", "FoodV3Enabled", "HudCohesionEnabled", "AudioPolishEnabled", "HatchV2",
+                    "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk", "GeneBoostEnabled", "FoodLayerEnabled", "FoodRespawnTiersEnabled", "PatternColourIndexEnabled", "ShopPromptBubbleEnabled", "RareFindBannerEnabled", "HudRailWordsEnabled", "ShopCardPriceButtonEnabled", "TimerChipsEnabled", "WelcomeBackEnabled", "PlayAgainEnabled", "HatchFastCommonsEnabled", "StarterRunEnabled", "DupProgressEnabled", "MotionPresetsEnabled", "ToyboxUIEnabled", "FoodV3Enabled", "WorldV3Enabled", "HatchStageEnabled", "HatchV2", "HudCohesionEnabled", "AudioPolishEnabled",
                     "CaveHub", "ClassMovementEnabled", "LowPolyDinos", "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled",
                     "SecretSpeciesEnabled", "DinoSkinsEnabled"):
             self.assertIs(values[key], True, key)

@@ -3,6 +3,8 @@
 -- Writes Weld.C1 (the animation offset) so DinoMotion's C0 poses (eat, jump squash/stretch, landing) keep working on top.
 -- Jump/leap state is derived client-side (humanoid state/velocity, LeapPredictAt/LeapUntil attributes); the server rules are untouched.
 -- Respects Reduce Motion (Theme.MotionEnabled). Remote dinos are animated at 20 Hz within 80 studs only.
+-- BD-1217: authored clips (Shared/LowPolyClips, keys from tools/blender/dino_clips.py) play ON TOP: eat when the dino eats (GrowthScore /
+-- CatchScore up), happy when it grows (VisualScale up) or a new species is put on, a look-around after standing still a while.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -11,11 +13,14 @@ local LowPoly = require(Shared.LowPolyDinos)
 local Theme = require(Shared.UITheme)
 local EffectAssets = require(Shared.EffectAssets)
 local NpcLowPoly = require(Shared.NpcLowPoly)
+local Clips = require(Shared.LowPolyClips)
 if not LowPoly.enabled() then return end
 
 local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
 local rigs: {[Model]: any} = {}
 local out, actOut, ctx = Pose.new(), Pose.new(), Pose.newCtx()
+local clipOut = Clips.new()
+local LOOK_AFTER, LOOK_JITTER, CLIP_FADE = 8, 6, 0.25 -- s standing still before a look-around; fade when a clip is cut short
 
 -- Small splash puff for the Water surge: the existing smoke sheet (alpha), 3 pooled emitters, none under Reduce Motion.
 local splash: {ParticleEmitter} = {}
@@ -121,6 +126,42 @@ local function updateAction(rig: any, now: number)
     end
 end
 
+-- BD-1217: clip state. playClip restarts nothing that is already playing the same clip; stopClip fades out over CLIP_FADE.
+local function playClip(rig: any, name: string, now: number)
+    if rig.clip == name and not rig.clipFadeAt then return end
+    rig.clip, rig.clipAt, rig.clipFadeAt = name, now, nil
+end
+local function stopClip(rig: any, now: number)
+    if rig.clip and not rig.clipFadeAt then rig.clipFadeAt = now end
+end
+local function updateClip(rig: any, now: number)
+    local character = rig.character
+    if not character then return end
+    local growth, catch, scale = num(character, "GrowthScore"), num(character, "CatchScore"), num(character, "VisualScale")
+    if rig.lastScale == nil then rig.lastGrowth, rig.lastCatch, rig.lastScale = growth, catch, scale end
+    if scale > rig.lastScale and rig.lastScale > 0 then playClip(rig, "happy", now)
+    elseif (growth > rig.lastGrowth or catch > rig.lastCatch) and rig.clip ~= "happy" then playClip(rig, "eat", now) end
+    rig.lastGrowth, rig.lastCatch, rig.lastScale = growth, catch, scale
+    if rig.clip and now - rig.clipAt >= Clips.length(rig.clip) then rig.clip, rig.clipFadeAt = nil, nil end
+    local still = rig.speed < 0.02 and rig.act == nil
+    if not still then
+        rig.lookAt = now + LOOK_AFTER
+        if rig.clip == "look" then stopClip(rig, now) end
+        if rig.clip == "happy" and rig.act ~= nil then stopClip(rig, now) end -- a jump takes over from the hops
+    elseif rig.clip == nil and now >= rig.lookAt then
+        playClip(rig, "look", now)
+        rig.lookAt = now + Clips.length("look") + LOOK_AFTER + math.random() * LOOK_JITTER
+    end
+end
+-- weight of the playing clip (0 = none); a stopped clip fades out
+local function clipWeight(rig: any, now: number): number
+    if not rig.clip then return 0 end
+    if not rig.clipFadeAt then return 1 end
+    local w = 1 - (now - rig.clipFadeAt) / CLIP_FADE
+    if w <= 0 then rig.clip, rig.clipFadeAt = nil, nil return 0 end
+    return w
+end
+
 -- BD-324: wild NPC predators (server-made models flagged NpcLowPoly, visual child "NpcVisual") use the SAME pose functions. Their action
 -- comes from the replicated NpcCue ("windup") and BiteSeq attributes, not from a Humanoid: windup lean, bite lunge.
 local function updateNpcAction(rig: any, model: Model, now: number)
@@ -187,7 +228,7 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
     rig.phase = (rig.phase + dt * Pose.stepRate(rig.speed) * (if rig.speed > 0.01 then 1 else 0)) % (2 * math.pi * 8)
     local height = rig.height
     rig.amp = amp
-    if amp == 0 then rig.act = nil elseif npc then updateNpcAction(rig, npc, now) else updateAction(rig, now) end
+    if amp == 0 then rig.act, rig.clip = nil, nil elseif npc then updateNpcAction(rig, npc, now) else updateAction(rig, now) updateClip(rig, now) end
     local phase = rig.act
     local k = 0
     if phase then
@@ -200,12 +241,22 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
     end
     local bob = Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class) * height -- BD-388: one shared translation for every part
     if amp > 0 and rig.rayParams then bob += hipDipFor(rig, now) end -- BD-556: the same lift for every part, so nothing slides
+    local cw = clipWeight(rig, now)
+    local clipT = if cw > 0 then now - rig.clipAt else 0
+    if cw > 0 then bob += Clips.sample(rig.clip, "root", 1, clipT, clipOut).bob * height * cw end -- BD-1217: the clip's whole-dino lift
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
         if phase == "defeat" then Pose.blend(out, Pose.sampleDefeat(item.role, item.side, item.lead, ctx, amp, actOut, rig.class, rig.skin), k)
         elseif phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
+        if cw > 0 then
+            Clips.sample(rig.clip, item.role, item.side, clipT, clipOut)
+            out.pitch += clipOut.pitch * cw
+            out.yaw += clipOut.yaw * cw
+            out.roll += clipOut.roll * cw
+            out.fwd += clipOut.fwd * height * cw
+        end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -246,6 +297,7 @@ RunService.Heartbeat:Connect(function(dt)
             continue
         end
         local rig = rigs[character]
+        local previous = rig
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             -- character: updateAction reads it (jump, leap, land, surge, defeat). It was never set, so those poses never played (found by tools/verify_motion_poses.py).
@@ -258,6 +310,12 @@ RunService.Heartbeat:Connect(function(dt)
                 rig.rayParams = params
             end
             rigs[character] = rig
+            rig.lookAt = now + LOOK_AFTER
+            rig.species = character:GetAttribute("SpeciesId")
+            if previous then -- BD-1217: a rebuilt visual keeps the clip triggers' memory; a NEW species put on plays happy
+                rig.lastGrowth, rig.lastCatch, rig.lastScale = previous.lastGrowth, previous.lastCatch, previous.lastScale
+                if previous.species ~= nil and rig.species ~= previous.species and amp > 0 then playClip(rig, "happy", now) end
+            end
         end
         if player == Players.LocalPlayer then
             apply(rig, now, dt, amp)

@@ -86,6 +86,16 @@ Generated.Food = {
     food_v3_amber_a = {assetId = "89498247826218", tris = 1500, rotX = 0, tint = {255, 172, 48}}, -- amber nugget, fern and bug fossil
     food_v3_amber_b = {assetId = "113390214356638", tris = 1000, rotX = 0, tint = {255, 190, 50}}, -- amber nugget, fern fossil
 }
+-- BD-1210 (BD-1208 step 3, docs/241 W4): one big landmark per zone of the redesigned island, generated with Roblox generate_mesh (published to the
+-- owner's account 2026-11-15, docs/evidence/2026-11-15-world/landmarks). Loaded only when Config.WorldV3Enabled; Arena puts each on its WorldV3 site,
+-- scaled to `height` studs, facing the plaza, with hidden box colliders (`colliders`: {cx, cy, cz, sx, sy, sz} as fractions of the scaled size,
+-- centre from the bottom middle) so the arch stays walkable. An empty id = that site stays an open clearing.
+Generated.Landmarks = {
+    landmark_v3_giant_tree = {assetId = "126740053119061", site = "giant_tree", height = 88, colliders = {{0, .2, 0, .22, .4, .22}}},
+    landmark_v3_lagoon_arch = {assetId = "98605517737411", site = "lagoon_arch", height = 46, colliders = {{-.36, .4, 0, .26, .8, .9}, {.36, .4, 0, .26, .8, .9}, {0, .88, 0, 1, .24, .9}}},
+    landmark_v3_fossil_statue = {assetId = "103276379519605", site = "fossil_statue", height = 40, colliders = {{0, .06, 0, .9, .12, .9}, {0, .5, 0, .45, .8, .5}}},
+    landmark_v3_waterfall = {assetId = "82497121541738", site = "waterfall", height = 50, flip = true, colliders = {{-.4, .45, 0, .2, .9, .8}, {.4, .45, 0, .2, .9, .8}}}, -- front is +Z
+}
 -- BD-463/464 step 2: true for a pasted Roblox asset id (digits only, no leading zero, 9-18 long). "" and anything else mean "not uploaded yet".
 function Generated.validId(id: any): boolean
     if type(id) ~= "string" then return false end

@@ -200,8 +200,18 @@ def parse(stdout):
     return props, cols, ext, hub
 
 
-def dump(runner, profile='playtest'):
-    """The placements, kit colliders and kit extents of the profile as the server would build them (one Luau run, a few seconds)."""
+# BD-1208: with Config.WorldV3Enabled the offline runner (no `script`) keeps IslandLayout and BiomeMap on the old island, so the V3 swap of their bottom
+# lines (src/shared/IslandLayout.luau, BiomeMap.luau) and Arena.build's Biome.useV3 are done here by hand, before the placements are generated.
+V3_SWAP = (
+    'local WorldV3=' + est.vwa.wrapped('src/shared/WorldV3.luau') + '\n'
+    'Layout.V3=true\nLayout.height,Layout.inPool,Layout.poolProximity=WorldV3.height,WorldV3.inPool,WorldV3.poolProximity\n'
+    'Layout.Pools,Layout.Basins,Layout.Peaks,Layout.Hills=WorldV3.Pools,{},{},{}\n'
+    'BiomeMap.V3=WorldV3\nBiomeMap.weights=WorldV3.weights\nBiome.useV3(WorldV3)\n')
+
+
+def dump(runner, profile='playtest', world=None):
+    """The placements, kit colliders and kit extents of the profile as the server would build them (one Luau run, a few seconds).
+    world='v3': the redesigned round island (BD-1208)."""
     text = (ROOT / 'src' / 'shared' / 'Config.luau').read_text(encoding='utf-8')
     cfg = release_profiles.apply_profile(text, profile)[0] if profile == 'playtest' else text
     old = est.DUMP
@@ -214,7 +224,7 @@ def dump(runner, profile='playtest'):
     hub = 'local CaveHubLayout=' + est.vwa.wrapped('src/shared/CaveHubLayout.luau') + '\nlocal caveHub=CaveHubLayout.hub(Config)\nif caveHub.enabled then Biome.useHub(caveHub.biome) end\n'
     marker = 'local a=Biome.generate('
     assert marker in src, 'estimate_world_budget.luau_script changed: update world_colliders.dump'
-    src = src.replace(marker, hub + marker, 1)
+    src = src.replace(marker, hub + (V3_SWAP if world == 'v3' else '') + marker, 1)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'colliders.luau'
         path.write_text(src, encoding='utf-8')
@@ -267,14 +277,16 @@ def arena_obstacles(cols):
 _CACHE = {}
 
 
-def load(runner, profile='playtest'):
-    """Obstacles for the profile (cached per process)."""
-    key = (str(runner), profile)
+def load(runner, profile='playtest', world=None):
+    """Obstacles for the profile (cached per process). world='v3' (BD-1208): the round island; Arena.build then makes no boundary boulder ring, arch or
+    jump stones (the landmark models are covered by the keep-out discs of BiomePlacement.useV3). `.sites` = (x, z, layer) of the rocks and kit landmarks."""
+    key = (str(runner), profile, world)
     if key not in _CACHE:
-        props, cols, ext, hub = dump(runner, profile)
-        items = prop_obstacles(props, cols, ext) + arena_obstacles(cols)
+        props, cols, ext, hub = dump(runner, profile, world)
+        items = prop_obstacles(props, cols, ext) + (arena_obstacles(cols) if world != 'v3' else [])
         _CACHE[key] = Obstacles(items)
         _CACHE[key].summary = {'props': len(props), 'obstacles': len(items), 'cave_hub': hub}
+        _CACHE[key].sites = [(p['x'], p['z'], p['layer']) for p in props if p['layer'] in ('rock', 'landmark')]
     return _CACHE[key]
 
 
