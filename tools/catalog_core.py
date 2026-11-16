@@ -63,7 +63,7 @@ def _closure(root: Path) -> list[str]:
         if name in seen or name not in files:
             continue
         seen.append(name)
-        for match in re.finditer(r"require\(\s*([A-Za-z_.]+)\s*\)", files[name].read_text(encoding="utf-8")):
+        for match in re.finditer(r"require\(\s*([A-Za-z0-9_.]+)\s*\)", files[name].read_text(encoding="utf-8")):
             todo.append(match.group(1).split(".")[-1])
     return sorted(seen)
 

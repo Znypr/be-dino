@@ -102,7 +102,7 @@ end
 R.FindTitle = "RARE FIND!"
 R.SecretFindTitle = "SECRET FIND!"
 R.MaxSpecies = 24 -- letters, digits, spaces, - ' . only (a species display name)
-R.FindKinds = table.freeze({legendary = true, shiny = true, mutation = true, secret = true})
+R.FindKinds = table.freeze({legendary = true, shiny = true, mutation = true, secret = true, epic = true}) -- epic: BD-1227, sent only with Config.RareHatchNewsEnabled
 R.FindFade = table.freeze({fadeIn = 0.3, hold = 3.6, fadeOut = 0.6}) -- seconds; Reduce Motion: no fades, the same hold
 
 function R.findTitle(kind: any): string
@@ -142,6 +142,47 @@ function R.findFromPayload(data: any, tierNames: {string}): {title: string, line
     local line = R.findLine(info, tierName, species)
     if line == nil then return nil end
     return {title = R.findTitle(data.kind), line = line}
+end
+
+-- BD-1227 (docs/242 gap 17, flag Config.RareHatchNewsEnabled): server news. An EPIC species (tier 4) also makes news for the other players
+-- (only news: no own celebration, the hatch screen already shows it), and the line names the hatcher by Roblox DISPLAY NAME:
+-- "Mia hatched a Legendary T-Rex!". Display names are moderated by Roblox; cleanName still drops control characters and cuts at MaxName.
+-- A secret keeps its species out ("Mia found a secret dino!"). Same rate limits as BD-428 (Window, Cooldown, GlobalMax), nothing new is stored.
+R.EpicTier = 4
+R.EpicScore = 3 -- below a Legendary (4): a burst with a Legendary and an Epic announces the Legendary
+R.MaxChatLine = 80 -- the chat line is at most this many characters
+
+-- The news-only info for a settled outcome that classify() did not call rare: an Epic species that hatched. nil for anything else.
+function R.epicNews(outcome: any, speciesRarity: number?): {kind: string, score: number, shiny: boolean, legendary: boolean, mutation: boolean, secret: boolean, epic: boolean}?
+    if type(outcome) ~= "table" or outcome.failed == true then return nil end
+    if (speciesRarity or 0) ~= R.EpicTier then return nil end
+    return {kind = "epic", score = R.EpicScore, shiny = false, legendary = false, mutation = false, secret = false, epic = true}
+end
+
+-- "Mia hatched a Legendary T-Rex!", "Mia hatched an Epic Shiny Raptor!", "Mia found a secret dino!". nil when a word is missing.
+function R.newsLine(playerName: any, info: {kind: any?, shiny: boolean?, mutation: boolean?, secret: boolean?}, tierName: string?, speciesName: string?): string?
+    local name = R.cleanName(playerName)
+    if info.secret == true or info.kind == "secret" then return string.format("%s found a secret dino!", name) end -- kidtext-ok: the news line (not a title), same words as R.text (BD-428)
+    if type(tierName) ~= "string" or type(speciesName) ~= "string" or tierName == "" or speciesName == "" then return nil end
+    local article = if string.find(tierName, "^[AEIOUaeiou]") then "an" else "a"
+    local mods = (if info.shiny == true then " Shiny" else "") .. (if info.mutation == true then " Mutant" else "")
+    local line = string.format("%s hatched %s %s%s %s!", name, article, tierName, mods, speciesName)
+    if #line > R.MaxChatLine then line = string.sub(line, 1, R.MaxChatLine) end
+    return line
+end
+
+-- The client checks the news payload ({k = "all", kind, tier, species, shiny, mutation, name}) again: a clean name (letters, digits, spaces, _),
+-- then the same checks as findFromPayload. Returns {title, line} with the name in the line, or nil (the caller falls back to the plain banner).
+function R.newsFromPayload(data: any, tierNames: {string}): {title: string, line: string}?
+    if type(data) ~= "table" or type(data.name) ~= "string" then return nil end
+    local name = data.name
+    if #name < 1 or #name > R.MaxName or not string.find(name, "^[%w_][%w_ ]*$") then return nil end
+    local find = R.findFromPayload(data, tierNames)
+    if find == nil then return nil end
+    local tierName = if data.kind == "secret" then nil else tierNames[data.tier]
+    local line = R.newsLine(name, {kind = data.kind, shiny = data.shiny == true, mutation = data.mutation == true, secret = data.kind == "secret"}, tierName, data.species)
+    if line == nil then return nil end
+    return {title = find.title, line = line}
 end
 
 export type State = {

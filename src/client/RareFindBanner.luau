@@ -43,8 +43,9 @@ end
 
 -- data = the server payload {k = "all", kind, tier, species, shiny, mutation, text}. calm = Reduce Motion. Returns true when the new banner was drawn;
 -- false when the payload fails the checks (the caller then shows the old text banner).
-function Banner.show(gui: Instance, data: any, calm: boolean): boolean
-    local find = Rare.findFromPayload(data, RarityWord.Names)
+-- BD-1227: news = Config.RareHatchNewsEnabled; then a payload with a valid display name gets "Mia hatched a Legendary T-Rex!" as its line.
+function Banner.show(gui: Instance, data: any, calm: boolean, news: boolean?): boolean
+    local find = (if news == true then Rare.newsFromPayload(data, RarityWord.Names) else nil) or Rare.findFromPayload(data, RarityWord.Names)
     if find == nil then return false end
     if current and current.Parent then current:Destroy() end
     local plan = Rare.findPlan(calm)

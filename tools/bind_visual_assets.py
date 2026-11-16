@@ -5,7 +5,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-BASES = {"Grass": 1280, "Rock": 896, "Wood": 512}
+BASES = {"Grass": 1280, "Rock": 896, "Wood": 512,
+         # BD-1223 toon ground variants (Enum.Material values)
+         "LeafyGrass": 1284, "Sand": 1296, "Limestone": 820, "Ground": 1360, "Mud": 1344, "Slate": 800, "Basalt": 788, "Sandstone": 912}
 
 
 def outputs():

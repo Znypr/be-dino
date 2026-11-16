@@ -25,6 +25,16 @@ def pin(text: str, old: str, rehearsal: str, *, label: str = "") -> str:
     return text.replace(old, rehearsal, 1) if ACTIVE else text
 
 
+def legacy_island() -> str:
+    """Luau lines for a harness that embeds IslandLayout / BiomeMap WITHOUT WorldV3 and asserts the square legacy island (peaks, mountain
+    heights, the 416 stud edge). Under the rehearsal Config.WorldV3Enabled is on, IslandLayout would then take the V3 branch and call V3 functions
+    that the harness does not provide. The harness gets its own copy of the Config with that ONE flag off (every other flag stays on); the
+    redesigned island is checked by its own verifiers (verify_food_layer_v3.py, verify_world_look.py). Empty outside the rehearsal."""
+    if not ACTIVE:
+        return ""
+    return "\nConfig = table.clone(Config) Config.WorldV3Enabled = false -- rehearsal: legacy island checks, World V3 has its own verifiers\n"
+
+
 OVERLAY_MARKER = "\n\n-- rehearsal overlay (tools/run_rehearsal.py)"
 OVERLAY_HEAD = "local BaseConfig = table.freeze({"
 
