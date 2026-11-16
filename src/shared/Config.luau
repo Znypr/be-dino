@@ -188,6 +188,12 @@ return table.freeze({
     -- rays, "Egg 2 of 5" in a cream chip, cream chips with ink text, grey buttons, the green NEXT EGG kept). Client presentation only; every
     -- other screen keeps its window. false = the hatch window exactly as before. Pinned off in the default profile, ON in the playtest profile.
     HatchStageEnabled = false,
+    -- BD-1213 (docs/240 step 2, style tile v2 board 1): true = the in-run HUD and the world labels on the style rules R1-R8
+    -- (src/client/HudCohesion.client.luau, Shared/HudCohesionRules): cream plates with an ink outline for the eggs, SIZE, crystals and goal,
+    -- no debug lines on the HUD (one small "Test game: not saved" chip in an unsaved Studio preview), LEAP grey (CHOMP the one green button),
+    -- key badges on the button edge, "+3 Crystals" above its amber. Client presentation only. false = the HUD exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157).
+    HudCohesionEnabled = false,
     -- BD-1214 (docs/240 order step 3): true = Run complete, Home (Sanctuary), the Welcome steps and the Loading screen follow the style rules
     -- R1-R8 (style tile v2 board 6, v3 boards 8-10): cream panels with an ink outline (no text on the studs, no dark loading screen), one green
     -- main button, real pictures only, the 28 / 20 / 16 / 14 type scale, short kid copy; src/client/ScreensCohesion.luau. Client presentation
