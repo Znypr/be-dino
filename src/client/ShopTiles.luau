@@ -7,6 +7,9 @@ local Theme = require(Shared.UITheme)
 local Slots = require(Shared.AssetSlots)
 local Art = require(Shared.ShopArt)
 local C = Theme.Colors
+-- BD-1237: the style rules for the landing tiles while Config.MenusCohesionEnabled is on (nil = the old slate tiles).
+local Cohesion = if (require(Shared.Config) :: any).MenusCohesionEnabled == true then require(Shared.MenusCohesionRules) else nil
+local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
 
 local Tiles = {}
 -- true when the shop was opened from SHOP / the crystal counter and the landing page should show instead of a category.
@@ -75,6 +78,29 @@ function Tiles.build(ui, body: GuiObject, spec)
         open.Name = "TileOpen"
         local words = ui.label(open, "OPEN", 0, 0, layout.width - 16, 44, 22)
         words.Name = "TileOpenText"
+        if Cohesion then -- BD-1237 (docs/240 step 4): a cream card with ink words (no gold words on a slate card, R1 R2 R4), OPEN grey (R3: four green buttons were four main buttons)
+            card.BackgroundColor3 = rgb(Cohesion.Cream)
+            local g = card:FindFirstChildOfClass("UIGradient") if g then g:Destroy() end
+            for _, label in {title, sub} do
+                label.TextColor3, label.TextStrokeTransparency = rgb(if label == title then Cohesion.Ink else Cohesion.Muted), 1
+                for _, child in label:GetChildren() do if child:IsA("UIStroke") then child.Enabled = false end end
+            end
+            sub.Text = string.gsub(sub.Text, "%d%d%d%d+", function(n: string): string return Cohesion.grouped(tonumber(n) or 0) end)
+            open.BackgroundColor3 = Color3.fromRGB(128, 142, 158)
+            -- the Toybox skin turns every TextButton into a gloss button picture (grey face, transparent body): a cream card frame sits under the
+            -- words and the picture instead, and the grey face is hidden whenever the skin adds it
+            local back = Instance.new("Frame")
+            back.Name, back.Size, back.BackgroundColor3, back.BorderSizePixel, back.ZIndex = "CreamCard", UDim2.fromScale(1, 1), rgb(Cohesion.Cream), 0, card.ZIndex
+            local round = Instance.new("UICorner") round.CornerRadius, round.Parent = UDim.new(0, 12), back
+            local line = Instance.new("UIStroke") line.Color, line.Thickness, line.Parent = rgb(Cohesion.Outline), Cohesion.Toast.stroke, back
+            back.Parent = card
+            local function hideFace()
+                local face = card:FindFirstChild("ToyboxFace")
+                if face and face:IsA("GuiObject") then face.Visible = false end
+            end
+            card.ChildAdded:Connect(function() task.defer(hideFace) end)
+            task.defer(hideFace)
+        end
         card.Activated:Connect(function() spec.onPick(tab) end)
     end
 end

@@ -76,6 +76,13 @@ function W.list(parent: Instance, padding: number, horizontal: boolean?): UIList
     return l
 end
 
+function W.knownColour(id: string?): boolean
+    for _, row in ProgressionConfig.EggColors do
+        if row.id == id then return true end
+    end
+    return false
+end
+
 function W.colorOf(id: string?): Color3
     for _, row in ProgressionConfig.EggColors do
         if row.id == id then return Color3.fromRGB(row.rgb[1], row.rgb[2], row.rgb[3]) end
@@ -88,6 +95,12 @@ function W.swatch(parent: Instance, genes, size: UDim2, position: UDim2): Frame
     local frame = Instance.new("Frame")
     frame.Size, frame.Position, frame.BackgroundTransparency = size, position, 1
     frame.Parent = parent
+    -- BD-1237 (docs/240 R8, cohesion matrix row Fusion): an older dino has no saved colours, so the bar was an empty dark strip across the card.
+    -- With Config.MenusCohesionEnabled no colour = no bar (the card's "Older dino" line already says it); flag off: the strip as before.
+    if (require(Shared.Config) :: any).MenusCohesionEnabled == true and not W.knownColour(genes and genes.primaryColorId) then
+        frame.Visible = false
+        return frame
+    end
     local blend = (genes and tonumber(genes.blend)) or 100
     local a = W.box(frame, UDim2.fromScale(math.clamp(blend / 100, .08, 1), 1), UDim2.new(), W.colorOf(genes and genes.primaryColorId), 3)
     a.Name = "Primary"

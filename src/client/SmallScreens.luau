@@ -44,6 +44,20 @@ function Screens.render(name: string)
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Go home?",C.red
+        if Config.MenusCohesionEnabled==true then -- BD-1237 (docs/240 step 4): the confirm on cream panels, GO HOME the one green button, CANCEL grey
+            local character=player.Character
+            local eggs=if character then character:GetAttribute("CatchScore") or 0 else 0
+            local growth=math.floor(if character then character:GetAttribute("GrowthScore") or 0 else 0)
+            local rows={{"Eggs found",tostring(eggs)}}
+            if growth>0 then table.insert(rows,{"Growth","+"..growth}) end
+            return require(script.Parent.MenusCohesion).confirm({body=body,picture="home",title=require(Shared.FtueCopy).homeConfirmLine,rows=rows,buttons={
+                {"CANCEL",close,false},
+                {"GO HOME",function()
+                    local current=player.Character
+                    close()
+                    if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Going home...",C.gold) end
+                end,true}}})
+        end
         -- BD-531: on a phone-landscape canvas the body is only ~270-330 px tall: a smaller picture, tighter lines and buttons at the bottom of the
         -- VISIBLE body (ModalCompact.bodyHeight), so GO HOME and CANCEL need no scroll. Desktop (402) keeps today's numbers.
         local visibleH=require(script.Parent.ModalCompact).bodyHeight()
@@ -92,7 +106,7 @@ function Screens.render(name: string)
         local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
         if tab=="help" then
         local body=require(script.Parent.SettingsMenu).helpHost(body) -- BD-1205: Toybox look = inside the cream panel (the body itself with the flag off)
-        button(body,"How to play",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
+        button(body,"How to play",0,70,400,76,if Config.MenusCohesionEnabled==true then C.card else C.gold,function() open("tutorial") end).TextSize=26 -- BD-1237 (R3): grey beside the one green FOOD GUIDE
         button(body,"FOOD GUIDE",424,70,400,76,C.accent,function() open("food") end).TextSize=26
         label(body,"Auto-open eggs",0,172,824,40,28).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
@@ -109,6 +123,7 @@ function Screens.render(name: string)
         end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
+        if Config.MenusCohesionEnabled==true then return require(script.Parent.MenusCohesion).food({body=body,eggs=math.floor(500*Config.FoodCatchRate+.5)}) end -- BD-1237 (docs/240 step 4): real food art on cream cards
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
         for i,food in types do
             local card=box(body,(i-1)*208,0,196,286,food[4],24)

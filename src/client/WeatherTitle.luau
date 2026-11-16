@@ -25,6 +25,33 @@ local sub=Instance.new("TextLabel") sub.Name="Sub" sub.AnchorPoint=Vector2.new(.
 sub.BackgroundTransparency=1 sub.Font=Enum.Font.FredokaOne sub.TextScaled=true sub.TextTransparency=1 sub.TextColor3=Color3.new(1,1,1) sub.Text="Special eggs can drop!" sub.ZIndex=5 sub.Parent=title
 local subStroke=Instance.new("UIStroke") subStroke.Thickness=3 subStroke.Color=Color3.fromRGB(14,20,34) subStroke.Transparency=1 subStroke.Parent=sub
 local titleToken=0
+-- BD-1237 (docs/240 step 4, style tile v3 board 13): with Config.MenusCohesionEnabled the word is white with an ink outline (no purple or gold word:
+-- those are rarity colours, R4), the weather's own icon sits over it and the line under it is ink in a cream chip (R1, R2). Flag off: nil, as before.
+local Cohesion=if (require(Shared.Config) :: any).MenusCohesionEnabled==true then require(Shared.MenusCohesionRules) else nil
+local card:any=nil -- {icon, chip, word, line}: the extra parts of the cohesive card
+if Cohesion then
+    local Chip=require(Shared.ChipStyle)
+    local Icons=require(Shared.UIIconAssets) :: any
+    local function rgb(t:{number}):Color3 return Color3.fromRGB(t[1],t[2],t[3]) end
+    stroke.Color,stroke.Thickness=rgb(Cohesion.Outline),Cohesion.TitleOutline
+    sub.Visible=false -- its words move into the chip
+    local icon=Instance.new("ImageLabel") icon.Name="Icon" icon.BackgroundTransparency=1 icon.AnchorPoint=Vector2.new(.5,1) icon.Position=UDim2.new(.5,0,0,-2)
+    icon.SizeConstraint=Enum.SizeConstraint.RelativeYY icon.Size=UDim2.fromScale(1.2,1.2) icon.ScaleType=Enum.ScaleType.Fit icon.ImageTransparency=1 icon.ZIndex=5 icon.Parent=title
+    local chip,word,line=Chip.new(title,{name="Line",fill=rgb(Cohesion.Cream),size=UDim2.fromScale(.36,.5),position=UDim2.new(.5,0,1,6),anchor=Vector2.new(.5,0),z=5,text=sub.Text})
+    line.Color=rgb(Cohesion.Outline)
+    word.TextColor3,word.TextStrokeTransparency=rgb(Cohesion.Ink),1
+    card={icon=icon,chip=chip,word=word,line=line,ids=Icons}
+end
+-- BD-1237: the cohesive card's extra parts follow the title's fade (alpha 0 = shown, 1 = gone); the chip only on the big card.
+local function cardAlpha(alpha:number,withChip:boolean,seconds:number?)
+    if not card then return end
+    local chipAlpha=if withChip then alpha else 1
+    local targets={{card.icon,{ImageTransparency=alpha}},{card.chip,{BackgroundTransparency=chipAlpha}},{card.word,{TextTransparency=chipAlpha}},{card.line,{Transparency=chipAlpha}}}
+    for _,t in targets do
+        if seconds and seconds>0 then TweenService:Create(t[1],TweenInfo.new(seconds),t[2]):Play() else for k,v in t[2] do (t[1] :: any)[k]=v end end
+    end
+end
+cardAlpha(1,true) -- hidden until the first card shows
 -- BD-1132 (docs/205 picture 447): the SOFT line (at home in the cave) slides clear of the HUD rail and plates instead of lying over the Potions button. Any
 -- failure falls back to the old spot. The big card (in a run) keeps WL.Title.y.
 local SOFT_SCALE=.4
@@ -46,6 +73,33 @@ local function softY():number
     end)
     return if ok and typeof(y)=="number" then y else WL.Title.y
 end
+-- BD-1237 (R8): with the cohesive card (icon over the word, chip under it) the whole block keeps clear of the HUD plates and of the toast cards (the
+-- "Rain started!" toast arrives at the same moment): the same slot rule as the soft line, the box = icon + word + chip. Any failure keeps WL.Title.y.
+local function bigY():number
+    local ok,y=pcall(function():number
+        local size=gui.AbsoluteSize
+        if size.X<=0 or size.Y<=0 then return WL.Title.y end
+        local ui:any=player:WaitForChild("PlayerGui"):FindFirstChild("BeDinoUI")
+        local blockers={}
+        if ui then
+            local origin=ui.AbsolutePosition
+            for _,name in HudRects.HardRects do
+                local r=HudRects.rectOf(ui:GetAttribute(name))
+                if r then table.insert(blockers,{x=r.x+origin.X,y=r.y+origin.Y,w=r.w,h=r.h}) end
+            end
+            local toasts=ui:FindFirstChild("Toasts")
+            if toasts then for _,card in toasts:GetChildren() do
+                if card:IsA("GuiObject") and card.Visible then table.insert(blockers,{x=card.AbsolutePosition.X,y=card.AbsolutePosition.Y+origin.Y,w=card.AbsoluteSize.X,h=card.AbsoluteSize.Y}) end
+            end end
+        end
+        local h=size.Y*WL.Title.height
+        local boxH=h*2.7+6
+        local offset=-boxH/2+h*1.2+h/2 -- from the block's centre to the word's centre
+        local cy=Slot.centreY({w=size.X,h=size.Y,boxW=size.X*.36,boxH=boxH,wantY=size.Y*WL.Title.y-offset,blockers=blockers})
+        return (cy+offset)/size.Y
+    end)
+    return if ok and typeof(y)=="number" then y else WL.Title.y
+end
 -- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
 local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
 player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
@@ -58,6 +112,7 @@ local function softenTitle()
     titleScale.Scale=SOFT_SCALE
     title.Position=UDim2.fromScale(.5,softY())
     title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=.35,.5,1,1
+    cardAlpha(.35,false)
 end
 local function showTitle(id:string,name:string,soft:boolean?)
     titleToken+=1 local mine=titleToken
@@ -71,11 +126,13 @@ local function showTitle(id:string,name:string,soft:boolean?)
         end)
         return
     end
-    title.Text=if soft then name else string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
+    title.Text=if soft then name else string.upper(name).."!" title.TextColor3=if card then Color3.new(1,1,1) else TITLE_COLOR[id] or Color3.new(1,1,1)
+    if card then card.icon.Image=(Cohesion and Cohesion.WeatherIcon[id] and card.ids[Cohesion.WeatherIcon[id]]) or "" card.word.Text=sub.Text end
     titleScale.Scale=if soft then SOFT_SCALE elseif Theme.MotionEnabled then 2.2 else 1
-    title.Position=UDim2.fromScale(.5,if soft then softY() else WL.Title.y)
+    title.Position=UDim2.fromScale(.5,if soft then softY() elseif card then bigY() else WL.Title.y)
     title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=if soft then .35 else 0,if soft then .5 else 0,1,1
     if not soft then sub.TextTransparency,subStroke.Transparency=0,0 end
+    cardAlpha(if soft then .35 else 0,not soft)
     if Theme.MotionEnabled and not soft then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
     task.delay(if soft then 1.8 else 3.2,function()
         if mine~=titleToken then return end
@@ -83,6 +140,7 @@ local function showTitle(id:string,name:string,soft:boolean?)
         local info=TweenInfo.new(.8)
         TweenService:Create(title,info,{TextTransparency=1}):Play() TweenService:Create(stroke,info,{Transparency=1}):Play()
         TweenService:Create(sub,info,{TextTransparency=1}):Play() TweenService:Create(subStroke,info,{Transparency=1}):Play()
+        cardAlpha(1,true,.8)
     end)
 end
 return {show=showTitle,soften=softenTitle}

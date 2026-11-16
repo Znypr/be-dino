@@ -46,7 +46,8 @@ local PANEL, CARD, ACCENT = Color3.fromRGB(42, 40, 53), Color3.fromRGB(61, 58, 7
 -- First position (before Bootstrap publishes the layout) = straight above the egg plate, the desktop rule.
 local FALLBACK_POS, FALLBACK_SIZE = UDim2.new(0, 18, 1, -138), UDim2.fromOffset(120, 48)
 local open = make("TextButton", gui, "TellUsButton", FALLBACK_SIZE, FALLBACK_POS)
-style(open, "Tell us!", Color3.fromRGB(194, 86, 255), 24)
+style(open, "Tell us!", if (Config :: any).MenusCohesionEnabled == true then Color3.fromRGB(128, 142, 158) else Color3.fromRGB(194, 86, 255), 24) -- BD-1237 (docs/240 R3): grey with the flag, purple is a rarity colour
+if (Config :: any).MenusCohesionEnabled == true then open.TextStrokeTransparency, open.TextStrokeColor3 = 0, Color3.fromRGB(13, 15, 20) end -- R2: white with an ink outline on colour
 local uiRoot: Instance? = nil
 local function pin()
     local r = if uiRoot then uiRoot:GetAttribute("FeedbackRect") else nil
