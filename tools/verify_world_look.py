@@ -13,6 +13,12 @@ WorldV3 colour tables) has a toon colour, the flat map is a real image id listed
 after useToonPlants no shrub list (every biome, the V3 beach and meadow) names a fern or horsetail, each list keeps its total weight, and the
 marsh pool edge is swapped too. Source guards: the variants are made only with the flag on and only in IslandTerrain; the swap runs after
 useV3 in Arena.
+
+BD-1221 plaza hub (Config.PlazaHubEnabled, src/shared/PlazaHubLayout.luau): four stalls, one per home station with a menu, each screen is
+the rail destination of its station (HubTravelClientRules.Stations); every piece and its prompt stands on the plaza (inside PlazaRadius - 6,
+outside the spawn circle), off the spoke paths, and stalls keep apart; every mesh key is a published CaveHubProps asset (docs/77), the sign
+word exists. Source guards: the client script returns at once with the flag off and opens only through HubTravelClient.press then
+openScreen (the rail's own "At home" rule); the server builds no visible Part (only hidden colliders and prompt anchors).
 Usage: python tools/verify_world_look.py --runner luau.exe"""
 from pathlib import Path
 import argparse
@@ -22,7 +28,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-FLAGS = {'RealSeaEnabled': 'BD-1220', 'ToonWorldEnabled': 'BD-1223'}
+FLAGS = {'RealSeaEnabled': 'BD-1220', 'ToonWorldEnabled': 'BD-1223', 'PlazaHubEnabled': 'BD-1221'}
 
 
 def read(path):
@@ -110,6 +116,32 @@ for name, def in Biome.Biomes do
     check(math.abs(total - before[name]) < 1e-9, "shrub weight kept in " .. name)
 end
 check(Biome.ToonSwaps == Toon.Swaps, "marsh pool edge swap is on")
+-- BD-1221 plaza hub
+local seen, points = {}, {}
+for _, st in Plaza.Stalls do
+    check(Travel.Stations[st.screen] == st.station, "stall screen is the rail destination of its station: " .. st.station)
+    check(not seen[st.station], "one stall per station") seen[st.station] = true
+    check(Signs.Signs[st.station] ~= nil and Signs.Signs[st.station] ~= "", "sign word for " .. st.station)
+    local list = {Plaza.Sign, {at = Plaza.PromptAt}}
+    for _, p in st.props do table.insert(list, p) check(Hub.assetId(p.key) ~= nil, "published mesh: " .. p.key) end
+    for _, p in list do
+        local x, z = Plaza.place(st, p.at, V3.CenterX, V3.CenterZ)
+        local r = math.sqrt((x - V3.CenterX) ^ 2 + (z - V3.CenterZ) ^ 2)
+        check(r < V3.PlazaRadius - 6 and r > 24, "on the plaza, clear of the spawn: " .. st.station .. " r=" .. math.floor(r))
+        check(V3.path(x, z) < .5 or r < V3.PlazaRadius, "off the spoke paths: " .. st.station)
+        for _, sp in V3.Spokes do
+            local a = math.rad(sp.angle)
+            local across = math.abs(-(x - V3.CenterX) * math.sin(a) + (z - V3.CenterZ) * math.cos(a))
+            local along = (x - V3.CenterX) * math.cos(a) + (z - V3.CenterZ) * math.sin(a)
+            check(along < 0 or across > V3.PathHalfWidth + 3, "not on the spoke line " .. sp.angle .. ": " .. st.station)
+        end
+    end
+    local cx, cz = Plaza.place(st, {0, 0}, V3.CenterX, V3.CenterZ)
+    for _, q in points do check((q[1] - cx) ^ 2 + (q[2] - cz) ^ 2 > 30 * 30, "stalls keep apart") end
+    table.insert(points, {cx, cz})
+end
+check(#Plaza.Stalls == 4 and Hub.assetId(Plaza.Sign.key) ~= nil, "four stalls and a published sign mesh")
+check(Plaza.enabled({WorldV3Enabled = true, PlazaHubEnabled = true}) and not Plaza.enabled({PlazaHubEnabled = true}), "plaza flag needs World V3")
 if #fails > 0 then for _, f in fails do print("FAIL: " .. f) end error("world look checks failed") end
 print("World look checks passed")
 '''
@@ -160,6 +192,18 @@ def static_checks():
     registry = read('docs/77-asset-registry.md')
     if image not in registry or decal not in registry:
         errors.append('the flat map ids (image %s, decal %s) need a docs/77 line' % (image, decal))
+    client = read('src/client/PlazaHub.client.luau')
+    head = '\n'.join(client.split('\n')[:10])
+    if 'if not Layout.enabled(Config) then return end' not in head:
+        errors.append('PlazaHub.client must return on its first lines with the flag off')
+    if 'if Travel.press(screen, true) then return end' not in client or 'Travel.openScreen(screen)' not in client:
+        errors.append('the plaza prompts must open through HubTravelClient.press then openScreen (the rail rule)')
+    for banned in ('RemoteEvent', 'FireServer', 'InvokeServer', 'DataStore'):
+        if banned in client:
+            errors.append('PlazaHub.client is presentation only: %s found' % banned)
+    server = read('src/server/PlazaHub.luau')
+    if server.count('Instance.new("Part")') != 2 or 'Instance.new("MeshPart")' in server:
+        errors.append('PlazaHub builds no visible Part: only the hidden collider and the prompt anchor')
     weather = read('src/client/WeatherVisuals.client.luau')
     if 'Sea.enabled(require(Shared.Config)) and Sea.clearFog(deviceClass)' not in weather:
         errors.append('WeatherVisuals must take the clear fog from WorldSea only with the flag on')
@@ -193,7 +237,9 @@ def main():
         print('FAIL:', p)
     source = ('local V3=' + module(read('src/shared/WorldV3.luau')) + '\nlocal Sea=' + module(read('src/shared/WorldSea.luau')) +
               '\nlocal Toon=' + module(read('src/shared/WorldToon.luau')) + '\nlocal BiomeMap=' + module(read('src/shared/BiomeMap.luau')) +
-              '\nlocal Biome=' + module(read('src/shared/BiomePlacement.luau')) + '\n' + LUAU)
+              '\nlocal Biome=' + module(read('src/shared/BiomePlacement.luau')) + '\nlocal Plaza=' + module(read('src/shared/PlazaHubLayout.luau')) +
+              '\nlocal Hub=' + module(read('src/shared/CaveHubProps.luau')) + '\nlocal Signs=' + module(read('src/shared/HubSignCopy.luau')) +
+              '\nlocal Travel=' + module(read('src/shared/HubTravelClientRules.luau')) + '\n' + LUAU)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'world_look.luau'
         path.write_text(source, encoding='utf-8')

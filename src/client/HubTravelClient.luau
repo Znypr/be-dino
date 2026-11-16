@@ -117,6 +117,14 @@ local function applyDimming()
     end
 end
 
+-- BD-1221: open a rail screen through the same functions the rail uses (the plaza stalls call press(destination, true) first, exactly
+-- like a rail button, so the "At home" rule of a run still holds). false = not attached (Config.CaveHub off).
+function Client.openScreen(destination: string): boolean
+    if ctx == nil then return false end
+    if destination == "fusion" then ctx.openFusion() else ctx.open(destination) end
+    return true
+end
+
 -- true = handled here (travelling or blocked); false = the caller opens the menu as before.
 -- BD-1055: `direct` = a button that SAYS "open" (Run Complete OPEN EGGS), not a rail button: no glow trail, the caller opens the menu now.
 function Client.press(destination: string, direct: boolean?): boolean

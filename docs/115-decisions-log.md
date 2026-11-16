@@ -806,3 +806,9 @@ Owner answers to the reference sheets in `docs/evidence/2026-11-14-owner-questio
 - **Plants (BD-1224):** the ferns and horsetail swap 1:1 to the round glossy bushes in every shrub list, the tree-foot undergrowth and the marsh pool edge (weights kept). Shrubs 573 -> 561, BaseParts 6776 -> 6811 (+35). The small grass tufts stay (low, far less visible); the palms were already glossy.
 - **Known follow-up:** the overrides are global, so the cave home's grass patches turn flat toon green while its cobblestone floor keeps the photo texture (`ground-04`). A one-style pass for the cave is separate work.
 - **Not checked on a phone** (BD-1222).
+
+## BD-1221: spawn plaza as a hub (2026-11-16, LEAD decision, owner delegated 2026-10-16)
+- **Behind `PlazaHubEnabled`** (needs `WorldV3Enabled`; off in the default build, on in the playtest profile per docs/157, in the rehearsal list). Benchmark gap 4 of docs/242 (extends BD-1181).
+- **Stalls:** NESTS (nest ledge), POTIONS (potion stall), SHOP (stone counter, gem chest, big crystal) and DINOS (lectern, T. rex and Brachiosaurus statues), each with the stone sign board at about 2.5x its cave size and the HubSignCopy word on both faces plus a word above it. Ring radius 46 between the spoke paths, facing the spawn. Every mesh is the cave home's own published generate_mesh prop (CaveHubProps.Assets, already in docs/77): no new asset, nothing code-built. Big pieces get one hidden box collider. 12 meshes + 3 colliders + 4 hidden prompt anchors.
+- **Opening:** the prompt (key G, E is LEAP) goes through the rail's own path: `HubTravelClient.press(screen, true)` first, then the new `HubTravelClient.openScreen(screen)`. So in a run POTIONS opens on the spot and NESTS / SHOP / DINOS answer "At home" exactly like their rail buttons (BD-1105, docs/104 s7.7). Opening those three on the island would break that owner rule; asked the lead, not changed here.
+- **Not checked on a phone** (BD-1222).

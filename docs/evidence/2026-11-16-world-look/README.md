@@ -19,4 +19,11 @@ Studio captures of the playtest build (`tools/build.py --profile playtest`), Pla
 Counts (Play, playtest profile, desktop): BaseParts 6776 before BD-1224, 6811 after (+35, round bushes carry colliders); shrubs 573 (231 bushes,
 238 ferns, 104 horsetail) -> 561 bushes. BD-1220: the 6000-stud `Ocean` part is gone (-1); the far sea is 456 terrain blocks written in about
 4.5-6 s in the background after IslandTerrainReady.
+| `plaza-01-hub-overview.jpg` | `PlazaHubEnabled`: NESTS, POTIONS, SHOP and DINOS stalls with big signs on the spawn plaza, between the spoke paths |
+| `plaza-02-potions-stall-dino.jpg` | The dino walked up to the POTIONS stall (prompt anchor in front of the counter) |
+| `plaza-03-nests-stall.jpg` | NESTS: nest ledge and the sign board |
+| `plaza-04-shop-stall-first-size.jpg` | SHOP (counter, gem chest, crystal) at the first size; the stalls were then scaled about 1.4x |
+
+BD-1221: 12 meshes, 4 hidden colliders, 4 hidden prompt anchors. The walk-up press itself could NOT be driven in this Studio session: no
+ProximityPrompt showed there at all (also a plain test prompt), so the opening path is checked by `verify_world_look` and code review only.
 
