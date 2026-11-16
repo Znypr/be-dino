@@ -61,18 +61,18 @@
   {
    "name": "HUD in the world",
    "group": "play",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "shot": "docs/evidence/2026-11-16-hud-cohesion/after-hud-world.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
     "R4": "P",
-    "R5": "?",
+    "R5": "P",
     "R6": "P",
     "R7": "-",
-    "R8": "F"
+    "R8": "P"
    },
-   "note": "navy plates, debug text, badges on words"
+   "note": "cream plates, no debug lines, LEAP grey, badges on the edge (BD-1213, HudCohesionEnabled, playtest)"
   },
   {
    "name": "Welcome steps",
@@ -349,18 +349,18 @@
   {
    "name": "World labels (+3 Crystals, names)",
    "group": "play",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/hud-world.jpg",
+   "shot": "docs/evidence/2026-11-16-hud-cohesion/after-two-pickups-one-label.jpg",
    "marks": {
     "R1": "P",
     "R2": "P",
     "R3": "-",
     "R4": "P",
-    "R5": "?",
+    "R5": "P",
     "R6": "P",
     "R7": "-",
     "R8": "P"
    },
-   "note": "white outlined text, ok; check names/health"
+   "note": "+3 Crystals above its amber, one label per close group (BD-1213); dino names/health not judged"
   },
   {
    "name": "Toasts / rare-find banner",
