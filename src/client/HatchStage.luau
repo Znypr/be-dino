@@ -35,6 +35,15 @@ end
 -- One object to the style: dark plates -> cream + ink outline, dark buttons -> grey, light text on cream -> ink.
 local function style(o: Instance, stop: Instance)
     if not o:IsA("GuiObject") then return end
+    -- the old window's flat backdrop behind the egg (HatchFx) would read as a pale box on the stage
+    if o.Name == "Backdrop" and o.Parent and o.Parent.Name == "HatchFxBack" then
+        o.Visible = false -- the hatch tweens its transparency, never Visible; keep it hidden if something shows it again
+        if not o:GetAttribute("StageHidden") then
+            o:SetAttribute("StageHidden", true)
+            o:GetPropertyChangedSignal("Visible"):Connect(function() if o.Visible and state then o.Visible = false end end)
+        end
+        return
+    end
     if o.BackgroundTransparency < .9 and Stage.isDark(o.BackgroundColor3) and o.AbsoluteSize.X < 700 then
         local isButton = o:IsA("TextButton") or o:IsA("ImageButton")
         o.BackgroundColor3 = if isButton then Stage.Grey else Stage.Cream
@@ -47,7 +56,13 @@ local function style(o: Instance, stop: Instance)
             corner.Parent = o
         end
     end
-    if (o:IsA("TextLabel") or o:IsA("TextButton")) and luminance(o.TextColor3) > .7 then
+    -- the "Drag to turn" hint floats outside the stage (docs/240 R8); dragging still turns the dino
+    if o:IsA("TextLabel") and o.Text == "Drag to turn" then
+        local plate = o.Parent
+        if plate and plate:IsA("GuiObject") and plate.AbsoluteSize.X < 260 and plate.Name ~= "HatchUiLayer" then plate.Visible = false else o.Visible = false end
+        return
+    end
+    if (o:IsA("TextLabel") or o:IsA("TextButton")) and luminance(o.TextColor3) > .55 then
         local plate = painted(o, stop)
         if plate and (plate.BackgroundColor3 == Stage.Cream or plate.BackgroundColor3 == Stage.Grey) then
             o.TextColor3 = Stage.Ink
@@ -74,6 +89,13 @@ function Stage.apply(p: Parts)
     end
     -- chrome off: panel plate + its Toybox pictures (stud body, frame), header strip and its title (the X keeps its own picture)
     keep(p.panel, "BackgroundTransparency", 1)
+    -- no clip box: the glow and rays of a reveal spill softly onto the stage instead of ending at the old window's edge
+    keep(p.panel, "ClipsDescendants", false)
+    keep(p.body, "ClipsDescendants", false)
+    for _, name in {"HatchFxBack", "HatchFxFront"} do
+        local layerFx = p.panel:FindFirstChild(name)
+        if layerFx then keep(layerFx, "ClipsDescendants", false) end
+    end
     keep(p.header, "BackgroundTransparency", 1)
     keep(p.heading, "Visible", false)
     for _, child in p.panel:GetChildren() do
@@ -104,14 +126,24 @@ function Stage.apply(p: Parts)
         o.AnchorPoint, o.Position, o.Size = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 8), UDim2.fromOffset(170, 36)
         o.TextXAlignment, o.TextSize = Enum.TextXAlignment.Center, 22
         o.BackgroundColor3, o.BackgroundTransparency = Stage.Cream, 0
-        style(o, p.panel)
+        o.TextColor3, o.TextStrokeTransparency = Stage.Ink, 1
+        if not o:FindFirstChildOfClass("UICorner") then local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 18) c.Parent = o end
+        local stroke = o:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
+        stroke.Color, stroke.Thickness, stroke.ApplyStrokeMode = Stage.Ink, 2, Enum.ApplyStrokeMode.Border
+        stroke.Parent = o
     end
     -- everything the hatch builds now and later (buckets, labels, the end buttons, the Skip layer) follows the style
     local layer = p.gui:FindFirstChild("HatchUiLayer")
-    for _, root in {p.body, p.header, layer} do
+    -- the whole panel: body, header strip and the HatchFx layers (the colour and pattern chips live there)
+    for _, root in {p.panel, layer} do
         if root then
             Stage.styleTree(root)
             for _, o in root:GetDescendants() do chipCounter(o) end
+            if root == p.panel then
+                table.insert(conns, root.ChildAdded:Connect(function(o)
+                    if o:IsA("GuiObject") and (o.Name == "HatchFxBack" or o.Name == "HatchFxFront") then o.ClipsDescendants = false end
+                end))
+            end
             table.insert(conns, root.DescendantAdded:Connect(function(o)
                 task.defer(function()
                     if not o.Parent then return end
