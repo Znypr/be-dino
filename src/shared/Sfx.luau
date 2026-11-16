@@ -53,6 +53,9 @@ Sfx.Sounds = {
     cracked_fail = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
     crystal_cue = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
     nest_open_cue = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    -- BD-1219: soft pop when a menu window opens / closes; silent while empty (AudioPolish fills it with Config.AudioPolishEnabled)
+    ui_open = {id = "", volume = .2, rate = 1, gap = .25},
+    ui_close = {id = "", volume = .15, rate = .85, gap = .25},
 }
 Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud (owner, 2026-10-15)
 Sfx.PoolSize = 3

@@ -14,6 +14,7 @@ R.Priority = {
     rare_hatch_fanfare = 95, mutation_dewdrop_reveal = 90, mutation_charged_reveal = 90, mutation_frost_reveal = 90,
     mutation_seismic_reveal = 90, mutation_ember_reveal = 90, mutation_aurora_reveal = 90, mutation_bloodmoon_reveal = 90,
     defeat_soft = 70, cracked_fail = 45, nest_open_cue = 50, crystal_cue = 20,
+    ui_open = 10, ui_close = 10, -- BD-1219 window pops (silent until AudioPolish fills them)
 }
 R.DefaultPriority = 30
 R.MaxVoices = 2
@@ -96,6 +97,7 @@ R.HatchStack = {
     {stages = 1, chime = false}, {stages = 2, chime = false}, {stages = 3, chime = true}, {stages = 3, chime = true}, {stages = 3, chime = true},
 }
 R.HatchStagger = .3 -- minimum seconds between audible hatch cues (0.25-0.4 s)
+R.KeepRattle = false -- BD-1219: AudioPolish.apply sets true (flag on) once hatch_rattle has a sound
 function R.hatchStack(rarity: number?): any
     return R.HatchStack[math.clamp(math.floor(rarity or 1), 1, #R.HatchStack)]
 end
@@ -105,10 +107,18 @@ function R.hatchCues(cues: {any}, rarity: number?): {any}
     local sorted = table.clone(cues)
     table.sort(sorted, function(a, b) return a.t < b.t end)
     local stack = R.hatchStack(rarity)
-    local out, stages, lastT = {}, 0, -1e9
+    local out, stages, lastT, lastRattle = {}, 0, -1e9, -1e9
     for _, c in sorted do
         local n = c.name
-        if n == "hatch_rattle" then continue end
+        if n == "hatch_rattle" then
+            -- BD-1219: with a real rattle sound (AudioPolish, flag on) a rattle plays only when it is spaced from the last hatch cue; it never
+            -- moves the cracks or the reveal (lastT is not touched). KeepRattle false = dropped as before.
+            if R.KeepRattle and c.t >= lastT + R.HatchStagger and c.t >= lastRattle + R.HatchStagger then
+                lastRattle = c.t
+                table.insert(out, {t = c.t, name = n})
+            end
+            continue
+        end
         if n == "hatch_crack_stage" then
             stages += 1
             if stages > stack.stages then continue end

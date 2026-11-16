@@ -191,6 +191,8 @@ local function celebrate(data)
             pcall(MomentRim.play, player.Character, {mutationId = mutationId})
         end
         confetti(plan.confetti)
+        -- BD-1219: flag on = a mutation gets its own reveal sound and other finds the soft fanfare (AudioPolish.rareSound); off = shiny_bang as before
+        if Config.AudioPolishEnabled == true then plan.sound = require(Shared:WaitForChild("AudioPolish")).rareSound(plan.sound, data) end
         if plan.sound ~= "" then pcall(Sfx.play, plan.sound) end -- BD-606: a secret find adds no sound of its own
     end)
 end

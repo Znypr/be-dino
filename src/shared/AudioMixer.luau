@@ -5,15 +5,17 @@
 -- profile: no migration); the defaults come back on every join. The maths below is pure; only group() touches Instances.
 local Mixer = {}
 
-local defaults: {[string]: number} = {master = 0.8, sfx = 0.7, ambience = 0.6}
-local labels: {[string]: string} = {master = "Everything", sfx = "Sounds", ambience = "Weather"}
-local groupNames: {[string]: string} = {master = "BeDinoMaster", sfx = "BeDinoSfx", ambience = "BeDinoAmbience"}
+-- BD-1218: "music" is its own group under Master for the AudioPolish beds; it has no slider yet (not in Order), so it follows Everything
+-- and the sound switch only. Session-only like the rest.
+local defaults: {[string]: number} = {master = 0.8, sfx = 0.7, ambience = 0.6, music = 0.7}
+local labels: {[string]: string} = {master = "Everything", sfx = "Sounds", ambience = "Weather", music = "Music"}
+local groupNames: {[string]: string} = {master = "BeDinoMaster", sfx = "BeDinoSfx", ambience = "BeDinoAmbience", music = "BeDinoMusic"}
 Mixer.Defaults = table.freeze(defaults)
 Mixer.Order = table.freeze({"master", "sfx", "ambience"})
 Mixer.Labels = table.freeze(labels)
 Mixer.GroupNames = table.freeze(groupNames)
 
-local levels: {[string]: number} = {master = defaults.master, sfx = defaults.sfx, ambience = defaults.ambience}
+local levels: {[string]: number} = {master = defaults.master, sfx = defaults.sfx, ambience = defaults.ambience, music = defaults.music}
 local groups: {[string]: any} = {}
 
 -- Pure: clamp to 0..1 and snap to Step; non-numbers and NaN fall back to `fallback` (or 0).
@@ -46,7 +48,7 @@ local function sync()
     end
 end
 
--- Returns (creating on first use) the SoundGroup for "master" | "sfx" | "ambience", or nil outside Roblox. Never throws.
+-- Returns (creating on first use) the SoundGroup for "master" | "sfx" | "ambience" | "music", or nil outside Roblox. Never throws.
 function Mixer.group(key: string): any
     local existing = groups[key]
     if existing and existing.Parent then return existing end

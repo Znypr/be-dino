@@ -200,6 +200,12 @@ return table.freeze({
     -- only: nothing is stored, sent or decided, the buttons do what they did. false = the four screens are built exactly as before and
     -- ScreensCohesion is never required. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     ScreensCohesionEnabled = false,
+    -- BD-1218 + BD-1219 (docs/242 benchmark gaps 3 and 4): true = calm music beds (island, home, a softer hatch bed) with crossfades, sounds for
+    -- the 14 silent Sfx slots (Roblox-licensed Creator Store audio, docs/77), a soft window open/close pop, a soft defeat and nest-open cue
+    -- and soft dino footsteps by surface instead of the human ones; src/client/AudioPolish.client.luau + src/shared/AudioPolish.luau.
+    -- Client sound only: nothing is stored, sent or decided. Unheard by agents: the owner judges by ear before it ships (docs/87).
+    -- false = the game sounds exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    AudioPolishEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
