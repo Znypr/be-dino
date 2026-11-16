@@ -2,6 +2,8 @@
 
 Owner 2026-11-14: "always cross reference the game ui, assets, behavior, retention etc. with the top performing roblox experiences and make sure its up to standard." This page is the standing benchmark the polish loop (docs/234) checks against every run; the `benchmark` role of the review panel scores each area. Labels: **CURRENT BUILD** = what the source does today (playtest profile), **TARGET** = the top-game standard.
 
+**Full every-aspect benchmark (2026-11-16): [242](242-full-benchmark-2026-11-16.md)** (world, art, rig, sound, music, hatch, UI, shops, juice, social, phone; rows BD-1216 to BD-1235).
+
 Reference set (look at their current versions before a review): Grow a Garden, Pet Simulator 99, Adopt Me!, Steal a Brainrot, Bee Swarm Simulator, Fisch. Outside data: GameAnalytics' 2025 Roblox benchmark report (return frequency up ~33% year on year, driven by re-entry design and offline progress; games with 0-6 minute sessions fall under 10% Day-1 retention, hits sit at 19+ minutes; checklist: quests, streaks, offline progression, co-play). Grow a Garden's crops grow while the player is offline, which is its main reason to come back.
 
 ## 1. Retention and return (biggest gap)
