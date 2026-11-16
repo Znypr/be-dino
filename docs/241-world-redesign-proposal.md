@@ -36,4 +36,5 @@ Status: **proposal pictures for owner approval.** Nothing in the game has change
 1. Terrain: island shape + zone ground colours as `WorldLayer` layers (`biome`, `height`), baked from the plan; paths as a sand layer.
 2. Placement: trees and plants from a `treeKind` layer with clump rules and `layer_stats` targets per zone (docs/187 E), landmarks placed by hand in the plan.
 3. Food models: new 3D food from the approved icons (generate_mesh or Blender, then cleanup; never code-built, docs/114 s8.1), bushes / fruit trees / nests / amber rocks as hosts; FoodService keeps its rules and the BD-1047 grid.
+   - 2026-11-16 (BD-1238): the hosts part is built: `FoodHostsEnabled` moves the V3 map's food to the bushes, trees, rocks and landmark edges already on the toon island (`tools/food_hosts.py`, `tools/verify_food_hosts.py`, decision in docs/115); no nest meshes placed (the V3 egg mesh carries its own nest, and new parts would break the phone budget).
 4. Each step checked with Studio pictures from the same three cameras as today, plus the phone budget (docs/107).
