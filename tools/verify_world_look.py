@@ -53,6 +53,11 @@ end
 for _, r in {reachX - V3.CenterX, reachZ - V3.CenterZ, V3.CenterX - lowX, V3.CenterZ - lowZ} do
     check(r >= Sea.Radius - Sea.Tile, "sea reaches Radius on every side (" .. r .. ")")
 end
+-- cave home box: its blocks are written before the cave shell (IslandTerrain), the rest after
+local early = 0
+for _, t in tiles do if Sea.overlaps(t, {-148, 452, 148, 708}) then early += 1 end end
+check(early >= 2 and early <= 6, "a few blocks touch the cave box (" .. early .. ")")
+check(Sea.overlaps({-100, 500}, {-148, 452, 148, 708}) and not Sea.overlaps({200, 500}, {-148, 452, 148, 708}) and not Sea.overlaps({-148 - Sea.Tile, 500}, {-148, 452, 148, 708}), "overlap rule")
 -- voxel column rule
 local m, o = Sea.column(Sea.SeaFloor, 4)
 check(#m == -Sea.FloorLow / 4, "one cell per 4 studs from FloorLow to 0")
@@ -99,8 +104,11 @@ def static_checks():
     if 'Sea.enabled(require(Shared.Config)) and Sea.clearFog(deviceClass)' not in weather:
         errors.append('WeatherVisuals must take the clear fog from WorldSea only with the flag on')
     terrain = read('src/server/IslandTerrain.luau')
-    if 'if realSea then task.spawn(farSea, V3, extent, resolution) end' not in terrain or terrain.index('task.spawn(farSea') < terrain.index('"IslandTerrainReady", true'):
+    if 'if realSea then task.spawn(farSea, V3, extent, resolution, false) end' not in terrain or terrain.index('task.spawn(farSea') < terrain.index('"IslandTerrainReady", true'):
         errors.append('the far sea must be written after IslandTerrainReady (nothing waits for it)')
+    early = 'if realSea then farSea(V3, extent, resolution, true) end'
+    if early not in terrain or terrain.index(early) > terrain.index('if beforeReady then beforeReady() end'):
+        errors.append('the sea blocks under the cave box must be written BEFORE the cave shell (beforeReady)')
     for path in ['src/client/Bootstrap.client.luau', 'src/client/HatchSequence.luau'] + [str(p.relative_to(ROOT)).replace('\\', '/') for p in (ROOT / 'src').rglob('HatchStage*.luau')]:
         text = read(path)
         if 'WorldSea' in text or 'RealSea' in text:

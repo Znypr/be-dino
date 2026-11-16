@@ -43,6 +43,11 @@ function WorldSea.tiles(cx: number, cz: number, half: number): {{number}}
     return out
 end
 
+-- True when a block (minimum corner {x, z}, Tile wide) overlaps the box {minX, minZ, maxX, maxZ} (the cave home's terrain box).
+function WorldSea.overlaps(tile: {number}, box: {number}): boolean
+    return tile[1] < box[3] and tile[1] + WorldSea.Tile > box[1] and tile[2] < box[4] and tile[2] + WorldSea.Tile > box[2]
+end
+
 -- Voxel column for a floor height (cells of `resolution` from FloorLow up to sea level 0), the same rule as the island terrain:
 -- a cell at least half under the floor is Sand, otherwise the part of it under sea level is Water. Returns material names ("Sand" / "Water") and occupancies.
 function WorldSea.column(floor: number, resolution: number): ({string}, {number})

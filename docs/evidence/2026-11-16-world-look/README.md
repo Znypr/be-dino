@@ -8,4 +8,5 @@ Studio captures of the playtest build (`tools/build.py --profile playtest`), Pla
 | `sea-02-after-from-above.jpg` | `RealSeaEnabled`: terrain sea to the horizon, island colours clear from 650 studs up |
 | `sea-03-after-mid-height.jpg` | Mid height: deep blue open water, turquoise shelf by the beach, no plate edge |
 | `sea-04-after-beach-horizon.jpg` | From the beach: the sea meets the sky at the horizon |
+| `sea-05-cave-home-intact.jpg` | The cave home after the far sea: the sea blocks under the cave box are written before the cave shell, so the cave overwrites them (an earlier build flooded the cave floor) |
 | `ground-00-before-photo-textures.jpg` | Before BD-1223 / BD-1224: photo grass and rock textures next to the toy props, spiky flat fronds |
