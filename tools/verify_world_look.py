@@ -166,6 +166,14 @@ def static_checks():
     terrain = read('src/server/IslandTerrain.luau')
     if 'if realSea then task.spawn(farSea, V3, extent, resolution, false) end' not in terrain or terrain.index('task.spawn(farSea') < terrain.index('"IslandTerrainReady", true'):
         errors.append('the far sea must be written after IslandTerrainReady (nothing waits for it)')
+    cave = read('src/shared/CaveTerrainRules.luau')
+    xs = re.search(r'Rules.XMin, Rules.XMax = (-?\d+), (-?\d+)', cave)
+    zs = re.search(r'Rules.ZMin, Rules.ZMax = (-?\d+), (-?\d+)', cave)
+    box = '{%s, %s, %s, %s}' % (xs.group(1), zs.group(1), xs.group(2), zs.group(2))
+    if 'WorldSea.HomeBox = ' + box not in read('src/shared/WorldSea.luau'):
+        errors.append('WorldSea.HomeBox must equal the cave terrain box %s' % box)
+    if 'CaveTerrain' in terrain or 'CaveHub' in terrain:
+        errors.append('IslandTerrain stays flag-agnostic about the cave (verify_cave_terrain)')
     early = 'if realSea then farSea(V3, extent, resolution, true) end'
     if early not in terrain or terrain.index(early) > terrain.index('if beforeReady then beforeReady() end'):
         errors.append('the sea blocks under the cave box must be written BEFORE the cave shell (beforeReady)')

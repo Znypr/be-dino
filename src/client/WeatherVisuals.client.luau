@@ -123,6 +123,7 @@ RunService.Heartbeat:Connect(function(dt)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
+    if seaClear and look==WL.Looks.clear then look=seaClear end -- BD-1220: the same clear look with the far fog
     local outside=1-Cave.amount() -- BD-383: weather grade, bloom, rays, haze, exposure and lamps fade to nothing inside the cave hall
     local t=WL.strength(k,Theme.MotionEnabled)*outside
     local animT=if Theme.MotionEnabled then now else 0
@@ -145,7 +146,7 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Offset=lerpNum(baseAtmo.offset,look.offset,t)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,look.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,look.glare),t)
-    local fogStart,fogEnd=WL.fog(if seaClear and look==WL.Looks.clear then seaClear else look,t,CLEAR,fogCap)
+    local fogStart,fogEnd=WL.fog(look,t,CLEAR,fogCap)
     local fogColor=c3(CLEAR.fog):Lerp(c3(fog),t)
     Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)

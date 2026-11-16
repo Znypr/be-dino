@@ -15,9 +15,9 @@ local function smooth(x: number, z: number, scale: number, offset: number): numb
     return math.noise(x / scale, z / scale, offset)
 end
 -- BD-1220 (Config.RealSeaEnabled, Shared/WorldSea): terrain water past the island square out to WorldSea.Radius, so the sea reaches the
--- fog instead of ending on a square plate. Blocks that touch the cave home's terrain box (CaveTerrainRules) are written first, BEFORE the
--- cave shell, so the cave always overwrites the sea there; the rest runs after IslandTerrainReady (nothing waits for it). Far blocks share
--- one flat column. early = true: only the cave-box blocks; false: every other block.
+-- fog instead of ending on a square plate. Blocks that touch the home's terrain box (WorldSea.HomeBox) are written first, BEFORE the
+-- beforeReady callback, so the home shell always overwrites the sea there; the rest runs after IslandTerrainReady (nothing waits for it).
+-- Far blocks share one flat column. early = true: only the home-box blocks; false: every other block.
 local function farSea(V3: any, half: number, resolution: number, early: boolean)
     local startedAt = os.clock()
     local flatM, flatO = Sea.column(Sea.SeaFloor, resolution)
@@ -40,10 +40,8 @@ local function farSea(V3: any, half: number, resolution: number, early: boolean)
     end
     local flat = function(_x: number, _z: number) return flatM, flatO end
     local shaped = function(x: number, z: number) return Sea.column(V3.height(x, z), resolution) end
-    local Cave = require(ReplicatedStorage.Shared.CaveTerrainRules)
-    local box = {Cave.XMin, Cave.ZMin, Cave.XMax, Cave.ZMax}
     for _, t in Sea.tiles(V3.CenterX, V3.CenterZ, half) do
-        if Sea.overlaps(t, box) ~= early then continue end
+        if Sea.overlaps(t, Sea.HomeBox) ~= early then continue end
         -- the nearest corner decides: blocks touching the shelf by the island get their real floor per column
         local nx = math.clamp(V3.CenterX, t[1], t[1] + Sea.Tile) - V3.CenterX
         local nz = math.clamp(V3.CenterZ, t[2], t[2] + Sea.Tile) - V3.CenterZ
@@ -146,7 +144,7 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
         task.wait()
     end
     workspace:SetAttribute("IslandTerrainBuildSeconds", math.floor((os.clock() - startedAt) * 10) / 10)
-    if realSea then farSea(V3, extent, resolution, true) end -- BD-1220: the sea under the cave box first, then the cave shell over it
+    if realSea then farSea(V3, extent, resolution, true) end -- BD-1220: the sea under the home box first, then the beforeReady shell over it
     if beforeReady then beforeReady() end
     workspace:SetAttribute("IslandTerrainReady", true)
     if realSea then task.spawn(farSea, V3, extent, resolution, false) end
