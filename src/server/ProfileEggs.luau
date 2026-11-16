@@ -616,6 +616,9 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 if not nextOutcome then return nil end
                 table.insert(pageOutcomes, nextOutcome)
             end
+            -- BD-1230: Dino Index milestone crystals, in the SAME transaction as the hatch that reached them (exactly once: the stored list is the
+            -- guard, so a repeated transform starts from the stored profile and grants nothing twice). Flag off: nothing is read or written.
+            if Config.IndexMilestonesEnabled == true then ProgressionRules.applyIndexMilestones(profileValue, Config.SpeciesOrder, ProgressionConfig.MaxCrystals) end
 
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds

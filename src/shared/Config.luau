@@ -206,6 +206,12 @@ return table.freeze({
     -- Client sound only: nothing is stored, sent or decided. Unheard by agents: the owner judges by ear before it ships (docs/87).
     -- false = the game sounds exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     AudioPolishEnabled = false,
+    -- BD-1230 (docs/242 benchmark gap 15): true = the Dino Index pays FREE crystals once at 25 / 50 / 75 / 100 % of the species found
+    -- (Shared/IndexMilestones, PROVISIONAL amounts 50 / 100 / 200 / 500), granted inside the hatch transaction that reaches the step, stored in the
+    -- ADDITIVE profile field indexMilestones; the Index bar says how many more dinos to the next reward and a toast celebrates it
+    -- (src/client/IndexMilestoneCue.client.luau). Never Robux, never a paid or random item. The locked "?" silhouettes already exist (BD-1194).
+    -- false = nothing is read, written or shown. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    IndexMilestonesEnabled = false,
     -- BD-1226 + BD-1231 + BD-1234 (docs/242 benchmark gaps 11, 15 and 19): true = three small play cues (Shared/PlayCuesRules): a bobbing chip
     -- on the first food, the nest with a ready egg and a stall for a new player (src/client/PointAtCue.client.luau); a "+N" rising at the dino
     -- when it eats and a short word banner at each SIZE quarter (src/client/GrowthPop.client.luau); a toast and a number badge on EGGS when a

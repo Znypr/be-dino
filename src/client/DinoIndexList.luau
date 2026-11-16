@@ -120,7 +120,13 @@ function List.build(d: any)
         end
     end
     local words = progress.short
-    if Config.SecretSpeciesEnabled == true and lay.meter.w >= 300 then
+    local hinted = false
+    if (Config :: any).IndexMilestonesEnabled == true and lay.meter.w >= 300 then -- BD-1230: how many more dinos to the next free crystals
+        local Milestones = require(Shared.IndexMilestones)
+        local hint = Milestones.nextHint(Milestones.found(d.decoded("CollectionJson", "{}"), Config.SpeciesOrder), #Config.SpeciesOrder, d.decoded("IndexMilestonesJson", "[]"))
+        if hint ~= "" then words ..= " • " .. hint hinted = true end
+    end
+    if Config.SecretSpeciesEnabled == true and lay.meter.w >= (if hinted then 560 else 300) then
         words ..= " • " .. Secret.summary(Secret.countFound(d.decoded("CollectionJson", "{}"))).text -- BD-604: secrets counted apart from the 22
     end
     L.text(track, words, UDim2.fromOffset(lay.meter.w - 16, lay.meter.h - 4), UDim2.fromOffset(8, 2), Kit.Type.heading, "value", Enum.TextXAlignment.Center).Name = "IndexText"
