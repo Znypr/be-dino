@@ -12,7 +12,7 @@ class DeliveryTests(unittest.TestCase):
  def test_catalog_native_models_packaged_with_colours_and_noncolliding_geometry(self):
   root=ET.fromstring(_generated_place())
   resources=next(i for i in root.iter('Item') if i.find("Properties/string[@name='Name']") is not None and i.find("Properties/string[@name='Name']").text=='Resources')
-  models=[m for m in resources.findall('Item') if m.find("Properties/string[@name='Name']").text!='GeneSurfaces'];self.assertEqual(len(models),13)
+  models=[m for m in resources.findall('Item') if m.find("Properties/string[@name='Name']").text not in ('GeneSurfaces','HatchBucketSurfaces')];self.assertEqual(len(models),13)
   for model in models:
    self.assertEqual(model.attrib['class'],'Model')
    parts=model.findall('Item');self.assertGreater(len(parts),10)

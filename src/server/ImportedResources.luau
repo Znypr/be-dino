@@ -44,7 +44,7 @@ end
 -- BD-206: Roblox-generated world meshes (WorldGeneratedMeshes.Assets) as one MeshPart each in ReplicatedStorage.GeneratedWorld.
 -- A failed load only logs and counts; Arena then keeps the current kit model for that prop (same fallback as loadWorldKit).
 function Import.loadGeneratedWorld(): (number, number)
-    if require(ReplicatedStorage.Shared.Config).HatchStageEnabled then task.spawn(Import.loadHatchShards) end -- BD-1212 (defined below)
+    if require(ReplicatedStorage.Shared.Config).HatchStageEnabled then task.spawn(Import.loadHatchShards) task.spawn(Import.loadHatchBuckets) end -- BD-1212 / BD-1211 (defined below)
     local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
     if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
     local loaded,failed,pending=0,0,0
@@ -136,6 +136,33 @@ function Import.loadHatchShards()
         model.Parent=ReplicatedStorage
     end)
     if not ok then warn("[Be Dino] hatch shards unavailable: "..tostring(err)) end
+end
+-- BD-1211: the two generated paint buckets of the hatch stage (docs/77 hatch_bucket_pail / _can) in ReplicatedStorage.HatchStageBuckets.
+-- The paint area of each texture is see-through (SurfaceAppearance overlay from Resources.HatchBucketSurfaces), so MeshPart.Color = the
+-- egg's paint colour. A failed load keeps the 2D bucket picture.
+Import.HatchBuckets={pail=105190298129955,can=77568845237888}
+function Import.loadHatchBuckets()
+    if ReplicatedStorage:FindFirstChild("HatchStageBuckets") then return end
+    local resources=ReplicatedStorage:FindFirstChild("Resources")
+    local surfaces=resources and resources:FindFirstChild("HatchBucketSurfaces")
+    local folder=Instance.new("Folder")
+    folder.Name="HatchStageBuckets"
+    for key,id in Import.HatchBuckets do
+        local ok,err=pcall(function()
+            local container=InsertService:LoadAsset(id)
+            local found=container:FindFirstChildWhichIsA("MeshPart",true)
+            assert(found and surfaces and surfaces:FindFirstChild(key),"bucket mesh or surface missing")
+            local part=found:Clone()
+            container:Destroy()
+            for _,child in part:GetChildren() do child:Destroy() end
+            surfaces[key]:Clone().Parent=part
+            part.TextureID,part.Name="",key
+            part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.Massless=true,false,false,false,true
+            part.Parent=folder
+        end)
+        if not ok then warn("[Be Dino] hatch bucket "..key.." unavailable: "..tostring(err)) end
+    end
+    folder.Parent=ReplicatedStorage
 end
 function Import.loadHatchV2(): (number, number)
     local Assets=require(ReplicatedStorage.Shared.HatchV2Assets)
