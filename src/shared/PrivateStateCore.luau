@@ -18,6 +18,7 @@ local PRIVATE = {
     "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting", "BufferedRevealCount",
     "NextChestId", "NextChestReadyAt", "RunStartBlocked",
     "StarterRun", -- BD-1163: 1 while this save has no settled run (the starter run applies), else 0; set only with Config.StarterRunEnabled
+    "IndexMilestonesJson", -- BD-1230: the Dino Index milestone steps this save already got (a JSON list of percent words), only with Config.IndexMilestonesEnabled
     "WelcomeBackNests", -- BD-1168: how many nests finished while the player was away (set once per join, only with Config.WelcomeBackEnabled)
     "RunStreak", "LastRunStreak", "LastRunStreakCrystals", -- BD-1199: run streak of the current / last run and its crystal bonus (server-set, session-only, only with Config.PlayAgainEnabled)
     -- run and hatch summaries

@@ -629,6 +629,8 @@ local function syncAttributes(player: Player, profile: any)
         table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
     PrivateState.set(player, "NestsJson", HttpService:JSONEncode(nestSummary))
+    -- BD-1230: the Dino Index milestones this save already got (additive field, absent = none); only with the flag on
+    if Config.IndexMilestonesEnabled == true then PrivateState.set(player, "IndexMilestonesJson", HttpService:JSONEncode(if typeof(profile.indexMilestones) == "table" then profile.indexMilestones else {})) end
     PrivateState.set(player, "RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
     PrivateState.set(player, "SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
@@ -1183,6 +1185,7 @@ local shared = {
     objectiveRules = objectiveRules,
     objectives = objectives,
     runStreak = runStreak,
+    indexMilestones = function(): any return require(ReplicatedStorage.Shared.IndexMilestones) end, -- BD-1230: only called while Config.IndexMilestonesEnabled
     ownSession = ownSession,
     ownsAny = ownsAny,
     pendingSettlements = pendingSettlements,
