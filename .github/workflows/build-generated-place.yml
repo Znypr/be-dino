@@ -111,6 +111,7 @@ jobs:
           python tools/verify_world_layer.py --runner /tmp/luau/luau
           python tools/verify_food_layer.py --runner /tmp/luau/luau
           python tools/verify_food_hosts.py --runner /tmp/luau/luau
+          python tools/verify_food_hosts.py --runner /tmp/luau/luau --veg2
           python tools/verify_vegetation_v2.py --runner /tmp/luau/luau
           python tools/verify_colossal_lod.py --runner /tmp/luau/luau
           python tools/verify_scale_ladder.py --runner /tmp/luau/luau

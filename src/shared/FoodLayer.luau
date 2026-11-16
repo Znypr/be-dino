@@ -52,6 +52,8 @@ end
 local function hostsMap(): string?
     local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end)
     if okConfig and type(Config) == "table" and (Config :: any).FoodHostsEnabled == true and (Config :: any).ToonWorldEnabled == true then
+        -- BD-1239 follow-up: the vegetation v2 island has fewer, smaller berry bushes (VegetationV2.BushRule), so it has its own hosts map
+        if (Config :: any).VegetationV2Enabled == true then return require((script :: any).Parent.FoodLayerDataV3HostsVeg2).Map end
         return require((script :: any).Parent.FoodLayerDataV3Hosts).Map
     end
     return nil

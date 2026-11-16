@@ -424,7 +424,14 @@ end
 function BiomePlacement.scaleFor(data: any, height: number, maxWidth: number): number
     return math.min(height / data.extent[2], maxWidth / math.max(data.extent[1], data.extent[3]))
 end
+-- BD-1239 follow-up (lead review 2026-11-16: the v2 berry bushes formed solid walls along the paths and round the plaza): with
+-- Config.VegetationV2Enabled Arena sets this before generate(). Round bushes (kit family "bush", also at a tree foot) are sized to
+-- minHeight..maxHeight kit studs instead of the 4-12 stud Small band, and of the shrub-layer bush picks only `keep` stay bushes, `flowers`
+-- become a flower or grass clump on the ground cover layer and the rest are open ground. nil = the grammar exactly as before.
+BiomePlacement.BushV2 = nil :: {minHeight: number, maxHeight: number, maxWidth: number, keep: number, flowers: number}?
 function BiomePlacement.smallScale(data: any, u: number): number
+    local v2 = BiomePlacement.BushV2
+    if v2 and data.family == "bush" then return BiomePlacement.scaleFor(data, v2.minHeight + (v2.maxHeight - v2.minHeight) * u, v2.maxWidth) end
     local b = BiomePlacement.SmallBand
     return BiomePlacement.scaleFor(data, b.minHeight + (b.maxHeight - b.minHeight) * u ^ b.skew, b.maxWidth)
 end
@@ -788,6 +795,7 @@ function BiomePlacement.generate(options): {Placement}
                 local id: string
                 local lay = layer.name
                 local dropOld, replaced, oldId = false, false, ""
+                local coverSwap = false -- BD-1239 follow-up: a shrub-layer bush pick that became a flower or grass clump (BushV2)
                 local sinkRoll = BiomePlacement.hash(seed, li, ix, iz, 10)
                 if lay == "tree" or lay == "colossal" then
                     local family = pick(if lay == "tree" then def.trees else def.colossals, n)
@@ -808,6 +816,15 @@ function BiomePlacement.generate(options): {Placement}
                     id = pick(def.shrubs, n)
                     if layout and biome == "marsh" and n > .75 and layout.poolProximity(x, z) > .15 then id = "world_horsetail_a" end
                     if BiomePlacement.ToonSwaps then id = BiomePlacement.ToonSwaps[id] or id end -- BD-1224
+                    local v2 = BiomePlacement.BushV2
+                    if v2 and (id == "world_bush_a" or id == "world_bush_b") then
+                        local keepRoll = BiomePlacement.hash(seed, li, ix, iz, 93)
+                        if keepRoll >= v2.keep + v2.flowers then count += 1 continue end -- open ground between the bush clumps
+                        if keepRoll >= v2.keep then
+                            id = if BiomePlacement.hash(seed, li, ix, iz, 94) < .6 then "world_flowers_a" else "world_grass_b"
+                            coverSwap = true
+                        end
+                    end
                     -- BD-463 step 2: in fern and conifer biomes about 1 in 3 old ferns becomes the fern plant, the rest are dropped (the plant has 4x the triangles)
                     if hasFern and Plants.fern.biomes[biome] and (id == "world_fern_a" or id == "world_fern_b") then
                         if BiomePlacement.hash(seed, li, ix, iz, 92) < Plants.fern.keep then id, replaced = Plants.fern.key, true else dropOld = true end
@@ -831,13 +848,13 @@ function BiomePlacement.generate(options): {Placement}
                 local data = kit[id]
                 if not data or parts + BiomePlacement.partCost(id, kit, meshes) > budget then continue end
                 local scale: number
-                if lay == "shrub" then
+                if lay == "shrub" and not coverSwap then
                     scale = BiomePlacement.smallScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: sized by target height (4-12 studs)
                     if math.sqrt(x ^ 2 + (z - 30) ^ 2) < BiomePlacement.SmallBand.spawnClear then continue end
                 elseif lay == "colossal" then
                     scale = BiomePlacement.colossalScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: 80-140 studs
                 else
-                    local range = if replaced then Spec[id].scale else BiomePlacement.Scales[lay]
+                    local range = if replaced then Spec[id].scale elseif coverSwap then BiomePlacement.Scales.groundcover else BiomePlacement.Scales[lay]
                     scale = range[1] + (range[2] - range[1]) * BiomePlacement.hash(seed, li, ix, iz, 6)
                 end
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
@@ -875,7 +892,7 @@ function BiomePlacement.generate(options): {Placement}
                     continue
                 end
                 local sink = if lay == "rock" then .12 elseif lay == "tree" or lay == "colossal" then .03 else .02 + .03 * sinkRoll
-                add(id, x, z, yaw, scale, lay, sink, biome)
+                add(id, x, z, yaw, scale, if coverSwap then "groundcover" else lay, sink, biome)
                 count += 1
                 -- BD-167 undergrowth: ferns, bushes and mushrooms gather around a tree foot (small, never on the trunk, never on a
                 -- walkway), limited by its own cap and the part budget. Layer "shrub" so PropGround treats them as plants.

@@ -28,6 +28,7 @@ import compare_food_layers as cmp  # noqa: E402
 import food_hosts as fh  # noqa: E402
 import food_layer_data_v3 as v3data  # noqa: E402
 import food_layer_data_v3_hosts as data  # noqa: E402
+import food_layer_data_v3_hosts_veg2 as data_veg2  # noqa: E402
 import generate_food_layer as gen  # noqa: E402
 import layer_stats  # noqa: E402
 import worldlayer  # noqa: E402
@@ -47,10 +48,13 @@ end)()
 local Hosts = (function()
 @HOSTS@
 end)()
+local HostsVeg2 = (function()
+@HOSTSVEG2@
+end)()
 local function reader(config)
     return (function()
     local require = function(m) return m end
-    local script = {Parent = {WorldLayer = WorldLayer, FoodLayerData = OldData, FoodLayerDataV3 = V3Data, FoodLayerDataV3Hosts = Hosts, Config = config}}
+    local script = {Parent = {WorldLayer = WorldLayer, FoodLayerData = OldData, FoodLayerDataV3 = V3Data, FoodLayerDataV3Hosts = Hosts, FoodLayerDataV3HostsVeg2 = HostsVeg2, Config = config}}
 @FOODLAYER@
     end)()
 end
@@ -58,6 +62,8 @@ local function text(r) local layer = r.load() assert(layer) return WorldLayer.en
 local strip = function(s) return (string.gsub(s, "%s", "")) end
 local on = reader({WorldV3Enabled = true, ToonWorldEnabled = true, FoodHostsEnabled = true})
 assert(text(on) == strip(Hosts.Map), "all three flags on must read the hosts map")
+assert(text(reader({WorldV3Enabled = true, ToonWorldEnabled = true, FoodHostsEnabled = true, VegetationV2Enabled = true})) == strip(HostsVeg2.Map), "with vegetation v2: the veg2 hosts map")
+assert(text(reader({WorldV3Enabled = true, ToonWorldEnabled = true, FoodHostsEnabled = false, VegetationV2Enabled = true})) == strip(V3Data.Map), "vegetation v2 without hosts: the V3 map")
 assert(text(reader({WorldV3Enabled = true, ToonWorldEnabled = true, FoodHostsEnabled = false})) == strip(V3Data.Map), "hosts flag off: the V3 map")
 assert(text(reader({WorldV3Enabled = true, ToonWorldEnabled = false, FoodHostsEnabled = true})) == strip(V3Data.Map), "toon off: the V3 map (the bushes stand elsewhere)")
 assert(text(reader({WorldV3Enabled = false, ToonWorldEnabled = true, FoodHostsEnabled = true})) == strip(OldData.Map), "World V3 off: the old map")
@@ -73,7 +79,7 @@ print("OK")
 def reader_check(runner, errors):
     src = READER_LUAU
     for token, path in (('@WORLDLAYER@', 'src/shared/WorldLayer.luau'), ('@OLD@', 'src/shared/FoodLayerData.luau'), ('@V3@', 'src/shared/FoodLayerDataV3.luau'),
-                        ('@HOSTS@', 'src/shared/FoodLayerDataV3Hosts.luau'), ('@FOODLAYER@', 'src/shared/FoodLayer.luau')):
+                        ('@HOSTSVEG2@', 'src/shared/FoodLayerDataV3HostsVeg2.luau'), ('@HOSTS@', 'src/shared/FoodLayerDataV3Hosts.luau'), ('@FOODLAYER@', 'src/shared/FoodLayer.luau')):
         src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'reader_hosts.luau'
@@ -224,7 +230,7 @@ _DUMP = {}
 def _dump(runner):
     if runner not in _DUMP:
         import world_colliders
-        props, cols, ext, _ = world_colliders.dump(runner, world='v3', toon=True)
+        props, cols, ext, _ = world_colliders.dump(runner, world='v3', toon=True, veg2=fh.VEG2)
         _DUMP[runner] = (props, cols, ext)
     return _DUMP[runner]
 
@@ -258,7 +264,12 @@ def main():
     ap.add_argument('--runner', required=True, help='pinned luau.exe (docs/160)')
     ap.add_argument('--picture', help='also draw the map (PNG)')
     ap.add_argument('--report', action='store_true', help='print the measures')
+    ap.add_argument('--veg2', action='store_true', help='BD-1239 follow-up: check the vegetation v2 hosts map (FoodLayerDataV3HostsVeg2)')
     args = ap.parse_args()
+    if args.veg2:
+        global data
+        fh.set_mode(True)
+        data = data_veg2
     errors = check(args.runner, args.picture, args.report)
     for e in errors:
         print('FAIL:', e)

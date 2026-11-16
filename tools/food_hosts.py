@@ -58,6 +58,18 @@ ZONES = (('meadow', -60.0, 30.0), ('forest', 30.0, 110.0), ('pine', 110.0, 180.0
 
 LUAU_PATH = ROOT / 'src' / 'shared' / 'FoodLayerDataV3Hosts.luau'
 PY_PATH = ROOT / 'tools' / 'food_layer_data_v3_hosts.py'
+# BD-1239 follow-up: the same rules for the vegetation v2 island (smaller berry bushes, fewer of them; Config.VegetationV2Enabled). --veg2 / set_mode(True).
+VEG2 = False
+
+
+def set_mode(veg2):
+    global VEG2, VERSION, LUAU_PATH, PY_PATH
+    VEG2 = bool(veg2)
+    VERSION = 'bd1239-foodhosts-veg2-1' if VEG2 else 'bd1238-foodhosts-v3-1'
+    LUAU_PATH = ROOT / 'src' / 'shared' / ('FoodLayerDataV3HostsVeg2.luau' if VEG2 else 'FoodLayerDataV3Hosts.luau')
+    PY_PATH = ROOT / 'tools' / ('food_layer_data_v3_hosts_veg2.py' if VEG2 else 'food_layer_data_v3_hosts.py')
+    CAP[('bush', 'berry')] = 9 if VEG2 else 7   # v2: fewer bushes (BushRule), each carries a couple more berries round its rim
+    REACH['berry'] = 36.0 if VEG2 else 30.0     # v2: the bushes stand a little further apart
 
 
 def zone_of(centre, x, z):
@@ -249,7 +261,7 @@ def free_near(x, z, space, ground, layer, centre, kept_clear):
 
 def load_hosts(runner):
     import world_colliders
-    props, cols, ext, _hub = world_colliders.dump(runner, world='v3', toon=True)
+    props, cols, ext, _hub = world_colliders.dump(runner, world='v3', toon=True, veg2=VEG2)
     obstacles = world_colliders.Obstacles(world_colliders.prop_obstacles(props, cols, ext))
     return props, cols, ext, obstacles
 
@@ -313,11 +325,18 @@ def luau_source(layer):
             '-- The V3 food map (FoodLayerDataV3) with every food at a matching host that already stands on the island: berries at the rim of the round bushes,\n'
             '-- fruit under the tree crowns, amber against the rocks, eggs (in their own twig nest) against a rock or at a tree foot. Same format (a WorldLayer,\n'
             '-- %d x %d cells, 1 berry, 2 fruit, 3 egg, 4 amber), the same %d foods (%s), the same count of every kind in every zone, the same starter patches.\n'
-            '-- Read by src/shared/FoodLayer.luau while Config.FoodHostsEnabled, WorldV3Enabled and ToonWorldEnabled are all true.\n'
+            '%s'
             'return table.freeze({\n'
             '    Version = "%s",\n'
             '    Map = [==[\n%s\n]==],\n'
-            '})\n') % (gen.WIDTH, gen.WIDTH, sum(counts.values()), ', '.join('%s %d' % kv for kv in counts.items()), VERSION, gen.wrap(layer.encode()))
+            '})\n') % (gen.WIDTH, gen.WIDTH, sum(counts.values()), ', '.join('%s %d' % kv for kv in counts.items()), reader_line(), VERSION, gen.wrap(layer.encode()))
+
+
+def reader_line():
+    if VEG2:
+        return ('-- Read by src/shared/FoodLayer.luau while Config.FoodHostsEnabled, WorldV3Enabled, ToonWorldEnabled and VegetationV2Enabled are all true\n'
+                '-- (BD-1239 follow-up: the vegetation v2 island with smaller, fewer berry bushes; tools/food_hosts.py --veg2).\n')
+    return '-- Read by src/shared/FoodLayer.luau while Config.FoodHostsEnabled, WorldV3Enabled and ToonWorldEnabled are all true.\n'
 
 
 def python_source(layer):
@@ -331,7 +350,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--runner', required=True, help='pinned luau.exe (docs/160)')
     ap.add_argument('--write', action='store_true', help='write src/shared/FoodLayerDataV3Hosts.luau and tools/food_layer_data_v3_hosts.py')
+    ap.add_argument('--veg2', action='store_true', help='the vegetation v2 island: FoodLayerDataV3HostsVeg2.luau and food_layer_data_v3_hosts_veg2.py')
     args = ap.parse_args()
+    set_mode(args.veg2)
     result = build(args.runner)
     pts = result['points']
     moved = [math.hypot(a[0] - b[0], a[1] - b[1]) for a, b in zip(pts, result['v3_points'])]
