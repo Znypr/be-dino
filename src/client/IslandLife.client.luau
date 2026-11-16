@@ -69,10 +69,10 @@ local function pivotFor(role: string, size: Vector3, side: number): Vector3 -- s
 end
 
 local babyPool: {[string]: {any}} = {}
-local function buildBaby(species: string): any?
+local function buildBaby(species: string, scale: number): any?
     local model = LowPoly.clone(species, nil)
     if not model then return nil end
-    model:ScaleTo(Life.BabyScale)
+    model:ScaleTo(scale)
     model:PivotTo(CFrame.new())
     local root = Instance.new("Part")
     root.Name = "LifeRoot"
@@ -100,7 +100,7 @@ local function buildBaby(species: string): any?
     return {model = model, root = root, parts = parts, height = math.max(size.Y, 1), class = model:GetAttribute("LPClass"), species = species}
 end
 
-type Baby = {home: Vector3, species: string, zone: string, rig: any?, mode: string, modeUntil: number, tx: number, tz: number,
+type Baby = {home: Vector3, species: string, scale: number, pool: string, zone: string, rig: any?, mode: string, modeUntil: number, tx: number, tz: number,
     pos: Vector3, yaw: number, phase: number, speed: number, clip: string?, clipAt: number, shyAt: number, nextGround: number, failedAt: number, acc: number}
 local babies: {Baby} = {}
 local herd: {any} = {}
@@ -112,7 +112,8 @@ do
     for _, spot in herd do
         local zoneId = spot.zone
         local home = Vector3.new(spot.x, 0, spot.z)
-        table.insert(babies, {home = home, species = spot.species, zone = zoneId, rig = nil, mode = "idle", modeUntil = 0, tx = spot.x, tz = spot.z,
+        local scale = spot.scale or Life.BabyScale
+        table.insert(babies, {home = home, species = spot.species, scale = scale, pool = spot.species .. "@" .. scale, zone = zoneId, rig = nil, mode = "idle", modeUntil = 0, tx = spot.x, tz = spot.z,
             pos = home, yaw = Life.hash01(spot.x, spot.z) * math.pi * 2, phase = 0, speed = 0, clip = nil, clipAt = 0, shyAt = -100, nextGround = 0, failedAt = -100, acc = 0})
     end
 end
@@ -121,7 +122,7 @@ local out, clipOut = Pose.new(), Clips.new()
 local function poseBaby(b: Baby, now: number, dt: number, amp: number)
     local rig = b.rig
     if not rig then return end
-    local speed01 = math.clamp(b.speed / (RUN_SPEED * Life.BabyScale), 0, 1)
+    local speed01 = math.clamp(b.speed / (RUN_SPEED * b.scale), 0, 1)
     b.phase = (b.phase + dt * Pose.stepRate(speed01) * (if speed01 > .01 then 1 else 0)) % (2 * math.pi * 8)
     local height = rig.height
     local seed = b.home.X
@@ -203,8 +204,8 @@ end
 
 local function activateBaby(b: Baby, now: number): boolean
     if now - b.failedAt < 5 then return false end
-    local pool = babyPool[b.species]
-    local rig = if pool and #pool > 0 then table.remove(pool) else buildBaby(b.species)
+    local pool = babyPool[b.pool]
+    local rig = if pool and #pool > 0 then table.remove(pool) else buildBaby(b.species, b.scale)
     if not rig then b.failedAt = now return false end -- template not replicated yet (LowPolyDinos loader): try again in 5 s
     b.rig = rig
     if b.pos.Y == 0 and not openGround(b.home.X, b.home.Z) then -- the home spot is under a bush or a rock: the nearest open ground around it
@@ -233,8 +234,8 @@ local function deactivateBaby(b: Baby)
     if not rig then return end
     rig.model.Parent = nil
     for _, item in rig.parts do item.weld.C1 = CFrame.identity end
-    babyPool[b.species] = babyPool[b.species] or {}
-    table.insert(babyPool[b.species], rig)
+    babyPool[b.pool] = babyPool[b.pool] or {}
+    table.insert(babyPool[b.pool], rig)
     b.rig = nil
 end
 
@@ -261,14 +262,15 @@ local function giveBack(key: string, part: MeshPart)
     table.insert(critterPool[key], part)
 end
 
-type Group = {centre: Vector3, key: string, kind: string, members: {MeshPart}, count: number}
+type Group = {centre: Vector3, key: string, kind: string, members: {MeshPart}, count: number, size: number}
 local flocks: {Group} = {}
 for _, spot in Life.flockSpots(WorldV3) do
-    table.insert(flocks, {centre = Vector3.new(spot.x, 0, spot.z), key = spot.kind, kind = "flock", members = {}, count = caps.perFlock})
+    table.insert(flocks, {centre = Vector3.new(spot.x, 0, spot.z), key = spot.kind, kind = "flock", members = {}, count = caps.perFlock + (if spot.big then 1 else 0),
+        size = if spot.big then Life.BigFlock else 1})
 end
 for i, spot in Life.dragonflySpots(WorldV3) do
     if i > caps.dragonflies then break end
-    table.insert(flocks, {centre = Vector3.new(spot.x, 0, spot.z), key = "life_dragonfly", kind = "dart", members = {}, count = 1})
+    table.insert(flocks, {centre = Vector3.new(spot.x, 0, spot.z), key = "life_dragonfly", kind = "dart", members = {}, count = 1, size = 1})
 end
 local gulls: {MeshPart?} = {}
 
@@ -287,7 +289,8 @@ local function stepGroup(g: Group, t: number)
             local dir = Vector3.new(x2 - x, 0, z2 - z)
             local look = if dir.Magnitude > 1e-3 then CFrame.lookAt(at, at + dir) else CFrame.new(at)
             part.CFrame = look * CFrame.Angles(0, 0, math.sin(t * 2 + i) * .25) * BUTTERFLY_TURN
-            part.Size = Vector3.new(base.X * Life.flap(i, t), base.Y, base.Z)
+            local s = g.size
+            part.Size = Vector3.new(base.X * Life.flap(i, t) * s, base.Y * s, base.Z * s)
         else
             local x, y, z = Life.dart(i + g.centre.X, t)
             local x2, _, z2 = Life.dart(i + g.centre.X, t + .05)

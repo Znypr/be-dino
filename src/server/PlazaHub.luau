@@ -34,7 +34,7 @@ local function loadTemplate(key: string): MeshPart?
     return mesh
 end
 
--- The sign word on both faces plus a small word above the board (same look as the cave signs, BD-292), sunlit outdoors.
+-- The sign word on both faces of the board (one word per stall: no floating word above it, lead review 2026-11-16), sunlit outdoors.
 local function signWord(text: string, inset: number): TextLabel
     local label = Instance.new("TextLabel")
     label.Name, label.AnchorPoint, label.Position = "Word", Vector2.new(.5, .5), UDim2.fromScale(.5, .5)
@@ -54,15 +54,8 @@ local function addSignText(mesh: MeshPart, text: string)
         signWord(text, cfg.inset).Parent = gui
         gui.Parent = mesh
     end
-    local b = Props.SignBillboard
-    local board = Instance.new("BillboardGui")
-    -- BD-1239 (owner screenshot 2026-11-16: NESTS and POTIONS overlapped): sized in studs, not pixels, so a far stall's word shrinks with its
-    -- sign instead of staying 180 px wide on top of the nearer one. 12 x 3.6 studs = the old pixel size at about 45 studs (the walk-up range).
-    board.Name, board.Size = "SignBillboard", UDim2.fromScale(Layout.Sign.size[1] * .86, Layout.Sign.size[1] * .26)
-    board.StudsOffsetWorldSpace = Vector3.new(0, mesh.Size.Y / 2 + b.lift * 2, 0)
-    board.MaxDistance, board.AlwaysOnTop, board.LightInfluence, board.Brightness = 160, false, 0, 1.2
-    signWord(text, 0).Parent = board
-    board.Parent = mesh
+    -- Lead review 2026-11-16 (BD-1244 spawn pictures): NESTS and POTIONS showed twice, the big word on the stone plus a small floating word
+    -- above it. One word per stall: the floating word is gone; the word on both faces of the stone board stays.
 end
 
 local function put(folder: Instance, template: MeshPart, size: {number}, x: number, z: number, yaw: number, solid: boolean?): MeshPart

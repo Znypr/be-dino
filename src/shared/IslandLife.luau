@@ -26,6 +26,7 @@ IslandLife.Babies = {
     beach = {"gallimimus", "duck"},
     volcano = {"triceratops", "ankylosaurus"},
 }
+IslandLife.BigFlock = 1.5 -- the two spawn-plaza flocks: butterflies this much bigger (and one more of them)
 IslandLife.BabyScale = .55 -- of the species' own size (a spawn dino is 4.4-6.6 studs tall; a baby triceratops shows about 4.5)
 IslandLife.Zones = table.freeze({"meadow", "forest", "pine", "beach", "volcano"})
 
@@ -117,22 +118,24 @@ end
 -- The spawn view (owner's screenshot: spawn, looking down the main path toward the giant tree, spoke 70): the nearest grass is 72+ studs
 -- out, too far to read, so two babies wander the open plaza either side of the main path (Studio-checked open ground, clear of the stalls),
 -- about 55 studs from the spawn camera. Angle and distance from the plaza centre. LEAD decision (owner delegated 2026-10-16), docs/115.
+-- Lead review 2026-11-16: three babies 40-60 studs from spawn, a little bigger (scale), so they read in that first frame.
 IslandLife.SpawnHerd = {
-    {angle = 43, r = 40, species = "triceratops", zone = "meadow"},
-    {angle = 99, r = 42, species = "parasaurolophus", zone = "forest"},
+    {angle = 48, r = 40, species = "triceratops", zone = "meadow", scale = .7},
+    {angle = 92, r = 42, species = "stegosaurus", zone = "forest", scale = .7},
+    {angle = 104, r = 48, species = "parasaurolophus", zone = "forest", scale = .7},
 }
-function IslandLife.spawnSpots(world: any): {{x: number, z: number, species: string, zone: string}}
+function IslandLife.spawnSpots(world: any): {{x: number, z: number, species: string, zone: string, scale: number?}}
     local out = {}
     for _, s in IslandLife.SpawnHerd do
         local x, z = world.polar(s.angle, s.r)
-        table.insert(out, {x = x, z = z, species = s.species, zone = s.zone})
+        table.insert(out, {x = x, z = z, species = s.species, zone = s.zone, scale = s.scale})
     end
     return out
 end
 
 -- Butterfly flock spots: the flower zones, beside the paths and the ring road. Deterministic.
 IslandLife.FlockZones = {meadow = 3, forest = 2, beach = 1, pine = 1}
-function IslandLife.flockSpots(world: any): {{x: number, z: number, zone: string, kind: string}}
+function IslandLife.flockSpots(world: any): {{x: number, z: number, zone: string, kind: string, big: boolean?}}
     local out = {}
     for _, zoneId in IslandLife.Zones do
         local want = IslandLife.FlockZones[zoneId] or 0
@@ -155,10 +158,11 @@ function IslandLife.flockSpots(world: any): {{x: number, z: number, zone: string
         end
     end
     -- the spawn plaza: two flocks either side of the main path that greet the player at the first look down it (owner's spawn view)
-    local x1, z1 = world.polar(56, 30)
-    local x2, z2 = world.polar(88, 26)
-    table.insert(out, 1, {x = x1, z = z1, zone = "meadow", kind = "life_butterfly_orange"})
-    table.insert(out, 2, {x = x2, z = z2, zone = "meadow", kind = "life_butterfly_blue"})
+    -- (lead review 2026-11-16: closer and bigger, so one is clearly visible in the spawn frame)
+    local x1, z1 = world.polar(58, 22)
+    local x2, z2 = world.polar(84, 20)
+    table.insert(out, 1, {x = x1, z = z1, zone = "meadow", kind = "life_butterfly_orange", big = true})
+    table.insert(out, 2, {x = x2, z = z2, zone = "meadow", kind = "life_butterfly_blue", big = true})
     return out
 end
 

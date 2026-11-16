@@ -21,10 +21,14 @@ Owner 2026-11-16, spawn screenshot: "game still looks empty", then "Yes, build a
 ## Numbers
 | | before (main) | after |
 |---|---|---|
-| client parts within 300 studs of spawn (XZ) | 4,643 | about 4,730 (4,714-4,763 as life moves) |
+| client parts within 300 studs of spawn (XZ) | 4,643 | about 4,730 (4,714-4,763 as life moves); 4,593 after merging #623 (BD-1245/1246 dropped ground cover) |
 | life parts alive (desktop caps: 8 babies, 4 flocks of 4, 3 dragonflies, 3 gulls) | 0 | 67-84 measured, 94 max |
 | life parts on a phone (caps 4 / 2x3 / 2 / 2) | 0 | 46 max (offline, tools/verify_island_life.py) |
 | ParticleEmitters with Rate > 0 | 18 | 19 |
 | live particles (Rate x mean lifetime, all emitters) | about 239 | about 339 (motes +100 desktop; phone +50, tablet +75) |
 
 Still above the docs/107 phone rule of thumb (about 3,000 parts in range, BD-1222); this adds about 2%. No phone check yet.
+
+## Lead review 2026-11-16 (before the PR)
+- Spawn view: three babies (triceratops, stegosaurus, parasaurolophus at 0.7 size) 40-48 studs from spawn either side of the main path, and the two plaza butterfly flocks 1.5x bigger, 16-22 studs from spawn: all in the spawn frame (`after-spawn.jpg`, Studio screen positions checked).
+- NESTS and POTIONS showed twice: the word on the stone sign plus a small floating word above it (PlazaHub `SignBillboard`, already on main, BD-1221/BD-1239). The floating word is removed on the plaza; each stall shows its word once (the cave home's own signs are unchanged).
