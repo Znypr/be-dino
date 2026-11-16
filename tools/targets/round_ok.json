@@ -235,6 +235,12 @@
    "contains": "round.CornerRadius = UDim.new(0, 15) round.Parent = knob",
    "kind": "dot",
    "why": "BD-1205: the round slider knob on the cream Settings panel"
+  },
+  {
+   "file": "src/loading/Loading.client.luau",
+   "contains": "round.CornerRadius,round.Parent=UDim.new(0,14),track",
+   "kind": "bar",
+   "why": "BD-1214: the cream loading bar of the warm loading screen (style tile v3 board 8), a 44 px progress bar with the panel corner, not a tag"
   }
  ]
 }

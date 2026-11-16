@@ -49,4 +49,30 @@ Copy.starterCardHeading = "Great job!"
 Copy.starterRunAgain = "Run again to find new dinos!"
 Copy.starterTrailHint = "Follow the shiny food!" -- BD-1175: one toast when the starter's own food trail appears (docs/225 section 7)
 
+-- BD-1214 (docs/240 step 3, style tile v3 board 9): the Welcome steps on the style rules: three cards, a real picture each (AssetSlots /
+-- UIIconAssets slot), a two-word title and one short line (kid copy, little reading). {title, line, picture slot}.
+Copy.welcomeSteps = {
+    { "Eat and grow", "Walk into food to eat it.", "golden_drumstick_icon" },
+    { "Find eggs", "Eat lots to find eggs!", "egg_green_spotted" },
+    { "Hatch them", "Tap HOME, then open your eggs.", "egg_nest" },
+}
+-- BD-1214 (style tile v2 board 6): Run complete as label / value rows ({label, value}), the same facts and rules as runCompleteRows.
+function Copy.runCompleteFacts(s: {eggs: number?, crystals: number?, nests: number?, nestCrystals: number?, growth: number?, killEggs: number?}): {{string}}
+    local rows = {{Copy.runCompleteEggsLabel, tostring(math.floor(s.eggs or 0))}, {"Crystals", string.format("+%d", math.floor(s.crystals or 0))}}
+    local kills = s.killEggs or 0
+    if kills > 0 then table.insert(rows, {"Hunting bonus", "+" .. plural(kills, "egg", "eggs")}) end
+    if (s.nests or 0) > 0 then table.insert(rows, {"Nests", string.format("+%d", s.nests :: number)}) end
+    if (s.nestCrystals or 0) > 0 then table.insert(rows, {"Extra nests", string.format("+%d Crystals", s.nestCrystals :: number)}) end
+    if math.floor(s.growth or 0) > 0 then table.insert(rows, {"Growth", tostring(math.floor(s.growth :: number))}) end
+    return rows
+end
+Copy.homeTip = "Eat food to grow big!" -- BD-1214: Home's one line when no egg waits
+Copy.runCheer = "Great run!" -- BD-1214: Run complete, under the trophy
+Copy.runCheerDefeat = "Good try!"
+-- The line under the egg pictures: how many eggs wait to be opened (0 = the no-eggs line).
+function Copy.eggsReadyLine(n: number): string
+    if n <= 0 then return "Eat more food to find eggs!" end
+    return plural(math.floor(n), "egg is", "eggs are") .. " ready to hatch!"
+end
+
 return Copy
