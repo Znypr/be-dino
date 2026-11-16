@@ -45,18 +45,18 @@
   {
    "name": "Loading screen",
    "group": "start",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/loading.jpg",
+   "shot": "docs/evidence/2026-11-16-screens-cohesion/after-loading.jpg",
    "marks": {
-    "R1": "F",
+    "R1": "P",
     "R2": "P",
-    "R3": "P",
+    "R3": "-",
     "R4": "-",
-    "R5": "F",
-    "R6": "F",
-    "R7": "F",
-    "R8": "-"
+    "R5": "P",
+    "R6": "P",
+    "R7": "-",
+    "R8": "P"
    },
-   "note": "dark slate, no art, other font"
+   "note": "BD-1214 (ScreensCohesionEnabled, playtest on): warm green, real dino art, cream bar, one font"
   },
   {
    "name": "HUD in the world",
@@ -77,34 +77,34 @@
   {
    "name": "Welcome steps",
    "group": "start",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/welcome.jpg",
+   "shot": "docs/evidence/2026-11-16-screens-cohesion/after-welcome.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
-    "R4": "F",
-    "R5": "F",
+    "R4": "P",
+    "R5": "P",
     "R6": "P",
     "R7": "P",
     "R8": "P"
    },
-   "note": "dark cards, coloured headings, no pictures"
+   "note": "BD-1214: three cream cards, real pictures, ink text, one green button"
   },
   {
    "name": "Home (Sanctuary)",
    "group": "home",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/sanctuary.jpg",
+   "shot": "docs/evidence/2026-11-16-screens-cohesion/after-home-compact-first-pass.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
     "R4": "P",
-    "R5": "F",
+    "R5": "P",
     "R6": "P",
     "R7": "P",
     "R8": "P"
    },
-   "note": "text on studs, empty dino box"
+   "note": "BD-1214: dino on a cream preview, facts in ink, Explore green, OPEN EGGS grey"
   },
   {
    "name": "Eggs screen",
@@ -317,18 +317,18 @@
   {
    "name": "Run complete",
    "group": "run end",
-   "shot": "docs/evidence/2026-11-15-cohesion/current/run-complete.jpg",
+   "shot": "docs/evidence/2026-11-16-screens-cohesion/after-run-complete.jpg",
    "marks": {
-    "R1": "F",
-    "R2": "F",
+    "R1": "P",
+    "R2": "P",
     "R3": "P",
-    "R4": "F",
+    "R4": "P",
     "R5": "P",
     "R6": "P",
     "R7": "P",
     "R8": "P"
    },
-   "note": "text on studs, blue/amber words"
+   "note": "BD-1214: facts panel + eggs panel, real art, one green button; defeat variant not captured (combat off)"
   },
   {
    "name": "Weather title card",
