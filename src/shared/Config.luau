@@ -217,6 +217,11 @@ return table.freeze({
     -- the sea while the Atmosphere gives the depth (phones keep their tight fog). Terrain and lighting only: no save, economy or reward change.
     -- false = the sea exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     RealSeaEnabled = false,
+    -- BD-1232 (docs/242 benchmark gap 17): true = with the warm loading look (ScreensCohesionEnabled) the loading screen shows REAL scene art
+    -- behind the logo (the owner-approved Blender render egg_stage_jungle, docs/77), one short kid tip that changes every few seconds and a grey
+    -- Skip button once the save has loaded (Shared/LoadingScene, src/loading/Loading.client.luau). Client presentation only. false = the warm
+    -- loading screen exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    LoadingSceneEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
