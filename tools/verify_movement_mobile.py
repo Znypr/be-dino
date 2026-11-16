@@ -10,6 +10,7 @@ an Android phone; see docs/51-bd053-054-movement-mobile.md.
 """
 from pathlib import Path
 import argparse, re, subprocess, tempfile
+import rehearsal_env
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -102,7 +103,7 @@ def static_538_paths():
 
 
 def script():
-    return 'local Config = ' + wrapped('src/shared/Config.luau') + '\nlocal PhoneScale = ' + wrapped('src/shared/PhoneScale.luau') + '\n' + '''
+    return 'local Config = ' + wrapped('src/shared/Config.luau') + rehearsal_env.legacy_island() + '\nlocal PhoneScale = ' + wrapped('src/shared/PhoneScale.luau') + '\n' + '''
 local script = {Parent = {Config = "Config", PhoneScale = "PhoneScale"}}
 local require = function(name) if name == "PhoneScale" then return PhoneScale end return Config end
 local workspace = {Gravity = 196.2}
