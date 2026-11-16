@@ -19,6 +19,7 @@ Usage: python tools/verify_vegetation_v2.py --runner luau.exe"""
 from pathlib import Path
 import argparse
 import json
+import math
 import re
 import subprocess
 import sys
@@ -79,6 +80,13 @@ for _, roll in {0, .2, .4, .6, .8, .99} do
     end
 end
 for key in Veg.Assets do check(used[key], "v2 key is used: " .. key) end
+-- BD-1239 follow-up: berry bushes no taller than the bush rule allows (kit height x scale), lower domes
+for _, p in placed do
+    if p.layer == "shrub" and (p.id == "world_bush_a" or p.id == "world_bush_b") then
+        check(Kit[p.id].extent[2] * p.scale <= Veg.BushRule.maxHeight + 1e-3, "bush taller than the v2 rule: " .. p.id)
+    end
+end
+for key, f in Veg.Squash do check(Veg.Assets[key] ~= nil and f > .5 and f <= 1, "squash factor for " .. key) end
 -- fit
 local bush = Kit.world_bush_a.extent
 local s = Veg.fit("shrub", bush, {4, 4, 4})
@@ -101,6 +109,15 @@ check(#thin < #placed, "fewer placements")
 if #fails > 0 then for _, f in fails do print("FAIL: " .. f) end error("vegetation v2 checks failed") end
 print(string.format("Vegetation v2 checks passed (%d placements, ground cover %d -> %d)", #placed, before, after))
 '''
+
+
+PR619_KEEP = .55  # the ground cover share PR #619 shipped (no bush rule): the part count may not grow past it
+
+
+def keep_cover(x, z, keep):
+    """VegetationV2.keepCover in Python (same integer hash; floats are exact at these sizes)."""
+    h = math.floor(x * 8) * 73856093 + math.floor(z * 8) * 19349663
+    return (h % 1000003) / 1000003 < keep
 
 
 def source_checks():
@@ -146,8 +163,21 @@ def main():
     problems = source_checks()
     for p in problems:
         print('FAIL:', p)
-    props = world_colliders.dump(args.runner, 'playtest', world='v3', toon=True)[0]
-    rows = ',\n'.join('{layer="%s",id="%s",x=%.3f,z=%.3f}' % (p['layer'], p['id'], p['x'], p['z']) for p in props)
+    props = world_colliders.dump(args.runner, 'playtest', world='v3', toon=True, veg2=True)[0]
+    base = world_colliders.dump(args.runner, 'playtest', world='v3', toon=True)[0]
+    bush = lambda P: sum(1 for p in P if p['layer'] == 'shrub' and p['id'] in ('world_bush_a', 'world_bush_b'))  # noqa: E731
+    print('round bushes: toon island %d, vegetation v2 %d; placements %d -> %d' % (bush(base), bush(props), len(base), len(props)))
+    if not bush(props) < bush(base) * .9:
+        problems.append('the v2 bush rule must thin the round bushes (%d of %d)' % (bush(props), bush(base)))
+        print('FAIL:', problems[-1])
+    keep = float(re.search(r'VegetationV2.CoverKeep = ([.\d]+)', read('src/shared/VegetationV2.luau')).group(1))
+    kept = lambda P, k: sum(1 for p in P if p['layer'] != 'groundcover' or keep_cover(p['x'], p['z'], k))  # noqa: E731
+    now, before = kept(props, keep), kept(base, PR619_KEEP)
+    print('in game (ground cover thinned): %d placements, PR #619 rule %d' % (now, before))
+    if now > before:
+        problems.append('the v2 island must not have more placements in game than the PR #619 rule (%d > %d)' % (now, before))
+        print('FAIL:', problems[-1])
+    rows = ',\n'.join('{layer="%s",id="%s",x=%.3f,z=%.3f,scale=%.4f}' % (p['layer'], p['id'], p['x'], p['z'], p['scale']) for p in props)
     source = ('local Kit=' + module(read('src/shared/WorldKitData.luau')) + '\nlocal Veg=' + module(read('src/shared/VegetationV2.luau')) +
               '\nlocal placed = {\n' + rows + '\n}\n' + LUAU)
     with tempfile.TemporaryDirectory() as tmp:

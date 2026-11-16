@@ -18,9 +18,9 @@ VegetationV2.Assets = {
     veg2_pine_b = {assetId = "77837197584497", tris = 900, ref = "pine_b", what = "young three-layer pine with a lime tip"},
     veg2_palm_coconut = {assetId = "87978584265482", tris = 1200, ref = "palm_coconut", what = "coconut palm with a hibiscus at the foot"},
     veg2_palm_flower = {assetId = "131648210939538", tris = 1200, ref = "palm_flower", what = "flower palm with a vine and a pink bloom"},
-    veg2_bush_red = {assetId = "72154567844680", tris = 700, ref = "bush_berry_red", what = "berry bush with red berries"},
-    veg2_bush_blue = {assetId = "136045157829017", tris = 700, ref = "bush_berry_blue", what = "berry bush with blueberries"},
-    veg2_bush_grape = {assetId = "133674054493602", tris = 800, ref = "bush_grape_purple", what = "low bush with purple grape bunches"},
+    veg2_bush_red = {assetId = "77978853272967", tris = 900, ref = "bush_berry_red", what = "green dome with small red berries"},
+    veg2_bush_blue = {assetId = "99690382623326", tris = 900, ref = "bush_berry_blue", what = "green dome with small blueberries"},
+    veg2_bush_grape = {assetId = "139210058341686", tris = 900, ref = "bush_grape_purple", what = "green dome with small purple grape bunches"},
     veg2_flowers_daisy = {assetId = "116872167176322", tris = 500, ref = "flowers_a", what = "purple, yellow and white daisies"},
     veg2_flowers_hibiscus = {assetId = "115140435674207", tris = 500, ref = "flowers_hibiscus", what = "pink and yellow hibiscus in broad leaves"},
     veg2_grass_a = {assetId = "125477923669500", tris = 400, ref = "grass_a", what = "soft round grass clump with a white flower"},
@@ -33,7 +33,13 @@ VegetationV2.Assets = {
 
 -- Share of the ground cover placements kept (the rest are dropped, deterministic by position): a soft clump reads as more plant than
 -- the thin kit tuft, and the phone part budget (BD-1222: 4,989 parts within 300 studs of spawn against about 3,000) needs fewer parts.
-VegetationV2.CoverKeep = .55
+VegetationV2.CoverKeep = .5
+-- BD-1239 follow-up (lead review 2026-11-16): the bush rule Arena hands to BiomePlacement.BushV2. Round bushes are 2.6-5 kit studs tall (the
+-- dome shows about 3-6 studs, a spawn dino is 4.4-6.6) instead of the 4-12 stud Small band; of the shrub-layer bush picks 60% stay bushes, 25%
+-- become flower or grass clumps, 15% are open ground. The food map for this world is FoodLayerDataV3HostsVeg2 (tools/food_hosts.py --veg2).
+-- Height factor of the shown mesh for the berry bushes (a lower dome, so a row of bushes reads as bushes, not a hedge). 1 = uniform.
+VegetationV2.Squash = table.freeze({veg2_bush_red = .8, veg2_bush_blue = .8, veg2_bush_grape = .8})
+VegetationV2.BushRule = table.freeze({minHeight = 3, maxHeight = 5.5, maxWidth = 11, keep = .75, flowers = .15})
 
 function VegetationV2.enabled(config: any): boolean
     return type(config) == "table" and config.WorldV3Enabled == true and config.ToonWorldEnabled == true and config.VegetationV2Enabled == true

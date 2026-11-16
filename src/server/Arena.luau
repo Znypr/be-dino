@@ -109,6 +109,7 @@ local function veg2Prop(id: string, biome: string, roll: number): Model?
         local size = template.Size
         local mesh = template:Clone()
         mesh.Size = size * Veg2.fit(KitData[id].kind, KitData[id].extent, {size.X, size.Y, size.Z})
+        mesh.Size = Vector3.new(mesh.Size.X, mesh.Size.Y * (Veg2.Squash[key] or 1), mesh.Size.Z) -- BD-1239 follow-up: lower bush domes
         mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
         mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0)
         mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0)
@@ -432,6 +433,7 @@ function Arena.build()
     if caveHub.enabled then Biome.useHub(caveHub.biome) end
     if (Layout :: any).V3 then Biome.useV3(BiomeMap.V3) end -- BD-1209: routes, keep-outs and landmark sites of the round island
     if WorldToon.enabled(Config) then Biome.useToonPlants(WorldToon.Swaps, WorldToon.swapList) end -- BD-1224: round glossy bushes, no spiky fronds
+    if Veg2.enabled(Config) then Biome.BushV2 = Veg2.BushRule end -- BD-1239 follow-up: smaller berry bushes, open grass and flowers between clumps
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do

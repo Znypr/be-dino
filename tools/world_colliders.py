@@ -214,7 +214,11 @@ TOON_SWAP = ('local WorldToon=' + est.vwa.wrapped('src/shared/WorldToon.luau') +
              'Biome.useToonPlants(WorldToon.Swaps, WorldToon.swapList)' + chr(10))
 
 
-def dump(runner, profile='playtest', world=None, toon=False):
+# BD-1239 follow-up: with Config.VegetationV2Enabled Arena.build() also sets the v2 bush rule (BiomePlacement.BushV2 = VegetationV2.BushRule).
+VEG2_RULE = ('local VegetationV2=' + est.vwa.wrapped('src/shared/VegetationV2.luau') + chr(10) + 'Biome.BushV2 = VegetationV2.BushRule' + chr(10))
+
+
+def dump(runner, profile='playtest', world=None, toon=False, veg2=False):
     """The placements, kit colliders and kit extents of the profile as the server would build them (one Luau run, a few seconds).
     world='v3': the redesigned round island (BD-1208). toon=True (BD-1238, only with world='v3'): also the BD-1224 round-bush swap of Arena.build."""
     text = (ROOT / 'src' / 'shared' / 'Config.luau').read_text(encoding='utf-8')
@@ -229,7 +233,7 @@ def dump(runner, profile='playtest', world=None, toon=False):
     hub = 'local CaveHubLayout=' + est.vwa.wrapped('src/shared/CaveHubLayout.luau') + '\nlocal caveHub=CaveHubLayout.hub(Config)\nif caveHub.enabled then Biome.useHub(caveHub.biome) end\n'
     marker = 'local a=Biome.generate('
     assert marker in src, 'estimate_world_budget.luau_script changed: update world_colliders.dump'
-    src = src.replace(marker, hub + (V3_SWAP if world == 'v3' else '') + (TOON_SWAP if toon and world == 'v3' else '') + marker, 1)
+    src = src.replace(marker, hub + (V3_SWAP if world == 'v3' else '') + (TOON_SWAP if toon and world == 'v3' else '') + (VEG2_RULE if veg2 and toon and world == 'v3' else '') + marker, 1)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'colliders.luau'
         path.write_text(src, encoding='utf-8')

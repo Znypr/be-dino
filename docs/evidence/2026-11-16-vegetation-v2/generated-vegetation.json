@@ -1,5 +1,5 @@
 {
-  "note": "BD-1239 vegetation v2: Roblox Studio generate_mesh (text prompts written from the approved ChatGPT concept sheet, one magenta reference per object in refs/), published to the owner's account 2026-11-16 (publishedAssetId of each job). tris = the maxTriangles cap given to the generator.",
+  "note": "BD-1239 vegetation v2: Roblox Studio generate_mesh (text prompts written from the approved ChatGPT concept sheet, one magenta reference per object in refs/), published to the owner's account 2026-11-16 (publishedAssetId of each job). tris = the maxTriangles cap given to the generator. Follow-up 2026-11-16 (lead review): the three berry bushes regenerated with small berries; the earlier ids are kept as `replaces`; a blue bush with a stem (129160076759236) was rejected.",
   "items": {
     "veg2_tree_flower": {
       "asset": 77092440397911,
@@ -44,22 +44,25 @@
       "what": "flower palm with a vine and a pink bloom"
     },
     "veg2_bush_red": {
-      "asset": 72154567844680,
-      "maxTriangles": 700,
+      "asset": 77978853272967,
+      "maxTriangles": 900,
       "reference": "refs/ref-bush_berry_red.png",
-      "what": "berry bush with red berries"
+      "what": "green dome with small red berries",
+      "replaces": 72154567844680
     },
     "veg2_bush_blue": {
-      "asset": 136045157829017,
-      "maxTriangles": 700,
+      "asset": 99690382623326,
+      "maxTriangles": 900,
       "reference": "refs/ref-bush_berry_blue.png",
-      "what": "berry bush with blueberries"
+      "what": "green dome with small blueberries",
+      "replaces": 136045157829017
     },
     "veg2_bush_grape": {
-      "asset": 133674054493602,
-      "maxTriangles": 800,
+      "asset": 139210058341686,
+      "maxTriangles": 900,
       "reference": "refs/ref-bush_grape_purple.png",
-      "what": "low bush with purple grape bunches"
+      "what": "green dome with small purple grape bunches",
+      "replaces": 133674054493602
     },
     "veg2_flowers_daisy": {
       "asset": 116872167176322,
