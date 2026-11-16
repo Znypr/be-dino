@@ -12,6 +12,8 @@ WorldV3.PlazaRadius = 72
 WorldV3.RingRadius = 205
 WorldV3.PathHalfWidth = 7
 WorldV3.SeaLevel = 0
+-- Sea floor: the lowest floor and its drop per stud out from the coast. BD-1220 (Config.RealSeaEnabled, Shared/WorldSea) deepens it.
+WorldV3.SeaFloor, WorldV3.SeaSlope = -6, .22
 
 -- Zones are angular sectors around the plaza (degrees, atan2(z - 30, x), the plan's layout). biome = the existing prop grammar id.
 WorldV3.Zones = {
@@ -134,7 +136,7 @@ end
 
 function WorldV3.height(x: number, z: number): number
     local c = WorldV3.inland(x, z)
-    if c < 0 then return math.max(-6, .4 + c * .22) end -- shallow sea shelf: wade-able near the beach, deeper further out
+    if c < 0 then return math.max(WorldV3.SeaFloor, .4 + c * WorldV3.SeaSlope) end -- sea shelf: wade-able near the beach, deeper further out
     local a = angleOf(x, z)
     -- Soft cliffs where the pine hill and the volcano meet the sea; wide beaches elsewhere.
     local cliffy = math.max(1 - smoothstep(25, 45, angDist(a, 145)), 1 - smoothstep(20, 40, angDist(a, 275)))

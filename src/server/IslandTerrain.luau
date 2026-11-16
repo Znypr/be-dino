@@ -4,6 +4,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
+local Sea = require(ReplicatedStorage.Shared.WorldSea)
+local Toon = require(ReplicatedStorage.Shared.WorldToon)
 local IslandTerrain = {}
 -- World v2: the surface material per column comes from the sub-biome map (BiomeMap) dithered with multi-octave noise, so a
 -- single grass material no longer tiles flat across the map: Grass/LeafyGrass/Mud/Ground/Sand/Sandstone/Slate/Basalt mix in
@@ -11,6 +13,45 @@ local IslandTerrain = {}
 local STRIP = 32 -- voxel columns written per WriteVoxels call (bounds the Lua table memory on the 2.5x larger island)
 local function smooth(x: number, z: number, scale: number, offset: number): number
     return math.noise(x / scale, z / scale, offset)
+end
+-- BD-1220 (Config.RealSeaEnabled, Shared/WorldSea): terrain water past the island square out to WorldSea.Radius, so the sea reaches the
+-- fog instead of ending on a square plate. Blocks that touch the home's terrain box (WorldSea.HomeBox) are written first, BEFORE the
+-- beforeReady callback, so the home shell always overwrites the sea there; the rest runs after IslandTerrainReady (nothing waits for it).
+-- Far blocks share one flat column. early = true: only the home-box blocks; false: every other block.
+local function farSea(V3: any, half: number, resolution: number, early: boolean)
+    local startedAt = os.clock()
+    local flatM, flatO = Sea.column(Sea.SeaFloor, resolution)
+    local cells, n = Sea.Tile / resolution, 0
+    local function block(fill: (number, number) -> ({string}, {number}), x0: number, z0: number)
+        local materials, occupancy = {}, {}
+        for x = 1, cells do
+            materials[x], occupancy[x] = {}, {}
+            for y = 1, #flatM do materials[x][y], occupancy[x][y] = {}, {} end
+            for z = 1, cells do
+                local m, o = fill(x0 + (x - .5) * resolution, z0 + (z - .5) * resolution)
+                for y = 1, #m do
+                    materials[x][y][z] = (Enum.Material :: any)[m[y]]
+                    occupancy[x][y][z] = o[y]
+                end
+            end
+        end
+        local region = Region3.new(Vector3.new(x0, Sea.FloorLow, z0), Vector3.new(x0 + Sea.Tile, 0, z0 + Sea.Tile))
+        workspace.Terrain:WriteVoxels(region, resolution, materials, occupancy)
+    end
+    local flat = function(_x: number, _z: number) return flatM, flatO end
+    local shaped = function(x: number, z: number) return Sea.column(V3.height(x, z), resolution) end
+    for _, t in Sea.tiles(V3.CenterX, V3.CenterZ, half) do
+        if Sea.overlaps(t, Sea.HomeBox) ~= early then continue end
+        -- the nearest corner decides: blocks touching the shelf by the island get their real floor per column
+        local nx = math.clamp(V3.CenterX, t[1], t[1] + Sea.Tile) - V3.CenterX
+        local nz = math.clamp(V3.CenterZ, t[2], t[2] + Sea.Tile) - V3.CenterZ
+        block(if nx * nx + nz * nz < Sea.FlatFrom * Sea.FlatFrom then shaped else flat, t[1], t[2])
+        n += 1
+        if not early and n % 4 == 0 then task.wait() end
+    end
+    if early then return end
+    workspace:SetAttribute("WorldSeaBlocks", n)
+    workspace:SetAttribute("WorldSeaBuildSeconds", math.floor((os.clock() - startedAt) * 10) / 10)
 end
 -- beforeReady (BD-281): optional extra terrain work (the cave shell, flag on only) that must finish before IslandTerrainReady.
 function IslandTerrain.build(beforeReady: (() -> ())?)
@@ -26,10 +67,29 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
         end
         pcall(function() terrain.WaterColor, terrain.WaterTransparency, terrain.WaterWaveSize = Color3.fromRGB(64, 182, 214), .35, .08 end)
     end
+    -- BD-1223 (Config.ToonWorldEnabled, Shared/WorldToon): the place carries one flat MaterialVariant per island material (authored at build
+    -- time, unbound: resources/world-materials.rbxmx); with the flag on they become the overrides, so the ground shows only its flat toon
+    -- colour (no photo grass, sand or rock). The Enum materials stay the same for footsteps, food and placement.
+    if V3 and Toon.enabled(Config) then
+        local MaterialService = game:GetService("MaterialService")
+        local bound = 0
+        for _, name in Toon.materials() do
+            local c = Toon.Palette[name]
+            local material = (Enum.Material :: any)[name] :: Enum.Material
+            terrain:SetMaterialColor(material, Color3.fromRGB(c[1], c[2], c[3]))
+            if MaterialService:FindFirstChild(Toon.VariantPrefix .. name) then
+                local ok = pcall(function() MaterialService:SetBaseMaterialOverride(material, Toon.VariantPrefix .. name) end)
+                if ok then bound += 1 end
+            end
+        end
+        workspace:SetAttribute("WorldToonVariants", bound)
+    end
     -- Roblox's own grass decoration adds real 3D tufts on Grass terrain for free (no parts); not scriptable everywhere.
     pcall(function() (terrain :: any).Decoration = true end)
     local resolution = Config.TerrainResolution
     local extent = Config.ArenaHalfWidth + 8
+    local realSea = V3 ~= nil and Sea.enabled(Config)
+    local floorLow = if realSea then Sea.FloorLow else -16
     local seed = Config.WorldArtSeed
     local o = .5 + (seed * .137) % 47
     local fullLow = -extent
@@ -39,7 +99,7 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
     for strip = 0, math.ceil(columns / STRIP) - 1 do
         local minX = fullLow + strip * STRIP * resolution
         local maxX = math.min(extent, minX + STRIP * resolution)
-        local region = Region3.new(Vector3.new(minX, -16, -extent), Vector3.new(maxX, Config.TerrainTop, extent)):ExpandToGrid(resolution)
+        local region = Region3.new(Vector3.new(minX, floorLow, -extent), Vector3.new(maxX, Config.TerrainTop, extent)):ExpandToGrid(resolution)
         local size = region.Size / resolution
         local low = region.CFrame.Position - region.Size / 2
         local materials, occupancy = {}, {}
@@ -84,7 +144,9 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
         task.wait()
     end
     workspace:SetAttribute("IslandTerrainBuildSeconds", math.floor((os.clock() - startedAt) * 10) / 10)
+    if realSea then farSea(V3, extent, resolution, true) end -- BD-1220: the sea under the home box first, then the beforeReady shell over it
     if beforeReady then beforeReady() end
     workspace:SetAttribute("IslandTerrainReady", true)
+    if realSea then task.spawn(farSea, V3, extent, resolution, false) end
 end
 return IslandTerrain

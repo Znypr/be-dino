@@ -212,6 +212,21 @@ return table.freeze({
     -- nest egg finishes during play (src/client/EggReadyCue.client.luau, in game only). Client presentation only: nothing is stored, sent or
     -- decided. false = the game exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     PlayCuesEnabled = false,
+    -- BD-1220 (docs/242 benchmark gap 5, rule W9): true = with WorldV3Enabled the sea is real terrain water out to the fog (Shared/WorldSea):
+    -- a deeper floor past the beach, no 6000-stud square ocean plate, and in clear weather on desktop and tablet the classic fog sits past
+    -- the sea while the Atmosphere gives the depth (phones keep their tight fog). Terrain and lighting only: no save, economy or reward change.
+    -- false = the sea exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    RealSeaEnabled = false,
+    -- BD-1223 + BD-1224 (docs/242 benchmark gaps 8 and 9, one art rule per game): true = with WorldV3Enabled the island is in one toy style
+    -- (Shared/WorldToon): the terrain shows flat toon colours instead of the photo grass, sand and rock textures (MaterialVariants on one flat
+    -- white map, docs/77), and the spiky flat-shaded ferns and horsetail are replaced by the round glossy bushes. Look and placement only: no
+    -- save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    ToonWorldEnabled = false,
+    -- BD-1221 (docs/242 benchmark gap 4, extends BD-1181): true = with WorldV3Enabled four stalls with big signs stand on the spawn plaza
+    -- (nests, potions, shop, dinos; the cave home's own generated meshes, Shared/PlazaHubLayout) and a walk-up prompt opens that screen through
+    -- the rail's own path (HubTravelClient.press, then openScreen), so a run keeps its "At home" rule. No save, economy or reward change.
+    -- false = the plaza exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    PlazaHubEnabled = false,
     -- BD-1227 (docs/242 gap 17): true = the rare hatch news names the hatcher by Roblox display name ("Mia hatched a Legendary T-Rex!") in the
     -- two-line banner plus one plain chat line, and an Epic species makes news too. Same server rate limits as BD-428; nothing stored.
     -- false = the BD-428 / BD-1121 announcement exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free.

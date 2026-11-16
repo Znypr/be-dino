@@ -78,6 +78,7 @@ CLASSIFIED = {
     'Arena.luau': ('world build', 'places props at server start'),
     'CaveLighting.luau': ('world build', 'places cave lights at server start'),
     'CaveProps.luau': ('world build', 'places cave props at server start'),
+    'PlazaHub.luau': ('world build', 'BD-1221: places the plaza stall meshes and their hidden colliders at server start'),
     'ImportedResources.luau': ('world build', 'scales imported resource models at server start'),
     'Leaderboards.luau': ('world build', 'places the boards at server start'),
     'FoodService.luau': ('world build', 'moves food visuals, not a player'),

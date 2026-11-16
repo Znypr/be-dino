@@ -104,6 +104,116 @@
       "roughness": "113318935596754",
       "metal": "116129277500945",
       "tile": 10
+    },
+    {
+      "name": "BeDinoToon_Basalt",
+      "base": "Basalt",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Grass",
+      "base": "Grass",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Ground",
+      "base": "Ground",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_LeafyGrass",
+      "base": "LeafyGrass",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Limestone",
+      "base": "Limestone",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Mud",
+      "base": "Mud",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Rock",
+      "base": "Rock",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Sand",
+      "base": "Sand",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Sandstone",
+      "base": "Sandstone",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
+    },
+    {
+      "name": "BeDinoToon_Slate",
+      "base": "Slate",
+      "color": "86126915537669",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 64,
+      "bound": false,
+      "note": "BD-1223 (docs/242 gap 8): flat toon ground. The colour map is one plain white image (docs/77 terrain_toon_flat_white), so the terrain shows only its toon colour (src/shared/WorldToon.luau Palette). Unbound here; src/server/IslandTerrain.luau sets the override at runtime only with Config.ToonWorldEnabled (and WorldV3Enabled)."
     }
   ]
 }

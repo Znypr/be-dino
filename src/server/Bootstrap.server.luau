@@ -34,6 +34,8 @@ if not Lighting:FindFirstChildOfClass("Atmosphere") then
     atmosphere.Name = "WorldHaze"
     atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = .1, .1, 0, .3
     atmosphere.Color, atmosphere.Decay = Color3.fromRGB(176, 205, 232), Color3.fromRGB(140, 176, 210)
+    local Sea = require(ReplicatedStorage.Shared.WorldSea) -- BD-1220: the Atmosphere carries the depth instead of the classic fog (set before any client joins)
+    if Sea.enabled(Config) then local A = Sea.Atmosphere atmosphere.Density, atmosphere.Haze, atmosphere.Offset, atmosphere.Glare = A.density, A.haze, A.offset, A.glare end
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
