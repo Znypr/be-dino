@@ -42,6 +42,29 @@ def problems(ns):
                     out.append("%s.root.bob: below 0 sinks the feet into the ground" % name)
                 if channel == "bob" and role != "root" or channel == "fwd" and role != "head":
                     out.append("%s.%s: %s belongs on the %s track" % (name, role, channel, "root" if channel == "bob" else "head"))
+    for name, cyc in ns.get("GAIT", {}).items():
+        length = cyc["length"]
+        if cyc.get("clock") not in ("time", "stride"):
+            out.append("gait %s: clock must be time or stride" % name)
+        for role, track in cyc["tracks"].items():
+            if role not in ns["GAIT_ROLES"]:
+                out.append("gait %s: role %s is not a gait role" % (name, role))
+            for channel, keys in track.items():
+                if channel not in ns["CHANNELS"]:
+                    out.append("gait %s.%s: unknown channel %s" % (name, role, channel))
+                times = [k[0] for k in keys]
+                if times != sorted(times) or len(set(times)) != len(times):
+                    out.append("gait %s.%s.%s: key times not increasing" % (name, role, channel))
+                if times[0] != 0 or abs(times[-1] - length) > 1e-9 or keys[0][1] != keys[-1][1]:
+                    out.append("gait %s.%s.%s: a loop runs from 0 to its length and ends on its first value" % (name, role, channel))
+                limit = {"bob": ns["MAX_BOB"], "fwd": ns["MAX_FWD"]}.get(channel, ns["MAX_DEG"])
+                for tk, v in keys:
+                    if abs(v) > limit + 1e-9:
+                        out.append("gait %s.%s.%s: %s at %s is over the calm limit %s" % (name, role, channel, v, tk, limit))
+                if channel in ("bob", "fwd") and any(v < 0 for _, v in keys):
+                    out.append("gait %s.%s.%s: below 0 (a dip sinks the feet / pulls the head into the body)" % (name, role, channel))
+                if channel == "bob" and role != "root" or channel == "fwd" and role != "head":
+                    out.append("gait %s.%s: %s belongs on the %s track" % (name, role, channel, "root" if channel == "bob" else "head"))
     return out
 
 
@@ -73,6 +96,22 @@ Clips.Data = {''' % f(ns["NECK_SHARE"])]
                     parts.append("%s = {%s}" % (channel, ", ".join("{%s, %s}" % (f(t), f(v)) for t, v in track[channel])))
             lines.append("\t\t%s = {%s}," % (role, ", ".join(parts)))
         lines.append("\t}},")
+    lines.append("}")
+    lines.append("-- BD-1217 rig follow-up (Config.DinoRigClipsEnabled): locomotion CYCLES, played by Shared/LowPolyGait. clock time = seconds per loop,")
+    lines.append("-- stride = parts of one stride (the animator's step phase). Loops: first value = last value, tangents wrap around.")
+    lines.append("Clips.Gait = {")
+    for name, cyc in ns.get("GAIT", {}).items():
+        lines.append("	%s = {length = %s, clock = \"%s\", tracks = {" % (name, f(cyc["length"]), cyc["clock"]))
+        for role in ns["GAIT_ROLES"]:
+            track = cyc["tracks"].get(role)
+            if not track:
+                continue
+            parts = []
+            for channel in ns["CHANNELS"]:
+                if channel in track:
+                    parts.append("%s = {%s}" % (channel, ", ".join("{%s, %s}" % (f(tk), f(v)) for tk, v in track[channel])))
+            lines.append("		%s = {%s}," % (role, ", ".join(parts)))
+        lines.append("	}},")
     lines.append("}")
     lines.append('''
 -- value of one channel at time t (keys {{t, v}, ...} sorted, first and last value 0): cubic Hermite, monotone-clamped tangents (no overshoot)
@@ -125,6 +164,55 @@ function Clips.sample(name: string, role: string, side: number, t: number, out: 
 \treturn out
 end
 
+-- one channel of a LOOP at time t (wrapped into [0, length)): cubic Hermite, monotone-clamped tangents that wrap around the seam
+local function cyclic(keys: {{number}}, length: number, t: number): number
+	local n = #keys
+	if n == 0 or length <= 0 then return 0 end
+	t = t % length
+	local i = 1
+	while i < n - 1 and keys[i + 1][1] <= t do i += 1 end
+	local function at(j: number): (number, number) -- key j with wrap-around (key n is key 1 one loop later)
+		if j < 1 then return keys[n - 1 + j][1] - length, keys[n - 1 + j][2] end
+		if j > n then return keys[j - n + 1][1] + length, keys[j - n + 1][2] end
+		return keys[j][1], keys[j][2]
+	end
+	local function slope(j: number): number
+		local ta, va = at(j - 1)
+		local tb, vb = at(j)
+		local tc, vc = at(j + 1)
+		if (vb - va) * (vc - vb) <= 0 then return 0 end
+		local cap = 3 * math.min(math.abs((vb - va) / (tb - ta)), math.abs((vc - vb) / (tc - tb)))
+		return math.clamp((vc - va) / (tc - ta), -cap, cap)
+	end
+	local t0, v0, t1, v1 = keys[i][1], keys[i][2], keys[i + 1][1], keys[i + 1][2]
+	local h = t1 - t0
+	if h <= 0 then return v0 end
+	local m0, m1 = slope(i), slope(i + 1) -- slope(1) and slope(n) agree: key 1 and key n are the same point of the loop
+	local u = (t - t0) / h
+	local u2, u3 = u * u, u * u * u
+	return (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * h * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * h * m1
+end
+
+-- Writes one part's offsets of the loop `name` at loop time t (seconds for clock "time", strides for "stride"). Same channels and rules as
+-- sample (neck = head at NeckShare unless it has its own track, roll mirrors by side for SideRoll roles, bob from the root track for every
+-- role). Unknown loop, role or NaN time = all zero.
+function Clips.sampleCycle(name: string, role: string, side: number, t: number, out: Out): Out
+	out.pitch, out.yaw, out.roll, out.bob, out.fwd = 0, 0, 0, 0, 0
+	local cyc = Clips.Gait[name]
+	if not cyc or t ~= t or math.abs(t) > 1e9 then return out end
+	local tracks, length = cyc.tracks :: any, cyc.length
+	if tracks.root and tracks.root.bob then out.bob = cyclic(tracks.root.bob, length, t) end
+	local track, k = tracks[role], 1
+	if not track and role == "neck" then track, k = tracks.head, Clips.NeckShare end
+	if not track or role == "root" then return out end
+	local d = math.pi / 180 * k
+	if track.pitch then out.pitch = cyclic(track.pitch, length, t) * d end
+	if track.yaw then out.yaw = cyclic(track.yaw, length, t) * d end
+	if track.roll then out.roll = cyclic(track.roll, length, t) * d * (if Clips.SideRoll[role] and side < 0 then -1 else 1) end
+	if track.fwd and role == "head" then out.fwd = cyclic(track.fwd, length, t) end
+	return out
+end
+
 return Clips''')
     return "\n".join(lines) + "\n"
 
@@ -144,7 +232,7 @@ def main(argv=None):
             print("PROBLEM: %s is out of date; run python tools/blender/gen_dino_clips_luau.py" % DEST.relative_to(ROOT).as_posix())
             return 1
         if not bad:
-            print("ok: LowPolyClips.luau matches dino_clips.py (%d clips)" % len(ns["CLIPS"]))
+            print("ok: LowPolyClips.luau matches dino_clips.py (%d clips, %d loops)" % (len(ns["CLIPS"]), len(ns.get("GAIT", {}))))
         return 1 if bad else 0
     if bad:
         return 1

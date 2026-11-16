@@ -26,6 +26,40 @@ Clips.Data = {
 		head = {pitch = {{0, 0}, {0.6, 4}, {1.8, 2}, {3, 0}}, yaw = {{0, 0}, {0.7, 18}, {1.2, 21}, {1.9, -14}, {2.4, -17}, {3, 0}}, roll = {{0, 0}, {0.7, 4}, {1.2, 5}, {1.9, -3}, {2.4, -4}, {3, 0}}},
 		tail = {yaw = {{0, 0}, {0.8, -8}, {1.6, 8}, {2.4, -6}, {3, 0}}},
 	}},
+	jump = {length = 0.6, tracks = {
+		head = {pitch = {{0, 0}, {0.15, 9}, {0.35, 6}, {0.6, 0}}},
+		tail = {pitch = {{0, 0}, {0.18, 12}, {0.6, 0}}},
+		arm = {pitch = {{0, 0}, {0.15, -12}, {0.6, 0}}},
+	}},
+	land = {length = 0.6, tracks = {
+		head = {pitch = {{0, 0}, {0.18, -6}, {0.38, 2}, {0.6, 0}}},
+		tail = {pitch = {{0, 0}, {0.18, 7}, {0.38, -3}, {0.6, 0}}, yaw = {{0, 0}, {0.22, 4}, {0.42, -2}, {0.6, 0}}},
+		arm = {pitch = {{0, 0}, {0.18, 5}, {0.6, 0}}},
+	}},
+}
+-- BD-1217 rig follow-up (Config.DinoRigClipsEnabled): locomotion CYCLES, played by Shared/LowPolyGait. clock time = seconds per loop,
+-- stride = parts of one stride (the animator's step phase). Loops: first value = last value, tangents wrap around.
+Clips.Gait = {
+	idle = {length = 4, clock = "time", tracks = {
+		root = {bob = {{0, 0}, {2, 0.01}, {4, 0}}},
+		head = {pitch = {{0, 0}, {1.2, 2.5}, {2.6, -1.5}, {4, 0}}, yaw = {{0, 0}, {1, 2}, {3, -2}, {4, 0}}, roll = {{0, -2}, {2, 2}, {4, -2}}},
+		tail = {pitch = {{0, 0}, {2, 2.5}, {4, 0}}, yaw = {{0, -7}, {2, 7}, {4, -7}}},
+		arm = {pitch = {{0, 0}, {2, -3}, {4, 0}}},
+	}},
+	walk = {length = 1, clock = "stride", tracks = {
+		root = {bob = {{0, 0}, {0.28, 0.02}, {0.5, 0}, {0.78, 0.02}, {1, 0}}},
+		head = {pitch = {{0, -2}, {0.28, 1.5}, {0.5, -2}, {0.78, 1.5}, {1, -2}}, roll = {{0, -2.5}, {0.5, 2.5}, {1, -2.5}}, fwd = {{0, 0}, {0.15, 0.025}, {0.4, 0}, {0.65, 0.025}, {0.9, 0}, {1, 0}}},
+		tail = {pitch = {{0, 2}, {0.35, 4}, {0.5, 2}, {0.85, 4}, {1, 2}}, yaw = {{0, -9}, {0.1, -11}, {0.6, 11}, {1, -9}}},
+		arm = {pitch = {{0, -12}, {0.5, 12}, {1, -12}}},
+		leg = {pitch = {{0, 24}, {0.3, 2}, {0.6, -24}, {0.8, 6}, {1, 24}}},
+	}},
+	run = {length = 1, clock = "stride", tracks = {
+		root = {bob = {{0, 0}, {0.22, 0.035}, {0.5, 0}, {0.72, 0.035}, {1, 0}}},
+		head = {pitch = {{0, -7}, {0.25, -3}, {0.5, -7}, {0.75, -3}, {1, -7}}, roll = {{0, -3}, {0.5, 3}, {1, -3}}, fwd = {{0, 0.03}, {0.25, 0.045}, {0.5, 0.03}, {0.75, 0.045}, {1, 0.03}}},
+		tail = {pitch = {{0, -6}, {0.3, -9}, {0.5, -6}, {0.8, -9}, {1, -6}}, yaw = {{0, -12}, {0.1, -14}, {0.6, 14}, {1, -12}}},
+		arm = {pitch = {{0, -26}, {0.5, -2}, {1, -26}}},
+		leg = {pitch = {{0, 28}, {0.45, -28}, {0.6, -16}, {0.8, 16}, {1, 28}}},
+	}},
 }
 
 -- value of one channel at time t (keys {{t, v}, ...} sorted, first and last value 0): cubic Hermite, monotone-clamped tangents (no overshoot)
@@ -75,6 +109,55 @@ function Clips.sample(name: string, role: string, side: number, t: number, out: 
 	if track.yaw then out.yaw = hermite(track.yaw, t) * d end
 	if track.roll then out.roll = hermite(track.roll, t) * d * (if Clips.SideRoll[role] and side < 0 then -1 else 1) end
 	if track.fwd and role == "head" then out.fwd = hermite(track.fwd, t) end
+	return out
+end
+
+-- one channel of a LOOP at time t (wrapped into [0, length)): cubic Hermite, monotone-clamped tangents that wrap around the seam
+local function cyclic(keys: {{number}}, length: number, t: number): number
+	local n = #keys
+	if n == 0 or length <= 0 then return 0 end
+	t = t % length
+	local i = 1
+	while i < n - 1 and keys[i + 1][1] <= t do i += 1 end
+	local function at(j: number): (number, number) -- key j with wrap-around (key n is key 1 one loop later)
+		if j < 1 then return keys[n - 1 + j][1] - length, keys[n - 1 + j][2] end
+		if j > n then return keys[j - n + 1][1] + length, keys[j - n + 1][2] end
+		return keys[j][1], keys[j][2]
+	end
+	local function slope(j: number): number
+		local ta, va = at(j - 1)
+		local tb, vb = at(j)
+		local tc, vc = at(j + 1)
+		if (vb - va) * (vc - vb) <= 0 then return 0 end
+		local cap = 3 * math.min(math.abs((vb - va) / (tb - ta)), math.abs((vc - vb) / (tc - tb)))
+		return math.clamp((vc - va) / (tc - ta), -cap, cap)
+	end
+	local t0, v0, t1, v1 = keys[i][1], keys[i][2], keys[i + 1][1], keys[i + 1][2]
+	local h = t1 - t0
+	if h <= 0 then return v0 end
+	local m0, m1 = slope(i), slope(i + 1) -- slope(1) and slope(n) agree: key 1 and key n are the same point of the loop
+	local u = (t - t0) / h
+	local u2, u3 = u * u, u * u * u
+	return (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * h * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * h * m1
+end
+
+-- Writes one part's offsets of the loop `name` at loop time t (seconds for clock "time", strides for "stride"). Same channels and rules as
+-- sample (neck = head at NeckShare unless it has its own track, roll mirrors by side for SideRoll roles, bob from the root track for every
+-- role). Unknown loop, role or NaN time = all zero.
+function Clips.sampleCycle(name: string, role: string, side: number, t: number, out: Out): Out
+	out.pitch, out.yaw, out.roll, out.bob, out.fwd = 0, 0, 0, 0, 0
+	local cyc = Clips.Gait[name]
+	if not cyc or t ~= t or math.abs(t) > 1e9 then return out end
+	local tracks, length = cyc.tracks :: any, cyc.length
+	if tracks.root and tracks.root.bob then out.bob = cyclic(tracks.root.bob, length, t) end
+	local track, k = tracks[role], 1
+	if not track and role == "neck" then track, k = tracks.head, Clips.NeckShare end
+	if not track or role == "root" then return out end
+	local d = math.pi / 180 * k
+	if track.pitch then out.pitch = cyclic(track.pitch, length, t) * d end
+	if track.yaw then out.yaw = cyclic(track.yaw, length, t) * d end
+	if track.roll then out.roll = cyclic(track.roll, length, t) * d * (if Clips.SideRoll[role] and side < 0 then -1 else 1) end
+	if track.fwd and role == "head" then out.fwd = cyclic(track.fwd, length, t) end
 	return out
 end
 

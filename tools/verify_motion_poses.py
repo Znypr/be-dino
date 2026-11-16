@@ -3,6 +3,8 @@
 BD-250: idle/walk driver (chicken/dino waddle, folded wings) as a pure pose function: bounded offsets, speed scaling, reduced motion
         (docs/101 s11 phase 5, implements BD-234).
 BD-251: jump / leap / dash animations per class (implements BD-233).
+BD-1217 rig follow-up: the animator suite runs twice, Config.DinoRigClipsEnabled off (as shipped) and on (playtest: authored loops from
+        src/shared/LowPolyGait.luau, jump / land clips, follow-through, default Animate off), plus the 1217.* checks.
 
 What runs:
   * src/shared/LowPolyPose.luau is loaded into the pinned Luau runner and every check calls its real functions
@@ -30,6 +32,7 @@ POSE = 'src/shared/LowPolyPose.luau'
 ANIM = 'src/client/LowPolyAnimator.client.luau'
 NPC = 'src/shared/NpcLowPoly.luau'
 CLIPS = 'src/shared/LowPolyClips.luau'  # BD-1217: the animator's authored clips (pure data, loaded as is)
+GAIT = 'src/shared/LowPolyGait.luau'  # BD-1217 rig follow-up: authored loops + follow-through (Config.DinoRigClipsEnabled)
 
 # id -> what it proves. "py" ids are static checks done in Python; the rest are printed by the Luau chunks.
 CHECKS = {
@@ -75,6 +78,13 @@ CHECKS = {
     '556.hipdip': 'Pose.hipDip: lifts by the compression minus a small dead zone, never above MaxHipDip, nothing for no dip or junk',
     '556.drive_surge': 'animator: the Water surge turns no weld 8 degrees or more in a frame, head, body and tail really swing and the flippers row; Reduce Motion keeps every weld at rest',
     '556.drive_hipdip': 'animator: a hard-landing hip dip lifts every part by the dip (feet stay put), only the local dino casts rays (few per second, none while rising), none under Reduce Motion, nothing with no floor',
+    '1217.drive_rig_off': 'animator with DinoRigClipsEnabled off: no authored loop, no hop clip, no follow-through, the Animate script untouched (the procedural poses exactly as before)',
+    '1217.drive_gait': 'animator with DinoRigClipsEnabled on: legs, arms, head and tail play the authored loops (idle standing, walk, run by the real speed), the step phase still advances by stepRate, Water and wings keep the sine poses',
+    '1217.drive_hop': 'animator with DinoRigClipsEnabled on: the jump clip starts at take-off and the land clip at touch-down (humanoid state), once each',
+    '1217.drive_follow': 'animator with DinoRigClipsEnabled on: turning left swings the tail out (yaw > 0) and settles, a landing kicks the tail down and springs back',
+    '1217.drive_animate': 'animator with DinoRigClipsEnabled on: the local character default Animate is disabled and its playing tracks stopped; remote characters untouched; off = untouched',
+    '1217.drive_reduce': 'animator with DinoRigClipsEnabled on under Reduce Motion: every weld at exact rest through walk, run, turn, jump and landing (wings keep the fold)',
+    '1217.drive_smooth': 'animator with DinoRigClipsEnabled on: no weld turns 8 degrees or more in one 60 Hz frame through idle -> walk -> run -> turn -> jump -> land -> stop, every class',
     '251.client_only': 'the pose module and the animator never touch the server (animation is client-side only)',
 }
 
@@ -772,6 +782,7 @@ end
 CFM.__index = function(t, k)
     if k == "Rotation" then return cf(t.r, {0, 0, 0}) end
     if k == "Position" then return V3.new(t.p[1], t.p[2], t.p[3]) end
+    if k == "LookVector" then return V3.new(-t.r[3], -t.r[6], -t.r[9]) end
     if k == "Inverse" then
         return function(self)
             local r = self.r
@@ -861,6 +872,7 @@ local function makeCharacter(class, at)
     function visual:GetDescendants() return parts end
     local root = obj("Part", {BasePart = true})
     root.Position = at or V3.zero
+    root.CFrame = CFrame.identity
     root.AssemblyLinearVelocity = V3.zero
     local hum = obj("Humanoid")
     hum.Health, hum.Jump, hum.FloorMaterial, hum.Parent = 100, false, Enum.Material.Plastic, char
@@ -890,13 +902,30 @@ local function boot(opts)
         return RealPose.sample(role, side, lead, t, phase, w, amp, o, class)
     end
     env.theme = {MotionEnabled = true}
+    env.gait, env.clipNames, env.follow = {}, {}, nil -- BD-1217 rig follow-up: what the animator asks the real LowPolyGait / LowPolyClips for
+    local G = setmetatable({}, {__index = LowPolyGait})
+    function G.sample(role, side, lead, t, phase, w, amp, h, o, class)
+        table.insert(env.gait, {role = role, w = w, phase = phase, amp = amp, class = class, now = env.now})
+        return LowPolyGait.sample(role, side, lead, t, phase, w, amp, h, o, class)
+    end
+    function G.addFollow(f, role, amp, o)
+        env.follow = {tailYaw = f.tailYaw, tailPitch = f.tailPitch, headYaw = f.headYaw, headPitch = f.headPitch}
+        return LowPolyGait.addFollow(f, role, amp, o)
+    end
+    local C = setmetatable({}, {__index = LowPolyClips})
+    function C.sample(name, role, side, t, o)
+        env.clipNames[name] = (env.clipNames[name] or 0) + 1
+        return LowPolyClips.sample(name, role, side, t, o)
+    end
     local Shared = {
         LowPolyPose = Pose,
         LowPolyDinos = {enabled = function() return opts.enabled ~= false end},
         UITheme = env.theme,
         EffectAssets = {isSheet = function() return false end, isAdditive = function() return false end, resolve = function() return "x" end, Builtin = {smoke = "smoke"}},
         NpcLowPoly = NpcLowPoly,
-        LowPolyClips = LowPolyClips,
+        LowPolyClips = C,
+        LowPolyGait = G,
+        Config = {DinoRigClipsEnabled = if opts.rig ~= nil then opts.rig else DEFAULT_RIG},
     }
     local Terrain = {}
     env.workspace = {Terrain = Terrain, CurrentCamera = {CFrame = {Position = V3.zero}}}
@@ -1378,6 +1407,207 @@ check("555.smooth", function()
     print("worst frame over all cases: " .. worst .. " deg")
 end)
 
+-- ---------------------------------------------------------------------------------------------------------------- BD-1217 rig follow-up
+local function relAngle(a, b) -- rotation angle between two CFrames' rotations: trace(a^T b) = sum a_ij b_ij
+    local tr = 0
+    for i = 1, 9 do tr += a.r[i] * b.r[i] end
+    return math.acos(math.clamp((tr - 1) / 2, -1, 1))
+end
+local function addAnimate(c)
+    local animate = obj("LocalScript", {BaseScript = true})
+    c.char._kids.Animate = animate
+    local anim = obj("Animator")
+    local stops = {n = 0}
+    function anim:GetPlayingAnimationTracks() return {{Stop = function() stops.n += 1 end}, {Stop = function() stops.n += 1 end}} end
+    anim.AnimationPlayed = {Connect = function(_, fn) stops.played = fn end}
+    function c.hum:FindFirstChildOfClass(cls) return if cls == "Animator" then anim else nil end
+    return animate, stops
+end
+local function turnTo(c, yaw) c.root.CFrame = CFrame.Angles(0, yaw, 0) end
+
+if DEFAULT_RIG then -- the rig-only checks run once (in the pass with the flag on by default); the pass with it off runs the rest as before
+check("1217.drive_rig_off", function()
+    local env = boot({rig = false})
+    local c = env.addLocal("Ground")
+    local animate = addAnimate(c)
+    c.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0)
+    env.step(60)
+    for i = 1, 30 do turnTo(c, i * 0.05) env.step(1) end
+    jumpUp(c) env.step(10) land(c) env.step(40)
+    assert(#env.gait == 0, "no authored loop with the flag off")
+    assert(env.clipNames.jump == nil and env.clipNames.land == nil, "no hop clip with the flag off")
+    assert(env.follow == nil, "no follow-through with the flag off")
+    assert(animate.Disabled == nil, "Animate untouched with the flag off")
+end)
+
+check("1217.drive_gait", function()
+    local env = boot({rig = true})
+    local c = env.addLocal("Ground")
+    env.step(30)
+    local idleRoles = {}
+    for _, g in env.gait do assert(g.w == 0 and g.amp == 1, "standing: speed 0") idleRoles[g.role] = true end
+    assert(idleRoles.leg and idleRoles.tail and idleRoles.head, "standing: legs, tail and head on the idle loop")
+    local tail0 = c.welds[3].C1
+    env.step(60)
+    assert(relAngle(tail0, c.welds[3].C1) > 0.01, "the idle loop moves the tail")
+    c.root.AssemblyLinearVelocity = V3.new(RUN / 2, 0, 0)
+    local n0 = #env.gait
+    local legMax = 0
+    for _ = 1, 240 do env.step(1) legMax = math.max(legMax, relAngle(CFrame.identity, c.welds[4].C1)) end
+    local last = env.gait[#env.gait]
+    assert(math.abs(last.w - 0.5) < 0.05, "half speed reaches the loops: " .. last.w)
+    assert(legMax > math.rad(12), "walking legs swing: " .. math.deg(legMax))
+    local a, b
+    for i = #env.gait, n0 + 1, -1 do
+        local g = env.gait[i]
+        if g.role == "leg" then
+            if not b then b = g elseif g.now < b.now then a = g break end
+        end
+    end
+    assert(a and b and math.abs((b.phase - a.phase) - (b.now - a.now) * RealPose.stepRate(b.w)) < 1e-3, "the loop clock is the step phase (dt * stepRate)")
+    -- left and right legs are half a stride apart: they are rarely at the same angle while walking
+    local same = 0
+    for _ = 1, 60 do
+        env.step(1)
+        if math.abs(relAngle(CFrame.identity, c.welds[4].C1) - relAngle(CFrame.identity, c.welds[5].C1)) < 1e-3 then same += 1 end
+    end
+    assert(same < 10, "the two legs alternate")
+    -- Water keeps the sine poses; Fly wings keep theirs
+    local envW = boot({rig = true})
+    local w = envW.addLocal("Water")
+    w.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0)
+    envW.step(60)
+    assert(#envW.gait == 0, "Water dinos keep the sine strokes")
+    w.root.AssemblyLinearVelocity = V3.zero
+    envW.step(30)
+    assert(w.welds[1].C1.p[2] > 0.03, "a Water dino keeps sitting low in the water (Pose.bob, not the land loops' lift)")
+    local envF = boot({rig = true})
+    local f = envF.addLocal("Fly")
+    f.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0)
+    envF.step(60)
+    for _, g in envF.gait do assert(g.role ~= "wing", "wings keep the sine pose") end
+    assert(#envF.gait > 0, "a Fly dino walks on the loops")
+end)
+
+check("1217.drive_hop", function()
+    local env = boot({rig = true})
+    local c = env.addLocal("Ground")
+    env.step(20)
+    assert(env.clipNames.jump == nil and env.clipNames.land == nil, "no hop while standing")
+    jumpUp(c)
+    env.step(12)
+    assert((env.clipNames.jump or 0) > 0 and env.clipNames.land == nil, "take-off plays the jump clip")
+    c.setState(ST.Freefall) c.root.AssemblyLinearVelocity = V3.new(0, -20, 0)
+    env.step(6)
+    land(c)
+    env.step(10)
+    assert((env.clipNames.land or 0) > 0, "touch-down plays the land clip")
+    env.step(60)
+    local j, l = env.clipNames.jump, env.clipNames.land
+    env.step(60)
+    assert(env.clipNames.jump == j and env.clipNames.land == l, "both clips end and do not repeat")
+    local envW = boot({rig = true})
+    local w = envW.addLocal("Water")
+    envW.step(5) jumpUp(w) envW.step(30) land(w) envW.step(30)
+    assert(envW.clipNames.jump == nil and envW.clipNames.land == nil, "Water has no hop clips (the surge is its jump)")
+end)
+
+check("1217.drive_follow", function()
+    local env = boot({rig = true})
+    local c = env.addLocal("Ground")
+    env.step(20)
+    assert(env.follow and math.abs(env.follow.tailYaw) < 1e-9, "no follow-through standing still")
+    for i = 1, 60 do turnTo(c, i * 3 * FRAME) env.step(1) end -- turning left at 3 rad/s
+    assert(env.follow.tailYaw > 0.1, "turning left swings the tail out: " .. env.follow.tailYaw)
+    assert(env.follow.headYaw > 0.05, "the head looks into the turn: " .. env.follow.headYaw)
+    env.step(120)
+    assert(math.abs(env.follow.tailYaw) < 0.01 and math.abs(env.follow.headYaw) < 0.01, "the tail settles after the turn")
+    jumpUp(c) env.step(8)
+    assert(env.follow.tailPitch > 0.03, "rising drags the tail tip down: " .. env.follow.tailPitch)
+    c.setState(ST.Freefall) c.root.AssemblyLinearVelocity = V3.new(0, -30, 0)
+    env.step(20)
+    assert(env.follow.tailPitch < -0.03, "falling lifts the tail: " .. env.follow.tailPitch)
+    land(c)
+    local peak, low = -1, 1
+    for _ = 1, 30 do env.step(1) peak = math.max(peak, env.follow.tailPitch) end
+    for _ = 1, 30 do env.step(1) low = math.min(low, env.follow.tailPitch) end
+    assert(peak > 0.03, "a landing kicks the tail down: " .. peak)
+    assert(low < 0, "and it springs back past rest (follow-through): " .. low)
+    env.step(120)
+    assert(math.abs(env.follow.tailPitch) < 0.01, "then settles")
+end)
+
+check("1217.drive_animate", function()
+    local env = boot({rig = true})
+    local c = env.addLocal("Ground")
+    local animate, stops = addAnimate(c)
+    local r = env.addRemote("Ground", V3.new(5, 0, 0))
+    local ra = addAnimate(r)
+    env.step(3)
+    assert(animate.Disabled == true, "the local default Animate is disabled")
+    assert(stops.n == 2, "its playing tracks are stopped, once: " .. stops.n)
+    assert(ra.Disabled == nil, "a remote character's Animate is not touched")
+    assert(stops.played, "tracks it still starts are watched")
+    stops.played({Stop = function() stops.n += 1 end})
+    assert(stops.n == 3, "a track the shutting-down Animate starts is stopped too")
+    local env2 = boot({rig = true})
+    local c2 = env2.addLocal("Ground")
+    env2.step(5)
+    local late = addAnimate(c2)
+    env2.step(2)
+    assert(late.Disabled == true, "an Animate that arrives late is disabled too")
+end)
+
+check("1217.drive_reduce", function()
+    for _, class in {"Ground", "Fly"} do
+        local env = boot({rig = true})
+        env.theme.MotionEnabled = false
+        local c = env.addLocal(class)
+        c.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0)
+        for i = 1, 60 do turnTo(c, i * 0.05) env.step(1) end
+        jumpUp(c) env.step(10) c.setState(ST.Freefall) c.root.AssemblyLinearVelocity = V3.new(0, -30, 0) env.step(5) land(c) env.step(30)
+        for i, wd in c.welds do
+            local isWing = class == "Fly" and i > 5
+            if not isWing then assert(isIdentity(wd.C1), class .. " weld " .. i .. " not at rest under Reduce Motion") end
+        end
+        assert(env.clipNames.jump == nil and env.clipNames.land == nil, "no hop clip under Reduce Motion")
+        assert(env.follow == nil or (env.follow.tailYaw == 0 and env.follow.tailPitch == 0), "springs at rest under Reduce Motion")
+    end
+end)
+
+check("1217.drive_smooth", function()
+    for _, class in {"Ground", "Armored", "Fly"} do
+        local env = boot({rig = true})
+        local c = env.addLocal(class)
+        env.step(1) -- the first frame puts the wings in their fold (posture, not motion)
+        local prev = {}
+        for i, wd in c.welds do prev[i] = wd.C1 end
+        local worst, where = 0, ""
+        local function frames(n, label, each)
+            for _ = 1, n do
+                if each then each() end
+                env.step(1)
+                for i, wd in c.welds do
+                    local d = relAngle(prev[i], wd.C1)
+                    if d > worst then worst, where = d, label .. " weld " .. i end
+                    prev[i] = wd.C1
+                end
+            end
+        end
+        frames(60, "idle")
+        c.root.AssemblyLinearVelocity = V3.new(RUN / 3, 0, 0) frames(60, "walk")
+        c.root.AssemblyLinearVelocity = V3.new(RUN, 0, 0) frames(90, "run")
+        local yaw = 0
+        frames(40, "turn", function() yaw += 3 * FRAME turnTo(c, yaw) end)
+        jumpUp(c) frames(20, "rise")
+        c.setState(ST.Freefall) c.root.AssemblyLinearVelocity = V3.new(RUN, -30, 0) frames(15, "fall")
+        land(c) frames(40, "land")
+        c.root.AssemblyLinearVelocity = V3.zero frames(90, "stop")
+        assert(worst < math.rad(8), class .. ": " .. string.format("%.1f", math.deg(worst)) .. " degrees in one frame at " .. where)
+    end
+end)
+end
+
 if failed > 0 then error(failed .. " check(s) failed") end
 print("animator checks passed")
 '''
@@ -1435,13 +1665,20 @@ def run_all(runner, pose_text, anim_text, npc_text, config_text, quiet=False):
     # Chunk 2: the real animator, unmodified, against engine stand-ins (HARNESS).
     anim_chunk = ('local RealPose = (function()\n' + pose_text + '\nend)()\nlocal NpcLowPoly = (function()\n' + npc_text + '\nend)()\n'
                   + 'local LowPolyClips = (function()\n' + (ROOT / CLIPS).read_text(encoding='utf-8') + '\nend)()\n'
+                  + 'local LowPolyGait = (function()\n' + (ROOT / GAIT).read_text(encoding='utf-8').replace('require(script.Parent.LowPolyClips)', 'LowPolyClips') + '\nend)()\n'
+                  + 'local DEFAULT_RIG = DEFAULT_RIG_VALUE\n'
                   + 'local P = RealPose\n' + PRELUDE
                   + 'local ANIM = function(game, workspace, os, Instance, CFrame, Vector3, Enum, require, NumberSequence, NumberSequenceKeypoint, NumberRange, ColorSequence, Color3, Vector2, RaycastParams)\n'
                   + anim_text + '\nend\n' + HARNESS)
-    code2, out2, err2 = run_luau(runner, anim_chunk, 'motion_animator.luau')
-    messages.append(out2 + err2)
-    seen.update(re.findall(r'^ok (\S+)', out2, re.M))
-    ok = ok and code2 == 0 and 'animator checks passed' in out2
+    # BD-1217 rig follow-up: the whole animator suite runs twice, Config.DinoRigClipsEnabled off (as shipped) and on (playtest); the
+    # rig-only 1217.* checks run in the second pass. Both passes must pass.
+    out2 = ''
+    for rig in ('false', 'true'):
+        code2, o2, err2 = run_luau(runner, anim_chunk.replace('DEFAULT_RIG_VALUE', rig), 'motion_animator.luau')
+        messages.append(f'[DinoRigClipsEnabled {rig}]' + chr(10) + o2 + err2)
+        seen.update(re.findall(r'^ok (\S+)', o2, re.M))
+        ok = ok and code2 == 0 and 'animator checks passed' in o2
+        out2 += o2
     fails = re.findall(r'^FAIL .*$', out + out2, re.M)
     missing = sorted(set(CHECKS) - seen)
     extra = sorted(seen - set(CHECKS))
@@ -1494,6 +1731,13 @@ MUTANTS = [
     ('animator ignores the dip on the touch-down frame that still reads as airborne (BD-556)', ANIM, 'if rig.inAir and rig.root.AssemblyLinearVelocity.Y > -1 then return 0 end', 'if rig.inAir then return 0 end', 1),
     ('animator never learns the settled gap (BD-556)', ANIM, 'if now - rig.gapAt >= 0.25 then', 'if false then', 1),
     ('animator ignores the flag', ANIM, 'if not LowPoly.enabled() then return end', '', 1),
+    ('rig: the default Animate is never switched off (BD-1217)', ANIM, 'if RIG and not rig.animateOff then', 'if false then', 1),
+    ('rig: the authored loops are never used (BD-1217)', ANIM, 'if rigOn and Gait.uses(item.role, rig.class) then', 'if false then', 1),
+    ('rig: follow-through ignores turning (BD-1217)', ANIM, 'Gait.turnRate(rig.yaw, yaw, dt)', '0', 1),
+    ('rig: a landing cuts the jump clip off (12 degree pop, BD-1217)', ANIM, 'if name and not hops[name] then hops[name] = now end', 'if name then table.clear(hops) hops[name] = now end', 1),
+    ('rig: the flag is ignored, loops always on (BD-1217)', ANIM, 'local RIG = (Config :: any).DinoRigClipsEnabled == true', 'local RIG = true', 1),
+    ('rig: Water dinos get the walk loops (BD-1217)', ANIM, 'local rigOn = RIG and rig.class ~= "Water"', 'local rigOn = RIG', 1),
+    ('rig: hop clips never end (BD-1217)', ANIM, 'if amp == 0 or now - at >= Clips.length(name) then hops[name] = nil end', 'if amp == 0 then hops[name] = nil end', 1),
 ]
 
 

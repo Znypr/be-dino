@@ -1,5 +1,6 @@
 """BD-1217: build assets/blender/anim/DinoClips.blend, a proxy dino rig (one block and one bone per body role) with one Blender action per clip
-of tools/blender/dino_clips.py (eat, happy, look). Headless, a separate process; never the live Blender MCP session:
+of tools/blender/dino_clips.py (eat, happy, look, jump, land) and one looping action per locomotion loop (loop_idle, loop_walk, loop_run;
+BD-1217 rig follow-up). Headless, a separate process; never the live Blender MCP session:
 
     blender --background --factory-startup --python tools/blender/build_dino_clips.py
     python tools/animation_strip.py assets/blender/anim/DinoClips.blend --action happy --out build/anim   # contact sheet + numbers
@@ -17,6 +18,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 ns = {}
 exec(open(os.path.join(ROOT, "tools", "blender", "dino_clips.py"), encoding="utf8").read(), ns)
 CLIPS, FPS, NECK_SHARE = ns["CLIPS"], ns["FPS"], ns["NECK_SHARE"]
+GAIT = ns.get("GAIT", {})  # BD-1217 rig follow-up: idle / walk / run loops (Config.DinoRigClipsEnabled)
+STRIDE_SECONDS = {"walk": 1.0, "run": 0.55}  # a stride loop shown at about the game's stride rate (LowPolyPose.stepRate at walk / run speed)
 SIDE_ROLL = {"wing", "flipper", "arm"}
 HEIGHT = 4.0  # proxy height in Blender units: bob and fwd are fractions of it
 
@@ -129,11 +132,58 @@ def key_clip(rig, bones, name, clip):
     return act, frames
 
 
+def key_loop(rig, bones, name, cyc):
+    """one cyclic action per loop, sampled every frame (the game samples the same keys with wrapped monotone Hermite; the stored frames
+    are dense, so Blender's interpolation between them is close). The right side runs half a stride later (LowPolyGait.offset)."""
+    act = bpy.data.actions.new("loop_" + name)
+    rig.animation_data_create()
+    rig.animation_data.action = act
+    tracks, length = cyc["tracks"], cyc["length"]
+    seconds = length if cyc["clock"] == "time" else STRIDE_SECONDS[name]
+    frames = max(2, round(seconds * FPS))
+
+    def value(keys, u):  # u in loop units, wrapped; linear between the keys (dense frames)
+        u = u % length
+        for (t0, v0), (t1, v1) in zip(keys, keys[1:]):
+            if t0 <= u <= t1:
+                return v0 + (v1 - v0) * ((u - t0) / (t1 - t0) if t1 > t0 else 0)
+        return keys[0][1]
+
+    pr = rig.pose.bones["root"]
+    for f in range(frames + 1):
+        u = f / frames * length
+        for bone_name, (role, side, _, _) in bones.items():
+            track, k = tracks.get(role), 1.0
+            if track is None and role == "neck":
+                track, k = tracks.get("head"), NECK_SHARE
+            if not track:
+                continue
+            off = 0.5 * length if (role in ("leg", "arm") and side > 0 and cyc["clock"] == "stride") else 0
+            pb = rig.pose.bones[bone_name]
+            pb.rotation_mode = "XYZ"
+            sroll = (-1 if side < 0 else 1) if role in SIDE_ROLL else 1
+            pb.rotation_euler = (-math.radians(value(track.get("pitch", [(0, 0), (length, 0)]), u + off) * k),
+                                 math.radians(value(track.get("yaw", [(0, 0), (length, 0)]), u + off) * k),
+                                 math.radians(value(track.get("roll", [(0, 0), (length, 0)]), u + off) * k * sroll))
+            pb.keyframe_insert("rotation_euler", frame=1 + f, group=bone_name)
+        if "root" in tracks and "bob" in tracks["root"]:
+            pr.location = (0, value(tracks["root"]["bob"], u) * HEIGHT, 0)
+            pr.keyframe_insert("location", frame=1 + f, group="root")
+    act["clip_length_s"] = seconds
+    act["loop"] = True
+    act.use_frame_range = True  # the last keyed frame equals the first: the loop plays frames 1..frames, not that pose twice
+    act.frame_start, act.frame_end = 1, frames
+    act.use_fake_user = True
+    return act
+
+
 def main():
     rig, bones = build()
     actions = {}
     for name, clip in CLIPS.items():
         actions[name], _ = key_clip(rig, bones, name, clip)
+    for name, cyc in GAIT.items():
+        actions["loop_" + name] = key_loop(rig, bones, name, cyc)
     scene = bpy.context.scene
     scene.render.fps = FPS
     rig.animation_data.action = actions["happy"]

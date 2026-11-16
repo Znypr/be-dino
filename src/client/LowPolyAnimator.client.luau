@@ -5,6 +5,10 @@
 -- Respects Reduce Motion (Theme.MotionEnabled). Remote dinos are animated at 20 Hz within 80 studs only.
 -- BD-1217: authored clips (Shared/LowPolyClips, keys from tools/blender/dino_clips.py) play ON TOP: eat when the dino eats (GrowthScore /
 -- CatchScore up), happy when it grows (VisualScale up) or a new species is put on, a look-around after standing still a while.
+-- BD-1217 rig follow-up (Config.DinoRigClipsEnabled): idle / walk / run come from AUTHORED loops (Shared/LowPolyGait) instead of the sine
+-- poses, still clocked by the real speed (step phase) and blended by it; a "jump" clip plays at take-off and a "land" clip at touch-down on
+-- top of the procedural tuck / squash; the tail and head follow through on a spring (turns, rise, fall, landing); and the local character's
+-- default R15 Animate script is switched off while the dino is shown (the avatar is hidden; movement is the Humanoid's, not Animate's).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -14,7 +18,10 @@ local Theme = require(Shared.UITheme)
 local EffectAssets = require(Shared.EffectAssets)
 local NpcLowPoly = require(Shared.NpcLowPoly)
 local Clips = require(Shared.LowPolyClips)
+local Gait = require(Shared.LowPolyGait)
+local Config = require(Shared.Config)
 if not LowPoly.enabled() then return end
+local RIG = (Config :: any).DinoRigClipsEnabled == true -- BD-1217 rig follow-up (off = the procedural poses exactly as before)
 
 local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
 local rigs: {[Model]: any} = {}
@@ -175,6 +182,24 @@ local function updateNpcAction(rig: any, model: Model, now: number)
     if want and want ~= rig.act then rig.aggr = 0 startPhase(rig, want, now) end
 end
 
+-- BD-1217 rig follow-up: the hidden avatar's default R15 Animate plays human walk / jump tracks nobody sees (wasted work, human footstep
+-- markers). Switch it off and stop its tracks, and any track it still starts while it shuts down (Studio showed its idle starting a moment
+-- after a one-time stop). Nothing else in the game plays Animator tracks on the character. Returns false while there is no Animate or Animator
+-- yet (added after spawn): asked again next frame.
+local function muteDefaultAnimate(character: Model): boolean
+    local animate = character:FindFirstChild("Animate")
+    if not animate then return false end
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    local animator = if hum then hum:FindFirstChildOfClass("Animator") else nil
+    if not animate or not animator or not animator:IsA("Animator") then return false end
+    if animate:IsA("BaseScript") then (animate :: any).Disabled = true end
+    for _, track in animator:GetPlayingAnimationTracks() do track:Stop(0) end
+    animator.AnimationPlayed:Connect(function(track: AnimationTrack) -- dies with the character's Animator
+        if (animate :: any).Disabled == true then track:Stop(0) end
+    end)
+    return true
+end
+
 local function pivotFor(role: string, size: Vector3, side: number): Vector3
     if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
     if role == "head" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck, bottom back
@@ -230,6 +255,29 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
     rig.amp = amp
     if amp == 0 then rig.act, rig.clip = nil, nil elseif npc then updateNpcAction(rig, npc, now) else updateAction(rig, now) updateClip(rig, now) end
     local phase = rig.act
+    local rigOn = RIG and rig.class ~= "Water" -- Water dinos keep the sine strokes and the surge
+    -- BD-1217: the jump / land clips start on the humanoid state change. Each plays to its own end (every clip ends at rest), so a landing
+    -- during the jump clip overlaps the two instead of cutting one off (a cut popped up to 12 degrees in a frame: verify_motion_poses 555.smooth).
+    -- A clip already playing is not restarted.
+    local hops = rig.hops
+    if not hops then hops = {} rig.hops = hops end
+    if rigOn and not npc and phase ~= rig.prevAct then
+        local name = if phase == "air" then "jump" elseif phase == "land" then "land" else nil
+        if name and not hops[name] then hops[name] = now end
+    end
+    rig.prevAct = phase
+    for name, at in hops do if amp == 0 or now - at >= Clips.length(name) then hops[name] = nil end end
+    if RIG then -- BD-1217: follow-through springs (turn rate from the facing, rise / fall, the touch-down speed)
+        rig.follow = rig.follow or Gait.newFollow()
+        local look = root.CFrame.LookVector
+        local yaw = math.atan2(-look.X, -look.Z)
+        local turn = if rig.yaw then Gait.turnRate(rig.yaw, yaw, dt) else 0
+        rig.yaw = yaw
+        local landSpeed = if rig.wasAir and not rig.inAir then math.max(0, -(rig.fallVy or 0)) else 0
+        if rig.inAir then rig.fallVy = v.Y end
+        rig.wasAir = rig.inAir
+        Gait.stepFollow(rig.follow, dt, turn, if rig.inAir then v.Y else 0, landSpeed, amp)
+    end
     local k = 0
     if phase then
         local elapsed = now - rig.actAt
@@ -239,7 +287,8 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         ctx.direct = phase == "air" -- BD-555: the air phase always begins at take-off now, with no stretch of its own
         k = if phase == "air" then Pose.airWeight(elapsed) elseif phase == "land" then Pose.landWeight(ctx.p, rig.landFrom) else Pose.actionWeight(phase, ctx.p)
     end
-    local bob = Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class) * height -- BD-388: one shared translation for every part
+    local bob = (if rigOn then Gait.bob(now + rig.seed, rig.phase, rig.speed, amp) else Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class))
+        * height -- BD-388: one shared translation for every part
     if amp > 0 and rig.rayParams then bob += hipDipFor(rig, now) end -- BD-556: the same lift for every part, so nothing slides
     local cw = clipWeight(rig, now)
     local clipT = if cw > 0 then now - rig.clipAt else 0
@@ -248,6 +297,9 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
+        if rigOn and Gait.uses(item.role, rig.class) then -- BD-1217: the authored loop replaces the sine pose of this part
+            Gait.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, height, out, rig.class)
+        end
         if phase == "defeat" then Pose.blend(out, Pose.sampleDefeat(item.role, item.side, item.lead, ctx, amp, actOut, rig.class, rig.skin), k)
         elseif phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
         if cw > 0 then
@@ -257,6 +309,13 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
             out.roll += clipOut.roll * cw
             out.fwd += clipOut.fwd * height * cw
         end
+        for name, at in hops do -- BD-1217: jump / land clips on top of the procedural tuck and squash
+            Clips.sample(name, item.role, item.side, now - at, clipOut)
+            out.pitch += clipOut.pitch
+            out.yaw += clipOut.yaw
+            out.roll += clipOut.roll
+        end
+        if RIG then Gait.addFollow(rig.follow, item.role, amp, out) end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -318,6 +377,7 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
         if player == Players.LocalPlayer then
+            if RIG and not rig.animateOff then rig.animateOff = muteDefaultAnimate(character) end
             apply(rig, now, dt, amp)
         elseif camera and (camera.CFrame.Position - root.Position).Magnitude <= RANGE then
             rig.acc += dt

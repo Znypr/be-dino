@@ -261,6 +261,12 @@ return table.freeze({
     -- Skip button once the save has loaded (Shared/LoadingScene, src/loading/Loading.client.luau). Client presentation only. false = the warm
     -- loading screen exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     LoadingSceneEnabled = false,
+    -- BD-1217 (docs/242 benchmark gap 2): true = the low-poly dinos (LowPolyDinos) walk, run, idle and hop with AUTHORED cycle clips
+    -- (Shared/LowPolyGait, keys in tools/blender/dino_clips.py) instead of the sine poses, still driven by the real speed and the humanoid
+    -- state, plus follow-through (tail and head lag in turns, jumps and landings), and the hidden avatar's default R15 Animate script is
+    -- switched off (movement is the Humanoid's, not Animate's). Client presentation only. false = the procedural poses exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Reduce Motion still freezes every pose.
+    DinoRigClipsEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
