@@ -3,10 +3,11 @@ Engine physics, replication and API permissions require Studio; this is numeric/
 """
 from pathlib import Path
 import argparse,subprocess,tempfile
+import rehearsal_env
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config = '+wrapped('src/shared/Config.luau')+'\n'+'''
+ return 'local Config = '+wrapped('src/shared/Config.luau')+rehearsal_env.legacy_island()+'\n'+'''
 local script={Parent={Config=true}}
 local require=function(_) return Config end
 local workspace={Gravity=196.2}

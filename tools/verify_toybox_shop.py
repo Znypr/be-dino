@@ -17,6 +17,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import text_style_floors as tf  # noqa: E402
+import rehearsal_env  # noqa: E402
 
 BODY = 'tools/toybox_shop_smoke.luau'
 EXTRA = {
@@ -127,7 +128,12 @@ def check_sources():
 
 
 def run(runner, replacements=None):
-    source = tf.build(replacements, [], BODY, EXTRA, False)
+    # docs/152 BD-626: under the all-on rehearsal Config ShopCardPriceButtonEnabled is on, so the "old card" of sections 2 and 5 is the price card
+    # (no chips). The smoke puts THIS ONE flag off in its own copy of the Config (every other flag stays on) so the old card draws for real;
+    # the Toybox card is built before the price-card flag is read, so the flag-on sections are unaffected.
+    source = rehearsal_env.pin(tf.build(replacements, [], BODY, EXTRA, False), 'local _ = ALLOW\n',
+                               'local _ = ALLOW\nConfigReal = table.clone(ConfigReal) ConfigReal.ShopCardPriceButtonEnabled = false loaded.Config = ConfigReal -- rehearsal: this one flag off in the copy\n',
+                               label='toybox shop old-card pin')
     result = tf.sw.run(runner, source)
     return result.returncode == 0 and 'passed' in result.stdout, result.stdout + result.stderr
 
