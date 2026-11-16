@@ -79,6 +79,7 @@ jobs:
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_audio.py --runner /tmp/luau/luau
+          python tools/verify_audio_polish.py --runner /tmp/luau/luau
           python tools/verify_sound_lab.py
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
           python tools/verify_egg_toast_count.py --runner /tmp/luau/luau

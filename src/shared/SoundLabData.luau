@@ -14,7 +14,7 @@ Lab.Labels = table.freeze({
 
 -- name -> category. Anything new in Sfx.Sounds or WeatherSounds.Sounds MUST be added here (verify_sound_lab.py fails otherwise).
 Lab.CategoryOf = table.freeze({
-    ui_click = "ui",
+    ui_click = "ui", ui_open = "ui", ui_close = "ui",
     pickup = "pickup", pickup_hi = "pickup", pickup_lo = "pickup",
     hatch_crack = "hatch", hatch_common = "hatch", hatch_rare = "hatch", hatch_legendary = "hatch",
     hatch_rattle = "hatch", hatch_crack_stage = "hatch", hatch_burst = "hatch",
