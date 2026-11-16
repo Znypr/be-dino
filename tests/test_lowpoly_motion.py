@@ -25,7 +25,7 @@ class LowPolyMotionTests(unittest.TestCase):
     def test_defeat_is_wired_and_respects_reduce_motion(self):
         self.assertIn('RunState") == "Ending"', ANIM)
         self.assertIn("Pose.sampleDefeat(", ANIM)
-        self.assertIn("if amp == 0 then rig.act = nil", ANIM)
+        self.assertIn("if amp == 0 then rig.act, rig.clip = nil, nil", ANIM)  # BD-1217: the clip clears too
 
     def test_body_never_moves_on_its_own_while_walking(self):
         self.assertRegex(POSE, r'if role == "body" then\n\s+-- BD-388')
