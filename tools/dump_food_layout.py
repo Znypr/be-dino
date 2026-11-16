@@ -167,6 +167,53 @@ print("OK")
 '''
 
 
+# BD-1208 (docs/241 W8): the same ground rule on the redesigned round island. The offline runner has no `script`, so IslandLayout / BiomeMap stay on the old
+# island here; this body reads WorldV3 directly (height, inPool, path) and runs BiomePlacement.useV3 for the keep-out discs and landmark sites.
+GROUND_BODY_V3 = r'''
+local Config = (function()
+@CONFIG@
+end)()
+local V3 = (function()
+@WORLDV3@
+end)()
+local BP = (function()
+@BIOMEPLACEMENT@
+end)()
+local Layout = V3
+@GROUND@
+BP.useV3(V3)
+print("A	" .. tostring(Config.ArenaHalfWidth) .. "	" .. tostring(Config.FoodSeed))
+print(string.format("V3	%g	%g	%g	%g	%g", V3.CenterX, V3.CenterZ, V3.PlazaRadius, V3.RingRadius, V3.PathHalfWidth))
+for _, s in V3.Spokes do print(string.format("SP	%g	%g", s.angle, s.to)) end
+for _, k in BP.KeepOuts do print(string.format("KO	%.3f	%.3f	%.3f	%s", k.x, k.z, k.radius, tostring(k.all))) end
+for _, s in V3.Landmarks do local x, z = V3.polar(s.angle, s.r) print(string.format("LM	%s	%.3f	%.3f", s.id, x, z)) end
+for _, g in V3.Groves do local x, z = V3.polar(g[1], g[2]) print(string.format("GR	%.3f	%.3f", x, z)) end
+for _, p in V3.Pools do print(string.format("PO	%.3f	%.3f	%.3f	%.3f", p.x, p.z, p.rx, p.rz)) end
+local CELL = @CELL@
+local HCELL = @HCELL@
+local cells = math.floor(2 * Config.ArenaHalfWidth / CELL)
+for iz = 0, cells - 1 do
+    local row, prow = table.create(cells), table.create(cells)
+    for ix = 0, cells - 1 do
+        local x, z = -Config.ArenaHalfWidth + (ix + 0.5) * CELL, -Config.ArenaHalfWidth + (iz + 0.5) * CELL
+        row[ix + 1] = if groundAt(x, z) then "1" else "0"
+        prow[ix + 1] = if V3.path(x, z) > 0.02 then "1" else "0"
+    end
+    print("M	" .. table.concat(row))
+    print("Q	" .. table.concat(prow))
+end
+local hcells = math.floor(2 * Config.ArenaHalfWidth / HCELL)
+for iz = 0, hcells - 1 do
+    local row = table.create(hcells)
+    for ix = 0, hcells - 1 do
+        row[ix + 1] = string.format("%.2f", Layout.height(-Config.ArenaHalfWidth + (ix + 0.5) * HCELL, -Config.ArenaHalfWidth + (iz + 0.5) * HCELL))
+    end
+    print("H	" .. table.concat(row, ","))
+end
+print("OK")
+'''
+
+
 def build(seeds):
     src = BODY.replace('@GROUND@', GROUND_LUAU)
     for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LAYOUT@', 'src/shared/IslandLayout.luau')):
@@ -174,13 +221,20 @@ def build(seeds):
     return src.replace('@SEEDS@', str(seeds))
 
 
-def ground_model(runner, cell=1.0, height_cell=8.0):
+def ground_model(runner, cell=1.0, height_cell=8.0, world=None):
     """BD-1047: FoodService's ground rule evaluated on a fine lattice, from the real Config and IslandLayout.
     Returns {"arena": half width, "cell": studs, "mask": [row strings of 0/1, rows[iz][ix], x = -arena + (ix + 0.5) cell],
-    "hcell": studs, "height": rows[iz][ix] of the island height in studs, same x/z rule}."""
-    src = GROUND_BODY.replace('@GROUND@', GROUND_LUAU)
-    for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LAYOUT@', 'src/shared/IslandLayout.luau')):
-        src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
+    "hcell": studs, "height": rows[iz][ix] of the island height in studs, same x/z rule}.
+    world='v3' (BD-1208): the redesigned island instead (src/shared/WorldV3.luau read directly); the model also holds "path" (rows of 0/1:
+    WorldV3.path above 0.02) and "v3": {"centre", "plaza", "ring", "half_width", "spokes", "keepouts", "landmarks", "groves", "pools"}."""
+    if world == 'v3':
+        src = GROUND_BODY_V3.replace('@GROUND@', GROUND_LUAU)
+        for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@WORLDV3@', 'src/shared/WorldV3.luau'), ('@BIOMEPLACEMENT@', 'src/shared/BiomePlacement.luau')):
+            src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
+    else:
+        src = GROUND_BODY.replace('@GROUND@', GROUND_LUAU)
+        for token, path in (('@CONFIG@', 'src/shared/Config.luau'), ('@LAYOUT@', 'src/shared/IslandLayout.luau')):
+            src = src.replace(token, (ROOT / path).read_text(encoding='utf-8'))
     src = src.replace('@CELL@', repr(float(cell))).replace('@HCELL@', repr(float(height_cell)))
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'ground_model.luau'
@@ -189,16 +243,35 @@ def ground_model(runner, cell=1.0, height_cell=8.0):
     if result.returncode or 'OK' not in result.stdout:
         print(result.stdout[-2000:], result.stderr[-2000:])
         raise SystemExit(result.returncode or 1)
-    arena, mask, heights = 416.0, [], []
+    arena, mask, heights, paths = 416.0, [], [], []
+    info = {'spokes': [], 'keepouts': [], 'landmarks': [], 'groves': [], 'pools': []}
     for line in result.stdout.splitlines():
-        p = line.split('\t')
+        p = line.split('	')
         if p[0] == 'A':
             arena = float(p[1])
         elif p[0] == 'M':
             mask.append(p[1])
+        elif p[0] == 'Q':
+            paths.append(p[1])
         elif p[0] == 'H':
             heights.append([float(v) for v in p[1].split(',')])
-    return {'arena': arena, 'cell': 2 * arena / len(mask), 'mask': mask, 'hcell': 2 * arena / len(heights), 'height': heights}
+        elif p[0] == 'V3':
+            info.update(centre=(float(p[1]), float(p[2])), plaza=float(p[3]), ring=float(p[4]), half_width=float(p[5]))
+        elif p[0] == 'SP':
+            info['spokes'].append((float(p[1]), float(p[2])))
+        elif p[0] == 'KO':
+            info['keepouts'].append((float(p[1]), float(p[2]), float(p[3]), p[4] == 'true'))
+        elif p[0] == 'LM':
+            info['landmarks'].append((p[1], float(p[2]), float(p[3])))
+        elif p[0] == 'GR':
+            info['groves'].append((float(p[1]), float(p[2])))
+        elif p[0] == 'PO':
+            info['pools'].append((float(p[1]), float(p[2]), float(p[3]), float(p[4])))
+    model = {'arena': arena, 'cell': 2 * arena / len(mask), 'mask': mask, 'hcell': 2 * arena / len(heights), 'height': heights}
+    if world == 'v3':
+        model['path'] = paths
+        model['v3'] = info
+    return model
 
 
 def dump(runner, seeds):

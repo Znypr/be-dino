@@ -14,7 +14,8 @@
     today's placement is inside the band of the targets (the walker that just runs around within 8%, the two seeking walkers within 20%);
   * the map is deterministic: tools/generate_food_layer.py regenerates the identical text (a change of the terrain or of the generator
     needs `python tools/generate_food_layer.py --runner ... --write` and a commit);
-  * src/shared/FoodLayer.luau (the reader FoodService uses) turns the map into the same foods, in the right sectors, in the pinned Luau runner.
+  * src/shared/FoodLayer.luau (the reader FoodService uses) turns the map into the same foods, in the right sectors, in the pinned Luau runner;
+  * BD-1208: the second map for the redesigned round island (src/shared/FoodLayerDataV3.luau) is checked too: tools/verify_food_layer_v3.py runs after the checks above.
 
     python tools/verify_food_layer.py --runner /path/to/luau
 """
@@ -275,12 +276,14 @@ def main():
     ap.add_argument('--runner', required=True, help='pinned luau.exe (docs/160)')
     args = ap.parse_args()
     errors = check(args.runner)
+    import verify_food_layer_v3  # BD-1208: the second food map, for the redesigned round island (checked after this one, same runner)
+    errors += verify_food_layer_v3.check(args.runner)
     if errors:
         print('FOOD MAP CHECK FAILED:')
         for e in errors:
             print('  -', e)
         return 1
-    print('Food map passed: 3,600 foods (berry 2519 / fruit 722 / egg 251 / amber 108) in small clusters of 3 to 5, ground, clear of solid props, starter patches, lone ambers, spread targets, pace band, deterministic, Luau reader')
+    print('Food map passed: 3,600 foods (berry 2519 / fruit 722 / egg 251 / amber 108) in small clusters of 3 to 5, ground, clear of solid props, starter patches, lone ambers, spread targets, pace band, deterministic, Luau reader; and the V3 island map (tools/verify_food_layer_v3.py)')
     return 0
 
 

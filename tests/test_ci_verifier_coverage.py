@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/build-generated-place.yml"
 
 # verifier file name -> why CI does not run it. Keep this empty if you can: add the line to the workflow instead.
-NOT_IN_CI: dict[str, str] = {}
+NOT_IN_CI: dict[str, str] = {
+    "verify_food_layer_v3.py": "imported and run by tools/verify_food_layer.py (BD-1209 V3 island food map), which CI runs",
+}
 
 
 class CiVerifierCoverageTests(unittest.TestCase):

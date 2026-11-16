@@ -84,4 +84,13 @@ function IslandLayout.height(x: number, z: number): number
     local wobble = (math.noise(x / (65 * S), z / (65 * S), 14) * 2.4 + math.noise(x / 23, z / 23, 15) * .7) * (1 - meadow * .8)
     return h + wobble
 end
+-- BD-1209: with Config.WorldV3Enabled the island is the redesigned round island (Shared/WorldV3.luau): every reader of IslandLayout
+-- (terrain, props, food, spawn, NPCs) follows it. Off = the functions above, exactly as before.
+local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end) -- offline runners have no script: stays off
+if okConfig and type(Config) == "table" and (Config :: any).WorldV3Enabled == true then
+    local V3 = require(script.Parent.WorldV3) :: any
+    IslandLayout.V3 = true
+    IslandLayout.height, IslandLayout.inPool, IslandLayout.poolProximity = V3.height, V3.inPool, V3.poolProximity
+    IslandLayout.Pools, IslandLayout.Basins, IslandLayout.Peaks, IslandLayout.Hills = V3.Pools, {}, {}, {}
+end
 return IslandLayout

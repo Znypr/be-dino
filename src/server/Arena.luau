@@ -306,6 +306,68 @@ local function biomeKit(parent: Instance)
     workspace:SetAttribute("WorldKitMissing", missing)
     for layer, n in counts do workspace:SetAttribute("WorldKit_" .. layer, n) end
 end
+-- BD-1210 (docs/241 W4, Config.WorldV3Enabled): one big generated landmark per zone on its WorldV3 site, resting on the terrain, facing the
+-- plaza, scaled to its height; hidden boxes collide instead of the mesh (the arch stays walkable). The volcano is the terrain itself plus a
+-- calm crater smoke and glow. A landmark whose mesh failed to load leaves its site an open clearing.
+local function v3Landmarks(parent: Instance, V3: any)
+    local folder = Instance.new("Folder")
+    folder.Name, folder.Parent = "Landmarks", parent
+    local generated = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType, rayParams.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {workspace.Terrain}
+    local function groundAt(x: number, z: number): number
+        local hit = workspace:Raycast(Vector3.new(x, 200, z), Vector3.new(0, -260, 0), rayParams)
+        return if hit then hit.Position.Y else Layout.height(x, z)
+    end
+    local placed = 0
+    for key, entry in Generated.Landmarks do
+        local template = if generated then generated:FindFirstChild(key) else nil
+        local site = nil
+        for _, s in V3.Landmarks do if s.id == entry.site then site = s end end
+        if not template or not template:IsA("BasePart") or not site then continue end
+        local x, z = V3.polar(site.angle, site.r)
+        local mesh = template:Clone() :: BasePart
+        local factor = entry.height / mesh.Size.Y
+        mesh.Size *= factor
+        -- rest on the lowest of five ground samples under the footprint, sunk a little so no edge floats
+        local r = math.min(mesh.Size.X, mesh.Size.Z) * .35
+        local y = math.huge
+        for _, o in {{0, 0}, {r, 0}, {-r, 0}, {0, r}, {0, -r}} do y = math.min(y, groundAt(x + o[1], z + o[2])) end
+        y -= .6
+        local base = CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(V3.CenterX, y, V3.CenterZ))
+        if entry.flip then base *= CFrame.Angles(0, math.pi, 0) end -- a mesh whose front is +Z
+        mesh.CFrame = base * CFrame.new(0, mesh.Size.Y / 2, 0)
+        mesh.Anchored, mesh.CanCollide, mesh.CanQuery, mesh.CanTouch = true, false, false, false
+        mesh.Name = key
+        mesh.Parent = folder
+        for _, c in entry.colliders do
+            local box = part(folder, key .. "Collider", Vector3.new(c[4] * mesh.Size.X, c[5] * mesh.Size.Y, c[6] * mesh.Size.Z), Vector3.zero,
+                Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+            box.CFrame = base * CFrame.new(c[1] * mesh.Size.X, c[2] * mesh.Size.Y, c[3] * mesh.Size.Z)
+            box.Transparency = 1
+        end
+        placed += 1
+    end
+    -- Volcano crater: soft smoke and a warm glow (calm, docs/87).
+    for _, s in V3.Landmarks do
+        if s.id ~= "volcano" then continue end
+        local x, z = V3.polar(s.angle, s.r)
+        local vent = part(folder, "VolcanoVent", Vector3.new(14, 1, 14), Vector3.new(x, groundAt(x, z) + 1, z), Color3.fromRGB(255, 120, 40), Enum.Material.Neon, false)
+        vent.Transparency = 1
+        local smoke = Instance.new("ParticleEmitter")
+        smoke.Texture = "rbxasset://textures/particles/smoke_main.dds" -- built-in soft smoke (the uploaded smokeSoft id does not load, Studio 2026-11-16)
+        smoke.Rate, smoke.Lifetime, smoke.Speed = 2.5, NumberRange.new(9, 13), NumberRange.new(4, 7)
+        smoke.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 10), NumberSequenceKeypoint.new(1, 34)})
+        smoke.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, .55), NumberSequenceKeypoint.new(.7, .75), NumberSequenceKeypoint.new(1, 1)})
+        smoke.Color = ColorSequence.new(Color3.fromRGB(150, 140, 136), Color3.fromRGB(220, 214, 208))
+        smoke.SpreadAngle, smoke.Acceleration, smoke.LightInfluence = Vector2.new(12, 12), Vector3.new(1.5, .6, 0), .6
+        smoke.Parent = vent
+        local glow = Instance.new("PointLight")
+        glow.Color, glow.Brightness, glow.Range = Color3.fromRGB(255, 130, 50), 3, 40
+        glow.Parent = vent
+    end
+    workspace:SetAttribute("WorldV3Landmarks", placed)
+end
 -- Flat water discs fill the marsh basins and the spring (decorative: they never block movement, like the old pool).
 local function pools(parent: Instance)
     for i, pool in Layout.Pools do
@@ -332,6 +394,7 @@ function Arena.build()
     local caveHub = CaveHubLayout.hub(Config)
     Terrain.build(if caveHub.enabled then CaveTerrain.build else nil)
     if caveHub.enabled then Biome.useHub(caveHub.biome) end
+    if (Layout :: any).V3 then Biome.useV3(BiomeMap.V3) end -- BD-1209: routes, keep-outs and landmark sites of the round island
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do
@@ -347,7 +410,28 @@ function Arena.build()
     local random = Random.new(1404)
     local S = Layout.Scale
     local kitMode = Config.WorldArtMode == "BiomeKit"
-    for side = 1, 4 do
+    -- BD-1209 (Config.WorldV3Enabled): the round island. A hidden wall follows the coast out in the shallow sea, an ocean plane reaches the
+    -- horizon past the terrain square, and the square-edge boulder ring, the old stone arch and the jump stones are not built.
+    local V3 = if (Layout :: any).V3 then BiomeMap.V3 else nil
+    if V3 then
+        local segments, previous = 72, nil
+        for i = 0, segments do
+            local angle = i * 360 / segments
+            local x, z = V3.polar(angle, V3.coast(angle) + 14)
+            local point = Vector3.new(x, 60, z)
+            if previous then
+                local mid, span = (previous + point) / 2, (point - previous)
+                local wall = part(world, "CoastBoundary", Vector3.new(span.Magnitude + 3, 160, 4), mid, Color3.fromRGB(81, 106, 116), Enum.Material.Rock, true)
+                wall.CFrame = CFrame.lookAt(mid, mid + Vector3.new(-span.Z, 0, span.X))
+                wall.Transparency = 1
+            end
+            previous = point
+        end
+        local ocean = part(world, "Ocean", Vector3.new(6000, 1, 6000), Vector3.new(0, V3.SeaLevel - .9, 0), Color3.fromRGB(64, 170, 206), Enum.Material.SmoothPlastic, false)
+        ocean.CanCollide, ocean.CanQuery, ocean.CanTouch, ocean.CastShadow = false, false, false, false
+        ocean.Transparency = .05
+    end
+    for side = 1, if V3 then 0 else 4 do
         -- BiomeKit: every third legacy ring slot, as kit boulders (one MeshPart each, no 41-part legacy rock); Legacy: all.
         local slots = if kitMode then 5 else 11
         for i = 0, slots do
@@ -373,7 +457,7 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
-    if kitMode then biomeKit(world) else
+    if kitMode then biomeKit(world) if V3 then v3Landmarks(world, V3) end else
     for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         local center = c * S
         for i = 1, 4 do
@@ -397,15 +481,17 @@ function Arena.build()
     end
     end -- Legacy dressing
     -- Stone arch landmark (1.6x with the island) with an open passage.
+    if not V3 then
     local archZ = -15 * S
     for _, x in {-96 * S, -64 * S} do
         local y = Layout.height(x, archZ)
         part(world,"ArchPillar",Vector3.new(7,23,8) * S,Vector3.new(x,y+11.5*S,archZ),Color3.fromRGB(142,153,140),Enum.Material.Rock,true)
     end
     part(world,"ArchTop",Vector3.new(42,6,9) * S,Vector3.new(-80*S,Layout.height(-80*S,archZ)+24*S,archZ),Color3.fromRGB(148,157,139),Enum.Material.Rock,true)
+    end -- not V3 (arch)
     -- Spring and marsh water; neither blocks navigation.
     pools(world)
-    for i = 1, 4 do
+    for i = 1, if V3 then 0 else 4 do
         local x,z = 30+i*10,-30
         part(world,"JumpStone",Vector3.new(6,1.2+i*.4,6),Vector3.new(x,Layout.height(x,z)+.6+i*.2,z),Color3.fromRGB(133,147,143),Enum.Material.Slate,true)
     end

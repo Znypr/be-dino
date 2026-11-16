@@ -26,9 +26,20 @@ Output (only with --write): src/shared/FoodLayerData.luau (the run-length text W
 tools/food_layer_data.py (the same text for the Python tools). tools/verify_food_layer.py regenerates the map and fails when the
 committed files differ, so a change of the terrain (IslandLayout) or of this file needs `--write` and a commit.
 
+BD-1208 (docs/241 W6 to W8): `--world v3` makes the SECOND food map, for the redesigned round island (src/shared/WorldV3.luau, Config.WorldV3Enabled):
+src/shared/FoodLayerDataV3.luau + tools/food_layer_data_v3.py, same format and totals (3,600 foods, same kind mix, small clusters). Ground, water, slope and
+colliders come from WorldV3 and BiomePlacement.useV3 (tools/dump_food_layout.py, tools/world_colliders.py with world='v3'). Rules of that map:
+  * nothing in the sea, the lagoon or the wet beach edge, on the plaza, on a path or the ring road (WorldV3.path above 0.02), inside a landmark keep-out
+    disc, or on steep ground; the gap rule (no ground spot farther than GAP_TARGET_V3 from food) is judged on walkable land only (not the plaza interior);
+  * patches mostly ALONG the five spoke paths and the ring road (density bonus for 8 to 30 studs from the path centre line) and in the open meadow, with open
+    grass between patches (the same blue-noise spacing as before);
+  * fruit gathers near the groves (WorldV3.Groves), amber and eggs prefer the neighbourhood of rocks, kit landmarks and the landmark sites (outside their keep-out);
+  * the two starter patches stand just outside the plaza edge (STARTER_V3_ANGLES), FoodLayerDataV3.StarterCentres tells FoodLayer.luau where.
+
 Usage:
   python tools/generate_food_layer.py --runner C:/Users/znypr/AppData/Local/Temp/bd057/luau/luau.exe            # build, print a summary, compare with the committed files
   python tools/generate_food_layer.py --runner ... --write                                                      # also (re)write the two data files
+  python tools/generate_food_layer.py --runner ... --world v3 [--write]                                         # the same for the V3 island (default: the old island)
 """
 from pathlib import Path
 import argparse
@@ -82,6 +93,22 @@ MOVE_REACH = 7.0       # studs: farthest a single food is moved away from the sp
 SHIFT_REACH = 14.0     # studs: farthest a whole cluster is shifted when single moves do not work
 LINK_MAX = 4.8         # studs: a moved food stays this close to a mate (verify_food_layer links foods closer than 5.0 into one cluster)
 CENTRE_MIN = 12.5      # studs: moved clusters keep their centres at least this far apart (written rule: 12)
+
+# BD-1208: the V3 island (see the docstring). Numbers are PROVISIONAL.
+SEED_V3 = 103
+VERSION_V3 = 'bd1208-foodlayer-v3island-1'
+PLAZA_MARGIN = 1.5     # studs: no food on the plaza (WorldV3.PlazaRadius) or this close to its edge
+STARTER_V3_ANGLES = (18.0, 312.0)   # degrees around the plaza centre: the starter patches sit in the meadow, either side of its spoke path (345)
+STARTER_V3_RADIUS = 86.0            # studs from the plaza centre (plaza radius 72 + patch radius 14)
+BAND = (8.0, 40.0)     # studs from a path centre line where the food patches are wanted (the plan says about 8 to 30; the wider band is what fits at the 14 stud patch spacing)
+BAND_BOOST = 12.0      # density bonus inside the band (peak, in units of the base density)
+MEADOW_BOOST = 1.5     # density bonus inside the meadow sector (angles -60 to 30 around the plaza)
+GAP_TARGET_V3 = 18.0   # studs: farthest a walkable ground spot may be from any food (the written rule is 25)
+GROVE_RADIUS = 40.0    # studs: fruit gathers this close to a WorldV3 grove centre
+GROVE_SHARE = 0.55     # share of the foods inside a grove that become fruit
+RARE_REACH = 22.0      # studs: ambers and eggs prefer foods this close to a rock, a kit landmark, or the ring around a landmark site
+RARE_RING = 55.0       # studs: the ring around a landmark keep-out disc that counts as 'near the landmark'
+AMBER_RARE_SHARE, EGG_RARE_SHARE = 0.5, 0.45
 
 
 # ------------------------------------------------------------------------------ ground
@@ -138,6 +165,87 @@ class Ground:
             x = -limit + step / 2
             while x < limit:
                 if self.ok(x, z, limit):
+                    out.append((x, z))
+                x += step
+            z += step
+        return out
+
+
+def _erode(raw, n):
+    """1 where a cell and its 8 neighbours are all set (one stud lattice: a food never sits on an edge)."""
+    out = [bytearray(n) for _ in range(n)]
+    for iz in range(1, n - 1):
+        above, here, below, row = raw[iz - 1], raw[iz], raw[iz + 1], out[iz]
+        for ix in range(1, n - 1):
+            if (here[ix] and here[ix - 1] and here[ix + 1] and above[ix] and above[ix - 1] and above[ix + 1]
+                    and below[ix] and below[ix - 1] and below[ix + 1]):
+                row[ix] = 1
+    return out
+
+
+# A walkable spot counts for the gap rule and the cover selections only when land stretches WIDE_REACH studs round it every way: a narrow shore strip (a
+# few studs across, e.g. at the foot of the volcano) cannot hold a food patch, so no food could ever be placed there.
+WIDE_REACH = 5.0
+WIDE_PROBES = tuple((round(math.cos(a * math.pi / 6) * WIDE_REACH, 2), round(math.sin(a * math.pi / 6) * WIDE_REACH, 2)) for a in range(12))
+
+
+class GroundV3(Ground):
+    """BD-1208: the ground of the V3 island. `ok` = where a FOOD may stand (walkable, not on the plaza, a path, or inside a landmark keep-out disc);
+    `walk` = where a player walks (everything walkable except the plaza interior and the landmark discs): the gap rule and the cover selections use it."""
+
+    def __init__(self, model):
+        info = model['v3']
+        self.info = info
+        n = len(model['mask'])
+        arena, cell = model['arena'], 2 * model['arena'] / n
+        cx, cz = info['centre']
+        discs = [(x, z, r) for x, z, r, every in info['keepouts'] if every and any(math.hypot(x - lx, z - lz) < 0.5 for _, lx, lz in info['landmarks'])]
+        self.discs = discs
+        raw_food, raw_walk = [], []
+        plaza2, margin2 = info['plaza'] ** 2, (info['plaza'] + PLAZA_MARGIN) ** 2
+        for iz in range(n):
+            z = -arena + (iz + 0.5) * cell
+            mrow, prow = model['mask'][iz], model['path'][iz]
+            food, walk = bytearray(n), bytearray(n)
+            near = [d for d in discs if abs(z - d[1]) < d[2] + cell]
+            for ix in range(n):
+                if mrow[ix] != '1':
+                    continue
+                x = -arena + (ix + 0.5) * cell
+                if any((x - dx) ** 2 + (z - dz) ** 2 < dr * dr for dx, dz, dr in near):
+                    continue
+                d2 = (x - cx) ** 2 + (z - cz) ** 2
+                if d2 >= plaza2:
+                    walk[ix] = 1
+                    if prow[ix] != '1' and d2 >= margin2:
+                        food[ix] = 1
+            raw_food.append(food)
+            raw_walk.append(walk)
+        # the base class erodes model['mask']: hand it the food rows
+        super().__init__(dict(model, mask=[''.join('1' if v else '0' for v in row) for row in raw_food]))
+        self.walk_cells = _erode(raw_walk, n)
+        self.walk_rows = [''.join('1' if v else '0' for v in row) for row in self.walk_cells]
+
+    obstacles = None   # set by generate_v3: a food spot must also be OBSTACLE_MARGIN studs clear of the solid props (so the placement never needs a late move)
+
+    def ok(self, x, z, limit=EXTENT):
+        if not Ground.ok(self, x, z, limit):
+            return False
+        return self.obstacles is None or self.obstacles.distance(x, z, OBSTACLE_MARGIN) >= OBSTACLE_MARGIN
+
+    def walk(self, x, z, limit=EXTENT):
+        if abs(x) > limit or abs(z) > limit:
+            return False
+        ix, iz = int((x + self.arena) / self.cell), int((z + self.arena) / self.cell)
+        return 0 <= ix < self.n and 0 <= iz < self.n and self.walk_cells[iz][ix] == 1
+
+    def lattice(self, step=SAMPLE_STEP, limit=EXTENT):
+        out = []
+        z = -limit + step / 2
+        while z < limit:
+            x = -limit + step / 2
+            while x < limit:
+                if self.walk(x, z, limit) and all(self.walk(x + dx, z + dz, limit) for dx, dz in WIDE_PROBES):
                     out.append((x, z))
                 x += step
             z += step
@@ -799,9 +907,162 @@ def generate(ground_model, obstacles=None):
     return {'layer': layer, 'points': out, 'tops': tops, 'meta': meta, 'ground': ground, 'moved': moved}
 
 
+# ------------------------------------------------------------------------------ BD-1208: the V3 island
+def path_distance(info, x, z):
+    """Studs from (x, z) to the nearest path centre line: the ring road or a spoke (the geometry of WorldV3.path, without its noise)."""
+    cx, cz = info['centre']
+    dx, dz = x - cx, z - cz
+    best = abs(math.hypot(dx, dz) - info['ring'])
+    for angle, end in info['spokes']:
+        a = math.radians(angle)
+        ux, uz = math.cos(a), math.sin(a)
+        along, across = dx * ux + dz * uz, -dx * uz + dz * ux
+        clamped = min(max(along, info['plaza'] - 6.0), end)
+        best = min(best, math.hypot(along - clamped, across))
+    return best
+
+
+def v3_density(info):
+    """Relative food density on the V3 island: 1 everywhere, a bonus in the 8 to 30 stud band along the paths and the ring road, a little more in the
+    meadow sector and gently more around the plaza edge (the run start). Never zero."""
+    cx, cz = info['centre']
+    near_x, near_z = SPAWN
+
+    def f(x, z):
+        d = 1.0
+        r = math.hypot(x - near_x, z - near_z) / SPAWN_RADIUS
+        d += SPAWN_BOOST * max(0.0, 1.0 - r * r)
+        pd = path_distance(info, x, z)
+        lo, hi = BAND
+        if lo - 2 < pd < hi + 2:
+            d += BAND_BOOST * min(1.0, (pd - (lo - 2)) / 4.0, ((hi + 2) - pd) / 4.0)
+        angle = math.degrees(math.atan2(z - cz, x - cx))
+        if -60.0 <= angle <= 30.0:
+            d += MEADOW_BOOST
+        return d
+    return f
+
+
+def v3_starter_centres(info):
+    cx, cz = info['centre']
+    return tuple((round(cx + math.cos(math.radians(a)) * STARTER_V3_RADIUS, 1), round(cz + math.sin(math.radians(a)) * STARTER_V3_RADIUS, 1)) for a in STARTER_V3_ANGLES)
+
+
+def rare_sites(info, obstacles):
+    """(x, z) spots where the rarer food likes to be: rocks and kit landmarks (tools/world_colliders.py) and a ring of points around every landmark site
+    (outside its keep-out disc)."""
+    sites = [(x, z) for x, z, _ in getattr(obstacles, 'sites', [])] if obstacles is not None else []
+    for _, lx, lz in info['landmarks']:
+        radius = max((r for x, z, r, every in info['keepouts'] if every and math.hypot(x - lx, z - lz) < 0.5), default=34.0)
+        for k in range(12):
+            a = 2 * math.pi * k / 12
+            sites.append((lx + math.cos(a) * (radius + RARE_RING / 2), lz + math.sin(a) * (radius + RARE_RING / 2)))
+    return sites
+
+
+def assign_kinds_v3(ground, points, fixed_kinds, rng, cid, info, obstacles):
+    """kinds[i] for the V3 island (docs/241 W7): the same order as assign_kinds, but the egg meadow is replaced by 'eggs and ambers near rocks and
+    landmarks' and the one fruit grove by fruit around every WorldV3 grove."""
+    kinds = dict(fixed_kinds)
+    free = [i for i in range(len(points)) if i not in kinds]
+    samples = ground.lattice()
+    xy = lambda idx: [points[i] for i in idx]  # noqa: E731
+    sites = rare_sites(info, obstacles)
+    site_hash = Hash(30.0)
+    for x, z in sites:
+        site_hash.add(x, z)
+    near_rare = [i for i in range(len(points)) if site_hash.nearest(points[i][0], points[i][1], RARE_REACH) < RARE_REACH]
+    near_set = set(near_rare)
+
+    def take(kind, chosen):
+        for i in chosen:
+            kinds[i] = kind
+        return [i for i in free if i not in kinds]
+
+    # ambers: the lone hill-top ones are fixed; most of the rest sit near rocks and landmarks, the others cover the ground evenly
+    have = [i for i, k in kinds.items() if k == 'amber']
+    want = COUNTS['amber'] - len(have)
+    rare_want = min(round(AMBER_RARE_SHARE * want), len([i for i in free if i in near_set]))
+    inside = [i for i in free if i in near_set]
+    free = take('amber', cover_select(points, inside, samples, rare_want, xy(have)))
+    have = [i for i, k in kinds.items() if k == 'amber']
+    rest = cover_select(points, free, samples, COUNTS['amber'] - len(have), xy(have))
+    free = take('amber', lloyd(points, free, samples, rest, xy(have), LLOYD_ROUNDS))
+    # every amber cluster also holds an egg and a fruit
+    for i in [i for i, k in kinds.items() if k == 'amber' and cid[i] >= 0]:
+        mates = [j for j in free if cid[j] == cid[i]]
+        for kind in ('egg', 'fruit'):
+            if mates:
+                free = take(kind, [mates.pop(rng.randrange(len(mates)))])
+    # eggs: a share near rocks and landmarks (a find), the rest spread so the walk to the next one stays short
+    have = [i for i, k in kinds.items() if k == 'egg']
+    inside = [i for i in free if i in near_set]
+    want = min(round(EGG_RARE_SHARE * (COUNTS['egg'] - len(have))), len(inside))
+    free = take('egg', cover_select(points, inside, samples, want, xy(have)))
+    have = [i for i, k in kinds.items() if k == 'egg']
+    eggs = cover_select(points, free, samples, COUNTS['egg'] - len(have), xy(have))
+    free = take('egg', lloyd(points, free, samples, eggs, xy(have), LLOYD_ROUNDS))
+    # fruit: around every grove, then everywhere (loose natural spread)
+    groves = info['groves']
+    in_grove = lambda i: any((points[i][0] - gx) ** 2 + (points[i][1] - gz) ** 2 <= GROVE_RADIUS ** 2 for gx, gz in groves)  # noqa: E731
+    inside = [i for i in free if in_grove(i)]
+    want = round(GROVE_SHARE * len([i for i in range(len(points)) if in_grove(i)]))
+    free = take('fruit', poisson_pick(points, inside, want, [], rng, 12.0))
+    have = [i for i, k in kinds.items() if k == 'fruit']
+    free = take('fruit', poisson_pick(points, free, COUNTS['fruit'] - len(have), xy(have), rng, 24.0))
+    take('berry', free)
+    return kinds
+
+
+def generate_v3(ground_model, obstacles=None):
+    """The food map of the V3 island (BD-1208). Same result shape as generate(); the module globals of the old island (starter centres, density, gap
+    target, seed) are swapped for the duration of the run and restored afterwards, so the old map stays byte-identical."""
+    global STARTER_CENTRES, density, GAP_TARGET, SEED
+    saved = (STARTER_CENTRES, density, GAP_TARGET)
+    ground = GroundV3(ground_model)
+    ground.obstacles = obstacles
+    info = ground.info
+    STARTER_CENTRES, density, GAP_TARGET = v3_starter_centres(info), v3_density(info), GAP_TARGET_V3
+    try:
+        layer = worldlayer.WorldLayer(WIDTH, WIDTH, ARENA)
+        rng = random.Random(SEED_V3)
+        starter, fixed_kinds = [], {}
+        for centre in STARTER_CENTRES:
+            for n, site in enumerate(starter_patch(ground, layer, centre)):
+                fixed_kinds[len(starter)] = 'fruit' if (n + 1) % 3 == 0 else 'berry'
+                starter.append(site)
+        tops = hill_tops(ground, layer)
+        for k in range(len(tops)):
+            fixed_kinds[len(starter) + k] = 'amber'
+        pts, cid = place_points(ground, layer, rng, {'starter': starter, 'lone': tops})
+        kinds = assign_kinds_v3(ground, pts, fixed_kinds, rng, cid, info, obstacles)
+        moved = []
+        if obstacles is not None:
+            pts, moved = clear_obstacles(pts, cid, len(starter), len(tops), ground, layer, obstacles)
+        out = []
+        for i, (x, z) in enumerate(pts):
+            kind = kinds[i]
+            if not layer.set(x, z, KIND_IDS[kind]):
+                raise SystemExit('food outside the layer: %r' % ((x, z),))
+            out.append((x, z, kind))
+        if layer.count() != TOTAL:
+            raise SystemExit('two foods share a cell: %d cells for %d foods' % (layer.count(), TOTAL))
+        counts = {k: sum(1 for p in out if p[2] == k) for k in COUNTS}
+        if counts != COUNTS:
+            raise SystemExit('kind counts %r differ from the plan %r' % (counts, COUNTS))
+        meta = {'version': VERSION_V3, 'seed': SEED_V3, 'min_spacing': MIN_SPACING, 'between_spacing': BETWEEN_SPACING, 'cluster_spacing': CLUSTER_SPACING,
+                'counts': counts, 'total': TOTAL, 'starter_centres': STARTER_CENTRES, 'starter_radius': STARTER_RADIUS,
+                'lone_ambers': [(round(x, 1), round(z, 1)) for x, z in pts[len(starter):len(starter) + len(tops)]]}
+        return {'layer': layer, 'points': out, 'tops': tops, 'meta': meta, 'ground': ground, 'moved': moved}
+    finally:
+        STARTER_CENTRES, density, GAP_TARGET = saved
+
+
 # ------------------------------------------------------------------------------ files
 LUAU_PATH = ROOT / 'src' / 'shared' / 'FoodLayerData.luau'
 PY_PATH = ROOT / 'tools' / 'food_layer_data.py'
+LUAU_PATH_V3 = ROOT / 'src' / 'shared' / 'FoodLayerDataV3.luau'
+PY_PATH_V3 = ROOT / 'tools' / 'food_layer_data_v3.py'
 
 
 def wrap(text, width=110):
@@ -810,6 +1071,20 @@ def wrap(text, width=110):
 
 def luau_source(result):
     meta = result['meta']
+    if meta['version'] == VERSION_V3:
+        centres = ', '.join('table.freeze({%g, %g})' % c for c in meta['starter_centres'])
+        return ('--!strict\n'
+                '-- GENERATED by tools/generate_food_layer.py --world v3 (BD-1208, docs/241 W8). Do not edit by hand: change the generator, run it with --world v3 --write and commit both outputs.\n'
+                '-- The designed food map for the redesigned round island (src/shared/WorldV3.luau): a WorldLayer (src/shared/WorldLayer.luau) over the arena, %d x %d cells, every cell 0 (none)\n'
+                '-- or a food kind 1 berry, 2 fruit, 3 egg, 4 amber. %d foods: %s. Seed %d, minimum spacing %g studs. Read by src/shared/FoodLayer.luau instead of FoodLayerData\n'
+                '-- while Config.WorldV3Enabled is true (and Config.FoodLayerEnabled). StarterCentres: the two starter patches just outside the plaza edge.\n'
+                'return table.freeze({\n'
+                '    Version = "%s",\n'
+                '    StarterCentres = table.freeze({%s}),\n'
+                '    StarterRadius = %g,\n'
+                '    Map = [==[\n%s\n]==],\n'
+                '})\n') % (WIDTH, WIDTH, meta['total'], ', '.join('%s %d' % (k, v) for k, v in meta['counts'].items()), meta['seed'],
+                           meta['min_spacing'], meta['version'], centres, meta['starter_radius'], wrap(result['layer'].encode()))
     return ('--!strict\n'
             '-- GENERATED by tools/generate_food_layer.py (BD-1047, docs/187 B). Do not edit by hand: change the generator, run it with --write and commit both outputs.\n'
             '-- The designed food map: a WorldLayer (src/shared/WorldLayer.luau) over the arena, %d x %d cells, every cell 0 (none) or a food kind 1 berry, 2 fruit, 3 egg, 4 amber.\n'
@@ -823,41 +1098,52 @@ def luau_source(result):
 
 def python_source(result):
     meta = result['meta']
+    text = '\n'.join('    %r' % result['layer'].encode()[i:i + 110] for i in range(0, len(result['layer'].encode()), 110))
+    if meta['version'] == VERSION_V3:
+        return ('"""GENERATED by tools/generate_food_layer.py --world v3 (BD-1208). Do not edit by hand. The same map as src/shared/FoodLayerDataV3.luau for the Python tools."""\n'
+                'VERSION = %r\nSEED = %d\nMIN_SPACING = %r\nCOUNTS = %r\nSTARTER_CENTRES = %r\nSTARTER_RADIUS = %r\nTEXT = (\n%s\n)\n') % (
+            meta['version'], meta['seed'], meta['min_spacing'], meta['counts'], tuple(meta['starter_centres']), meta['starter_radius'], text)
     return ('"""GENERATED by tools/generate_food_layer.py (BD-1047). Do not edit by hand. The same map as src/shared/FoodLayerData.luau for the Python tools."""\n'
             'VERSION = %r\nSEED = %d\nMIN_SPACING = %r\nCOUNTS = %r\nTEXT = (\n%s\n)\n') % (
-        VERSION, meta['seed'], meta['min_spacing'], meta['counts'],
-        '\n'.join('    %r' % result['layer'].encode()[i:i + 110] for i in range(0, len(result['layer'].encode()), 110)))
+        VERSION, meta['seed'], meta['min_spacing'], meta['counts'], text)
 
 
-def committed_text():
+def committed_text(path=None):
     """The map text in the committed Luau module (whitespace removed), or None."""
     import re
-    if not LUAU_PATH.exists():
+    path = path or LUAU_PATH
+    if not path.exists():
         return None
-    m = re.search(r'Map = \[==\[(.*?)\]==\]', LUAU_PATH.read_text(encoding='utf-8'), re.S)
+    m = re.search(r'Map = \[==\[(.*?)\]==\]', path.read_text(encoding='utf-8'), re.S)
     return re.sub(r'\s', '', m.group(1)) if m else None
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--runner', required=True, help='pinned luau.exe (docs/160)')
-    ap.add_argument('--write', action='store_true', help='write src/shared/FoodLayerData.luau and tools/food_layer_data.py')
+    ap.add_argument('--write', action='store_true', help='write src/shared/FoodLayerData.luau and tools/food_layer_data.py (--world v3: the V3 files)')
+    ap.add_argument('--world', choices=('old', 'v3'), default='old', help='old = the original island (default), v3 = the redesigned round island (BD-1208)')
     args = ap.parse_args()
     import dump_food_layout
     import world_colliders
-    obstacles = world_colliders.load(args.runner)
+    v3 = args.world == 'v3'
+    obstacles = world_colliders.load(args.runner, world='v3' if v3 else None)
     print('solid props: %(props)d placed props -> %(obstacles)d footprints; foods keep %(margin)g studs clear' % dict(obstacles.summary, margin=OBSTACLE_MARGIN))
-    result = generate(dump_food_layout.ground_model(args.runner, 1.0, 4.0), obstacles)
+    if v3:
+        result = generate_v3(dump_food_layout.ground_model(args.runner, 1.0, 4.0, world='v3'), obstacles)
+    else:
+        result = generate(dump_food_layout.ground_model(args.runner, 1.0, 4.0), obstacles)
     text = result['layer'].encode()
     far = max((math.hypot(b[0] - a[0], b[1] - a[1]) for _, a, b in result['moved']), default=0.0)
     print('%d foods moved out of the way of solid props (farthest move %.1f studs)' % (len(result['moved']), far))
     print('%d foods %s, %d characters of text, lone ambers at %s' % (result['meta']['total'], result['meta']['counts'], len(text), result['meta']['lone_ambers']))
-    old = committed_text()
+    luau_path, py_path = (LUAU_PATH_V3, PY_PATH_V3) if v3 else (LUAU_PATH, PY_PATH)
+    old = committed_text(luau_path)
     print('committed map: %s' % ('missing' if old is None else ('identical' if old == text else 'DIFFERENT')))
     if args.write:
-        LUAU_PATH.write_text(luau_source(result), encoding='utf-8', newline='\n')
-        PY_PATH.write_text(python_source(result), encoding='utf-8', newline='\n')
-        print('wrote', LUAU_PATH.relative_to(ROOT), 'and', PY_PATH.relative_to(ROOT))
+        luau_path.write_text(luau_source(result), encoding='utf-8', newline='\n')
+        py_path.write_text(python_source(result), encoding='utf-8', newline='\n')
+        print('wrote', luau_path.relative_to(ROOT), 'and', py_path.relative_to(ROOT))
     return 0 if (old == text or args.write) else 1
 
 
