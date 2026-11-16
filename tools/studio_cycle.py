@@ -5,6 +5,7 @@ test file (never the owner's Place1 or any other window), open the new build and
 
     python tools/studio_cycle.py            # compile + build + restart the test Studio
     python tools/studio_cycle.py --no-studio  # compile + build only
+    python tools/studio_cycle.py --name life   # a session's own test window: build/BeDino-life-test.rbxlx (one per session, docs owner rule)
 """
 import argparse
 import pathlib
@@ -35,7 +36,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-studio", action="store_true")
     ap.add_argument("--wait", type=int, default=55)
+    ap.add_argument("--name", default="", help="own test file build/BeDino-<name>-test.rbxlx instead of the lead's WorldV3 one")
     a = ap.parse_args()
+    global TEST
+    if a.name:
+        if not a.name.replace("-", "").isalnum():
+            sys.exit("--name: letters, digits and dashes only")
+        TEST = ROOT / ("build/BeDino-" + a.name + "-test.rbxlx")
     run([sys.executable, "tools/verify_sources.py", "--compiler", str(LUAU / "luau-compile.exe")])
     run([sys.executable, "tools/build.py", "--profile", "playtest", "--output", str(TEST.relative_to(ROOT))])
     if a.no_studio:

@@ -45,6 +45,7 @@ end
 -- A failed load only logs and counts; Arena then keeps the current kit model for that prop (same fallback as loadWorldKit).
 function Import.loadGeneratedWorld(): (number, number)
     if require(ReplicatedStorage.Shared.Config).HatchStageEnabled then task.spawn(Import.loadHatchShards) task.spawn(Import.loadHatchBuckets) end -- BD-1212 / BD-1211 (defined below)
+    task.spawn(require(script.Parent.IslandLifeLoader).load) -- BD-1244: island-life critters (returns at once while IslandLifeEnabled is off)
     local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
     if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
     local loaded,failed,pending=0,0,0
