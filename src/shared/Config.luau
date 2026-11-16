@@ -228,6 +228,12 @@ return table.freeze({
     -- white map, docs/77), and the spiky flat-shaded ferns and horsetail are replaced by the round glossy bushes. Look and placement only: no
     -- save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     ToonWorldEnabled = false,
+    -- BD-1238 (BD-1208, docs/241 W6 + W7): true = with WorldV3Enabled, ToonWorldEnabled and FoodLayerEnabled the food map is FoodLayerDataV3Hosts
+    -- (tools/food_hosts.py): berries at the rim of the round bushes, fruit under the tree crowns, amber against the rocks and the landmark edges,
+    -- eggs against a rock or at a tree foot. No new parts (the hosts already stand on the island); the same 3,600 foods, kinds, points, starter
+    -- patches and respawn rules, the same count of every kind in every zone. false = the V3 map exactly as before. Pinned off in the default
+    -- profile, ON in the playtest profile (docs/157). Free, no Robux.
+    FoodHostsEnabled = false,
     -- BD-1221 (docs/242 benchmark gap 4, extends BD-1181): true = with WorldV3Enabled four stalls with big signs stand on the spawn plaza
     -- (nests, potions, shop, dinos; the cave home's own generated meshes, Shared/PlazaHubLayout) and a walk-up prompt opens that screen through
     -- the rail's own path (HubTravelClient.press, then openScreen), so a run keeps its "At home" rule. No save, economy or reward change.

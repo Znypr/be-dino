@@ -47,9 +47,19 @@ function FoodLayer.isStarter(x: number, z: number): boolean
 end
 
 -- The decoded map (nil and a reason when the text is not a valid layer).
+-- BD-1238 (docs/241 W6 + W7): with Config.FoodHostsEnabled and ToonWorldEnabled on top of WorldV3Enabled the map is FoodLayerDataV3Hosts: the same
+-- foods moved to the bushes, trees, rocks and landmark edges that stand on the toon island (tools/food_hosts.py). Same starter patches as the V3 map.
+local function hostsMap(): string?
+    local okConfig, Config = pcall(function() return require((script :: any).Parent.Config) end)
+    if okConfig and type(Config) == "table" and (Config :: any).FoodHostsEnabled == true and (Config :: any).ToonWorldEnabled == true then
+        return require((script :: any).Parent.FoodLayerDataV3Hosts).Map
+    end
+    return nil
+end
+
 function FoodLayer.load(text: string?): (WorldLayer.Layer?, string?)
     local v3 = v3Data()
-    return WorldLayer.decode(text or (if v3 then v3.Map else FoodLayerData.Map))
+    return WorldLayer.decode(text or (if v3 then (hostsMap() or v3.Map) else FoodLayerData.Map))
 end
 
 -- Items per sector: plan[sx * sectorCount + sz] = {Item} (row by row inside a sector), and the total. Sectors are the FoodService squares:
