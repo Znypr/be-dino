@@ -84,6 +84,7 @@ require(script.Parent.FeedbackService).start() -- docs/126: no-op while Config.P
 Telemetry.start() -- BD-426: no-op while Config.RunTelemetryEnabled is false
 require(script.Parent.FunnelService).start() -- BD-1166: first-session funnel inputs (screen beat, save facts, friends); no-op while the flag is false
 require(script.Parent.WelcomeBackService).start() -- BD-1168: "Your nest is ready!" at join; no-op while Config.WelcomeBackEnabled is false
+require(script.Parent.SocialServices).start() -- BD-1227/1228/1229/1233: friend bonus, badges, codes; each part is a no-op while its flag is false
 RunLifecycle.start()
 require(script.Parent.StarterRunService).start() -- BD-1163: the first run of a brand-new save starts by itself; no-op while Config.StarterRunEnabled is false
 CollectionService.start(ProfileRepository, Dinosaur)

@@ -20,6 +20,7 @@ local PRIVATE = {
     "StarterRun", -- BD-1163: 1 while this save has no settled run (the starter run applies), else 0; set only with Config.StarterRunEnabled
     "WelcomeBackNests", -- BD-1168: how many nests finished while the player was away (set once per join, only with Config.WelcomeBackEnabled)
     "RunStreak", "LastRunStreak", "LastRunStreakCrystals", -- BD-1199: run streak of the current / last run and its crystal bonus (server-set, session-only, only with Config.PlayAgainEnabled)
+    "FriendBonus", "LastRunFriendCrystals", -- BD-1228: friend bonus percent while a friend is in the server (0 = none) and the last run's extra crystals (only with Config.FriendBonusEnabled)
     -- run and hatch summaries
     "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestNewJson", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
     "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull", "LastRunNestCrystals",
