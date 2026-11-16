@@ -217,6 +217,11 @@ return table.freeze({
     -- the sea while the Atmosphere gives the depth (phones keep their tight fog). Terrain and lighting only: no save, economy or reward change.
     -- false = the sea exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     RealSeaEnabled = false,
+    -- BD-1223 + BD-1224 (docs/242 benchmark gaps 8 and 9, one art rule per game): true = with WorldV3Enabled the island is in one toy style
+    -- (Shared/WorldToon): the terrain shows flat toon colours instead of the photo grass, sand and rock textures (MaterialVariants on one flat
+    -- white map, docs/77), and the spiky flat-shaded ferns and horsetail are replaced by the round glossy bushes. Look and placement only: no
+    -- save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    ToonWorldEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

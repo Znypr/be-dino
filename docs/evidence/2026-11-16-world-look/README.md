@@ -10,3 +10,13 @@ Studio captures of the playtest build (`tools/build.py --profile playtest`), Pla
 | `sea-04-after-beach-horizon.jpg` | From the beach: the sea meets the sky at the horizon |
 | `sea-05-cave-home-intact.jpg` | The cave home after the far sea: the sea blocks under the cave box are written before the cave shell, so the cave overwrites them (an earlier build flooded the cave floor) |
 | `ground-00-before-photo-textures.jpg` | Before BD-1223 / BD-1224: photo grass and rock textures next to the toy props, spiky flat fronds |
+| `plants-00-before-spiky-fern.jpg` | Before BD-1224: a giant flat-shaded fern frond fills the view next to round glossy trees |
+| `ground-01-after-toon-ground.jpg` | `ToonWorldEnabled`: flat toon grass, earth path and grey-violet volcano rock, round bushes (same camera as `ground-00`) |
+| `ground-02-after-forest-round-bushes.jpg` | Broadleaf forest: round glossy bushes where the ferns and horsetail were; small grass tufts remain |
+| `ground-03-after-mid-height.jpg` | The island from mid height with the toon ground and the real sea |
+| `ground-04-cave-home-grass-follow-up.jpg` | Known follow-up: the overrides are global, so the cave home's grass patches turn flat toon green while its cobblestone floor stays photo |
+
+Counts (Play, playtest profile, desktop): BaseParts 6776 before BD-1224, 6811 after (+35, round bushes carry colliders); shrubs 573 (231 bushes,
+238 ferns, 104 horsetail) -> 561 bushes. BD-1220: the 6000-stud `Ocean` part is gone (-1); the far sea is 456 terrain blocks written in about
+4.5-6 s in the background after IslandTerrainReady.
+
