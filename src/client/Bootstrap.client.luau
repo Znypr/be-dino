@@ -132,6 +132,7 @@ body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UD
 local modalVersion=0
 local updateNavigation=function() end
 local function close()
+    if Config.HatchStageEnabled then require(script.Parent.HatchStage).restore() end -- BD-1211
     autoHatching=false
     hatchCancelSerial+=1
     modalVersion+=1
@@ -246,6 +247,7 @@ local openFusion
 local rail
 local function open(name: string)
     if require(script.Parent.ModalGuard).routed(name,openFusion) then return end -- BD-1196
+    if Config.HatchStageEnabled then require(script.Parent.HatchStage).restore() end -- BD-1211: every screen but the hatch keeps its window
     local wasVisible=shade.Visible and active~=""
     modalVersion+=1
     active=name
@@ -522,6 +524,11 @@ render=function(name: string)
                 end
             end,
         })
+        -- BD-1211: the hatch is a full stage over the world, not a window (docs/240 R7); restore() runs on the next open/close
+        if Config.HatchStageEnabled then -- a skin error must never stop a hatch: on failure the window look stays
+            local okStage,stageError=pcall(require(script.Parent.HatchStage).apply,{gui=gui,shade=shade,panel=panel,header=header,heading=heading,body=body,reduceMotion=not motion})
+            if not okStage then require(script.Parent.HatchStage).restore() warn("[Be Dino] hatch stage skipped: "..tostring(stageError)) end
+        end
         hatchState.pending={version=version,supply=supply,handle=handle}
         if hatchState.fresh then hatchState.fresh=false supply() end
     elseif SmallScreens.names[name] then SmallScreens.render(name)

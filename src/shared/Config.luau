@@ -184,6 +184,10 @@ return table.freeze({
     -- beach with a lagoon, volcano corner). Terrain shape, ground colours and where props may grow change; no save, economy or reward change.
     -- false = the island is exactly as before. Pinned off in the default profile, ON in the playtest profile.
     WorldV3Enabled = false,
+    -- BD-1211 (docs/240 R7, style tile v2 boards 2-4): true = the hatch is a full stage over the world (no stud window, a light veil with soft
+    -- rays, "Egg 2 of 5" in a cream chip, cream chips with ink text, grey buttons, the green NEXT EGG kept). Client presentation only; every
+    -- other screen keeps its window. false = the hatch window exactly as before. Pinned off in the default profile, ON in the playtest profile.
+    HatchStageEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)

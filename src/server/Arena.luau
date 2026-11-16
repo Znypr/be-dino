@@ -348,14 +348,14 @@ local function v3Landmarks(parent: Instance, V3: any)
         end
         placed += 1
     end
-    -- Volcano crater: soft smoke and a warm glow (calm, docs/87), from the uploaded soft smoke sprite.
+    -- Volcano crater: soft smoke and a warm glow (calm, docs/87).
     for _, s in V3.Landmarks do
         if s.id ~= "volcano" then continue end
         local x, z = V3.polar(s.angle, s.r)
         local vent = part(folder, "VolcanoVent", Vector3.new(14, 1, 14), Vector3.new(x, groundAt(x, z) + 1, z), Color3.fromRGB(255, 120, 40), Enum.Material.Neon, false)
         vent.Transparency = 1
         local smoke = Instance.new("ParticleEmitter")
-        smoke.Texture = "rbxassetid://77674653002282"
+        smoke.Texture = "rbxasset://textures/particles/smoke_main.dds" -- built-in soft smoke (the uploaded smokeSoft id does not load, Studio 2026-11-16)
         smoke.Rate, smoke.Lifetime, smoke.Speed = 2.5, NumberRange.new(9, 13), NumberRange.new(4, 7)
         smoke.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 10), NumberSequenceKeypoint.new(1, 34)})
         smoke.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, .55), NumberSequenceKeypoint.new(.7, .75), NumberSequenceKeypoint.new(1, 1)})
