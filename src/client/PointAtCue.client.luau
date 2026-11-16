@@ -49,14 +49,17 @@ end
 
 -- One marker: a billboard with a cream chip (ink words, ink outline: style rules R1 / R2), optional registered icon on its left.
 type Marker = {board: BillboardGui, label: TextLabel, lift: number, target: BasePart?}
-local function marker(name: string, icon: string?): Marker
+local function marker(name: string, icon: string?, onTop: boolean): Marker
     local board = Instance.new("BillboardGui")
-    board.Name, board.Size, board.LightInfluence, board.MaxDistance, board.Enabled = "PointAt_" .. name, UDim2.fromOffset(170, 52), 0, 400, false
-    board.AlwaysOnTop = false -- Studio's screen capture does not draw AlwaysOnTop billboards; the chip floats above the thing, in view
+    board.Name, board.Size, board.LightInfluence, board.MaxDistance, board.Enabled = "PointAt_" .. name, UDim2.fromOffset(if icon then 200 else 160, 50), 0, 400, false
+    -- Stall and nest chips stay on top: in the cave a rock pillar would hide them, and a guide the child cannot see is no guide. The food chip
+    -- is drawn in the world (open island, many foods). Note: Studio's screen capture does not draw AlwaysOnTop billboards (evidence pictures
+    -- of the stall and nest chips are taken with it switched off for the shot).
+    board.AlwaysOnTop = onTop
     board.ResetOnSpawn = false
     local chip, label = Chip.new(board :: any, {name = "Chip", fill = CREAM, size = UDim2.new(1, -4, 1, -4), position = UDim2.fromOffset(2, 2), z = 1,
         text = "", textInset = if icon then 44 else 8})
-    label.TextColor3, label.TextStrokeTransparency = INK, 1
+    label.TextColor3, label.TextStrokeTransparency, label.TextScaled, label.TextSize = INK, 1, false, 20 -- one fixed 20 px word (the 28 / 20 / 16 / 14 scale)
     if icon then
         local art = Theme.icon(chip, icon)
         if art then art.Position, art.Size, art.ZIndex = UDim2.fromOffset(4, 4), UDim2.fromOffset(40, 40), 3 end
@@ -65,9 +68,9 @@ local function marker(name: string, icon: string?): Marker
     return {board = board, label = label, lift = 0, target = nil}
 end
 
-local food = marker("Food", nil)
-local nest = marker("Nest", "egg_nest")
-local stall = marker("Stall", nil)
+local food = marker("Food", nil, false)
+local nest = marker("Nest", "egg_nest", true)
+local stall = marker("Stall", nil, true)
 food.label.Text, nest.label.Text = Rules.Words.food, Rules.Words.nest
 
 local function partOf(item: Instance): BasePart?
@@ -75,11 +78,11 @@ local function partOf(item: Instance): BasePart?
     if item:IsA("Model") then return item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true) end
     return nil
 end
-local function point(m: Marker, target: BasePart?)
+local function point(m: Marker, target: BasePart?, lift: number?)
     if target ~= m.target then
         m.target = target
         m.board.Adornee = target
-        m.lift = if target then target.Size.Y * 0.5 + Rules.Lift else 0
+        m.lift = if target then target.Size.Y * 0.5 + (lift or Rules.Lift) else 0
     end
     m.board.Enabled = target ~= nil
 end
@@ -110,8 +113,15 @@ local function readyNests(): number
     return Rules.readyCount(NestQueue.project(list, math.floor(workspace:GetServerTimeNow()), Config.NestIncubationSeconds))
 end
 
+local function clearView(part: BasePart): boolean
+    local camera = workspace.CurrentCamera
+    if not camera then return false end
+    local at, visible = camera:WorldToViewportPoint(part.Position + Vector3.new(0, part.Size.Y * 0.5 + Rules.StationLift, 0))
+    return Rules.inClearView(at.X, visible, camera.ViewportSize.X)
+end
+
 local legacyNest: BasePart? = nil
-local function nestTarget(): BasePart?
+local function nestPart(): BasePart?
     local prompts = workspace:FindFirstChild("HubWalkUpPrompts")
     local pad = if prompts then prompts:FindFirstChild("Prompt_nests") else nil
     if pad and pad:IsA("BasePart") then return pad end
@@ -119,6 +129,10 @@ local function nestTarget(): BasePart?
     local found = workspace:FindFirstChild("EggNest", true) -- the legacy Sanctuary (cave hub off): looked up once, then cached
     legacyNest = if found and found:IsA("BasePart") then found else nil
     return legacyNest
+end
+local function nestTarget(): BasePart?
+    local part = nestPart()
+    return if part and clearView(part) then part else nil -- never under the rail: it shows once the player turns toward the nests
 end
 
 local function stallTarget(from: Vector3): (BasePart?, string?)
@@ -128,7 +142,7 @@ local function stallTarget(from: Vector3): (BasePart?, string?)
     for _, id in Rules.StallStations do
         local pad = prompts:FindFirstChild("Prompt_" .. id)
         if pad and pad:IsA("BasePart") then
-            table.insert(list, {distance = (pad.Position - from).Magnitude})
+            table.insert(list, {distance = (pad.Position - from).Magnitude, clear = clearView(pad)})
             table.insert(parts, {pad, id})
         end
     end
@@ -167,11 +181,11 @@ task.spawn(function()
         local from = rootPosition()
         local blocked = menuOpen() or from == nil
         point(food, if not blocked and Rules.foodOn({new = new, runState = state, bites = bites, played = played}) then foodTarget(from :: Vector3) else nil)
-        point(nest, if not blocked and Rules.nestOn({readyNests = ready, runState = state, opened = opened}) then nestTarget() else nil)
+        point(nest, if not blocked and Rules.nestOn({readyNests = ready, runState = state, opened = opened}) then nestTarget() else nil, Rules.StationLift)
         local stallPart, stallId = nil, nil
         if not blocked and Rules.stallOn({new = new, runState = state, usedStall = usedStall, home = home}) then stallPart, stallId = stallTarget(from :: Vector3) end
         if stallId then stall.label.Text = if stallId == "potions" then Rules.Words.potions else Rules.Words.stall end
-        point(stall, stallPart)
+        point(stall, stallPart, Rules.StationLift)
         task.wait(TICK)
     end
 end)

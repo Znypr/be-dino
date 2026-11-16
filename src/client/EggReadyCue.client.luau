@@ -42,42 +42,45 @@ local function openEggs()
 end
 
 -- The badge: a small chip in the accent green (never red: red is only the X, style rule R3) on the top-right corner of the EGGS rail button.
-local badges: {[GuiObject]: TextLabel} = setmetatable({}, {__mode = "k"}) :: any
-local function badgeOn(button: GuiObject): TextLabel
-    local label = badges[button]
-    if label and label.Parent then return label end
-    local frame, text = Chip.new(button, {name = "ReadyBadge", fill = Theme.Colors.accent, size = UDim2.fromOffset(30, 30), position = UDim2.new(1, 4, 0, -6),
-        anchor = Vector2.new(1, 0), z = button.ZIndex + 4, text = "", textInset = 3})
-    frame.Visible = false
-    badges[button] = text
-    return text
-end
+-- It is NOT a child of the button (the rail lays out every child of its buttons, RailRun.place): it sits in its own layer of the HUD and
+-- follows the button's corner every tick.
+local badgeLayer = Instance.new("Frame")
+badgeLayer.Name, badgeLayer.BackgroundTransparency, badgeLayer.Size, badgeLayer.ZIndex = "EggReadyBadges", 1, UDim2.fromScale(1, 1), 30
+badgeLayer.Parent = gui
+local badge, badgeText = Chip.new(badgeLayer, {name = "ReadyBadge", fill = Theme.Colors.accent, size = UDim2.fromOffset(30, 30), anchor = Vector2.new(0.5, 0.5),
+    z = 31, text = "", textInset = 3})
+badge.Visible = false
 local found: {GuiObject} = {}
 local foundAt = -math.huge
-local function eggButtons(): {GuiObject}
-    if os.clock() - foundAt < 5 then return found end -- the rail is built once; look again every few seconds, not every tick
-    foundAt, found = os.clock(), {}
-    for _, item in gui:GetDescendants() do
-        if item:IsA("GuiButton") and item:GetAttribute("Destination") == "eggs" then table.insert(found, item) end
+local function eggButton(): GuiObject?
+    if os.clock() - foundAt >= 5 then -- the rail is built once; look again every few seconds, not every tick
+        foundAt, found = os.clock(), {}
+        for _, item in gui:GetDescendants() do
+            if item:IsA("GuiButton") and item:GetAttribute("Destination") == "eggs" then table.insert(found, item) end
+        end
     end
-    return found
+    for _, button in found do
+        if button.Parent and button.Visible then return button end
+    end
+    return nil
 end
 local function showBadge(count: number)
     local words = Rules.badgeText(count)
-    for _, button in eggButtons() do
-        local label = badgeOn(button)
-        label.Text = words
-        local frame = label.Parent :: GuiObject
-        frame.Visible = words ~= ""
-    end
+    local button = if words ~= "" then eggButton() else nil
+    badge.Visible = button ~= nil
+    if not button then return end
+    badgeText.Text = words
+    local corner = button.AbsolutePosition - badgeLayer.AbsolutePosition + Vector2.new(button.AbsoluteSize.X - 6, 4)
+    badge.Position = UDim2.fromOffset(corner.X, corner.Y)
 end
 
 task.spawn(function()
     while not Toasts.layer and gui.Parent do task.wait(0.5) end -- Bootstrap attaches the toast stack at start; a bounded wait in practice
     while not PrivateState.isReady() and gui.Parent do task.wait(0.5) end
     local previous: number? = nil
+    local lastRead, count = -math.huge, 0
     while gui.Parent do
-        local count = readyNests()
+        if os.clock() - lastRead >= 1 then lastRead, count = os.clock(), readyNests() end
         if Rules.toastNow(previous, count) then
             local home = runState() == "Sanctuary"
             Toasts.notify(Rules.toastText(count), Theme.Colors.gold, {kind = "major", key = "egg_ready", icon = "egg_nest",
@@ -86,6 +89,6 @@ task.spawn(function()
         end
         previous = count
         showBadge(count)
-        task.wait(1)
+        task.wait(0.25)
     end
 end)

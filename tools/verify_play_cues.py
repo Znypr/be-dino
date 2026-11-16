@@ -54,6 +54,11 @@ check(most > 0.1 and most <= 1, "a calm bob (at most 1 stud)")
 check(Rules.BobSeconds >= 0.8, "a slow bob")
 check(Rules.nearest({{distance = 9}, {distance = 3}, {distance = 5}}) == 2, "nearest")
 check(Rules.nearest({}) == nil, "nearest of nothing")
+check(Rules.nearest({{distance = 3, clear = false}, {distance = 40, clear = true}}) == 2, "a stall in clear view beats a nearer hidden one")
+check(Rules.nearest({{distance = 3, clear = false}}) == nil, "a stall under the rail is never picked")
+check(Rules.inClearView(500, true, 1000) and Rules.inClearView(900, true, 1000) and not Rules.inClearView(100, true, 1000) and not Rules.inClearView(990, true, 1000), "the rail edge is not clear view")
+check(Rules.StationLift > Rules.Lift, "a stall chip sits above the sign")
+check(not Rules.inClearView(500, false, 1000), "behind the camera is not clear view")
 for key, w in Rules.Words do check(#w <= 14 and not string.find(w, "%d"), "short marker word " .. key) end
 -- growth pop
 check(Rules.popText(0.1, 0.1) == "+1", "+1 for one food")
@@ -116,11 +121,13 @@ def guards(clients, config, profiles, playtest):
             if banned in code:
                 problems.append(path + ': client presentation only, no ' + banned)
         if 'AlwaysOnTop = true' in code:
-            problems.append(path + ': Studio capture cannot see AlwaysOnTop billboards (evidence)')
+            problems.append(path + ': AlwaysOnTop only through the marker argument (stall and nest), never fixed on')
     point, egg = clients[CLIENTS[0]], clients[CLIENTS[2]]
     for path, text in ((CLIENTS[0], point), (CLIENTS[2], egg)):
         if 'Chip.new(' not in text:
             problems.append(path + ': every tag is a Chip (ChipStyle)')
+    if 'local food = marker("Food", nil, false)' not in point:
+        problems.append('the food chip is drawn in the world (Studio evidence can see it)')
     if 'Rules.bob(clock, motion())' not in point:
         problems.append('the markers must bob through the rules (Reduce Motion)')
     if 'Rules.popMotion(motion())' not in clients[CLIENTS[1]]:
@@ -134,6 +141,7 @@ def guards(clients, config, profiles, playtest):
 
 
 MUTANTS = {
+    'a hidden stall wins': ('rules', 'if item.clear ~= false and item.distance < bestD then', 'if item.distance < bestD then'),
     'veterans get markers': ('rules', 'return typeof(level) == "number" and level <= Rules.NewPlayerLevel', 'return true'),
     'the food marker never goes': ('rules', 'and s.bites < Rules.FoodBites and s.played < Rules.FoodSeconds', ''),
     'the nest marker stays after opening': ('rules', 'and s.runState == "Sanctuary" and not s.opened', 'and s.runState == "Sanctuary"'),
@@ -146,7 +154,7 @@ MUTANTS = {
     'a badge for zero': ('rules', 'if typeof(count) ~= "number" or count < 1 then return "" end', ''),
     'the flag is ignored': ('client0', FLAG_LINE, ''),
     'the pop calls the server': ('client1', 'local player = Players.LocalPlayer', 'local player = Players.LocalPlayer\nReplicatedStorage.X:FireServer()'),
-    'the badge is not a chip': ('client2', 'Chip.new(button,', 'Instance.new("Frame", button,'),
+    'the badge is not a chip': ('client2', 'Chip.new(badgeLayer,', 'Instance.new("Frame", badgeLayer,'),
 }
 
 

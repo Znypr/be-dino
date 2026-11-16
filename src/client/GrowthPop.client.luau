@@ -2,7 +2,7 @@
 -- BD-1231 (docs/242 benchmark gap 15, "numbers are the juice"): ONLY while Config.PlayCuesEnabled is on (flag off: this script returns on its first
 -- lines and nothing changes). When the dino eats, a big "+N" (N = food points, Shared/PlayCuesRules.popText) rises softly at the dino and fades;
 -- bites closer than PlayCuesRules.MergeSeconds add up into one number. When the SIZE bar passes a quarter, one short word banner ("Bigger!",
--- "Huge!") shows under the bar, once per quarter per run. Calm (docs/87): no shake, no flash; Reduce Motion = the number fades in place.
+-- "Huge!") shows above HOME, once per quarter per run. Calm (docs/87): no shake, no flash; Reduce Motion = the number fades in place.
 -- The old screen-centre "+0.1" pop of Bootstrap is hidden while this runs (one number, at the dino). Nothing floats over an open window.
 -- Client presentation only: nothing is stored, sent or decided. Bootstrap is untouched (size ceiling).
 local Players = game:GetService("Players")
@@ -66,6 +66,7 @@ local function pop(character: Model, text: string)
     board.Name, board.Adornee, board.Size, board.LightInfluence = "GrowthPop", anchor, UDim2.fromOffset(150, 60), 0
     board.AlwaysOnTop = false -- Studio's screen capture does not draw AlwaysOnTop billboards (docs/evidence note); the dino is in front of the camera anyway
     board.StudsOffset, board.MaxDistance = Vector3.new(0, top, 0), 200
+    board.SizeOffset = Vector2.new(0.75, 0) -- beside the head, clear of the health bar above it (style rule R8: nothing overlaps)
     local label = word(board, text, 40)
     board.Parent = playerGui
     table.insert(live, board)
@@ -82,7 +83,7 @@ local function pop(character: Model, text: string)
     end)
 end
 
--- The word banner: under the SIZE bar, top centre of the screen.
+-- The word banner: bottom centre, in the free strip between the dino's feet and the HOME button (the top holds SIZE and its hint).
 local bannerLayer = Instance.new("ScreenGui")
 bannerLayer.Name, bannerLayer.ResetOnSpawn, bannerLayer.IgnoreGuiInset, bannerLayer.DisplayOrder = "GrowthBanner", false, false, 5
 bannerLayer.Parent = playerGui
@@ -92,8 +93,8 @@ local function banner(text: string)
     local serial = bannerSerial
     for _, old in bannerLayer:GetChildren() do old:Destroy() end
     local holder = Instance.new("Frame")
-    holder.Name, holder.BackgroundTransparency, holder.AnchorPoint = "Banner", 1, Vector2.new(0.5, 0)
-    holder.Position, holder.Size = UDim2.new(0.5, 0, 0, 74), UDim2.fromOffset(360, 64)
+    holder.Name, holder.BackgroundTransparency, holder.AnchorPoint = "Banner", 1, Vector2.new(0.5, 1)
+    holder.Position, holder.Size = UDim2.new(0.5, 0, 1, -96), UDim2.fromOffset(360, 64) -- the free strip between the dino and HOME (R8)
     local scale = Instance.new("UIScale")
     scale.Scale, scale.Parent = if motion() then 0.6 else 1, holder
     local label = word(holder, text, 48)

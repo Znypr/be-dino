@@ -17,7 +17,8 @@ Rules.FoodSeconds = 180 -- ... or after this many seconds of play (the first min
 Rules.StallSeconds = 120 -- the stall marker goes away after this many seconds at home, or when any stall opened
 Rules.BobStuds = 0.6 -- the chip bobs this far up and down
 Rules.BobSeconds = 1.1 -- one slow bob (calm; Reduce Motion: no bob)
-Rules.Lift = 3 -- studs above the top of the thing it points at
+Rules.Lift = 3 -- studs above the top of the food it points at
+Rules.StationLift = 15 -- studs above a stall or nest prompt: over the stall awning and the big nest model (Studio 2026-11-16)
 Rules.Words = table.freeze({food = "Eat me!", nest = "Eggs ready!", stall = "Shop!", potions = "Potions!"})
 Rules.StallStations = table.freeze({"style", "potions"}) -- the stalls the stall marker may point at (HubSignCopy station ids)
 
@@ -48,13 +49,20 @@ function Rules.bob(t: number, motion: boolean): number
     return math.sin(t * 2 * math.pi / Rules.BobSeconds) * Rules.BobStuds
 end
 
--- The nearest of a list of {distance} entries (index), or nil when the list is empty. Ties keep the first.
-function Rules.nearest(list: {{distance: number}}): number?
+-- The nearest of a list of {distance, clear} entries (index), or nil: an entry that is not in clear view (clear = false: off screen or under the
+-- HUD rail) is never picked, so a chip never hides under the rail; it shows once the player turns toward a stall. Ties keep the first.
+Rules.ClearLeft = 0.12 -- the left 12 % of the screen holds the rail (DINOS, EGGS, ...): a chip there would sit under it
+Rules.ClearRight = 0.04 -- a small margin on the right edge
+function Rules.nearest(list: {{distance: number, clear: boolean?}}): number?
     local best, bestD = nil, math.huge
     for i, item in list do
-        if item.distance < bestD then best, bestD = i, item.distance end
+        if item.clear ~= false and item.distance < bestD then best, bestD = i, item.distance end
     end
     return best
+end
+-- Is a viewport point (x, on screen) in clear view on a screen `width` wide?
+function Rules.inClearView(x: number, onScreen: boolean, width: number): boolean
+    return onScreen and width > 0 and x >= width * Rules.ClearLeft and x <= width * (1 - Rules.ClearRight)
 end
 
 -- ---------------------------------------------------------------- growth number pop (BD-1231)
