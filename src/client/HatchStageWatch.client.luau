@@ -83,6 +83,40 @@ RunService.Heartbeat:Connect(function()
             current, mode = fx, "hatch"
             local ok, err = pcall(Stage.apply, parts())
             if not ok then Stage.restore() warn("[Be Dino] hatch stage skipped: " .. tostring(err)) end
+            -- BD-1212 paint beat: each bucket's colour chip turns visible at its impact, with the exact paint colour in its swatch
+            local front = panel:FindFirstChild("HatchFxFront")
+            local colors: {Color3} = {}
+            local function minimal(chip: GuiObject)
+                -- kid-minimal (owner 2026-11-16 "too much reading"): the chip is only its colour dot
+                for _, d in chip:GetChildren() do
+                    if d:IsA("GuiObject") and d.Name ~= "Swatch" then d.Visible = false end
+                end
+                chip.Size = UDim2.fromOffset(52, 52)
+                local swatch = chip:FindFirstChild("Swatch") :: GuiObject?
+                if swatch then swatch.Position, swatch.Size = UDim2.fromScale(.5, .5), UDim2.fromOffset(38, 38) end
+            end
+            for i = 1, 2 do
+                local chip = front and front:FindFirstChild("PaintChip" .. i) :: GuiObject?
+                if chip then
+                    chip:GetPropertyChangedSignal("Visible"):Connect(function()
+                        if not chip.Visible or current ~= fx then return end
+                        local swatch = chip:FindFirstChild("Swatch") :: GuiObject?
+                        colors[i] = if swatch then swatch.BackgroundColor3 else Color3.new(1, 1, 1)
+                        minimal(chip)
+                        if i == 1 then
+                            pcall(Stage.playPaint, "pour", {colors[1]})
+                            task.delay(1.6, function() if current == fx and not colors[2] then Stage.paintDone() end end)
+                        else
+                            pcall(Stage.playPaint, "spots", {colors[1] or colors[2], colors[2]})
+                            task.delay(1.05, function() if current == fx then Stage.paintDone() end end)
+                        end
+                    end)
+                end
+            end
+            local patternChip = front and front:FindFirstChild("PatternChip") :: GuiObject?
+            if patternChip then
+                patternChip:GetPropertyChangedSignal("Visible"):Connect(function() if patternChip.Visible then patternChip.Visible = false end end)
+            end
         end
     elseif mode == "hatch" then
         current, mode = nil, ""

@@ -26,6 +26,9 @@ function Stage.isGreen(c: Color3): boolean return c.G > .5 and c.G > c.R * 1.25 
 local state: {restore: {() -> ()}, conns: {RBXScriptConnection}}? = nil
 -- BD-1212: the uploaded Blender sunburst (resources/ui/v2/hatch/hatch-rays-v1.png, docs/77), white on transparency, tinted per rarity
 Stage.RaysImage = "rbxassetid://101879664534811"
+-- BD-1212 reveal pieces (ChatGPT art on the owner-approved target, cut by tools/ui_piece_cut.py, docs/77 ui_hatch_reveal_*)
+Stage.Art = {ribbon = "rbxassetid://121511299885018", plate = "rbxassetid://131844292652547", new = "rbxassetid://83897608776051",
+    pedestal = "rbxassetid://120694157611008"}
 -- top-level UI that stays on the stage: the hatch's own layers, the reveal flash and the toasts
 Stage.KeepOnStage = {ModalScrim = true, HatchUiLayer = true, HatchTapCatcher = true, RevealFlash = true, Toasts = true}
 -- the rarity ladder (docs/evidence/2026-11-16-hatch-fullscreen): ray strength, veil, word size, tilt, confetti
@@ -182,7 +185,7 @@ function Stage.apply(p: Parts)
     for _, b in p.header:GetDescendants() do
         if b:IsA("GuiButton") then keep(b, "Visible", false) end
     end
-    stageParts = {shade = p.shade, panel = p.panel, body = p.body, sun = sun, glow = rays, veil = veil, reduceMotion = p.reduceMotion, restore = restore}
+    stageParts = {gui = p.gui, shade = p.shade, panel = p.panel, body = p.body, sun = sun, glow = rays, veil = veil, reduceMotion = p.reduceMotion, restore = restore}
     -- "Egg N of M": the counter HatchSequence puts in the header becomes a cream chip at the top centre of the stage
     local function chipCounter(o: Instance)
         if o.Name ~= "EggCounter" or not o:IsA("TextLabel") then return end
@@ -293,38 +296,43 @@ function Stage.reveal()
     scan()
     task.delay(.4, scan) -- the banner arrives a moment after the burst
     task.delay(1.2, scan)
+    -- BD-1212 reveal on the owner-approved target (docs/evidence/2026-11-16-hatch-fullscreen/reveal-target-chatgpt.png): a glossy ribbon banner
+    -- tinted in the rarity colour with the outlined rarity word, the dino on a glowing pedestal, a cream name plate with the colour dots and a
+    -- NEW! sticker, one big glossy NEXT where the tap goes on, a small SKIP. Pieces: ChatGPT art cut by tools/ui_piece_cut.py (docs/77).
+    local screen = s.shade.AbsoluteSize
+    local base = s.shade.AbsolutePosition
+    local function art(name: string, image: string, size: Vector2, center: Vector2, z: number, tint: Color3?): ImageLabel
+        local l = Instance.new("ImageLabel")
+        l.Name, l.BackgroundTransparency, l.Image, l.ScaleType = name, 1, image, Enum.ScaleType.Fit
+        l.AnchorPoint, l.Size, l.Position, l.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(size.X, size.Y), UDim2.fromOffset(center.X, center.Y), z
+        if tint then l.ImageColor3 = tint end
+        l.Parent = s.shade
+        table.insert(restore, function() l:Destroy() end)
+        return l
+    end
+    local function pop(o: GuiObject, delay: number)
+        if s.reduceMotion then return end
+        local sc = Instance.new("UIScale")
+        sc.Scale = 0
+        sc.Parent = o
+        task.delay(delay, function()
+            if sc.Parent then TweenService:Create(sc, TweenInfo.new(.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() end
+        end)
+    end
+    local bannerTint = if info.failed then Color3.fromRGB(200, 200, 200) elseif rank <= 1 then Color3.fromRGB(255, 205, 70) else color:Lerp(Color3.new(1, 1, 1), .12)
+    local bw = math.min(screen.X * .3, 520)
+    local banner = art("HatchStageBanner", Stage.Art.ribbon, Vector2.new(bw, bw * 167 / 444), Vector2.new(screen.X / 2, bw * 167 / 444 / 2 + 6), s.panel.ZIndex + 30, bannerTint)
+    banner.Rotation = tier.tilt * .5
     local word = Instance.new("TextLabel")
     word.Name, word.BackgroundTransparency = "HatchStageWord", 1
-    word.AnchorPoint, word.Position, word.Size = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 70), UDim2.new(1, 0, 0, tier.size + 16)
-    word.Font, word.TextSize, word.Text = Enum.Font.FredokaOne, math.floor(tier.size * 1.25), if info.failed then "OOPS!" else tier.word
-    word.TextColor3 = if rank <= 1 then Color3.fromRGB(236, 240, 243) else color
-    word.Rotation, word.ZIndex = tier.tilt, s.panel.ZIndex + 30
+    word.AnchorPoint, word.Position, word.Size = Vector2.new(.5, .5), UDim2.fromScale(.5, .4), UDim2.fromScale(.66, .5)
+    word.Font, word.TextScaled, word.Text = Enum.Font.FredokaOne, true, if info.failed then "OOPS!" else string.gsub(tier.word, "!", "")
+    word.TextColor3, word.ZIndex = Color3.new(1, 1, 1), banner.ZIndex + 1
     local outline = Instance.new("UIStroke")
-    outline.Color, outline.Thickness = Stage.Ink, 4
+    outline.Color, outline.Thickness = Stage.Ink, 5
     outline.Parent = word
-    word.Size = UDim2.new(1, 0, 0, math.floor(tier.size * 1.25) + 20)
-    outline.Thickness = 5
-    local drop = word:Clone()
-    drop.Name, drop.TextColor3, drop.ZIndex = "HatchStageWordDrop", Stage.Ink, word.ZIndex - 1
-    drop.Position = word.Position + UDim2.fromOffset(0, 6)
-    drop.Parent = s.shade
-    local shine = Instance.new("UIGradient")
-    shine.Rotation, shine.Color = 90, ColorSequence.new(Color3.new(1, 1, 1), Color3.new(.82, .82, .82))
-    shine.Parent = word
-    word.Parent = s.shade
-    table.insert(restore, function() word:Destroy() drop:Destroy() end)
-    if not s.reduceMotion then
-        TweenService:Create(word, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = word.Position + UDim2.fromOffset(0, -6)}):Play()
-        TweenService:Create(drop, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = drop.Position + UDim2.fromOffset(0, -6)}):Play()
-        local dropPop = Instance.new("UIScale")
-        dropPop.Scale = .4
-        dropPop.Parent = drop
-        TweenService:Create(dropPop, TweenInfo.new(.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        local pop = Instance.new("UIScale")
-        pop.Scale = .4
-        pop.Parent = word
-        TweenService:Create(pop, TweenInfo.new(.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-    end
+    word.Parent = banner
+    pop(banner, 0)
     -- the dino is the star: its 3D view grows by a third on the stage (more for Legendary and up), with a little overshoot
     for _, v in s.body:GetDescendants() do
         if v:IsA("ViewportFrame") and v.AbsoluteSize.X > 200 and not v:FindFirstChild("StageGrow") then
@@ -333,36 +341,133 @@ function Stage.reveal()
                 v.Position = v.Position + UDim2.new(v.Size.X.Scale / 2, v.Size.X.Offset / 2, v.Size.Y.Scale / 2, v.Size.Y.Offset / 2)
             end
             local grow = Instance.new("UIScale")
-            grow.Name, grow.Scale = "StageGrow", if s.reduceMotion then (if rank >= 5 then 1.45 else 1.3) else 1
+            grow.Name, grow.Scale = "StageGrow", if s.reduceMotion then (if rank >= 5 then 1.85 else 1.6) else 1
             grow.Parent = v
             if not s.reduceMotion then
-                TweenService:Create(grow, TweenInfo.new(.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = if rank >= 5 then 1.45 else 1.3}):Play()
+                TweenService:Create(grow, TweenInfo.new(.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = if rank >= 5 then 1.85 else 1.6}):Play()
             end
         end
     end
-    if not info.failed then
-        local row = Instance.new("Frame")
-        row.Name, row.BackgroundTransparency = "HatchStageChips", 1
-        row.AnchorPoint, row.Position, row.Size, row.ZIndex = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 244), UDim2.fromOffset(820, 46), 60
-        local list = Instance.new("UIListLayout")
-        list.FillDirection, list.HorizontalAlignment, list.Padding, list.SortOrder = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center, UDim.new(0, 8), Enum.SortOrder.LayoutOrder
-        list.Parent = row
-        local name = plain(if info.nameLabel then info.nameLabel.Text else "")
-        local detail = plain(if info.detailLabel then info.detailLabel.Text else "")
-        local odds = plain(if info.oddsLabel then info.oddsLabel.Text else "")
-        local pct = tonumber(string.match(odds, "([%d%.]+)%% of eggs") or "")
-        local chance = if pct then Stage.chanceWords(pct) else (string.match(odds, "1 in [%d,]+ eggs") or "")
-        if name ~= "" then chip(row, name, 1) end
-        if detail ~= "" then chip(row, (string.gsub(detail, " • ", " · ")), 2) end
-        if chance ~= "" then chip(row, chance, 3) end
-        for _, l in {info.nameLabel, info.oddsLabel, info.detailLabel} do if l then hold(l) end end
-        -- the old lines' plates (the rarity pill behind the odds line, the shine behind the name) go with them
-        for _, plate in {s.body:FindFirstChild("RarityPill"), s.body:FindFirstChild("NameShine")} do
-            if plate and plate:IsA("GuiObject") then hold(plate) end
+    -- the dino stands on a glowing pedestal in the rarity colour (behind the panel, so behind the dino)
+    local view = s.body:FindFirstChild("DinosaurPreview", true) :: GuiObject?
+    local vc = if view then view.AbsolutePosition + view.AbsoluteSize / 2 - base else Vector2.new(screen.X / 2, screen.Y * .48)
+    local vh = if view then view.AbsoluteSize.Y else screen.Y * .4
+    local pw = math.min(screen.X * .2, 340)
+    local pedestalY = vc.Y + vh * .6 -- under the feet (the view grows around its middle)
+    local pedestal = art("HatchStagePedestal", Stage.Art.pedestal, Vector2.new(pw, pw * 212 / 429), Vector2.new(vc.X, pedestalY), s.panel.ZIndex - 1,
+        if rank <= 1 then Color3.fromRGB(150, 225, 255) else color:Lerp(Color3.new(1, 1, 1), .35))
+    pop(pedestal, .05)
+    for _, l in {info.nameLabel, info.oddsLabel, info.detailLabel} do if l then hold(l) end end
+    for _, plate in {s.body:FindFirstChild("RarityPill"), s.body:FindFirstChild("NameShine")} do
+        if plate and plate:IsA("GuiObject") then hold(plate) end
+    end
+    -- "New pattern!" / "New colour!" ribbons become one NEW! sticker on the name plate
+    local newFind = false
+    for _, d in s.panel:GetDescendants() do
+        if d:IsA("TextLabel") and (string.find(d.Text, "New pattern", 1, true) or string.find(d.Text, "New colour", 1, true) or string.find(d.Text, "New mutation", 1, true)) then
+            newFind = true
+            local plate = d.Parent
+            hold(if plate and plate:IsA("GuiObject") and plate ~= s.panel and plate ~= s.body and plate.AbsoluteSize.X < 500 then plate else d)
         end
-        row.Parent = s.body
-        for _, d in row:GetChildren() do if d:IsA("GuiObject") then d.ZIndex = 60 end end
-        table.insert(restore, function() row:Destroy() end)
+    end
+    if not info.failed then
+        local name = plain(if info.nameLabel then info.nameLabel.Text else "")
+        local plateW = math.min(screen.X * .2, 300)
+        local plateH = plateW * 137 / 439
+        local plateC = Vector2.new(vc.X + 26, pedestalY + pw * 212 / 429 * .45 + plateH * .55)
+        local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.BackgroundTransparency, nameLabel.AnchorPoint = 1, Vector2.new(.5, .5)
+        nameLabel.Position, nameLabel.Size, nameLabel.ZIndex = UDim2.fromScale(.5, .47), UDim2.fromScale(.8, .62), plate.ZIndex + 1
+        nameLabel.Font, nameLabel.TextScaled, nameLabel.Text, nameLabel.TextColor3 = Enum.Font.FredokaOne, true, name, Stage.Ink
+        local ns = Instance.new("UIStroke")
+        ns.Color, ns.Thickness = Color3.new(1, 1, 1), 2.5
+        ns.Parent = nameLabel
+        nameLabel.Parent = plate
+        pop(plate, .12)
+        -- the egg's colours as dots left of the plate (kid-minimal: no colour or pattern words)
+        local dot = plateH * .62
+        for k, c in Stage.lastColors do
+            local d = Instance.new("Frame")
+            d.Name, d.AnchorPoint, d.ZIndex = "ColourDot" .. k, Vector2.new(.5, .5), plate.ZIndex
+            d.Size = UDim2.fromOffset(dot, dot)
+            d.Position = UDim2.fromOffset(plateC.X - plateW / 2 - dot * (#Stage.lastColors - k + .7) - 6 * (#Stage.lastColors - k), plateC.Y)
+            Chip.apply(d, c, Stage.Ink)
+            d.Parent = s.shade
+            table.insert(restore, function() d:Destroy() end)
+            pop(d, .18 + k * .05)
+        end
+        if newFind then
+            local sticker = art("HatchStageNew", Stage.Art.new, Vector2.new(plateH * 1.25, plateH * 1.17), Vector2.new(plateC.X + plateW / 2 + plateH * .25, plateC.Y - plateH * .25), plate.ZIndex + 2)
+            sticker.Rotation = 12
+            pop(sticker, .3)
+        end
+    end
+    -- one big glossy NEXT exactly where "Tap for next egg" was (a picture only: the tap goes through to the hatch's own tap catcher)
+    local nextShown = false
+    local function placeNext()
+    if stageParts ~= s then return end
+    -- SKIP is one short word, and the dino-view RESET button never covers the stage (both are rebuilt after the burst)
+    for _, b in s.gui:GetDescendants() do
+        if (b:IsA("TextButton") or b:IsA("TextLabel")) and string.upper(b.Text) == "SKIP THE REST" then b.Text = "SKIP" end
+        if b:IsA("TextButton") and (b.Name == "ResetView" or b.Text == "RESET") and b.Visible then hold(b) end
+    end
+    -- the dino is the star (target: about 40% of the screen): its view grows once it exists
+    for _, v in s.body:GetDescendants() do
+        if v:IsA("ViewportFrame") and v.Name == "DinosaurPreview" and not v:GetAttribute("StageGrown") then
+            v:SetAttribute("StageGrown", true)
+            if v.AnchorPoint == Vector2.zero then
+                v.AnchorPoint = Vector2.new(.5, .5)
+                v.Position = v.Position + UDim2.new(v.Size.X.Scale / 2, v.Size.X.Offset / 2, v.Size.Y.Scale / 2, v.Size.Y.Offset / 2)
+            end
+            -- Roblox uses only ONE UIScale per object: grow the view's own one (or add one if it has none)
+            local grow = v:FindFirstChildOfClass("UIScale")
+            if not grow then grow = Instance.new("UIScale") grow.Parent = v end
+            local target = grow.Scale * 1.6
+            if s.reduceMotion then grow.Scale = target
+            else TweenService:Create(grow, TweenInfo.new(.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target}):Play() end
+        end
+    end
+    if nextShown then return end
+    local hint = s.body:FindFirstChild("TapHint", true) :: TextLabel?
+    if hint and hint.Visible and hint.Text ~= "" then
+        nextShown = true
+        local hc = hint.AbsolutePosition + hint.AbsoluteSize / 2 - base
+        hold(hint)
+        local ok, Skin = pcall(require, Shared:WaitForChild("ToyboxSkin"))
+        local next = Instance.new("TextButton")
+        next.Name, next.Text, next.AutoButtonColor = "HatchStageNext", "NEXT", false
+        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250, 66), UDim2.fromOffset(hc.X, hc.Y)
+        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, 34, Color3.new(1, 1, 1), s.panel.ZIndex + 32
+        next.Parent = s.shade
+        next.Activated:Connect(function()
+            -- the same tap as on the egg (HatchSequence's StageTap), never the backdrop's close
+            local catcher = s.gui:FindFirstChild("HatchTapCatcher")
+            local tap = catcher and catcher:FindFirstChild("StageTap")
+            if tap and tap:IsA("BindableEvent") then tap:Fire() end
+        end)
+        if ok and Skin.ready("button") then pcall(Skin.button, next, nil) end
+        table.insert(restore, function() next:Destroy() end)
+        pop(next, .05)
+    end
+    end
+    task.spawn(function() -- the tap hint (and the rebuilt SKIP / RESET) can arrive seconds after the burst
+        for _ = 1, 16 do
+            if stageParts ~= s then return end
+            placeNext()
+            task.wait(.5)
+        end
+    end)
+    -- SKIP is short (one word)
+    for _, b in s.gui:GetDescendants() do
+        if (b:IsA("TextButton") or b:IsA("TextLabel")) and string.upper(b.Text) == "SKIP THE REST" then b.Text = "SKIP" end
+    end
+    -- the old name line's class icon (left of the name) goes with the old lines
+    if info.nameLabel then
+        local y = info.nameLabel.AbsolutePosition.Y
+        for _, d in s.body:GetChildren() do
+            if d:IsA("ImageLabel") and math.abs(d.AbsolutePosition.Y + d.AbsoluteSize.Y / 2 - (y + info.nameLabel.AbsoluteSize.Y / 2)) < 40 then hold(d) end
+        end
     end
     if tier.confetti > 0 and not s.reduceMotion then
         local colours = {Color3.fromRGB(255, 107, 107), Color3.fromRGB(79, 195, 247), Color3.fromRGB(156, 204, 101), Color3.fromRGB(255, 213, 79), Color3.fromRGB(186, 104, 200)}
@@ -404,6 +509,84 @@ function Stage.summary(p: Parts)
     word.Parent = s.shade
     table.insert(s.restore, function() word:Destroy() end)
 end
+-- BD-1212 paint beat (owner picked the ChatGPT cartoon frames 2026-11-16): two 4 x 2 flipbooks of 256 px cells cut by
+-- tools/paint_sheet_cut.py from the owner-approved sheets (docs/77 ui_hatch_paint_*). Paint layers are white and tinted with the egg's real
+-- colours; the egg layer (shell, highlights, sparkle) is drawn over them. While a flipbook plays, the old 2D buckets / streams / splashes
+-- and the 3D egg hide; the 3D egg (already painted by the v2 bake) comes back when the paint beat ends.
+Stage.Paint = {
+    pour = {egg = "rbxassetid://92069732192394", paint1 = "rbxassetid://73353455894694", frame = .09},
+    spots = {egg = "rbxassetid://81242850190606", paint1 = "rbxassetid://135360744887859", paint2 = "rbxassetid://81436669855366", frame = .09},
+}
+local paintOverlay: Frame? = nil
+Stage.lastColors = {} :: {Color3} -- the colours the paint beat used, shown as dots on the reveal
+local hiddenForPaint: {GuiObject} = {}
+local OLD_PAINT = {PaintStream1 = true, PaintStream2 = true, PaintSplash1 = true, PaintSplash2 = true} -- the 2D bucket pictures stay: they pour
+local function hideOldPaint(s: any)
+    for _, d in s.panel:GetDescendants() do
+        if d:IsA("GuiObject") and d.Visible and (OLD_PAINT[d.Name] or d.Name == "HatchEggV2" or d.Name == "PremiumHatchEgg" or string.match(d.Name, "^PaintDrop")) then
+            d.Visible = false
+            if not table.find(hiddenForPaint, d) then table.insert(hiddenForPaint, d) end
+        end
+    end
+end
+local function overlayFor(s: any): Frame
+    if paintOverlay and paintOverlay.Parent then return paintOverlay end
+    local egg = s.panel:FindFirstChild("HatchEggV2", true) :: GuiObject?
+    local base = s.shade.AbsolutePosition
+    local cx, cy, side
+    if egg then
+        cx, cy = egg.AbsolutePosition.X + egg.AbsoluteSize.X / 2 - base.X, egg.AbsolutePosition.Y + egg.AbsoluteSize.Y / 2 - base.Y
+        side = egg.AbsoluteSize.Y * 1.35
+    else
+        cx, cy = s.body.AbsolutePosition.X + s.body.AbsoluteSize.X / 2 - base.X, s.body.AbsolutePosition.Y + s.body.AbsoluteSize.Y * .38 - base.Y
+        side = s.body.AbsoluteSize.Y * .85
+    end
+    local f = Instance.new("Frame")
+    f.Name, f.BackgroundTransparency, f.AnchorPoint = "HatchStagePaint", 1, Vector2.new(.5, .5)
+    f.Position, f.Size, f.ZIndex = UDim2.fromOffset(cx, cy), UDim2.fromOffset(side, side), s.panel.ZIndex + 5
+    f.Parent = s.shade
+    paintOverlay = f
+    table.insert(s.restore, function() f:Destroy() paintOverlay = nil end)
+    return f
+end
+local function layer(parent: Frame, name: string, image: string, color: Color3?, z: number): ImageLabel
+    local l = Instance.new("ImageLabel")
+    l.Name, l.BackgroundTransparency, l.Image, l.Size, l.ZIndex = name, 1, image, UDim2.fromScale(1, 1), z
+    l.ImageRectSize = Vector2.new(256, 256)
+    if color then l.ImageColor3 = color end
+    l.Parent = parent
+    return l
+end
+-- Play one flipbook (8 frames, then hold the last). colors = {paint1, paint2?}
+function Stage.playPaint(kind: string, colors: {Color3})
+    local s = stageParts
+    if not s or not state then return end
+    local book = Stage.Paint[kind]
+    Stage.lastColors = if book.paint2 then {colors[1], colors[2] or colors[1]} else {colors[1]}
+    hideOldPaint(s)
+    local f = overlayFor(s)
+    f:ClearAllChildren()
+    local z = f.ZIndex
+    local layers = {layer(f, "Paint1", book.paint1, colors[1], z + 1)}
+    if book.paint2 then table.insert(layers, layer(f, "Paint2", book.paint2, colors[2] or colors[1], z + 2)) end
+    table.insert(layers, layer(f, "Egg", book.egg, nil, z + 3))
+    task.spawn(function()
+        for i = 0, 7 do
+            if not f.Parent then return end
+            local offset = Vector2.new((i % 4) * 256, math.floor(i / 4) * 256)
+            for _, l in layers do l.ImageRectOffset = offset end
+            hideOldPaint(s) -- the 3D egg and old splashes may be shown again by the sequence while the flipbook plays
+            task.wait(if s.reduceMotion then 0 else book.frame)
+        end
+    end)
+end
+-- The paint beat is over (rattle starts): the 3D egg comes back with its real pattern.
+function Stage.paintDone()
+    if paintOverlay then paintOverlay:Destroy() paintOverlay = nil end
+    for _, d in hiddenForPaint do if d.Parent then d.Visible = true end end
+    hiddenForPaint = {}
+end
+
 -- Next egg: back to the calm egg look (word gone, white rays, light veil).
 function Stage.nextEgg()
     local s = stageParts
@@ -419,6 +602,8 @@ function Stage.restore()
     local s = state
     state = nil
     stageParts, pending = nil, nil
+    Stage.paintDone()
+    Stage.lastColors = {}
     if not s then return end
     for _, c in s.conns do c:Disconnect() end
     for i = #s.restore, 1, -1 do s.restore[i]() end
