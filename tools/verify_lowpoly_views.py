@@ -55,7 +55,8 @@ def static_checks():
     check("LowPoly" in npc and npc.index("LowPoly") < npc.index("Visual.render("), "NPC predators must try the low-poly model before the legacy visual")
     # 4. ViewportFrame creators: dino cards use DinosaurPreview only.
     known = {"shared/DinosaurPreview.luau", "shared/ModelPreview.luau", "client/HatchEggV2.luau", "shared/PotionArt.luau",
-             "client/HatchStage.luau"}  # BD-1212: the 3D egg-shard burst (shell pieces, not a dino view)
+             "client/HatchStage.luau",  # BD-1212: the 3D egg-shard burst (shell pieces, not a dino view)
+             "client/MenusCohesion.luau"}  # BD-1237: the Food guide shows the V3 food meshes (food, not a dino view)
     makers = {p.relative_to(SRC).as_posix() for p in files("*.luau") if 'Instance.new("ViewportFrame")' in p.read_text(encoding="utf-8")}
     check(makers <= known, f"new ViewportFrame creator(s) {sorted(makers - known)}: dino views must go through Shared/DinosaurPreview (low-poly aware)")
     # 5. DinosaurPreview waits for a pending low-poly model in BOTH load branches and keeps a flat picture meanwhile.

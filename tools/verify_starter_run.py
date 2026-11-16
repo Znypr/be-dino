@@ -500,7 +500,7 @@ def check_sources(overrides=None):
     screens = src(SCREENS)
     for needle in ('tutorial = true, starter = true}', 'require(script.Parent.StarterRunClient).attach(d, Screens)',
                    'if name=="starter" then require(script.Parent.StarterRunClient).render()', 'Screens.shown = name',
-                   'button(body,"How to play",0,70,400,76,C.gold,function() open("tutorial") end)'):
+                   'button(body,"How to play",0,70,400,76,if Config.MenusCohesionEnabled==true then C.card else C.gold,function() open("tutorial") end)'):
         if needle not in screens:
             return 'SmallScreens lost: ' + needle
     rc = src(RUN_COMPLETE)

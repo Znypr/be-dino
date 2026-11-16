@@ -1053,7 +1053,9 @@ def static():
     for path in ('src/shared/OddsCopy.luau', 'src/shared/ShopOdds.luau', 'src/shared/EggOutcomeOdds.luau', 'src/shared/EggOutcomeView.luau'):
         need('SecretSpeciesConfig' not in read(path), path + ' never reads the secret module (the shop egg odds cannot mention a secret)')
     need('if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do' in boot_text(), 'the Egg Odds panel shows the free-egg line only behind the flag and a ready model, never in the upgrade odds')
-    need(boot_text().count('freeEggNotes') == 1, 'the free-egg line has exactly one UI call site')
+    guarded = 'if not upgradeOdds then for _,note in OddsCopy.freeEggNotes(Config.SecretSpeciesEnabled==true and #require(Shared.SecretSpeciesConfig).readyIds()>0) do'
+    # BD-1237: the cohesive Egg chances page (MenusCohesionEnabled) collects the same line with the same guard: every call site is that guarded one
+    need(1 <= boot_text().count('freeEggNotes') <= 2 and boot_text().count('freeEggNotes') == boot_text().count(guarded), 'every free-egg line call site is the guarded Egg Odds one')
 
     # The pure module: no Roblox APIs and no Config reads (the flag is read by the callers).
     module_text = chr(10).join(line.split('--')[0] for line in read('src/shared/SecretSpeciesConfig.luau').splitlines())  # code only, no comments
