@@ -16,6 +16,7 @@ local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local WorldSea = require(ReplicatedStorage.Shared.WorldSea)
 local WorldToon = require(ReplicatedStorage.Shared.WorldToon)
 local Veg2 = require(ReplicatedStorage.Shared.VegetationV2) -- BD-1239
+local Fill = require(ReplicatedStorage.Shared.WorldFill) -- BD-1245 / BD-1246
 local PlazaHubLayout = require(ReplicatedStorage.Shared.PlazaHubLayout)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
@@ -251,6 +252,111 @@ local function ancientColliders(made: Model?): {{number}}?
     if not entry or not made or not made.PrimaryPart then return nil end
     return ColossalRules.colliders(entry, made.PrimaryPart.Size.Y)
 end
+-- BD-1245 / BD-1246 (Config.GroundDetailEnabled / ThingsToDoEnabled, Shared/WorldFill): generated ground detail along the paths and in the open
+-- grass, and one set piece beside each spoke. One MeshPart each, fitted into its WorldFill size box, pivot bottom centre, resting on the real
+-- terrain (lowest of five rays, sunk a little). They go into WorldKit, so WorldCulling hides them by distance like the plants. Flags off = nothing.
+local fillCache: {[string]: Model} = {}
+local function fillModel(key: string): Model?
+    local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local template = if folder and Fill.ready(key) then folder:FindFirstChild(Fill.Assets[key].use or key) else nil
+    if not template or not template:IsA("MeshPart") then return nil end
+    if not fillCache[key] then
+        local want, size = Fill.Assets[key].size, template.Size
+        local mesh = template:Clone()
+        -- longest side to want[1], height at most want[2]; a mesh that came out long along Z is turned so its long side lies along local X
+        mesh.Size = size * math.min(want[1] / math.max(size.X, size.Z), want[2] / size.Y)
+        mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless, mesh.CastShadow = true, false, false, false, true, key:sub(1, 4) == "set_"
+        local turn = if size.Z > size.X * 1.15 then CFrame.Angles(0, math.pi / 2, 0) else CFrame.new()
+        mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0) * turn
+        mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0) * turn:Inverse()
+        local model = Instance.new("Model")
+        mesh.Parent = model
+        model.PrimaryPart = mesh
+        model.WorldPivot = CFrame.new()
+        model.Name = key
+        model:SetAttribute("GeneratedMesh", key)
+        fillCache[key] = model
+    end
+    return fillCache[key]:Clone()
+end
+local function signWords(model: Model)
+    local mesh = model.PrimaryPart
+    if not mesh then return end
+    local gui = Instance.new("BillboardGui")
+    gui.Name, gui.Size, gui.StudsOffset = "SignWords", UDim2.fromScale(7, 4.2), Vector3.new(0, mesh.Size.Y * .5 + 2.4, 0)
+    gui.MaxDistance, gui.LightInfluence, gui.Parent = 140, 0, mesh
+    local list = Instance.new("UIListLayout")
+    list.HorizontalAlignment, list.VerticalAlignment, list.Parent = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center, gui
+    for i, word in Fill.SignWords do
+        local label = Instance.new("TextLabel")
+        label.Size, label.BackgroundTransparency, label.Text, label.LayoutOrder = UDim2.fromScale(1, .33), 1, word, i
+        label.Font, label.TextScaled, label.TextColor3 = Enum.Font.FredokaOne, true, Color3.fromRGB(92, 60, 34)
+        local stroke = Instance.new("UIStroke") -- cream outline: reads on the sky and on the trees
+        stroke.Color, stroke.Thickness, stroke.Parent = Color3.fromRGB(255, 244, 214), 2.5, label
+        label.Parent = gui
+    end
+end
+local function worldFill(folder: Instance, placed: {any}, kitAll: any)
+    local V3 = if (Layout :: any).V3 then BiomeMap.V3 else nil
+    local ground, things = Fill.groundEnabled(Config), Fill.thingsEnabled(Config)
+    if not V3 or not (ground or things) then return end
+    local blockers = {}
+    for _, p in placed do
+        if p.layer == "groundcover" then continue end
+        local e = kitAll[p.id].extent
+        table.insert(blockers, {x = p.x, z = p.z, r = math.max(e[1], e[3]) * .5 * p.scale})
+    end
+    for _, site in V3.Landmarks do
+        local x, z = V3.polar(site.angle, site.r)
+        table.insert(blockers, {x = x, z = z, r = if site.id == "volcano" then 60 else 30})
+    end
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType, rayParams.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {workspace.Terrain}
+    local made, sets = 0, 0
+    local function put(p: any): Model?
+        local model = fillModel(p.key)
+        if not model or not model.PrimaryPart then return nil end
+        model:ScaleTo(p.scale)
+        local size = model.PrimaryPart.Size
+        local r = math.min(size.X, size.Z) * .35
+        local y = math.huge
+        for _, o in {{0, 0}, {r, 0}, {-r, 0}, {0, r}, {0, -r}} do
+            local hit = workspace:Raycast(Vector3.new(p.x + o[1], 200, p.z + o[2]), Vector3.new(0, -260, 0), rayParams)
+            y = math.min(y, if hit then hit.Position.Y else Layout.height(p.x + o[1], p.z + o[2]))
+        end
+        model:PivotTo(CFrame.new(p.x, y - size.Y * .06, p.z) * CFrame.Angles(0, p.yaw, 0))
+        model.Parent = folder
+        made += 1
+        return model
+    end
+    local detail = if ground then Fill.groundDetail(V3, blockers) else {}
+    if things then
+        for _, p in Fill.setPieceSites(V3, blockers) do
+            local model = put(p)
+            if not model or not model.PrimaryPart then continue end
+            sets += 1
+            local size = model.PrimaryPart.Size
+            if p.key == "set_signpost" then signWords(model) end
+            if p.key ~= "set_log_bridge" then
+                -- one low hidden box so dinos walk around it (named *Collider: the phone culls it like the kit colliders)
+                local w = if p.key == "set_signpost" then 1.6 else .7
+                local box = part(folder, p.key .. "Collider", Vector3.new(size.X * w * (if p.key == "set_signpost" then .3 else 1), math.min(size.Y, 4), size.Z * w * (if p.key == "set_signpost" then .3 else 1)),
+                    Vector3.zero, Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+                box.CFrame = model:GetPivot() * CFrame.new(0, math.min(size.Y, 4) / 2, 0)
+                box.Transparency = 1
+            end
+            -- the set pieces count as blockers for the ground detail
+            table.insert(blockers, {x = p.x, z = p.z, r = math.max(size.X, size.Z) * .5})
+        end
+        if ground then detail = Fill.groundDetail(V3, blockers) end
+    end
+    for i, p in detail do
+        put(p)
+        if i % 40 == 0 then task.wait() end
+    end
+    workspace:SetAttribute("WorldFillParts", made)
+    workspace:SetAttribute("WorldFillSetPieces", sets)
+end
 -- BD-049 BiomeKit dressing (world v2): sub-biome driven kit props, colossal trees (BD-473, was giants), fallen logs, a 4-12 stud Small band, clearings and ground cover.
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
@@ -276,6 +382,8 @@ local function biomeKit(parent: Instance)
     meshes = Biome.propMeshes(meshes, propEntries)
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
         extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout, props = propEntries})
+    -- BD-1245 (Config.GroundDetailEnabled): the flower patches take over the open grass, so fewer single ground cover clumps stay (fewer parts)
+    if veg2On and Fill.groundEnabled(Config) then Veg2.CoverKeep = Fill.CoverKeep end
     if veg2On then placed = Veg2.thin(placed) end -- BD-1239: fewer, fuller ground cover clumps (the other layers and the food hosts are untouched)
     local missing = 0
     local counts = {tree = 0, colossal = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
@@ -342,6 +450,7 @@ local function biomeKit(parent: Instance)
     workspace:SetAttribute("WorldKitNewProps", (function() local n = 0 for _, p in placed do if propEntries[p.id] then n += 1 end end return n end)()) -- BD-463/464: Blender plants and ground props placed
     workspace:SetAttribute("WorldKitMissing", missing)
     for layer, n in counts do workspace:SetAttribute("WorldKit_" .. layer, n) end
+    worldFill(folder, placed, kitAll)
 end
 -- BD-1210 (docs/241 W4, Config.WorldV3Enabled): one big generated landmark per zone on its WorldV3 site, resting on the terrain, facing the
 -- plaza, scaled to its height; hidden boxes collide instead of the mesh (the arch stays walkable). The volcano is the terrain itself plus a

@@ -20,6 +20,9 @@ local OUTLINE = require(Shared:WaitForChild("Config")).FoodV3Enabled == true
 local OUTLINE_SLOTS, OUTLINE_T, OUTLINE_FILL_T = 20, .05, .94
 
 local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 56, 130, .5, 1.3 -- BD-387: more and farther halos so food reads from afar
+-- BD-1246 (Config.ThingsToDoEnabled): the food clusters along the spoke paths reach 84-170 studs from the plaza centre, so the bob, spin and sparkle
+-- reach that far too (pooled BillboardGuis, no parts, no lights). Off = the numbers above.
+if require(Shared:WaitForChild("WorldFill")).thingsEnabled(require(Shared:WaitForChild("Config"))) then SLOTS, RADIUS = 72, 175 end
 local BOB, BOB_SPEED, SPIN_SPEED = .22, 1.6, .7
 local TIER_BY_NAME = {berry = "Common", fruit = "Uncommon", egg = "Rare", amber = "Epic"}
 local CREAM = Color3.fromRGB(255, 244, 200) -- warm base glow: reads on green grass, sand and rock alike
