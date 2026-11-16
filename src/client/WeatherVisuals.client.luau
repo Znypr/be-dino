@@ -63,6 +63,12 @@ local fogCap=(function():number
     if not culling or not culling.Enabled then return WL.fogCap(nil) end
     return WL.capFor(deviceClass,culling[deviceClass].radius)
 end)()
+-- BD-1220 (Config.RealSeaEnabled, Shared/WorldSea): clear weather has no classic fog on desktop and tablet; the Atmosphere gives the depth
+local seaClear:any=nil
+do
+    local Sea=require(Shared.WorldSea) local far=Sea.enabled(require(Shared.Config)) and Sea.clearFog(deviceClass)
+    if far then seaClear=table.clone(CLEAR) seaClear.fogStart,seaClear.vis=far.fogStart,far.fogEnd CLEAR=seaClear fogCap=math.max(fogCap,far.fogEnd) end
+end
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
 
 -- ---------------------------------------------------------------- weather parts (docs/153); the flash / shake / pulse the one-shots raise are shared through fx
@@ -139,7 +145,7 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Offset=lerpNum(baseAtmo.offset,look.offset,t)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,look.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,look.glare),t)
-    local fogStart,fogEnd=WL.fog(look,t,CLEAR,fogCap)
+    local fogStart,fogEnd=WL.fog(if seaClear and look==WL.Looks.clear then seaClear else look,t,CLEAR,fogCap)
     local fogColor=c3(CLEAR.fog):Lerp(c3(fog),t)
     Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)

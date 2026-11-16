@@ -206,6 +206,11 @@ return table.freeze({
     -- Client sound only: nothing is stored, sent or decided. Unheard by agents: the owner judges by ear before it ships (docs/87).
     -- false = the game sounds exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     AudioPolishEnabled = false,
+    -- BD-1220 (docs/242 benchmark gap 5, rule W9): true = with WorldV3Enabled the sea is real terrain water out to the fog (Shared/WorldSea):
+    -- a deeper floor past the beach, no 6000-stud square ocean plate, a thinner clear-day Atmosphere and clear fog that opens up while the
+    -- camera is high (desktop and tablet; phones keep their tight fog). Terrain and lighting only: no save, economy or reward change.
+    -- false = the sea exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    RealSeaEnabled = false,
     StarterRunEggs = 3, -- PROVISIONAL: eggs caught in the starter run when the "You found 3 eggs!" card shows
     StarterRunMinEggs = 3, -- PROVISIONAL: the starter run settles at least this many eggs (only when it caught one or more)
     StarterRunSafeEggs = 3, -- PROVISIONAL: never-Cracked eggs of the starter run (the normal rule is ProgressionConfig.SafeEggs = 2)
