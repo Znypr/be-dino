@@ -132,7 +132,6 @@ body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UD
 local modalVersion=0
 local updateNavigation=function() end
 local function close()
-    if Config.HatchStageEnabled then require(script.Parent.HatchStage).restore() end -- BD-1211
     autoHatching=false
     hatchCancelSerial+=1
     modalVersion+=1
@@ -247,7 +246,6 @@ local openFusion
 local rail
 local function open(name: string)
     if require(script.Parent.ModalGuard).routed(name,openFusion) then return end -- BD-1196
-    if Config.HatchStageEnabled then require(script.Parent.HatchStage).restore() end -- BD-1211: every screen but the hatch keeps its window
     local wasVisible=shade.Visible and active~=""
     modalVersion+=1
     active=name
@@ -486,7 +484,6 @@ render=function(name: string)
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount"))
             paint.setRarityColor(rarityColors[rarity])
-            if Config.HatchStageEnabled then require(script.Parent.HatchStage).prepare({rarity=rarity,color=rarityColors[rarity],failed=failed,nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel}) end -- BD-1212
             handle.supply({
                 dino=view,speciesId=id,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
@@ -508,7 +505,7 @@ render=function(name: string)
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onAbort=function() skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() skippedEntries={} end, -- BD-1019: X / tap outside / Escape mid-party: the rest stays in the queue
-            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" if Config.HatchStageEnabled then pcall(require(script.Parent.HatchStage).reveal) end end end, -- BD-1212
+            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" end end,
             onAgain=function(go) -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
                 autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
                 local character=player.Character
@@ -525,15 +522,9 @@ render=function(name: string)
                 end
             end,
         })
-        -- BD-1211: the hatch is a full stage over the world, not a window (docs/240 R7); restore() runs on the next open/close
-        if Config.HatchStageEnabled then -- a skin error must never stop a hatch: on failure the window look stays
-            local okStage,stageError=pcall(require(script.Parent.HatchStage).apply,{gui=gui,shade=shade,panel=panel,header=header,heading=heading,body=body,reduceMotion=not motion})
-            if not okStage then require(script.Parent.HatchStage).restore() warn("[Be Dino] hatch stage skipped: "..tostring(stageError)) end
-        end
         hatchState.pending={version=version,supply=supply,handle=handle}
         if hatchState.fresh then hatchState.fresh=false supply() end
     elseif SmallScreens.names[name] then SmallScreens.render(name)
-        if name=="batchSummary" and Config.HatchStageEnabled then pcall(require(script.Parent.HatchStage).summary,{gui=gui,shade=shade,panel=panel,header=header,heading=heading,body=body,reduceMotion=not motion}) end -- BD-1212
     elseif name=="results" then
         -- BD-315: a defeat is a gentle first section of THIS modal (a toast was covered by it); eggs, crystals and nests stay banked.
         local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
