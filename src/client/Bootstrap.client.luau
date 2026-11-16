@@ -486,6 +486,7 @@ render=function(name: string)
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount"))
             paint.setRarityColor(rarityColors[rarity])
+            if Config.HatchStageEnabled then require(script.Parent.HatchStage).prepare({rarity=rarity,color=rarityColors[rarity],failed=failed,nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel}) end -- BD-1212
             handle.supply({
                 dino=view,speciesId=id,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
@@ -507,7 +508,7 @@ render=function(name: string)
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onAbort=function() skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() skippedEntries={} end, -- BD-1019: X / tap outside / Escape mid-party: the rest stays in the queue
-            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" end end,
+            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else shownReason or "You hatched a dinosaur!" if Config.HatchStageEnabled then pcall(require(script.Parent.HatchStage).reveal) end end end, -- BD-1212
             onAgain=function(go) -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
                 autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
                 local character=player.Character
@@ -532,6 +533,7 @@ render=function(name: string)
         hatchState.pending={version=version,supply=supply,handle=handle}
         if hatchState.fresh then hatchState.fresh=false supply() end
     elseif SmallScreens.names[name] then SmallScreens.render(name)
+        if name=="batchSummary" and Config.HatchStageEnabled then pcall(require(script.Parent.HatchStage).summary,{gui=gui,shade=shade,panel=panel,header=header,heading=heading,body=body,reduceMotion=not motion}) end -- BD-1212
     elseif name=="results" then
         -- BD-315: a defeat is a gentle first section of THIS modal (a toast was covered by it); eggs, crystals and nests stay banked.
         local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
