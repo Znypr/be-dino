@@ -141,6 +141,16 @@ for _, st in Plaza.Stalls do
     table.insert(points, {cx, cz})
 end
 check(#Plaza.Stalls == 4 and Hub.assetId(Plaza.Sign.key) ~= nil, "four stalls and a published sign mesh")
+-- LEAD 2026-11-16 option A: in a run only POTIONS opens; the home-only stalls say the HOME line
+local homeOnly = 0
+for _, st in Plaza.Stalls do
+    local dim = Travel.dimmed(st.screen, true, "Active")
+    if dim then homeOnly += 1 end
+    check(Plaza.promptText(dim) == (if dim then Plaza.HomeLine else "Open"), "prompt words for " .. st.station)
+    check(not Travel.dimmed(st.screen, true, "Sanctuary"), "at home every stall says Open: " .. st.station)
+end
+check(homeOnly == 3 and not Travel.dimmed("potions", true, "Active"), "in a run three stalls are home-only, POTIONS opens")
+check(#Plaza.HomeLine <= Signs.BubbleLineMax and string.find(Plaza.HomeLine, "HOME", 1, true) ~= nil, "short HOME line that names the HOME button")
 check(Plaza.enabled({WorldV3Enabled = true, PlazaHubEnabled = true}) and not Plaza.enabled({PlazaHubEnabled = true}), "plaza flag needs World V3")
 if #fails > 0 then for _, f in fails do print("FAIL: " .. f) end error("world look checks failed") end
 print("World look checks passed")

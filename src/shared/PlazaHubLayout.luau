@@ -50,6 +50,16 @@ function PlazaHubLayout.place(stall: any, at: {number}, centerX: number, centerZ
     return x, z, math.atan2(outX, outZ)
 end
 
+-- LEAD decision 2026-11-16 (option A): in a run the stalls keep the rail's "At home" rule (BD-1105, docs/104 s7.7). A stall whose screen
+-- is home-only shows this short line on its prompt instead of "Open", pointing at the HOME button; a press still shows the "At home" toast.
+PlazaHubLayout.OpenWord = "Open"
+PlazaHubLayout.HomeLine = "Open at HOME"
+
+-- Prompt words for a stall right now: homeOnly = the rail would answer "At home" (HubTravelClientRules.dimmed).
+function PlazaHubLayout.promptText(homeOnly: boolean): string
+    return if homeOnly then PlazaHubLayout.HomeLine else PlazaHubLayout.OpenWord
+end
+
 -- Where the walk-up prompt sits: in front of the stall (toward the centre).
 PlazaHubLayout.PromptAt = {0, -6}
 
