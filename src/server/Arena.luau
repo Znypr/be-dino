@@ -13,6 +13,7 @@ local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
+local WorldSea = require(ReplicatedStorage.Shared.WorldSea)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
@@ -427,9 +428,13 @@ function Arena.build()
             end
             previous = point
         end
-        local ocean = part(world, "Ocean", Vector3.new(6000, 1, 6000), Vector3.new(0, V3.SeaLevel - .9, 0), Color3.fromRGB(64, 170, 206), Enum.Material.SmoothPlastic, false)
-        ocean.CanCollide, ocean.CanQuery, ocean.CanTouch, ocean.CastShadow = false, false, false, false
-        ocean.Transparency = .05
+        if WorldSea.enabled(Config) then
+            -- BD-1220: terrain water reaches the horizon (IslandTerrain), so no square ocean plate (the Atmosphere is set in Bootstrap).
+        else
+            local ocean = part(world, "Ocean", Vector3.new(6000, 1, 6000), Vector3.new(0, V3.SeaLevel - .9, 0), Color3.fromRGB(64, 170, 206), Enum.Material.SmoothPlastic, false)
+            ocean.CanCollide, ocean.CanQuery, ocean.CanTouch, ocean.CastShadow = false, false, false, false
+            ocean.Transparency = .05
+        end
     end
     for side = 1, if V3 then 0 else 4 do
         -- BiomeKit: every third legacy ring slot, as kit boulders (one MeshPart each, no 41-part legacy rock); Legacy: all.
