@@ -908,9 +908,11 @@ function Seq.play(args: Args): Handle
     end
     overlay.Activated:Connect(onTap)
     -- BD-1212: the full-screen stage's NEXT button fires this to run the same tap (HatchStage)
-    local stageTap = Instance.new("BindableEvent")
-    stageTap.Name, stageTap.Parent = "StageTap", overlay
-    stageTap.Event:Connect(onTap)
+    pcall(function() -- optional: never stops the sequence (offline mocks have no BindableEvent)
+        local stageTap = Instance.new("BindableEvent")
+        stageTap.Name, stageTap.Parent = "StageTap", overlay
+        stageTap.Event:Connect(onTap)
+    end)
     -- A tap on the dark backdrop (BD-1019): while the egg is being built it counts like a tap on the egg (as before); once the dino has been shown for
     -- ReadyGrace seconds it is the same as X. While the answer is on its way, or the egg is cracking, it does nothing (X always works).
     outsideFn = function(): boolean
