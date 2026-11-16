@@ -29,7 +29,6 @@ local lastChestReadyAt = shared.lastChestReadyAt
 local migrateLegacyNests = shared.migrateLegacyNests
 local objectives = shared.objectives
 local runStreak = shared.runStreak -- BD-1199
-local indexMilestones = shared.indexMilestones -- BD-1230
 local ownSession = shared.ownSession
 local ownsAny = shared.ownsAny
 local pendingSettlements = shared.pendingSettlements
@@ -600,7 +599,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             end
             -- BD-1230: Dino Index milestone crystals, in the SAME transaction as the hatch that reached them (exactly once: the stored list is the
             -- guard, so a repeated transform starts from the stored profile and grants nothing twice). Flag off: nothing is read or written.
-            if Config.IndexMilestonesEnabled == true then indexMilestones().applyToProfile(profileValue, Config.SpeciesOrder, ProgressionConfig.MaxCrystals) end
+            if Config.IndexMilestonesEnabled == true then ProgressionRules.applyIndexMilestones(profileValue, Config.SpeciesOrder, ProgressionConfig.MaxCrystals) end
 
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds

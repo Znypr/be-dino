@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BD-1230 (docs/242 benchmark gap 15): Dino Index milestone rewards behind Config.IndexMilestonesEnabled.
 
-Runs the REAL Shared/IndexMilestones in the pinned Luau runtime and checks: the found count is the server's ownsAny test over Config.SpeciesOrder
+Runs the REAL ProgressionRules grant (with ProgressionConfig, EggGenetics) and Shared/IndexMilestones in the pinned Luau runtime and checks: the found count is the server's ownsAny test over Config.SpeciesOrder
 (secrets never counted), the percent is floored like the Index bar, each step is granted EXACTLY ONCE (a second transform on the stored profile
 grants nothing), several steps reached at once are all paid, crystals clamp to the wallet cap, a save without a wallet or with a newer build's
 field is never touched, the stored field is additive (nothing else in the profile changes), and the kid words are short.
@@ -19,12 +19,13 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 RULES = 'src/shared/IndexMilestones.luau'
+CORE = 'src/shared/ProgressionRules.luau'
 CLIENT = 'src/client/IndexMilestoneCue.client.luau'
 EGGS = 'src/server/ProfileEggs.luau'
 REPO = 'src/server/ProfileRepository.luau'
 LIST = 'src/client/DinoIndexList.luau'
 FLAG_LINE = 'if (Config :: any).IndexMilestonesEnabled ~= true then return end'
-GRANT_LINE = 'if Config.IndexMilestonesEnabled == true then indexMilestones().applyToProfile(profileValue, Config.SpeciesOrder, ProgressionConfig.MaxCrystals) end'
+GRANT_LINE = 'if Config.IndexMilestonesEnabled == true then ProgressionRules.applyIndexMilestones(profileValue, Config.SpeciesOrder, ProgressionConfig.MaxCrystals) end'
 
 
 def read(path):
@@ -90,8 +91,15 @@ if #fails > 0 then print("FAIL " .. table.concat(fails, "; ")) else print("OK") 
 '''
 
 
-def run_rules(runner, rules_text):
-    source = 'local M = (function()\n' + rules_text + '\nend)()\n' + LUAU
+def run_rules(runner, core_text, words_text):
+    """Loads the REAL ProgressionRules (with ProgressionConfig and EggGenetics) and Shared/IndexMilestones through a tiny require shim."""
+    mods = {'ProgressionConfig': read('src/shared/ProgressionConfig.luau'), 'EggGenetics': read('src/shared/EggGenetics.luau'),
+            'ProgressionRules': core_text, 'IndexMilestones': words_text}
+    shim = ['local script = {Parent = setmetatable({}, {__index = function(_, k) return k end})}', 'local loaders = {}', 'local cache = {}',
+            'local function require(name) if cache[name] == nil then cache[name] = loaders[name]() end return cache[name] end']
+    for name, text in mods.items():
+        shim.append('loaders["%s"] = function()\n%s\nend' % (name, text.replace('--!strict', '')))
+    source = '\n'.join(shim) + '\nlocal M = require("IndexMilestones")\n' + LUAU
     with tempfile.NamedTemporaryFile('w', suffix='.luau', delete=False, encoding='utf-8') as handle:
         handle.write(source)
         path = handle.name
@@ -119,17 +127,17 @@ def guards(texts):
         transform = claim.split('store:UpdateAsync', 1)[1].split('end)\n    end)', 1)[0]
         if GRANT_LINE not in transform:
             problems.append('the grant must sit INSIDE the claimChest UpdateAsync transform (exactly once with the hatch)')
-    if eggs.count('indexMilestones()') != 1:
+    if eggs.count('applyIndexMilestones(') != 1:
         problems.append('the grant has one call site')
     if 'if Config.IndexMilestonesEnabled == true then PrivateState.set(player, "IndexMilestonesJson"' not in texts['repo']:
         problems.append('the private value is set only with the flag on')
-    if '"IndexMilestonesJson"' not in texts['core']:
+    if '"IndexMilestonesJson"' not in texts['pscore']:
         problems.append('IndexMilestonesJson must be an owner-only private value')
     client = texts['client']
     head = client.split('local Milestones = require', 1)[0]
     if FLAG_LINE not in head:
         problems.append('the toast script must return first with the flag off')
-    code = '\n'.join(line.split('--', 1)[0] for line in (client + texts['rules']).splitlines())
+    code = '\n'.join(line.split('--', 1)[0] for line in (client + texts['rules'] + texts['core'].split('BD-1230', 1)[-1]).splitlines())
     for banned in ('FireServer', 'InvokeServer', 'RemoteEvent', 'RemoteFunction', 'DataStore', 'Robux', 'MarketplaceService', 'ProductId'):
         if banned in code:
             problems.append('no remote, no store, no paid line: ' + banned)
@@ -139,13 +147,14 @@ def guards(texts):
 
 
 MUTANTS = {
-    'secrets counted': ('rules', '    for _, id in order do\n        if ownsAny(collection[id]) then n += 1 end\n    end', '    for _, entry in collection do\n        if ownsAny(entry) then n += 1 end\n    end'),
-    'granted twice': ('rules', 'if percent >= step and not done[step] then', 'if percent >= step then'),
-    'percent rounded up': ('rules', 'return math.floor(math.clamp(found, 0, total) / total * 100 + 1e-9)', 'return math.ceil(math.clamp(found, 0, total) / total * 100)'),
-    'no wallet cap': ('rules', 'wallet.crystals = math.min(maxCrystals, wallet.crystals + crystals)', 'wallet.crystals = wallet.crystals + crystals'),
-    'a newer field is overwritten': ('rules', 'if stored ~= nil and (typeof(stored) ~= "table" or #stored > M.MaxStored) then return out end', ''),
-    'the step is not stored': ('rules', '        table.insert(profile.indexMilestones, tostring(step))\n', ''),
-    'the field is created for nothing': ('rules', '    if #due == 0 then return out end\n', '    profile.indexMilestones = profile.indexMilestones or {}\n    if #due == 0 then return out end\n'),
+    'secrets counted': ('core', '        if indexOwnsAny(collection[id]) then n += 1 end', '        if indexOwnsAny(collection[id]) then n += 1 end\n    end\n    for _, entry in collection do if indexOwnsAny(entry) then n += 1 end'),
+    'granted twice': ('core', 'if percent >= step and not done[step] then', 'if percent >= step then'),
+    'percent rounded up': ('core', 'return math.floor(math.clamp(found, 0, total) / total * 100 + 1e-9)', 'return math.ceil(math.clamp(found, 0, total) / total * 100)'),
+    'no wallet cap': ('core', 'wallet.crystals = math.min(maxCrystals, wallet.crystals + crystals)', 'wallet.crystals = wallet.crystals + crystals'),
+    'a newer field is overwritten': ('core', 'if stored ~= nil and (typeof(stored) ~= "table" or #stored > Rules.IndexMilestoneMaxStored) then return out end', ''),
+    'the step is not stored': ('core', '        table.insert(profile.indexMilestones, tostring(step))\n', ''),
+    'the field is created for nothing': ('core', '    if #due == 0 then return out end\n', '    profile.indexMilestones = profile.indexMilestones or {}\n    if #due == 0 then return out end\n'),
+    'the bar hint says nothing when reached': ('rules', 'if need <= 0 then return "+" .. tostring(M.Crystals[step]) .. " soon!" end', ''),
     'the grant leaves the transaction': ('eggs', '            ' + GRANT_LINE + '\n', ''),
     'the flag is ignored by the toast': ('client', FLAG_LINE, ''),
     'the toast calls the server': ('client', 'local gui = Players', 'ReplicatedStorage.X:FireServer()\nlocal gui = Players'),
@@ -157,10 +166,10 @@ def main():
     parser.add_argument('--runner', required=True)
     parser.add_argument('--no-mutants', action='store_true')
     args = parser.parse_args()
-    texts = {'rules': read(RULES), 'client': read(CLIENT), 'eggs': read(EGGS), 'repo': read(REPO), 'list': read(LIST),
-             'core': read('src/shared/PrivateStateCore.luau'), 'config': read('src/shared/Config.luau'),
+    texts = {'rules': read(RULES), 'core': read(CORE), 'client': read(CLIENT), 'eggs': read(EGGS), 'repo': read(REPO), 'list': read(LIST),
+             'pscore': read('src/shared/PrivateStateCore.luau'), 'config': read('src/shared/Config.luau'),
              'profiles': read('tools/release_profiles.py'), 'playtest': read('tools/release_playtest.py')}
-    out = run_rules(args.runner, texts['rules'])
+    out = run_rules(args.runner, texts['core'], texts['rules'])
     problems = guards(texts)
     if out != 'OK' or problems:
         print('verify_index_milestones FAILED:', out, problems)
@@ -171,7 +180,7 @@ def main():
             assert old in texts[where], 'mutant target missing: ' + name
             mutated = dict(texts)
             mutated[where] = texts[where].replace(old, new, 1)
-            killed = (run_rules(args.runner, mutated['rules']) != 'OK') if where == 'rules' else bool(guards(mutated))
+            killed = (run_rules(args.runner, mutated['core'], mutated['rules']) != 'OK') if where in ('rules', 'core') else bool(guards(mutated))
             if not killed:
                 survived.append(name)
         if survived:

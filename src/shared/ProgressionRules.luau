@@ -379,4 +379,79 @@ function Rules.multipliers(p,species,weather,now,mutation)
     return math.min(Config.GrowthCap,growth*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
         math.min(Config.SpeedCap,speed*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
 end
+-- BD-1230 (docs/242 gap 15): Dino Index milestone rewards, used ONLY while Config.IndexMilestonesEnabled is on. The pure grant lives HERE (not in
+-- Shared/IndexMilestones) because every offline server harness already embeds ProgressionRules; Shared/IndexMilestones re-exports it with the
+-- kid words for the client. Free crystals once at 25 / 50 / 75 / 100 % of the species; stored in the ADDITIVE profile field indexMilestones.
+Rules.IndexMilestoneSteps = table.freeze({25, 50, 75, 100})
+-- PROVISIONAL (LEAD decision 2026-11-16, owner delegated 2026-10-16): about one to five normal runs' worth of crystals per step.
+Rules.IndexMilestoneCrystals = table.freeze({[25] = 50, [50] = 100, [75] = 200, [100] = 500})
+Rules.IndexMilestoneMaxStored = 8 -- structural ceiling for the stored list (4 steps today)
+
+local function indexOwnsAny(entry: any): boolean
+    if typeof(entry) ~= "table" then return false end
+    for _, key in {"base", "gold", "diamond"} do
+        if typeof(entry[key]) == "number" and entry[key] > 0 then return true end
+    end
+    return (typeof(entry.variants) == "table" and next(entry.variants) ~= nil)
+        or (typeof(entry.events) == "table" and next(entry.events) ~= nil)
+end
+
+-- How many species of `order` the collection owns.
+function Rules.indexFound(collection: any, order: {string}): number
+    if typeof(collection) ~= "table" then return 0 end
+    local n = 0
+    for _, id in order do
+        if indexOwnsAny(collection[id]) then n += 1 end
+    end
+    return n
+end
+
+-- Whole percent found (floor), the same number the Index bar shows (IndexProgress.summary).
+function Rules.indexPercent(found: number, total: number): number
+    if total <= 0 then return 0 end
+    return math.floor(math.clamp(found, 0, total) / total * 100 + 1e-9)
+end
+
+-- The steps already granted, as a set of numbers. Bad or missing input reads as none.
+function Rules.indexGranted(stored: any): {[number]: boolean}
+    local set = {}
+    if typeof(stored) ~= "table" then return set end
+    for _, value in stored do
+        local step = tonumber(value)
+        if step and Rules.IndexMilestoneCrystals[step] then set[step] = true end
+    end
+    return set
+end
+
+-- The steps reached and not granted yet, smallest first.
+function Rules.indexDue(percent: number, stored: any): {number}
+    local done, out = Rules.indexGranted(stored), {}
+    for _, step in Rules.IndexMilestoneSteps do
+        if percent >= step and not done[step] then table.insert(out, step) end
+    end
+    return out
+end
+
+-- Server, INSIDE an UpdateAsync transform after the collection changed: grants every due step exactly once (the stored list is the guard, so
+-- a repeated transform starts from the stored profile and grants nothing twice). Adds the crystals to progression.crystals (clamped to
+-- maxCrystals) and appends the step to profile.indexMilestones. Returns the granted list {{step, crystals}} (empty when nothing was due).
+function Rules.applyIndexMilestones(profile: any, order: {string}, maxCrystals: number): {{step: number, crystals: number}}
+    local out = {}
+    if typeof(profile) ~= "table" or typeof(profile.collection) ~= "table" then return out end
+    local stored = profile.indexMilestones
+    if stored ~= nil and (typeof(stored) ~= "table" or #stored > Rules.IndexMilestoneMaxStored) then return out end -- a newer build's field: never touched
+    local due = Rules.indexDue(Rules.indexPercent(Rules.indexFound(profile.collection, order), #order), stored)
+    if #due == 0 then return out end
+    local wallet = profile.progression
+    if typeof(wallet) ~= "table" or typeof(wallet.crystals) ~= "number" then return out end -- no wallet yet: nothing granted, tried again next hatch
+    profile.indexMilestones = stored or {}
+    for _, step in due do
+        local crystals = Rules.IndexMilestoneCrystals[step]
+        wallet.crystals = math.min(maxCrystals, wallet.crystals + crystals)
+        table.insert(profile.indexMilestones, tostring(step))
+        table.insert(out, {step = step, crystals = crystals})
+    end
+    return out
+end
+
 return Rules

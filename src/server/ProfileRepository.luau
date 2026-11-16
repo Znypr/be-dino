@@ -1185,7 +1185,6 @@ local shared = {
     objectiveRules = objectiveRules,
     objectives = objectives,
     runStreak = runStreak,
-    indexMilestones = function(): any return require(ReplicatedStorage.Shared.IndexMilestones) end, -- BD-1230: only called while Config.IndexMilestonesEnabled
     ownSession = ownSession,
     ownsAny = ownsAny,
     pendingSettlements = pendingSettlements,
