@@ -39,6 +39,7 @@ local oddsLevelOverride=nil
 local outcomeState={page=1,filters={}}
 local potionChoice={id="speed_common",window=0} -- BD-539: the shop window the offers were drawn from
 local pendingShop=nil
+local standardPages: any=nil -- BD-1266: ShopWindowPages once the standard window routes are registered (flag on)
 local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
     local token=Http:GenerateGUID(false)
@@ -75,7 +76,7 @@ function Shop.attach(d: any)
         if ok then Sfx.play("shop_buy") end
         notify(if ok then "Done!" else NotifyQueue.statusText(status),if ok then C.accent else C.red,{key=if ok then "ok" else "error"})
         local current=isActive() if current=="auras" or current=="potions" then body:ClearAllChildren() render(current) end
-        if Config.StandardMenuEnabled==true then require(script.Parent.ShopWindowPages).refresh() end -- BD-1266: the standard window draws the new numbers
+        if standardPages then standardPages.refresh() end -- BD-1266: the standard window draws the new numbers
     end)
     if Config.StandardMenuEnabled==true then Shop.standardRoutes() end -- BD-1266 (docs/244 s2.14): the Crystal Shop opens on the standard window
 end
@@ -84,8 +85,11 @@ end
 -- (MenuWindow + ShopWindowPages) instead of Bootstrap's window. Same remote, token and server checks (transact); the egg purchase, the egg chances and
 -- the luck upgrade pages stay Bootstrap screens and come back here. Flag off: nothing is registered.
 function Shop.standardRoutes()
-    local Guard=require(script.Parent.ModalGuard)
-    local Pages=require(script.Parent.ShopWindowPages)
+    local guardModule,pagesModule=script.Parent:FindFirstChild("ModalGuard"),script.Parent:FindFirstChild("ShopWindowPages")
+    if not guardModule or not pagesModule then return end -- a stripped client (the offline smoke mocks) keeps the old shop
+    local Guard=require(guardModule)
+    local Pages=require(pagesModule)
+    standardPages=Pages
     local PaidRandomGate=require(Shared.PaidRandomGate)
     local helpers={
         gui=function() local parts=require(script.Parent.ModalCompact).parts() return if parts then parts.gui else nil end,
