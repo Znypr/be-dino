@@ -174,7 +174,8 @@ function Menu.build(body: Instance, ctx: Context): string
         Kit = Layout.Kit
         local compact = require(script.Parent:WaitForChild("ModalCompact"))
         local rows = if currentTab == "sound" then (if soundLabAllowed() then 5 else 4) elseif currentTab == "look" then 5 elseif currentTab == "controls" then 6 else 1
-        T = Kit.settingsLayout(compact.bodyScale(), compact.bodyWidth(), compact.bodyHeight(), rows)
+        local bodyW = if (require(Shared:WaitForChild("Config")) :: any).MenusCohesionEnabled == true then compact.usableWidth() else compact.bodyWidth() -- BD-1241: clear of the scroll bar on a compact canvas
+        T = Kit.settingsLayout(compact.bodyScale(), bodyW, compact.bodyHeight(), rows)
         BTN = T.big
         local panel = Layout.panel(body :: GuiObject, "SettingsPanel", UDim2.fromOffset(T.panel.w, T.panel.h), UDim2.fromOffset(T.panel.x, T.panel.y))
         panel.Name = "SettingsPanel"

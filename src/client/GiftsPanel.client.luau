@@ -144,4 +144,25 @@ task.spawn(function()
     local u = ui
     if u then u:GetAttributeChangedSignal("Screen"):Connect(refresh) end
     refresh()
+    -- BD-1241 (docs/240 R8): with MenusCohesionEnabled the button keeps clear of the HUD pieces BeDinoUI publishes (the weather chip moves up on
+    -- short canvases and sat under Codes at 1274 x 481). Flag off: the old fixed spot.
+    if u and Config.MenusCohesionEnabled == true then
+        local Spot = require(Shared:WaitForChild("CodesButtonSpot"))
+        local function place()
+            local size = gui.AbsoluteSize
+            if size.X <= 0 or size.Y <= 0 then return end
+            local blockers = {}
+            for name, value in u:GetAttributes() do
+                if string.sub(name, -4) == "Rect" then
+                    local r = Spot.fromAttribute(value)
+                    if r then table.insert(blockers, r) end
+                end
+            end
+            local r = Spot.place({x = size.X - 128, y = 162, w = 110, h = 44}, blockers, size.X, size.Y)
+            open.Position = UDim2.fromOffset(r.x, r.y)
+        end
+        u.AttributeChanged:Connect(function(name: string) if string.sub(name, -4) == "Rect" then place() end end)
+        gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+        place()
+    end
 end)

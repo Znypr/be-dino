@@ -1,0 +1,353 @@
+# 244 Mobile benchmark on the owner's phone (BD-1258 to BD-1277), 2026-11-17
+
+Owner 2026-11-17, after playing the playtest build on a Samsung S23 Ultra: "dino shadows are really low quality, ui is really messy and all over the place. and overlapping often, tiny font sometimes". The owner asked for a comparison with famous Roblox experiences **on mobile**. Later the same evening the owner said: "use my phone instead for current famous games on phone, but prio private servers", "click everything and get a full understanding of the full UI menus, settings, shops, where ui is placed how big", and "prio steal an egg, and ps 99".
+
+This page adds the phone view to [242](242-full-benchmark-2026-11-16.md) (every aspect, desktop stills) and [235](235-top-games-benchmark.md) (retention). It does not repeat them.
+
+## Method and limits (read first)
+
+- **Be Dino (CURRENT BUILD):** the playtest build on the private newbuild place, played by the lead on the owner's phone (3088 x 1440 landscape). Four screenshots: `docs/evidence/2026-11-17-phone-real/bedino-01-loading.jpg`, `bedino-02-spawn.jpg`, `bedino-03-walk-volcano.jpg` and `bedino-04-toast-overlap.jpg` (stored at half size, 1544 x 720; all pixel numbers below are converted to 1440 px height).
+- **Top games, on the same phone (owner's account):** Steal an Egg (SAE), Pet Simulator 99 (PS99), Grow a Garden (GAG, in the owner's private server), Steal a Brainrot (SAB), Bubble Gum Simulator INFINITY (BGSI), Adopt Me! (AM). These were launched over adb with `roblox://placeId=...` (the home screen was never captured). I opened every HUD button and each menu tab and captured it with `adb exec-out screencap`. There are 60 captures, stored **local only** in `C:\Users\znypr\Documents\be-dino-reference-shots\mobile-2026-11-17\phone\`, never committed. File names are cited below (for example `sae-phone-02-hud.png`). Nothing was bought: no Robux button, Claim, Rebirth or Play-with-consent button was pressed.
+- **Before the phone, YouTube phone recordings** (stills, same local folder): GAG `7dOSBWhSctM` ("I Play Roblox Grow A Garden On MOBILE...", 2025-06-09) at t=300 and t=700; PS99 `IgPxlAGI7mA` ("Pet Simulator 99 Gameplay Walkthrough Part 3 (iOS, Android)", 2025-05-04, a real phone recording) at t=80 and t=100. Desktop-recorded or pre-2025 videos were rejected (`guOxyi6ATkA`, `TeFsGfVab6Q`, `f4KDke0NLKQ` from 2022, `7zk-oXSbBg8` from 2023).
+- **Not covered:** Adopt Me in game (its Play button accepts an updated privacy policy, so the owner has to press it), BGSI menus (a fresh profile; my walk got stuck in a tree and the phone was down to 12 % battery), walk-up shops in SAE and PS99 (blind joystick walking hit walls; a 2-minute auto-capture while the owner walked caught no walk). Covered for GAG (the seed stall, `gag-phone-04-shop-shadows.png`). **No sound was heard, and motion was not judged.**
+- **Text sizes** are cap heights read off the screenshots with a 20 px ruler, about ±10 %. From our EGGS label (TextSize 30 renders 63 px), TextSize N is about 2.1 x N px of cap height on this phone.
+
+## 1. Real-phone performance (Be Dino playtest, measured over adb by the lead)
+
+| Moment | Result |
+| --- | --- |
+| Spawn, idle | 60.8 fps |
+| Walking | 61.5 fps |
+| Walking and turning, 40 s | 60.7 fps (Roblox caps at 60) |
+| Memory (PSS) | 1.64 to 1.73 GB |
+| Battery temperature | 30.8 °C |
+
+Performance is not the problem. The look and the layout are.
+
+## 2. Topic by topic (SAE and PS99 first, owner priority)
+
+Priority: **P1** = the owner named it or a player sees it in the first minute; **P2** = within a session; **P3** = polish.
+
+### 2.1 HUD frame and safe areas
+
+| Game | What they do on the phone (source) |
+| --- | --- |
+| SAE | Left-middle: two big word buttons (Shop, Index) and a Slow Mode toggle. Right-middle: a column of 3 square icons (eggs, pets, fishing). Bottom-left: money above the joystick. Bottom-centre: a 2-slot hotbar. Bottom-right: jump, a lock button and the event timer. Top-centre: the server event line only. The middle of the screen is empty (`sae-phone-02-hud.png`). |
+| PS99 | Left: a 3-wide icon grid, then currencies, then potions beside the joystick. Right: the quest list and one big green Rewards button. Top-centre: one quest card. Bottom-centre: the pets button. The middle is empty (`ps99-phone-05-hud-clean.png`; video `IgPxlAGI7mA` t=100). The main nav (shop, index, trade, clan, settings) appears as a right-hand rail **only while the pets menu is open** (`ps99-phone-08-pets-inventory-rail.png`). |
+| GAG | Top: the Roblox bar plus settings, backpack and tools icons, then SEEDS / GARDEN / SELL word tabs top-centre. Left-middle: 4 word buttons (Shop, Trade, Pass, Guide). Bottom-left: money and Friend Boost. Bottom-centre: a 6-slot hotbar. The middle is empty (`gag-phone-07-hud-ps.png`). |
+| SAB | Left: a 2 x 3 grid of square icons with small words under them (Shop, Rebirth, Index, Duels, Trade, Codes). Bottom-left: money. Bottom-centre: a 5-slot hotbar. Top-centre: an event countdown (`sab-phone-02-hud.png`). |
+| BGSI | Top-centre: the quest card. Left-middle: 2 resource bars (bubbles, coins). Bottom-centre: a height bar. Nothing else on a fresh profile (`bgsi-phone-03-hud-onboarding.png`). |
+| **Be Dino** | Top-centre: POTIONS, the shield badge, the health bar, the SIZE bar and the hint line, all stacked **over the dino**. Top-right: two wide cream plates (crystals, weather) with one short line each. Top-left: EGGS. Bottom-centre: HOME, and Admin (owner only). Right: LEAP and CHOMP (`bedino-02`, `bedino-04`). |
+| **Gap** | Every top game gives each corner one job and keeps the middle third free. We put five things in the top centre over the character, and the right-hand plates are mostly empty space. |
+| **Fix** | **BD-1258 (P1)**: zones with numbers (the row has the full list). |
+
+### 2.2 Button sizes and spacing (px at 1440 height)
+
+| Game | Measured |
+| --- | --- |
+| SAE | Shop and Index are 290 x 112, 20 px apart. The right icons are 120 x 120, 45 px apart. |
+| PS99 | Left icons about 140 x 140. Rewards is 520 x 140. Menu X is 200 x 190 (`ps99-phone-06-free-rewards.png`). |
+| GAG | Rail buttons 335 x 145, 18 px apart. Hotbar slots 260 x 210. |
+| **Be Dino** | LEAP and CHOMP 360 x 150 (fine). HOME 450 x 150. The POTIONS row is a 140 px icon plus a word with no plate. The weather and crystal plates are 740 x 160 and 600 x 120 for one short value. |
+| **Gap** | Our sizes are fine. The waste is plates far wider than their text. |
+| **Fix** | BD-1258 (zones), BD-1259 (plates shrink to their text). |
+
+### 2.3 Font sizes and outlines (cap height at 1440 px)
+
+| Text | px | Style |
+| --- | --- | --- |
+| SAE Shop / Index | 57 | white, thick dark outline |
+| SAE money "$7.7T" | 68 | green, dark outline |
+| SAE "Slow Mode" | 33 | white, outline (their smallest) |
+| PS99 quest lines | 39 | white, dark outline |
+| PS99 currency "71.3m" | 45 | white, dark outline |
+| GAG rail words | 48 | white, outline |
+| GAG hotbar words | 36 | white on a dark plate |
+| SAB rebirth warning | about 20 | tiny (their weak spot, `sab-phone-05-rebirth-small-text.png`) |
+| GAG Guide tab words | about 20 | tiny (their weak spot, `gag-phone-13-guide-profile.png`) |
+| **Be Dino crystal count "3"** | **27** | dark on cream, no outline |
+| **Be Dino weather "Next: 1 min"** | **33** | dark on cream, no outline |
+| **Be Dino toast "You found 2 eggs!"** | **33** | dark on cream |
+| Be Dino EGGS 6 | 63 | dark on cream |
+
+**Gap:** the top games keep main HUD words at 45 to 68 px, always outlined. Small text appears only inside menus, and the owner noticed it in theirs too. Ours goes down to 27 px on the HUD itself, with no outline. **Fix: BD-1259 (P1)**: no HUD word under 40 px (about TextSize 19), counters and button words at least 50 px (TextSize 24), and a dark outline of at least 2.5 design px on every word over the world.
+
+### 2.4 Toasts and popups
+
+| Game | What they do (source) |
+| --- | --- |
+| SAE | Server news as one line of outlined text with an icon, straight under the Roblox bar, no card ("A Secret Tideler Egg spawned in Alien Planet!", `sae-phone-12`; "Skyfall is happening in Stormlands! Ends in 2:18", `sae-phone-14`). Menus: a centred modal about 57 % wide with a red X on the corner; category tabs sit **outside** the modal on its right (Featured, Stars, Speed, Money, `sae-phone-03` to `06`). The HUD stays visible. Pets and eggs open as small drawers on the right, not modals (`sae-phone-08`, `09`). |
+| PS99 | Short news as red outlined text in the middle of the world, no box ("Speed Potion II has run out!", `ps99-phone-13`). Every menu is a centred white modal about 42 % wide with a big red X, the HUD hidden, and only the currency row left at the bottom centre (`ps99-phone-04`, `06`, `07b`, `09`, `12`). Menus share one header tab strip (teleport, settings, potions and so on). Login and What's New popups come one at a time at join (`ps99-phone-03`, `04`). |
+| GAG | Modals with a blurred world behind them, the HUD rail hidden, the X small and red on the header (`gag-phone-08` to `14`). |
+| SAB | A compact modal (37 % wide), blurred world, tabs in the header; "Someone is stealing your X" as outlined text above the hotbar (`sab-phone-03`, `04`). |
+| **Be Dino** | The toast is a cream card at y 80, which lies **on the SIZE bar and the health bar** (`bedino-04`). ToastSlot's keepClear list does not contain the SIZE bar, the hint, the POTIONS row or the shield. |
+| **Gap** | Nobody puts a toast card over their HUD. They use one outlined line in a free lane. |
+| **Fix** | **BD-1260 (P1)**: one bottom-centre lane above HOME, outlined text and no card, every HUD rect in keepClear. |
+
+### 2.5 World labels
+
+| Game | What they do (source) |
+| --- | --- |
+| SAE | Pickups: a small icon chip with a number ("10T", `sae-phone-13`). Signs on the boards themselves. |
+| PS99 | Zone signs float ("Fantasy World! World 4"), and the chest label "Void Chest! Requires Key" **runs under the Roblox bar** (`ps99-phone-15`, `16`). |
+| GAG | Plant names with mutation lists **overlap the money corner** (`gag-phone-03`). |
+| **Be Dino** | "+3 Crystals" is **cut off at the right edge** (`bedino-03`). |
+| **Gap** | Overlaps happen in the top games too, but a cut-off word looks broken. |
+| **Fix** | **BD-1262 (P2)**: number plus icon only, outlined, clamped inside the safe area and off the HUD rects. |
+
+### 2.6 Character shadow
+
+| Game | What they do (source) |
+| --- | --- |
+| GAG, SAE, PS99, SAB | No blob: only the engine sun shadow, soft at phone quality (`gag-phone-04-shop-shadows.png`: the stall and the avatar cast plain sun shadows). |
+| **Be Dino** | ContactShadow stacks three translucent discs (1.00 / .72 / .46), which read as a dark disc with hard rings (`bedino-02`, `04`, owner: "really low quality"). |
+| **Studio test** 2026-11-17 | Raptor stand-ins on grass. A = today's discs: visible rings (`docs/evidence/review-2026-10-17/590`). B = no blob: no contact shadow in the test. C = **one** part with a Top Decal using the built-in `rbxasset://textures/glow.png`, tinted (12, 20, 16), Transparency 0.25: a smooth falloff with no ring (`591`, left). D = the same at 0.10: too dark (`591`, right). Engine shadows with ShadowSoftness 0.2 showed no visible sun shadow for the stand-ins in the edit capture (`592`), so engine-only cannot replace the blob here. |
+| **Fix** | **BD-1261 (P1)**: option C. One part instead of three, which is also cheaper on the phone. The texture is part of every Roblox client, so no upload and no new art. A custom Blender blob can come later if the owner wants one. |
+
+### 2.7 Camera distance
+
+| Game | Character height on screen |
+| --- | --- |
+| GAG | About 30 % (`gag-phone-02`) |
+| SAE | About 36 % (`sae-phone-02`) |
+| PS99 | About 35 %, higher camera (`ps99-phone-05`) |
+| **Be Dino** | About 32 % (`bedino-02`) |
+
+The distance is fine. The problem is the HUD covering the dino (2.1). No row.
+
+### 2.8 Screen kept free
+
+The top games leave the middle third of the screen (x 33-67 %, y 25-80 %) free of HUD. Be Dino covers its top part with SIZE, POTIONS, health, the shield and the hint, and a toast card on top of that when one shows (`bedino-04`). The fix is BD-1258 (the centre box must be empty, checked by test).
+
+### 2.9 Loading screens
+
+| Game | What they show (source) |
+| --- | --- |
+| GAG | Blurred world behind the logo, a tip line, a block bar "Loading 547/2000", then "Click Anywhere to Play" (`gag-phone-05`, `06`) |
+| PS99 | A white BIG Games splash with page dots, then straight in (`ps99-phone-01`) |
+| AM | A branded card "LOADING SAVE...", then a title card with Play (`am-phone-01`, `02`) |
+| BGSI | "Connecting to server" bar, then the title and one big PLAY (`bgsi-phone-01`, `02`) |
+| SAE, SAB | No custom loading screen (`sae-phone-01`, `sab-phone-01`) |
+| **Be Dino** | Logo, mascot, a progress plate and a tip plate. Good, but the logo's first letter reads oddly at 1440 px and the two plates touch (`bedino-01`) |
+
+**Fix: BD-1264 (P3).**
+
+### 2.10 Low-poly dino up close
+
+The faceted green dino looks rough at phone distance (`bedino-02`, `03`). This is already the biggest look gap in [242](242-full-benchmark-2026-11-16.md) row 7 and is owned by BD-1216 (V3 dinos). No new row.
+
+### 2.11 Settings (owner asked for a full UI read)
+
+| Game | Settings (source) |
+| --- | --- |
+| PS99 | A modal: Controls (Hotbar Edit, Security PIN), Main (Music and Sounds sliders, Potato Mode, Other Pets toggles), big pill toggles (`ps99-phone-09`, `10`) |
+| SAE | 4 rows: Music, SFX, View Other's Pets, View Your Pets (`sae-phone-11`) |
+| Be Dino | Settings with Help (SmallScreens): not captured on the phone today |
+
+Both top games offer a **low-graphics or hide-pets switch** for phones (PS99 Potato Mode, SAE View Other's Pets). Our Effects setting (Full / Lite / Off) is the same idea, so no gap.
+
+### 2.12 The owner's standard: the Steal an Egg shop with Passes open (OWNER TARGET)
+
+The owner sent a screenshot from their own phone, the Steal an Egg shop scrolled to PASSES. It is stored local only as `be-dino-reference-shots/mobile-2026-11-17/owner-phone-current-1.png` (the same screen as `sae-phone-03` to `06`). The owner's words: "really clean nice colors, easy to read, minimal. especially the passes and sub menus like featured or the shop or counters timers should be in our game similar". **This is now the standard for layout, size and look on the phone.**
+
+Measured on the owner's screenshot (3088 x 1440). "% h" is the share of the screen height. "Design px" assumes the phone canvas is about 480 design px tall, so 1 % h is about 4.8 design px. Use Scale values (% h) in Toybox and `Chip.apply`, never fixed px, so the look is the same on every phone.
+
+| Piece | Theirs, measured | % h | Our kit target |
+| --- | --- | --- | --- |
+| Window | Centred, 1780 x 963 px, top edge at 22 % h | width 58 % of the **screen width**, height 67 % h | Every menu: width 58 % of the screen width (min 540, max 1100 design px), height 67 % h, centred 3 % h below the middle |
+| Title bar | Bright diagonal stripes, 150 px tall | 10.4 % h | 10 % h, the screen's colour, stripes in the art |
+| Title word | "Shop", white, black outline, 65 px cap | 4.5 % h | 4.5 % h, outline 2.5 design px |
+| Close X | Red square with a white X, 115 x 118 px, top-right inside the title bar | 8.2 % h | 8 % h red square, inside the title bar, on the right |
+| Body | Dark studded pattern panel | - | Dark patterned body (Toybox skin "dark"), cards stand out on it |
+| Section header | "-- PASSES --", yellow or pink, black outline, 55 px cap | 3.8 % h | 3.8 % h, coloured fill, black outline, dashes on both sides |
+| Card grid | 2 columns, gap 55 px | gap 3.8 % h | 2 columns on the phone (3 on desktop), gap 3.5 % h |
+| Card | 805 x 400 px, bright gradient | 28 % h tall | 28 % h tall, gradient by rarity or theme |
+| Card icon | Big 3D icon on the left, about 190 x 225 px | 15.6 % h | 15 % h, left third of the card |
+| Card title | "x2 Growth", white, outlined, 50 px cap | 3.5 % h | 3.5 % h, outlined |
+| Card line | One line, highlight word in green ("x2"), 45 px | 3.1 % h | ONE line, 3.1 % h, highlight word coloured |
+| Price button | Green, 568 x 95 px, price 45 px | 6.6 % h | 6.6 % h, green, **crystal icon + number** (never R$) |
+| Gift button | Small purple square beside the price | 6.6 % h | Leave out: no gifting on our paid lines (they stay off) |
+| Side category tabs | Right of the window, OUTSIDE it: a 3D icon about 138 px plus an outlined word about 33 px (Featured, Stars, Speed, Money), no plate | icon 9.6 % h, word 2.3 % h | Icon 9.5 % h, word **3 % h** (raised to the 40 px floor of BD-1259), outlined, no plate, 1.5 % h between items |
+| Small square tiles | 120 x 120 px coloured squares (egg, paw) | 8.3 % h | Our right-hand column (BD-1258): 8.5 % h squares |
+| Left HUD button | "Shop": red, icon plus word, 385 x 128 px, word 60 px cap | 8.9 % h, word 4.2 % h | Left rail word buttons 9 % h tall, word 4.2 % h, outlined, each its own colour |
+| Counters | Bottom-left, an icon (112 px) plus a huge bold italic number, 60 to 68 px cap, coloured fill (money green), thick black stroke, **no box** | number 4.4 % h | Crystals and eggs: icon 7.5 % h plus the number at 4.4 % h, italic, coloured fill (crystals amber, eggs cream), black stroke 3 design px, no plate |
+| Timer | Bottom-right, an icon plus "in 32s", same style, 45 px cap | 3.1 % h | Weather: icon plus "in 3 min" at 3.2 % h, same style, bottom-right above jump |
+
+Everything has a thick black outline. Titles are 4.5 % h, labels 3.1 to 3.8 % h, and nothing on the HUD is under 3 % h. That matches the BD-1259 floor (40 px at 1440 = 2.8 % h).
+
+**Do not copy:** the "x32 Speed ONLY 48 R$" promo button, Robux prices, pass lines bought with Robux, crossed-out prices and pay-to-skip offers. Our paid lines stay off (docs/43), so every price is in crystals.
+
+**How our screens map onto it:**
+
+| Our screen (`docs/evidence/2026-11-15-cohesion/current/`) | Today | Becomes |
+| --- | --- | --- |
+| Crystal Shop (`shop.jpg`) | A cream window about 44 % wide; tabs are small cream pills inside (Auras, Trails, Eggs, Crystals); 3 cards per row; small titles with no outline | The standard window. Tabs move to the right side as 3D icons with words: **Featured**, Auras, Trails, Eggs. Section headers ("-- AURAS --"). 2 cards per row on the phone, crystal prices on green buttons |
+| Potion Shop (`potions.jpg`) | 6 small cards in 3 columns with tiny text | The standard window, side tabs (Potions, Your potions), cards with "Speed +20%" as the one highlighted line |
+| Eggs (`eggs.jpg`) | A cream window with 5 small nest boxes | The standard window. Nests as cards with a timer in the counter style ("in 3 min") |
+| Index tabs (`index.jpg`) | Full-screen, tabs across the top (Dinos, Patterns, Colours) | The standard window; Dinos / Patterns / Colours as side tabs on the right |
+| Wallet and crystal counter (plates top-right today) | A cream plate 600 px wide for one digit | The counter style, bottom-left, no plate |
+| EGGS plate (top-left) | A cream plate | The counter style, under the crystal counter |
+| Weather chip (top-right) | A cream plate 740 px wide, "Next: 1 min" at 33 px | The timer style, bottom-right, "in 1 min" |
+| HUD buttons (HOME, rail) | HOME bottom-centre; the rail inside the menus | Left rail word buttons (Home, Shop, Dinos, Eggs, Potions) in the standard size |
+
+**Featured tab idea (Crystal Shop):** the first side tab and the page the shop opens on. One big card for this week's new thing (a new aura, trail or egg), with its odds row in kid words for eggs, a crystal price, and "3 days left" in the timer style. Under it, "-- NEW --" with 2 more cards. Rules: crystals only, no crossed-out "worth" prices, no countdown pressure beyond the plain "days left", and it rotates from content we already have (no Robux line). The row is BD-1270.
+
+### 2.13 More owner references from the same game: HUD, item cards, stations, Fusion, Index, backpack (OWNER TARGET)
+
+The owner sent ten more phone screenshots of Steal an Egg (local only, `be-dino-reference-shots/mobile-2026-11-17/owner-phone-current-3.png` to `-12.png`, eleven references with section 2.12; shot 2 was a Roblox payment prompt and was deleted unused). Sizes below are measured at 3088 x 1440: "% w" is the share of the screen width, "% h" the share of the height.
+
+**HUD (ref 3; refs 5 and 6 show the same HUD).**
+
+| Piece | Theirs | Our rule |
+| --- | --- | --- |
+| Event banner | Top-centre, right next to the Roblox bar. An icon, one line ("Skyfall is happening in Stormlands!", about 2.5 % h), and a timer line under it ("Ends In: 4:26", about 1.7 % h), on a faint see-through strip, not a plate | **Our weather card becomes this** (BD-1271): icon plus "Rain is here!" at 3 % h, timer line "3 min left" at 2.8 % h (their timer is too small for our 40 px floor), faint strip at 35 % opacity, no plate. Kid words only: "3 min left", never "2:59" or "4m 26s" |
+| Left | EXACTLY two big rectangular word buttons (green Shop, cyan Index), stacked, plus one small toggle with a label | Two word buttons: **Shop** and **Dinos** (BD-1269). Everything else goes in the right column |
+| Right | A column of small square colour tiles (egg, paw, orb), 8.3 % h each | Right column squares: Eggs, Fusion, Potions, then the gear (BD-1258) |
+| Bottom-left | Two lines, each an icon plus a huge italic outlined number (speed, money) | Crystals and eggs (BD-1268) |
+| Bottom-right | Timers in the same style ("Skyfall ends in 4m 26s", "in 4m 16s") | Weather "3 min left" and potion timers in the same style, kid words (BD-1268) |
+| Bottom-centre | A 2-slot hotbar of dark see-through squares | LEAP and CHOMP as 2 dark see-through squares (BD-1258) |
+| Middle | Empty | Empty (BD-1258) |
+
+**World stations (refs 3, 5, 6).**
+
+| Piece | Theirs | Our rule (BD-1272) |
+| --- | --- | --- |
+| Station word | ONE big floating word per station in its own colour with a thick dark outline, no plate: red "SELL", yellow "CRYSTAL EGG", yellow "TRAILS SHOP" (about 7 % h tall at mid distance) | One word per plaza station in its own colour: EGGS yellow, POTIONS green, SHOP blue, DINOS orange, FUSION cyan. A 3D SurfaceGui sign or a BillboardGui with a size in studs, so it shrinks with distance |
+| Progress under the word | "Fuse Machine" in cyan, then "0/3" under it | "FUSION" plus "2/6"; nests "1/5 ready"; Index "12/22" |
+| Ground ring | A glowing ring on the ground in the station's colour marks where to stand (yellow at the egg, cyan at sell) | The same, in the station colour, a Neon flat ring with a slow pulse (Reduce Motion: no pulse) |
+| Free marker | A green "FREE!" label over a reward chest | Only for real free rewards (daily gift, Index milestone) |
+| Prompt | Roblox's own ProximityPrompt used plainly: round tap button, hand icon, small grey object name, bold action word ("Fuse Pets"). No custom plate | Every station uses the plain ProximityPrompt (ObjectText = station, ActionText = verb: "Open", "Fuse", "Hatch") |
+| **Don't copy** | Up close, the floating "Fuse Machine" word overlaps the event banner (ref 6) | World words fade out when their screen rect touches the top lane or any HUD rect (BD-1262) |
+
+**Item card window (ref 4, "Trail Shop") = the template for the Potion Shop, Crystal Shop items, Eggs and auras/trails.**
+
+| Piece | Theirs | Our rule (BD-1266, added) |
+| --- | --- | --- |
+| Window | Centred, 43 % w x 56 % h. Striped title bar in that shop's colour (purple), title on the left, red X | Item windows 43 % w (the 58 % window of s2.12 is for long shops with sections). Title bar in the shop's colour |
+| Background | The world is blurred while it is open | A BlurEffect (Size 12) on the camera while any window is open, removed on close |
+| HUD | Stays visible around the window (counters, side buttons, event banner) | The window never covers the HUD corners; the HUD stays |
+| Cards | 3 tall cards in a row, 44 % h tall, each ONE solid saturated colour by rarity (gold Legendary, red Mythic, purple Cosmic with a galaxy texture). Name bold and outlined, rarity word small under it. A big 3D render fills the card. A dark strip with the effect, the number in green ("x4 Speed"). A full-width green "Equip" button | Card colour = our rarity colour from docs/114 s5: Common #808E9E, Uncommon #5DED1F, Rare #2ECEFF, Epic #C256FF, Legendary #FFD22B, Mythic #F73930 (Mythic may carry a texture made in Blender). The render is a ViewportFrame of the real model, or a Blender render; never code-drawn. Effect strip: "Speed +20%" with the number green, 3.1 % h. Button full width, 5 % h: "Buy" with the crystal price, or "Equip" / "Use" when owned |
+
+**Fusion screen (ref 7, "Fuse Machine") = the template for our Fusion (6 of a dino make a Gold one).** Ours fails R8 in the cohesion matrix today (`docs/evidence/2026-11-16-screens-cohesion/cohesion-matrix.md`).
+
+| Piece | Theirs | Our rule (BD-1273) |
+| --- | --- | --- |
+| Frame | The same striped frame and red X, 35 % w x 62 % h | The standard frame, Fusion colour (cyan) |
+| Rule text | Two lines. Big: "Bring 3 same Pets to Fuse", the number in red. Green italic: "Better pets give more Luck" | "Bring 6 of the same dino", the 6 in red; green line: "Get a GOLD dino!" |
+| Slots | 3 slots labelled "Empty", each with a big green + button | 6 slots (2 rows of 3), each "Empty" plus a green +, or the dino's render once picked |
+| Result | Pipes lead down into a black SILHOUETTE of the result | Pipes into a gold-rimmed black silhouette of the Gold dino; it fills in when all 6 are in |
+| Progress button | Full width, green, shows what is left ("3 Pet Left") until ready | "3 dinos left", then "FUSE!" when ready |
+| Helper card | A small picture card next to the window: 3 small pets ≈ 1 big pet, with "OK!". Teaching by picture, almost no words | Picture card: 6 small dinos = 1 gold dino, "OK!", shown the first 2 times |
+
+**Index (refs 8 and 9, "Pet Index") = the template for our Dino Index.**
+
+| Piece | Theirs | Our rule (BD-1274) |
+| --- | --- | --- |
+| Frame | Cyan striped title bar, red X, 49 % w x 60 % h. Tabs OUTSIDE on the right as big coloured buttons ("World" blue, "Limited" gold, 7 % h tall) | The standard frame. Outside tabs on the right: **Dinos**, Patterns, Colours. The active tab is bright, the others darker |
+| Pages | One zone per page with a tall zone picture card on the left ("Desert"); on the Limited tab, one page per egg with its own painted card ("Crystal Egg") | One page per World V3 zone (meadow, forest, pine, beach, volcano) or per egg type, with a painted zone or egg card on the left (Blender or owner art) |
+| Grid | 4 x 2 square tiles, each coloured by rarity. Unfound: a black silhouette with "???". Found: the real render and the name | 4 x 2 tiles in our rarity colours; unfound = silhouette + "???" (BD-1230 has the silhouettes); found = ViewportFrame render + name |
+| Progress | A per-page bar under the grid ("2/8") and an overall bar with a book icon ("Unlocked: 52/134") | "2/8" per page, "Found 12/22" overall with the book icon |
+| Side panel | The selected pet as a big render, name, rarity, income ("$1/s" in green). Under it a Rewards box with icons and amounts and a button. Unfound selection: silhouette on a rarity-coloured background, "???" for the name and income | Selected dino: render, name, rarity, "Growth +15%" in green; unfound = silhouette on its rarity colour with "???" |
+| Claim states | "CLAIM!" bright when ready, "CLAIMED!" greyed when done | BD-1230 milestone crystals: "CLAIM!" bright green when ready, "CLAIMED!" grey when done, the reward icons with amounts above the button |
+
+**Backpack (ref 10) = the template for our dino collection on Home.**
+
+| Piece | Theirs | Our rule (BD-1275) |
+| --- | --- | --- |
+| Panel | A see-through dark panel right above the hotbar, 37 % w x 43 % h, not a framed window: the world stays visible | The same position and size, but more solid: background at 15 % transparency, not about 50 % |
+| Tabs | A vertical tab column on the left with icon plus word (Pets / Eggs / Gear); the active tab has a white outline | Dinos / Eggs / Potions, the active one outlined white |
+| Header | "All Items", a count ("Pets: 31/250"), a search box top-right | "My dinos", "Dinos: 31/250", search |
+| Grid | 5 columns of tiles: a 3D render with the name and a stat under it ("(1,039Kg)"), the name coloured by rarity | 5 columns, a render per tile, the name in its rarity colour, size or growth under it in kid words |
+| Hotbar | Grows to 5 slots while it is open | Not needed: we have no tools |
+| **Don't copy** | So see-through that world text ("Fuse Machine", "0/3") shows through and is hard to read | Hide world words behind the panel (BD-1262 fade) and use the more solid background |
+
+**Backpack Eggs tab (ref 11).** The same panel on the Eggs tab: the count line changes per tab ("Eggs: 12/115"), egg renders fill the same 5-column grid, and egg names are coloured by rarity (common names stay white). Ours gets an Eggs tab with our egg renders and names in our rarity colours (added to BD-1275).
+
+**Settings (ref 12) = the template for our Settings.**
+
+| Piece | Theirs | Our rule (BD-1277) |
+| --- | --- | --- |
+| Frame | Grey-white striped title bar and red X, 34 % w x 68 % h | The standard frame in grey |
+| Rows | Full-width dark rows about 10 % h tall: a big bold title with a small subtitle ("Music / Background Music!", the subtitle about 1.6 % h) and ONE control on the right | Rows 10 % h, title 3.2 % h, subtitle 2.8 % h (raised to our floor) |
+| Controls | Volume: a thick yellow bar with a square knob. On/off: a red or green block with a big "OFF" / "ON" word beside it | Sliders 4 % h with a 6 % h square knob; ON/OFF blocks 5 % h with the word at 3 % h |
+| Our rows | Music, SFX, View Other's Pets, View Your Pets | Music (AudioPolish music group), Sounds (Sfx group), Reduce Motion, Show other dinos, Effects (Full / Lite / Off), Help |
+
+### 2.14 Be Dino phone UI kit (the one spec all the rows build on)
+
+Everything is a **Scale value**: "% h" is the share of the screen height (the phone canvas is about 480 design px tall, so 1 % h ≈ 4.8 design px ≈ 14 px at 1440). Widths of windows are a share of the screen width ("% w"). The kit lives in Toybox (`ToyboxKit`, `ToyboxSkin`, `ToyboxLayout`) and `ChipStyle` (`Chip.apply`). The handbook floors still apply: text ≥ 14 design px, targets ≥ 44 design px, contrast ≥ 4.5:1, kid words (docs/72).
+
+**1. Text.** Font FredokaOne. Every word over the world or on a coloured plate has a black UIStroke (2.5 design px for words, 3 for counters).
+
+| Use | Cap height | About TextSize on this phone |
+| --- | --- | --- |
+| Window title | 4.5 % h | 30 |
+| Section header "-- NAME --" | 3.8 % h | 26 |
+| Card title, button word, counter number | 3.5 to 4.4 % h | 24 to 30 |
+| Line text, timer, tab word | 3 to 3.2 % h | 20 to 22 |
+| Smallest allowed (subtitles, rarity word) | 2.8 % h | 19 |
+
+**2. Window colour map** (title bar stripes and the side-tab glow; the body is always the dark patterned panel).
+
+| Window | Colour | Width x height |
+| --- | --- | --- |
+| Crystal Shop (long, with sections) | Green #5DED1F | 58 % w x 67 % h |
+| Potion Shop, auras, trails (item cards) | Purple #C256FF | 43 % w x 56 % h |
+| Eggs (nests) | Yellow #FFD22B | 43 % w x 56 % h |
+| Fusion | Cyan #2ECEFF | 35 % w x 62 % h |
+| Dino Index | Cyan #2ECEFF | 49 % w x 60 % h |
+| Settings | Grey #808E9E | 34 % w x 68 % h |
+| My dinos (panel, not a window) | Dark, 15 % transparent | 37 % w x 43 % h, above the bottom bar |
+
+Shared by every window: title bar 10 % h with the title on the left; a red square X 8 % h inside the bar on the right; centred 3 % h below the middle; the world blurred (BlurEffect Size 12) while it is open; the HUD corners stay visible around it.
+
+**3. Tabs.** Outside the window on the right, as a column. Two styles:
+- *Category tabs* (shops): a 3D icon 9.5 % h with an outlined word under it at 3 % h, no plate, 1.5 % h apart. The active one bounces and glows in the window colour.
+- *Page tabs* (Index, Settings pages): coloured rectangles 7 % h tall with the word at 3 % h. The active one is bright and the others are darkened 40 %.
+- Inside a panel (My dinos): a vertical column on the panel's left with an icon and a word; the active tab gets a white outline.
+
+**4. Card types.**
+
+| Card | Size | Content |
+| --- | --- | --- |
+| Pass / offer card (Crystal Shop sections) | 28 % h tall, 2 per row | A bright gradient, a 15 % h icon on the left, a title at 3.5 % h, ONE line at 3.1 % h with the key word coloured, a green price button 6.6 % h with the crystal icon |
+| Item card (potions, auras, trails, eggs) | 44 % h tall, 3 per row | One solid rarity colour, the name with the rarity word under it, a big render (ViewportFrame or Blender), a dark effect strip with the number green, a full-width button 5 % h (crystal price, or Equip / Use) |
+| Index tile | Square, 4 x 2 grid | The rarity colour; found = render + name, unfound = black silhouette + "???" |
+| Collection tile | Square, 5 columns | A render, the name in its rarity colour (Common white), a stat in kid words under it |
+| Settings row | Full width, 10 % h | A title and subtitle on the left, one control on the right |
+
+Rarity colours (docs/114 s5): Common #808E9E, Uncommon #5DED1F, Rare #2ECEFF, Epic #C256FF, Legendary #FFD22B, Mythic #F73930.
+
+**5. Counters and timers.** No plates. An icon (7.5 % h for counters, 6 % h for timers) plus a bold italic number at 4.4 % h (counters) or 3.2 % h (timers), a coloured fill (crystals amber, eggs cream, time white) and a black 3 px stroke. Counters go bottom-left above the joystick (crystals, then eggs). Timers go bottom-right above jump (weather, potions). Timers use kid words: "3 min left", "in 30 sec", never "2:59" or "4m 26s".
+
+**6. HUD zones** (BD-1258): the top-centre is the event banner only; the left holds two word buttons (Shop, Dinos), each 9 % h with the word at 4.2 % h; the right side column is squares of 8.5 % h, 1.5 % h apart (Eggs, Fusion, Potions, gear); bottom-left counters; bottom-right timers and jump; bottom-centre LEAP and CHOMP as dark see-through squares; one toast lane above them; the middle box (x 33-67 %, y 25-80 %) stays empty.
+
+**7. World labels** (BD-1262, BD-1272): one word per station in its own colour (EGGS yellow, POTIONS green, SHOP blue, DINOS orange, FUSION cyan), sized in studs, 3 px dark outline, no plate. A fraction can go under it ("2/6"). A Neon ring on the ground in the same colour marks where to stand. Prompts are Roblox's plain ProximityPrompt. Pickup labels are a number plus an icon. Every world word fades when it would touch a HUD rect, the banner lane or an open panel, and it is clamped inside the safe area.
+
+## 3. Ranked rows (added 2026-11-17, Backlog)
+
+| Rank | Row | Pri | What |
+| --- | --- | --- | --- |
+| 1 | BD-1258 | P1 | Phone HUD zones: one job per corner, the centre box empty, health inside the SIZE plate |
+| 2 | BD-1266 | P1 | Owner standard menu window (Steal an Egg shop look): 58 % width x 67 % h, striped title bar, red X, dark body, section headers, 2-column cards |
+| 3 | BD-1268 | P1 | Counters and timers without plates: icon + big bold italic outlined number (crystals and eggs bottom-left, weather bottom-right) |
+| 4 | BD-1259 | P1 | Text floor 40 px (TextSize 19), counters 50 px, outlines on every HUD word |
+| 5 | BD-1260 | P1 | One toast lane bottom-centre above HOME, outlined line, no card, every HUD rect kept clear |
+| 6 | BD-1261 | P1 | Soft blob shadow: one glow.png decal instead of three discs (Studio-tested) |
+| 7 | BD-1267 | P1 | Side category tabs outside the window: 3D icon + outlined word, no plate |
+| 8 | BD-1269 | P1 | Left rail word buttons in the owner standard size (Shop-button look) |
+| 9 | BD-1271 | P1 | Weather card becomes the top-centre event banner (icon, one line, short timer, faint strip) |
+| 10 | BD-1272 | P1 | Station words + ground rings + plain ProximityPrompt + progress fraction |
+| 11 | BD-1273 | P1 | Fusion screen: 6 slots, Gold silhouette, progress button, picture helper |
+| 12 | BD-1274 | P1 | Dino Index: zone pages, rarity tiles with silhouettes, side panel, CLAIM / CLAIMED |
+| 13 | BD-1262 | P2 | World labels short, outlined, clamped to the safe area |
+| 14 | BD-1270 | P2 | Crystal Shop "Featured" tab, crystals only |
+| 15 | BD-1275 | P2 | My dinos panel above the bottom bar (tabs, count, search, 5-column renders, more solid) |
+| 16 | BD-1277 | P2 | Settings in the owner standard: rows with title + subtitle, yellow sliders, ON/OFF blocks, Reduce Motion and Show other dinos |
+| 17 | BD-1263 | P2 | `tools/phone_capture.py`: adb burst, tap and sheet with the Roblox-in-front and lock-screen guard |
+| 18 | BD-1264 | P3 | Loading screen polish (logo letter, plate gap, number on the bar) |
+
+## 4. Rules learned for phone captures
+
+- Capture only when `mCurrentFocus` is `com.roblox.client` **and** no keyguard is showing. One capture caught the lock screen before the second check existed. It was deleted and never shared.
+- When the owner is on the phone at the same time, wait. A two-device join causes Error 273 (`Same account launched experience from different device`).
+- Never press a button that buys, claims, rebirths or accepts terms in someone else's game.

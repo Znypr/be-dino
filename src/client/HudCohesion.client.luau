@@ -171,6 +171,25 @@ local function home(button: Instance)
     end)
 end
 
+-- R1/R2 (BD-1241 emulator pass 2026-11-17): the home menu rail (DINOS, EGGS, FUSION, SHOP, POTIONS) was the last dark navy plate on the
+-- home HUD; it becomes a cream plate and its words dark ink like the other plates (the gold active-tab bar and the red dot stay).
+local function rail(frame: Frame)
+    plate(frame, Kit.PanelCorner)
+    for _, item in frame:GetDescendants() do
+        if item:IsA("TextLabel") and item.Name == "TextLabel" and item.Parent and item.Parent:IsA("TextButton") then ink(item) end
+    end
+end
+local function findRail(): Frame?
+    for _, child in gui:GetChildren() do
+        if child:IsA("Frame") then
+            for _, button in child:GetChildren() do
+                if button:IsA("TextButton") and button:FindFirstChild("Art_dinos") then return child end
+            end
+        end
+    end
+    return nil
+end
+
 local function startsWith(text: string, prefix: string): boolean return string.sub(text, 1, #prefix) == prefix end
 
 -- One pass over the HUD; every piece is styled once, the pass repeats until all are found (Bootstrap builds them in steps).
@@ -194,6 +213,7 @@ local function pass(): boolean
     all = once(gui:FindFirstChild("EggsPlate", true), eggs) and all
     local homeButton = gui:FindFirstChild("HomeButton")
     all = once(homeButton, home) and all
+    all = once(findRail(), rail) and all
     local bite = gui:FindFirstChild("BiteButton", true)
     if bite then badge(bite) end
     local leapFound = false

@@ -27,6 +27,35 @@ local Chip = require(Shared:WaitForChild("ChipStyle"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
 
 local Bubble = {}
+
+-- BD-1241 (emulator pass 2026-11-17, docs/240 R1-R3): with Config.MenusCohesionEnabled the bubble is a cream plate with ink words and ONE green
+-- action (it was the last dark navy plate with a gold title and a yellow button). Colours only: size, place and behaviour stay the same.
+local function cohesion(): boolean
+    local ok, config = pcall(function() return require(Shared:WaitForChild("Config")) :: any end)
+    return ok and type(config) == "table" and config.MenusCohesionEnabled == true
+end
+local function restyle(button: TextButton)
+    local Kit = require(Shared:WaitForChild("ToyboxKit"))
+    local cream = Color3.fromRGB(Kit.Tone.panel[1], Kit.Tone.panel[2], Kit.Tone.panel[3])
+    local ink = Color3.fromRGB(Kit.Tone.value[1], Kit.Tone.value[2], Kit.Tone.value[3])
+    Chip.apply(button, cream, Theme.Colors.outline)
+    for _, name in {"Title", "Line"} do
+        local l = button:FindFirstChild(name)
+        if l and l:IsA("TextLabel") then l.TextColor3, l.TextStrokeTransparency = ink, 1 end
+    end
+    local action = button:FindFirstChild("Action")
+    if action and action:IsA("Frame") then
+        Chip.apply(action, Theme.Colors.accent, nil)
+        local key = action:FindFirstChild("Key")
+        if key and key:IsA("Frame") then Chip.apply(key, cream, Theme.Colors.outline, true) end
+        local letter = key and key:FindFirstChild("Letter")
+        if letter and letter:IsA("TextLabel") then letter.TextColor3 = ink end
+        local words = action:FindFirstChild("Words")
+        if words and words:IsA("TextLabel") then
+            words.TextColor3, words.TextStrokeColor3, words.TextStrokeTransparency = Color3.new(1, 1, 1), Theme.Colors.outline, 0
+        end
+    end
+end
 local ACTION = "HubPromptBubbleKey"
 local TICK = 0.2 -- seconds between two looks at the player's distance and the open windows
 local LIFT = 3.5 -- studs above the prompt anchor (the stall sign)
@@ -179,6 +208,7 @@ function Bubble.attach(ctx: any): any
         open.Font, open.TextColor3, open.TextSize = Enum.Font.FredokaOne, Theme.Colors.outline, layout.buttonSize
         open.Parent = action
 
+        if cohesion() then restyle(button) end
         button.Activated:Connect(function()
             press(prompt)
         end)

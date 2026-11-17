@@ -61,7 +61,7 @@ function Screens.render(name: string)
             local compact=require(script.Parent.ModalCompact)
             require(script.Parent.DinoIndexList).build({body=body,C=C,label=label,hero=hero,copies=copies,bestMutation=bestMutation,eventMutation=eventMutation,
                 ownedTraits=ownedTraits,speciesIndex=speciesIndex,decoded=decoded,open=open,openFusion=openFusion,select=function(id) selected=id end,
-                rarityColors=rarityColors,rarityNames=rarityNames,motion=motion,bodyW=compact.bodyWidth(),bodyH=compact.bodyHeight(),bodyScale=compact.bodyScale()})
+                rarityColors=rarityColors,rarityNames=rarityNames,motion=motion,bodyW=if Config.MenusCohesionEnabled==true then compact.usableWidth() else compact.bodyWidth(),bodyH=compact.bodyHeight(),bodyScale=compact.bodyScale()}) -- BD-1241: clear of the frame on a compact canvas
             return
         end
         local unlocked=0
@@ -156,7 +156,7 @@ function Screens.render(name: string)
             fallbackStage=bestMutation(selected),
             fallbackLine=string.format("Base %d, Gold %d, Diamond %d",base,gold,diamond),
             scale=viewportScale,
-            bodySize=if Theme.Toybox then function() local compact=require(script.Parent.ModalCompact) return compact.bodyWidth(),compact.bodyHeight() end else nil, -- BD-1189: the page fills the body that is really on screen
+            bodySize=if Theme.Toybox then function() local compact=require(script.Parent.ModalCompact) return (if Config.MenusCohesionEnabled==true then compact.usableWidth() else compact.bodyWidth()),compact.bodyHeight() end else nil, -- BD-1189: the page fills the body that is really on screen
             revision=function() return num("ProfileRevision") end,
             -- BD-1170 (docs/227): with DupProgressEnabled a row of progress bars ("3 of 6 for Gold!"); a tap opens the Fusion Menu on this dino. Flag off = nil, the page is unchanged.
             dupRow=if Config.DupProgressEnabled==true then function(parent,dinos,top,height,rowWidth,left)
