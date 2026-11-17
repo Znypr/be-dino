@@ -99,6 +99,9 @@ def run_model(runner):
     s += 'local Lod = ' + module('src/shared/EffectsLod.luau') + '\n'
     s += 'local W = ' + module('src/shared/WeatherLooks.luau') + '\n'
     s += 'local MP = ' + module('src/shared/MutationRevealPlan.luau') + '\n' + LUA
+    # BD-1247: the warm-light motes (clear weather only, so they join the clear-sky moment): busiest zone per device class
+    s += '\nlocal WarmMotes = ' + module('src/shared/WarmLight.luau') + '\n'
+    s += 'for _, d in {"Desktop", "Tablet", "Phone"} do print("MOTES\\t" .. string.lower(d) .. "\\t" .. WarmMotes.liveParticles(d)) end\n'
     with tempfile.NamedTemporaryFile('w', suffix='.luau', delete=False, encoding='utf-8') as f:
         f.write(s)
     r = subprocess.run([runner, f.name], capture_output=True, text=True)
@@ -116,6 +119,7 @@ def run_model(runner):
 
 def moments(rows, phone_density=None):
     dino, devcap, lod, weather, ui, hatch_ui = {}, {}, {}, {}, {}, 0
+    motes = {}
     keys = ['alive', 'beams', 'trails', 'lights', 'burst']
     for r in rows:
         k = r[0]
@@ -125,6 +129,7 @@ def moments(rows, phone_density=None):
         elif k == 'WEATHER': weather[r[1]] = (float(r[2]), float(r[3]))
         elif k == 'HATCHUI': hatch_ui = sum(int(x) for x in r[1:6])
         elif k == 'MUTUI': ui[r[1]] = int(r[2])
+        elif k == 'MOTES': motes[r[1]] = float(r[2])
     out = {}
     for dev in ['phone', 'tablet', 'desktop']:
         dens = (PHONE_WEATHER_DENSITY if phone_density is None else phone_density) if dev == 'phone' else 1.0
@@ -142,7 +147,7 @@ def moments(rows, phone_density=None):
         out[dev] = [
             ('15-egg reveal (Legendary Shiny + mutation) + worst weather %s + %d players with aura+trail+mutation' % (wid, PLAYERS), m1),
             ('open world: %d players with aura+trail+mutation, worst weather %s' % (PLAYERS, wid), m2),
-            ('aura party: %d players, clear sky' % PLAYERS, base),
+            ('aura party: %d players, clear sky + warm-light motes (BD-1247)' % PLAYERS, dict(base, live3d=base['live3d'] + motes.get(dev, 0))),
         ]
     return out
 

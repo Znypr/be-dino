@@ -246,6 +246,17 @@ return table.freeze({
     -- fitted into the kit boxes, so the food hosts stay put); the flat spiky grass tufts are gone and the ground cover is thinned (fewer parts).
     -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     VegetationV2Enabled = false,
+    -- BD-1244 (owner 2026-11-16 "game still looks empty"): true = with WorldV3Enabled the island has calm ambient life, client-only
+    -- (Shared/IslandLife, client/IslandLife.client.luau): butterfly flocks beside the paths, dragonflies at the water, gulls circling high and
+    -- 2-3 small wild baby dinos grazing near the paths in every zone (herbivore V3 low-poly dinos with the BD-1217 clips). Pooled, shown only
+    -- within 150 studs of the camera, capped per device, no physics, never catchable or seen by the NPC predators. Look only: no save, economy
+    -- or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    IslandLifeEnabled = false,
+    -- BD-1247 (owner 2026-11-16 "game still looks empty"): true = on the island in clear weather a warmer, slightly more saturated colour
+    -- grade, gentle bloom on highlights, soft sun rays and slow floating pollen / motes per World V3 zone (client/WarmLight.client.luau,
+    -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    WarmLightEnabled = false,
     -- BD-1245 (owner 2026-11-16 "game still looks empty"): true = with WorldV3Enabled, ToonWorldEnabled and VegetationV2Enabled the ground gets detail
     -- (Shared/WorldFill): a darker grass lip along the paths and soft grass / earth patches (terrain only), generated edge stones, pebbles and a log
     -- along each spoke, flower-and-grass patches (one mesh each) in the open grass; the single ground cover clumps are thinned to pay for them
