@@ -145,6 +145,14 @@ function M.bodyWidth(): number
     return 824
 end
 
+-- BD-1241 (emulator pass 2026-11-17): the body sits 4 px into the scroller on a compact canvas, so a screen that spans bodyWidth() ran 4 px into
+-- the stud frame on the right (Run complete / defeat Eggs panel at 1274x481). Same rule as ToyboxShop.usableWidth: compact keeps 12 px clear.
+function M.usableWidth(): number
+    local m = if ctx then M.model() else nil
+    if m and m.mode == "compact" then return math.floor(m.innerW) - 12 end
+    return 824
+end
+
 function M.bodyScale(): number
     local m = if ctx then M.model() else nil
     return if m then m.effScale else 1

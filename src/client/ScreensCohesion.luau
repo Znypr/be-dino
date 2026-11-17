@@ -20,7 +20,7 @@ S.Grey = Color3.fromRGB(128, 142, 158)
 
 local function size(r: Rects.Rect): UDim2 return UDim2.fromOffset(r.w, r.h) end
 local function pos(r: Rects.Rect): UDim2 return UDim2.fromOffset(r.x, r.y) end
-local function body(): (number, number, number) return ModalCompact.bodyWidth(), ModalCompact.bodyHeight(), ModalCompact.bodyScale() end
+local function body(): (number, number, number) return ModalCompact.usableWidth(), ModalCompact.bodyHeight(), ModalCompact.bodyScale() end
 
 -- A real picture from a bound slot (AssetSlots.Images first, then the UI icons); nil while the slot is empty (R5: never a stand-in).
 function S.pictureId(slot: string): string?

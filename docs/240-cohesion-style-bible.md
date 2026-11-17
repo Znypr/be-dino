@@ -44,6 +44,8 @@ Today: **6 surfaces pass, 13 fail, 11 not checked** (30 surfaces: start, play, h
 
 Progress 2026-11-16: steps 1-3 merged (hatch stage, HUD BD-1213, screens BD-1214); step 4 and the UI fixes of step 5 in BD-1237 (`MenusCohesionEnabled`, pictures `docs/evidence/2026-11-16-menus-style/`, matrix there: 20 pass, 4 fail, 6 not checked). Every row that is not a pass has a board row: hatch rows BD-1211, props BD-206 / BD-1239, defeat BD-1240, phone BD-1241, sound and motion BD-1242, 3D re-captures BD-1243.
 
+Progress 2026-11-17 (final checks, `docs/evidence/2026-11-17-final-checks/`): defeat captured after a real wild-predator knock-out (BD-1240, pass after an R8 fix); Food guide, 3D dinos, world props and food models re-captured in Studio (BD-1243, pass); phone layout first pass in a resized Studio viewport (828x374, 634x344, desktop input: an emulator pass, not a real phone; BD-1241): panels now keep clear of the frame on compact canvases, Codes keeps clear of the weather chip, the home rail and the walk-up bubble are cream (all behind the cohesion flags). Matrix: 26 pass, 1 fail (phone R8: BD-1249 toasts, BD-1250 taps under 44 px, BD-1251 nest pictures), 3 not checked (nests with eggs, sound, motion).
+
 ## 5. In the loop (docs/234)
 
 Every polish run re-renders the matrix; a change that turns a surface red does not merge. The target is every row green. The per-screen score stays, but the matrix is the whole-game check.
