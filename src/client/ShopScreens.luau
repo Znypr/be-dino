@@ -77,12 +77,12 @@ function Shop.attach(d: any)
         local current=isActive() if current=="auras" or current=="potions" then body:ClearAllChildren() render(current) end
         if Config.StandardMenuEnabled==true then require(script.Parent.ShopWindowPages).refresh() end -- BD-1266: the standard window draws the new numbers
     end)
-    if Config.StandardMenuEnabled==true then Shop.standardRoutes() end -- BD-1266 (docs/244 s2.14): the Crystal Shop and the Potion Shop open on the standard window
+    if Config.StandardMenuEnabled==true then Shop.standardRoutes() end -- BD-1266 (docs/244 s2.14): the Crystal Shop opens on the standard window
 end
 
--- BD-1266 / BD-1267 / BD-1270 (docs/244 s2.12 to s2.14): with Config.StandardMenuEnabled the Crystal Shop ("auras") and the Potion Shop ("potions") open on the
--- ONE standard window (MenuWindow + ShopWindowPages) instead of Bootstrap's window. Same remote, token and server checks (transact); the egg purchase,
--- the egg chances, the luck upgrade and the potion replace pages stay Bootstrap screens and come back here. Flag off: nothing is registered.
+-- BD-1266 / BD-1267 / BD-1270 (docs/244 s2.12 to s2.14): with Config.StandardMenuEnabled the Crystal Shop ("auras") opens on the ONE standard window
+-- (MenuWindow + ShopWindowPages) instead of Bootstrap's window. Same remote, token and server checks (transact); the egg purchase, the egg chances and
+-- the luck upgrade pages stay Bootstrap screens and come back here. Flag off: nothing is registered.
 function Shop.standardRoutes()
     local Guard=require(script.Parent.ModalGuard)
     local Pages=require(script.Parent.ShopWindowPages)
@@ -92,7 +92,6 @@ function Shop.standardRoutes()
         num=num,str=str,progression=progression,notify=notify,open=open,transact=transact,
         randomBlocked=function() return PaidRandomGate.blocked(Config.DeveloperProducts,Config.PaidRandomItemsEnabled,require(script.Parent.PrivateState).get("PaidRandomEligible")) end,
         openChances=function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end,
-        openReplace=function(id) potionChoice.id=id open("potionReplace") end,
         closeMenu=function() -- only when Bootstrap's window is really open (its close also stops auto-hatching)
             local parts=require(script.Parent.ModalCompact).parts()
             local shade=parts and parts.panel.Parent

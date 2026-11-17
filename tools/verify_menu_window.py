@@ -10,7 +10,8 @@ Runs the REAL Shared/MenuWindowRules in the pinned Luau runtime and checks, at a
   * the Crystals (Robux packs) tab never shows; Featured first only with its flag;
   * BD-1270: the weekly pick is deterministic, the same all week, changes on Monday 00:00 UTC, only priced (crystal) items, never more than 3;
     "3 days left" / "1 day left" / "Last day", never seconds.
-Source guards: both flags ship false, are pinned off by default, ON in the playtest profile, in the rehearsal list and the manifest; the
+Source guards: both flags ship false and are pinned off by default; StandardMenuEnabled is ON in the playtest profile, ShopFeaturedEnabled stays
+off everywhere until the owner approves the window (owner 2026-11-18); both are in the rehearsal list and the manifest; the
 routes are registered only behind StandardMenuEnabled; Bootstrap.client is untouched; the window and the pages build no art (only the allowed
 instance classes), use Chip.apply, send nothing themselves (only through ShopScreens' transact), and have no Robux, gift or crossed-out price.
 Mutants put a defect back and the checks must fail.
@@ -153,10 +154,13 @@ def static_checks(files=None):
     get = lambda path: files.get(path) or read(path)  # noqa: E731
     errors = []
     config, profiles = get('src/shared/Config.luau'), get('tools/release_profiles.py')
+    if 'Rule("ShopFeaturedEnabled", "set", True,' in profiles:
+        errors.append('ShopFeaturedEnabled stays off in every profile until the owner approves the standard window (owner 2026-11-18)')
     for flag, row in (('StandardMenuEnabled', 'BD-1266'), ('ShopFeaturedEnabled', 'BD-1270')):
         if len(re.findall(r'^    %s = false,$' % flag, config, re.M)) != 1:
             errors.append('Config.%s must ship false exactly once' % flag)
-        for needle in ('_flag_off("%s",' % flag, 'Rule("%s", "set", True,' % flag, '("%s", "%s' % (flag, row)):
+        wanted = ('_flag_off("%s",' % flag, '("%s", "%s' % (flag, row)) + (('Rule("%s", "set", True,' % flag,) if flag == 'StandardMenuEnabled' else ())
+        for needle in wanted:
             if needle not in profiles:
                 errors.append('release_profiles.py is missing %s' % needle)
         if '"%s"' % flag not in get('tools/release_playtest.py') or '"%s"' % flag not in get('tests/test_rehearsal.py'):
