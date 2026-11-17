@@ -103,20 +103,20 @@ function PlazaShops.build(parent: Instance, centerX: number, centerZ: number): F
         for _, stall in Hub.Stalls do
             local shop = Layout.shop(stall.station)
             if not shop then continue end
-            local group = Instance.new("Model")
-            group.Name = "Shop_" .. stall.station
+            local model = Instance.new("Model")
+            model.Name = "Shop_" .. stall.station
             local b = shop.building
             local t = templates[b.key]
             if t then
                 local mesh = t:Clone()
                 mesh.Size = t.Size * Layout.fit({t.Size.X, t.Size.Y, t.Size.Z}, b.size)
                 mesh.CFrame = frame(stall, {0, b.z}, mesh.Size.Y / 2, centerX, centerZ)
-                mesh.Parent = group
+                mesh.Parent = model
                 local box = Instance.new("Part")
                 box.Name, box.Anchored, box.Transparency, box.CanCollide, box.CanQuery, box.CanTouch = b.key .. "_Collider", true, 1, true, true, false
                 box.Size = Vector3.new(mesh.Size.X * .8, mesh.Size.Y, mesh.Size.Z * .7)
                 box.CFrame = mesh.CFrame
-                box.Parent = group
+                box.Parent = model
                 placed += 1
             end
             local board = templates[Layout.Sign.key]
@@ -126,13 +126,13 @@ function PlazaShops.build(parent: Instance, centerX: number, centerZ: number): F
                 sign.Size = Vector3.new(Layout.Sign.w, Layout.Sign.h, Layout.Sign.d)
                 sign.CFrame = frame(stall, {0, shop.sign.z}, shop.sign.y, centerX, centerZ)
                 signFace(sign, shop)
-                sign.Parent = group
+                sign.Parent = model
                 placed += 1
             end
             local k = shop.keeper
-            group:SetAttribute("KeeperSpecies", k.species)
-            group:SetAttribute("KeeperHeight", k.height)
-            group:SetAttribute("KeeperCFrame", frame(stall, {k.x, k.z}, k.y, centerX, centerZ))
+            model:SetAttribute("KeeperSpecies", k.species)
+            model:SetAttribute("KeeperHeight", k.height)
+            model:SetAttribute("KeeperCFrame", frame(stall, {k.x, k.z}, k.y, centerX, centerZ))
             local px, pz = Hub.place(stall, Hub.PromptAt, centerX, centerZ)
             local anchor = Instance.new("Part")
             anchor.Name, anchor.Anchored, anchor.Transparency, anchor.Size = "PlazaPrompt", true, 1, Vector3.new(1, 1, 1)
@@ -141,8 +141,8 @@ function PlazaShops.build(parent: Instance, centerX: number, centerZ: number): F
             anchor:SetAttribute("PlazaStation", stall.station)
             anchor:SetAttribute("PlazaScreen", stall.screen)
             anchor:SetAttribute("PlazaOneLabel", true) -- the sign is the only label: the prompt shows no object name
-            anchor.Parent = group
-            group.Parent = folder
+            anchor.Parent = model
+            model.Parent = folder
         end
         for _, t in templates do t:Destroy() end
         folder:SetAttribute("Placed", placed)
