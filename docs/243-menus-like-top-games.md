@@ -1,0 +1,71 @@
+# 243 Menus like the top Roblox games: study and proposal (2026-11-17)
+
+Owner 2026-11-17: "not all ui menus really look like the top famous roblox experiences, i want you to study like top 5 roblox famous games and their menus, like steal an egg, grow a garden, etc. we need menus looking like that, full indepth".
+
+Status: **study + spec + backlog.** The owner's message is the decision (newest owner statement wins over the cream pick of 2026-11-14); the body style is a LEAD decision (docs/115, BD-1252). Nothing in the game changed because of this page yet. It corrects [242](242-full-benchmark-2026-11-16.md) row 11, which called menus "covered": they follow our own style tile ([240](240-cohesion-style-bible.md)), not the top games.
+
+Mockup board (decision aid, our own art only): `docs/evidence/2026-11-17-menu-study/menu-mock-v1.jpg`, generator `tools/menu_study_mock.py`. Today's windows for comparison: `docs/evidence/2026-11-17-final-checks/phone-828x374-potion-shop.jpg` (PR #627; panel D of the board), `docs/evidence/2026-11-15-cohesion/current/index.jpg`.
+
+## 1. What I looked at (and what not)
+
+Stills only, watched in the built-in browser, nothing downloaded, no third-party picture in this public repo.
+
+| Game | Source | Menus seen |
+| --- | --- | --- |
+| Steal an Egg (SAE) | the owner's own shots in `be-dino-reference-shots` (local only): Dino Index, Auras, Fuse Machine, Shop, Trail Shop, Sell Pets, Sell Eggs, Pet Index, Boss Mastery, Dr Scramble | 10 windows |
+| Grow a Garden (GAG) | YouTube n3WqE8Pzf8M t=112 (old seed shop), pqqBkvkAbpg t=201 (fall 2025 "Sell your pets!") | seed shop, sell window, HUD |
+| Pet Simulator 99 (PS99) | YouTube mg_tER6-zms t=330, 600 | HUD, Exclusive Shop window |
+| Bubble Gum Simulator INFINITY (BGSI) | YouTube yc5wXJvGP4Q t=400 | season rewards window |
+| Steal a Brainrot (SAB) | YouTube P0W_sV66aw0 t=60-420 | HUD only (it keeps menus to a minimum) |
+| Adopt Me! | not re-watched this time; [242](242-full-benchmark-2026-11-16.md) AM-A/AM-B notes used | egg popup, odds panel |
+
+Not judged: animation of windows opening (stills only), sound, phone sizes of the other games.
+
+## 2. The menu grammar the top games share
+
+Ten rules that hold in at least four of the six games. "Be Dino today" is the playtest build of 2026-11-17.
+
+| # | Top games do | Seen in | Be Dino today | Gap |
+| --- | --- | --- | --- | --- |
+| G1 | **The window is smaller than the screen** (about 55-75 % wide) and the world stays visible around it, no dark cover | SAE, GAG, PS99, BGSI | Windows fill the screen (compact: 1250 of 1274 px) over a scrim | High |
+| G2 | **Each menu has its own header colour** (SAE: blue Index, lavender Auras, magenta Fuse, green Shop; GAG pink sell; PS99 orange event) with a glossy stripe, big white outlined title on the left, an icon beside it | SAE, GAG, PS99, BGSI | One header colour per place (green shop, grey settings); title fine | Med |
+| G3 | **A dark or themed body** (SAE dark studs, GAG chocolate wood, BGSI patterned blue) so the colourful cards pop | SAE, GAG, BGSI | Cream body and cream cards (docs/240 R1 forbids dark plates) | **High** (this is the main look difference) |
+| G4 | **Cards are filled with their rarity colour** (SAE whole card, BGSI frames, GAG rarity word in colour) and the item art is big | SAE, BGSI, GAG, PS99 | Cream cards for every rarity; rarity is a word or chip | High |
+| G5 | **Every card has its own action button** (Equip, price pill, Unequip) in green; the window's main action is the biggest | SAE, GAG, PS99 | One green button per screen (R3); the Potion Shop already has one per card | Med |
+| G6 | **Tabs are big square icon tiles outside the window** (GAG left strip, SAE right Eggs/Pets/World) or pills above its top edge (BGSI) | GAG, SAE, BGSI | Tabs are flat chips inside the window | Med |
+| G7 | **Huge outlined progress**: "Unlocked: 14/55" with a fat bar, "COMPLETE! 6/6" bars, region reward boxes | SAE, PS99, BGSI | Index has "Found 1/22 * 5 more: +50" in a thin footer | Med |
+| G8 | **Live info in the header**: restock timer, currency chip, "Ends in 19 days" | GAG, PS99, BGSI, SAE | Potion Shop has "New in 1 min" as a chip; other windows none | Low |
+| G9 | **Locked things are silhouettes** ("???" on a coloured card) | SAE, PS99 | Silhouettes on cream (BD-1230) | Low (colour only) |
+| G10 | **Something breaks the frame**: a 3D icon over the top-left corner, a "Brand New!" ribbon, the X on the corner | PS99, SAE | Nothing breaks the frame | Low |
+
+What we already match: red square X, chunky outlined font, price on the button, rarity words, real item art, kid-safe shop rules (no Robux lines, odds shown).
+
+**Do not copy** (kid-safe and owner rules, unchanged): Robux packs, countdown pressure on paid offers, crossed-out prices, "Sell" of a player's dinos for money without a confirm.
+
+## 3. Why we drifted
+
+Our Toybox kit (`resources/ui/v2/toybox/final/`) already IS this grammar: dark stud tile, dark panel frame, coloured glossy headers (blue, green, purple, amber, red), rarity cards with studs (`card-common` ... `card-mythic`), coloured buttons. The cohesion pass ([240](240-cohesion-style-bible.md) R1 "no dark plates", owner pick "bright cream A" 2026-11-14) laid cream panels and cream cards on top of it, so every window became the same calm cream page. That fixed the "vibe coded" mix, but it moved us away from what top games look like.
+
+**Mismatch, resolved:** docs/240 R1 + R3 + the cream pick (owner 2026-11-14) vs this request (owner 2026-11-17). The newer owner statement wins for menu windows; cream stays for small text plates (HUD, toasts, chips). Recorded in docs/115 (BD-1252).
+
+## 4. Proposal (mockup board A-C)
+
+- **A Dino Index:** blue header, a biome card on the left with its "find all" reward, rarity-filled dino cards (locked ones as "???" silhouettes on their colour), the selected dino large on the right with CLAIM ALL and Variants, a fat "Found: 14 / 55" bar; Colours / Patterns as tiles outside the window.
+- **B Potion Shop:** purple header, crystals chip and restock line in the top row, six rarity-filled cards each with its own green price button, Potions / Auras / Trails / Crystals as big tiles left of the window.
+- **C Fusion:** one page that explains itself with pictures (3 slots, lines to the result, one big FUSE!).
+- Every window: about 65-75 % of the screen wide, dark studded body, header colour per menu, red X, world visible.
+
+Style-tile changes this needs (docs/240, done with BD-1252): R1 becomes "dark studded body, cream only for text plates", R3 becomes "one green button per card, the window's main action biggest", R4 becomes "rarity colour fills the card".
+
+## 5. Backlog (priority order, nothing built yet)
+
+| Row | What | Why first |
+| --- | --- | --- |
+| BD-1252 (P1) | Update docs/240 R1/R3/R4 for menu windows (decision recorded in docs/115) and re-judge the matrix rules | Every other row builds on the new rules |
+| BD-1253 (P1) | Window size: 65-75 % wide on desktop and phone, world visible, no scrim; same frame for every window | Biggest single difference (G1) |
+| BD-1254 (P1) | Dark studded body + per-menu header colour + rarity-filled cards in the kit (Layout.panel / card helpers), behind a new flag `MenusTopLookEnabled` | G2, G3, G4: most of the look |
+| BD-1255 (P2) | Tabs as icon tiles outside the window (Shop, Index, Eggs) | G6 |
+| BD-1256 (P2) | Index: fat "Found x / y" bar, biome reward card, CLAIM ALL | G7 (ties to BD-1230 milestones) |
+| BD-1257 (P3) | Header live info (timers, currency chip) and one frame-breaking icon per window | G8, G10 |
+
+Phone rule stays: every window and tab tile checked at 634x344 and 828x374 (BD-1241 method), targets at least 44 px.
