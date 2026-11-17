@@ -4,6 +4,11 @@
 -- drawn in code (docs/72). Numbers live in Shared/ToyboxKit. Required by a screen only while Theme.Toybox is on (Config.ToyboxUIEnabled).
 local Kit = require(script.Parent.ToyboxKit)
 local Skin = require(script.Parent.ToyboxSkin)
+-- BD-1254 (docs/243 G3, owner 2026-11-17): with Config.MenusTopLookEnabled everything these helpers draw INSIDE a menu window (under the
+-- ModalScrim root) uses the dark studded-body tones and white outlined words; outside a window (HUD, toasts, cues) the cream tones stay.
+local TOP = (require(script.Parent.Config) :: any).MenusTopLookEnabled == true
+local DARK = {panel = {44, 47, 64}, card = {58, 61, 82}, slot = {52, 55, 74}, label = {196, 204, 224}, value = {255, 255, 255},
+    ready = {62, 96, 70}, busy = {96, 82, 52}, silhouette = {70, 72, 92}}
 
 local Layout = {}
 Layout.Kit = Kit
@@ -11,11 +16,24 @@ local OUTLINE = Color3.fromRGB(Kit.Outline[1], Kit.Outline[2], Kit.Outline[3])
 
 -- ---- BD-1189 (docs/232): layout helpers. Screens ask these instead of placing and colouring things by hand. They draw flat colours
 -- (UICorner + UIStroke, one gradient on the preview box); no texture is drawn in code (docs/72). Numbers: Shared/ToyboxKit.
-local function tone(name: string): Color3
-    local t = (Kit.Tone :: any)[name]
+-- true when the top look is on and `host` sits inside a menu window: Bootstrap's ModalScrim or the Fusion Menu's FusionScrim.
+local WINDOW_ROOTS = {"ModalScrim", "FusionScrim"}
+local function windowed(host: Instance?): boolean
+    if not TOP or host == nil then return false end
+    for _, root in WINDOW_ROOTS do
+        if host.Name == root or host:FindFirstAncestor(root) ~= nil then return true end
+    end
+    return false
+end
+-- `dark` is a boolean, or the object the colour is for (then it is dark only inside a window under the top look).
+local function tone(name: string, dark: any?): Color3
+    local useDark = if typeof(dark) == "Instance" then windowed(dark) else dark == true
+    local t = (if useDark then (DARK :: any)[name] else nil) or (Kit.Tone :: any)[name]
     return Color3.fromRGB(t[1], t[2], t[3])
 end
 Layout.tone = tone
+Layout.windowed = windowed
+Layout.Dark = DARK
 local function frame(parent: GuiObject, name: string, size: UDim2, position: UDim2, fill: Color3, corner: number, stroke: number?): Frame
     local f = Instance.new("Frame")
     f.Name, f.Size, f.Position, f.BackgroundColor3, f.BorderSizePixel = name, size, position, fill, 0
@@ -31,11 +49,11 @@ local function frame(parent: GuiObject, name: string, size: UDim2, position: UDi
 end
 -- A cream panel: 14 px corners, 3 px dark outline. Content goes PanelPad (12) inside it.
 function Layout.panel(parent: GuiObject, name: string, size: UDim2, position: UDim2): Frame
-    return frame(parent, name, size, position, tone("panel"), Kit.PanelCorner, Kit.PanelStroke)
+    return frame(parent, name, size, position, tone("panel", windowed(parent)), Kit.PanelCorner, Kit.PanelStroke)
 end
 -- BD-1195 / BD-1194: a card on a panel: the lighter cream (or a soft tint such as "ready" / "busy"), 12 px corners, 2 px dark outline.
 function Layout.card(parent: GuiObject, name: string, size: UDim2, position: UDim2, tint: string?): Frame
-    return frame(parent, name, size, position, tone(tint or "card"), Kit.CardCorner, Kit.CardStroke)
+    return frame(parent, name, size, position, tone(tint or "card", windowed(parent)), Kit.CardCorner, Kit.CardStroke)
 end
 -- A small count chip ("Nests 0/5"): warm tone, 8 px corners, 2 px outline, dark ink (no outline on the text). Returns the chip and its label.
 function Layout.chip(parent: GuiObject, text: string, size: UDim2, position: UDim2): (Frame, TextLabel)
@@ -55,7 +73,11 @@ function Layout.preview(parent: GuiObject, size: UDim2, position: UDim2): Frame
     return box
 end
 -- Dark body text on a cream surface: no outline (outline only on titles and button words). Works on a label the old helpers built too.
-function Layout.ink(label: TextLabel, which: string?): TextLabel
+function Layout.ink(label: TextLabel, which: string?, host: Instance?): TextLabel
+    if windowed(host or label.Parent) then -- BD-1254: white (or light) words with the dark outline on the dark body
+        label.TextColor3, label.TextStrokeTransparency, label.TextStrokeColor3 = tone(which or "value", true), 0, OUTLINE
+        return label
+    end
     label.TextColor3, label.TextStrokeTransparency = tone(which or "value"), 1
     for _, child in label:GetChildren() do
         if child:IsA("UIStroke") then child.Transparency = 1 end
@@ -68,7 +90,7 @@ Layout.Amber = Color3.fromRGB(255, 215, 106)
 function Layout.tabChip(parent: GuiObject, name: string, text: string, size: UDim2, position: UDim2, selected: boolean, textSize: number, callback: () -> ()): TextButton
     local b = Instance.new("TextButton")
     b.Name, b.Text, b.AutoButtonColor, b.BorderSizePixel = name, text, false, 0
-    b.BackgroundColor3 = if selected then Layout.Amber else tone("panel")
+    b.BackgroundColor3 = if selected then Layout.Amber else tone("panel", windowed(parent))
     b.Position, b.Size, b.ZIndex = position, size, parent.ZIndex + 1
     b.Font, b.TextSize, b.TextColor3 = Enum.Font.FredokaOne, Kit.textSize(textSize), tone("value")
     b.TextTransparency, b.TextStrokeTransparency = 1, 1
@@ -80,7 +102,7 @@ function Layout.tabChip(parent: GuiObject, name: string, text: string, size: UDi
     local word = Instance.new("TextLabel")
     word.Name, word.BackgroundTransparency, word.Size, word.ZIndex, word.Text = "ChipWord", 1, UDim2.fromScale(1, 1), b.ZIndex + 1, text
     word.Font, word.TextSize, word.TextWrapped, word.TextXAlignment = Enum.Font.FredokaOne, Kit.textSize(textSize), false, Enum.TextXAlignment.Center
-    Layout.ink(word)
+    Layout.ink(word, nil, if selected then nil else parent)
     word.Parent = b
     word.ChildAdded:Connect(function(child) if child:IsA("UIStroke") then child.Transparency = 1 end end)
     b.Activated:Connect(callback)
@@ -95,7 +117,7 @@ function Layout.text(parent: GuiObject, text: string, size: UDim2, position: UDi
     label.TextXAlignment, label.ZIndex = alignX or Enum.TextXAlignment.Left, parent.ZIndex + 1
     local limit = Instance.new("UITextSizeConstraint")
     limit.MinTextSize, limit.MaxTextSize, limit.Parent = Kit.MinText, Kit.textSize(textSize), label
-    Layout.ink(label, which)
+    Layout.ink(label, which, parent)
     label.Parent = parent
     return label
 end

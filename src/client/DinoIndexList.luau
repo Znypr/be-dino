@@ -61,6 +61,11 @@ function List.build(d: any)
         local look = if secret then Secret.indexCard(id, found) else FusionSelection.indexCard(found)
         local card = L.card(list, "Card_" .. id, UDim2.fromOffset(lay.cellW, lay.cellH), UDim2.new(), if found then "card" else "slot")
         card.LayoutOrder = i
+        local topLook = L.windowed(list) -- BD-1254 (docs/243 G4): the rarity colour fills the card (a darker shade while undiscovered)
+        local rarityColour = d.rarityColors[rarity]
+        if topLook and rarityColour then
+            card.BackgroundColor3 = if found then rarityColour:Lerp(Color3.new(0, 0, 0), 0.12) else rarityColour:Lerp(Color3.fromRGB(30, 32, 44), 0.55)
+        end
         local innerW = lay.cellW - 16
         local heroY, heroH = 58, lay.cellH - 58 - 30
         if found then
@@ -88,6 +93,7 @@ function List.build(d: any)
                 view.Position, view.Size = UDim2.fromOffset(8, 12), UDim2.fromOffset(innerW, lay.cellH - 12 - 38)
                 -- a soft dark-brown tint at ~0.35 transparency (not a hard black shape); the card edge takes the rarity colour
                 view.ImageColor3, view.ImageTransparency = Color3.fromRGB(107, 90, 68), 0.35
+                if topLook then view.ImageColor3, view.ImageTransparency = Color3.fromRGB(14, 15, 22), 0.25 end -- BD-1254: a clear dark shape on its rarity colour
                 local edge = card:FindFirstChildOfClass("UIStroke")
                 local silRarity = d.rarityColors[rarity]
                 if edge and silRarity then edge.Color = silRarity end

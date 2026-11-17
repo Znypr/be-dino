@@ -264,11 +264,22 @@ end
 
 function M.attach(context: Ctx)
     ctx = context
+    local topLook = (require(Shared:WaitForChild("Config")) :: any).MenusTopLookEnabled == true
+    if Theme.Toybox and topLook then require(Shared:WaitForChild("ToyboxKit")).useTopLook() end -- BD-1253: a header colour per menu (docs/243 G2)
     context.body.DescendantAdded:Connect(schedule)
     context.body.ChildAdded:Connect(schedule)
+    -- BD-1253 (docs/243 G1): with MenusTopLookEnabled the cover behind a window is light, so the world stays visible around it (top games dim
+    -- nothing; the Buy confirm keeps a soft dim through this same cover). Flag off: Bootstrap's 0.42 cover, unchanged.
+    local shade = context.panel.Parent
+    if topLook and shade and shade:IsA("GuiObject") then
+        local function light() if shade.BackgroundTransparency < M.TopLookCover then shade.BackgroundTransparency = M.TopLookCover end end
+        light()
+        shade:GetPropertyChangedSignal("BackgroundTransparency"):Connect(light)
+    end
     if Theme.Toybox then Theme.Toybox.window({panel = context.panel, header = context.header, heading = context.heading, closeButton = context.closeButton, scale = context.scale}) end -- BD-1177
     M.layout()
 end
+M.TopLookCover = 0.82
 
 -- The shared window as it is on screen (px, after its UIScale) and how far its centre sits right of the screen centre. nil before attach().
 -- The Fusion Menu uses this under the Toybox flag so it is exactly as big and as centred as every other menu window.
