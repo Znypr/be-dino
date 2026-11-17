@@ -1,4 +1,4 @@
-# 244 Mobile benchmark on the owner's phone (BD-1258 to BD-1275), 2026-11-17
+# 244 Mobile benchmark on the owner's phone (BD-1258 to BD-1277), 2026-11-17
 
 Owner 2026-11-17, after playing the playtest build on a Samsung S23 Ultra: "dino shadows are really low quality, ui is really messy and all over the place. and overlapping often, tiny font sometimes". The owner asked for a comparison with famous Roblox experiences **on mobile**. Later the same evening the owner said: "use my phone instead for current famous games on phone, but prio private servers", "click everything and get a full understanding of the full UI menus, settings, shops, where ui is placed how big", and "prio steal an egg, and ps 99".
 
@@ -194,7 +194,7 @@ Everything has a thick black outline. Titles are 4.5 % h, labels 3.1 to 3.8 % h,
 
 ### 2.13 More owner references from the same game: HUD, item cards, stations, Fusion, Index, backpack (OWNER TARGET)
 
-The owner sent eight more phone screenshots of Steal an Egg (local only, `be-dino-reference-shots/mobile-2026-11-17/owner-phone-current-3.png` to `-10.png`; shot 2 was a Roblox payment prompt and was deleted unused). Sizes below are measured at 3088 x 1440: "% w" is the share of the screen width, "% h" the share of the height.
+The owner sent ten more phone screenshots of Steal an Egg (local only, `be-dino-reference-shots/mobile-2026-11-17/owner-phone-current-3.png` to `-12.png`, eleven references with section 2.12; shot 2 was a Roblox payment prompt and was deleted unused). Sizes below are measured at 3088 x 1440: "% w" is the share of the screen width, "% h" the share of the height.
 
 **HUD (ref 3; refs 5 and 6 show the same HUD).**
 
@@ -261,6 +261,68 @@ The owner sent eight more phone screenshots of Steal an Egg (local only, `be-din
 | Hotbar | Grows to 5 slots while it is open | Not needed: we have no tools |
 | **Don't copy** | So see-through that world text ("Fuse Machine", "0/3") shows through and is hard to read | Hide world words behind the panel (BD-1262 fade) and use the more solid background |
 
+**Backpack Eggs tab (ref 11).** The same panel on the Eggs tab: the count line changes per tab ("Eggs: 12/115"), egg renders fill the same 5-column grid, and egg names are coloured by rarity (common names stay white). Ours gets an Eggs tab with our egg renders and names in our rarity colours (added to BD-1275).
+
+**Settings (ref 12) = the template for our Settings.**
+
+| Piece | Theirs | Our rule (BD-1277) |
+| --- | --- | --- |
+| Frame | Grey-white striped title bar and red X, 34 % w x 68 % h | The standard frame in grey |
+| Rows | Full-width dark rows about 10 % h tall: a big bold title with a small subtitle ("Music / Background Music!", the subtitle about 1.6 % h) and ONE control on the right | Rows 10 % h, title 3.2 % h, subtitle 2.8 % h (raised to our floor) |
+| Controls | Volume: a thick yellow bar with a square knob. On/off: a red or green block with a big "OFF" / "ON" word beside it | Sliders 4 % h with a 6 % h square knob; ON/OFF blocks 5 % h with the word at 3 % h |
+| Our rows | Music, SFX, View Other's Pets, View Your Pets | Music (AudioPolish music group), Sounds (Sfx group), Reduce Motion, Show other dinos, Effects (Full / Lite / Off), Help |
+
+### 2.14 Be Dino phone UI kit (the one spec all the rows build on)
+
+Everything is a **Scale value**: "% h" is the share of the screen height (the phone canvas is about 480 design px tall, so 1 % h ≈ 4.8 design px ≈ 14 px at 1440). Widths of windows are a share of the screen width ("% w"). The kit lives in Toybox (`ToyboxKit`, `ToyboxSkin`, `ToyboxLayout`) and `ChipStyle` (`Chip.apply`). The handbook floors still apply: text ≥ 14 design px, targets ≥ 44 design px, contrast ≥ 4.5:1, kid words (docs/72).
+
+**1. Text.** Font FredokaOne. Every word over the world or on a coloured plate has a black UIStroke (2.5 design px for words, 3 for counters).
+
+| Use | Cap height | About TextSize on this phone |
+| --- | --- | --- |
+| Window title | 4.5 % h | 30 |
+| Section header "-- NAME --" | 3.8 % h | 26 |
+| Card title, button word, counter number | 3.5 to 4.4 % h | 24 to 30 |
+| Line text, timer, tab word | 3 to 3.2 % h | 20 to 22 |
+| Smallest allowed (subtitles, rarity word) | 2.8 % h | 19 |
+
+**2. Window colour map** (title bar stripes and the side-tab glow; the body is always the dark patterned panel).
+
+| Window | Colour | Width x height |
+| --- | --- | --- |
+| Crystal Shop (long, with sections) | Green #5DED1F | 58 % w x 67 % h |
+| Potion Shop, auras, trails (item cards) | Purple #C256FF | 43 % w x 56 % h |
+| Eggs (nests) | Yellow #FFD22B | 43 % w x 56 % h |
+| Fusion | Cyan #2ECEFF | 35 % w x 62 % h |
+| Dino Index | Cyan #2ECEFF | 49 % w x 60 % h |
+| Settings | Grey #808E9E | 34 % w x 68 % h |
+| My dinos (panel, not a window) | Dark, 15 % transparent | 37 % w x 43 % h, above the bottom bar |
+
+Shared by every window: title bar 10 % h with the title on the left; a red square X 8 % h inside the bar on the right; centred 3 % h below the middle; the world blurred (BlurEffect Size 12) while it is open; the HUD corners stay visible around it.
+
+**3. Tabs.** Outside the window on the right, as a column. Two styles:
+- *Category tabs* (shops): a 3D icon 9.5 % h with an outlined word under it at 3 % h, no plate, 1.5 % h apart. The active one bounces and glows in the window colour.
+- *Page tabs* (Index, Settings pages): coloured rectangles 7 % h tall with the word at 3 % h. The active one is bright and the others are darkened 40 %.
+- Inside a panel (My dinos): a vertical column on the panel's left with an icon and a word; the active tab gets a white outline.
+
+**4. Card types.**
+
+| Card | Size | Content |
+| --- | --- | --- |
+| Pass / offer card (Crystal Shop sections) | 28 % h tall, 2 per row | A bright gradient, a 15 % h icon on the left, a title at 3.5 % h, ONE line at 3.1 % h with the key word coloured, a green price button 6.6 % h with the crystal icon |
+| Item card (potions, auras, trails, eggs) | 44 % h tall, 3 per row | One solid rarity colour, the name with the rarity word under it, a big render (ViewportFrame or Blender), a dark effect strip with the number green, a full-width button 5 % h (crystal price, or Equip / Use) |
+| Index tile | Square, 4 x 2 grid | The rarity colour; found = render + name, unfound = black silhouette + "???" |
+| Collection tile | Square, 5 columns | A render, the name in its rarity colour (Common white), a stat in kid words under it |
+| Settings row | Full width, 10 % h | A title and subtitle on the left, one control on the right |
+
+Rarity colours (docs/114 s5): Common #808E9E, Uncommon #5DED1F, Rare #2ECEFF, Epic #C256FF, Legendary #FFD22B, Mythic #F73930.
+
+**5. Counters and timers.** No plates. An icon (7.5 % h for counters, 6 % h for timers) plus a bold italic number at 4.4 % h (counters) or 3.2 % h (timers), a coloured fill (crystals amber, eggs cream, time white) and a black 3 px stroke. Counters go bottom-left above the joystick (crystals, then eggs). Timers go bottom-right above jump (weather, potions). Timers use kid words: "3 min left", "in 30 sec", never "2:59" or "4m 26s".
+
+**6. HUD zones** (BD-1258): the top-centre is the event banner only; the left holds two word buttons (Shop, Dinos), each 9 % h with the word at 4.2 % h; the right side column is squares of 8.5 % h, 1.5 % h apart (Eggs, Fusion, Potions, gear); bottom-left counters; bottom-right timers and jump; bottom-centre LEAP and CHOMP as dark see-through squares; one toast lane above them; the middle box (x 33-67 %, y 25-80 %) stays empty.
+
+**7. World labels** (BD-1262, BD-1272): one word per station in its own colour (EGGS yellow, POTIONS green, SHOP blue, DINOS orange, FUSION cyan), sized in studs, 3 px dark outline, no plate. A fraction can go under it ("2/6"). A Neon ring on the ground in the same colour marks where to stand. Prompts are Roblox's plain ProximityPrompt. Pickup labels are a number plus an icon. Every world word fades when it would touch a HUD rect, the banner lane or an open panel, and it is clamped inside the safe area.
+
 ## 3. Ranked rows (added 2026-11-17, Backlog)
 
 | Rank | Row | Pri | What |
@@ -280,8 +342,9 @@ The owner sent eight more phone screenshots of Steal an Egg (local only, `be-din
 | 13 | BD-1262 | P2 | World labels short, outlined, clamped to the safe area |
 | 14 | BD-1270 | P2 | Crystal Shop "Featured" tab, crystals only |
 | 15 | BD-1275 | P2 | My dinos panel above the bottom bar (tabs, count, search, 5-column renders, more solid) |
-| 16 | BD-1263 | P2 | `tools/phone_capture.py`: adb burst, tap and sheet with the Roblox-in-front and lock-screen guard |
-| 17 | BD-1264 | P3 | Loading screen polish (logo letter, plate gap, number on the bar) |
+| 16 | BD-1277 | P2 | Settings in the owner standard: rows with title + subtitle, yellow sliders, ON/OFF blocks, Reduce Motion and Show other dinos |
+| 17 | BD-1263 | P2 | `tools/phone_capture.py`: adb burst, tap and sheet with the Roblox-in-front and lock-screen guard |
+| 18 | BD-1264 | P3 | Loading screen polish (logo letter, plate gap, number on the bar) |
 
 ## 4. Rules learned for phone captures
 
