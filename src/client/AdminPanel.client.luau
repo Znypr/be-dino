@@ -51,12 +51,13 @@ task.spawn(function()
     local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
     if not main then return end
     local function pin()
-        local rect = main:GetAttribute("AdminRect")
+        local rect = main:GetAttribute("PhoneHudAdminRect") or main:GetAttribute("AdminRect") -- BD-1258: the phone HUD's spot wins (flag on only)
         if typeof(rect) == "Rect" then
             toggle.Position, toggle.Size = UDim2.fromOffset(rect.Min.X, rect.Min.Y), UDim2.fromOffset(rect.Width, rect.Height)
         end
     end
     main:GetAttributeChangedSignal("AdminRect"):Connect(pin)
+    main:GetAttributeChangedSignal("PhoneHudAdminRect"):Connect(pin)
     pin()
 end)
 

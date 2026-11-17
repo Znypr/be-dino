@@ -178,6 +178,7 @@ jobs:
           python tools/verify_toybox_shop.py --runner /tmp/luau/luau
           python tools/verify_toybox_layout.py --runner /tmp/luau/luau
           python tools/verify_hud_cohesion.py --runner /tmp/luau/luau
+          python tools/verify_phone_hud.py --runner /tmp/luau/luau
           python tools/verify_index_milestones.py --runner /tmp/luau/luau
           python tools/verify_loading_scene.py --runner /tmp/luau/luau
           python tools/verify_play_cues.py --runner /tmp/luau/luau

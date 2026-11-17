@@ -16,6 +16,11 @@ local C = Theme.Colors
 -- 20 / 14 scale (R1, R2, R6); the kind (or rarity) colour stays only on the thin bar at the left edge. Flag off: nil, the navy cards as before.
 local Cohesion = if (require(Shared.Config) :: any).MenusCohesionEnabled == true then require(Shared.MenusCohesionRules) else nil
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
+-- BD-1260 (docs/244 s2.14, Config.PhoneHudZonesEnabled): ONE toast lane at the bottom centre, just above LEAP and CHOMP (PhoneHud.client writes the
+-- ToastLaneRect and ToastLaneText attributes on the gui): at most two lines of outlined words with the icon on the left, no card, never over a HUD
+-- piece. With a menu open the old single card (ToastSlot) is used. Flag off: no lane, the stack as before.
+local LaneOn = (require(Shared.Config) :: any).PhoneHudZonesEnabled == true
+local LaneLines = 2
 
 local Toasts: any = {}
 
@@ -64,6 +69,47 @@ drawToasts=function()
         end
     end
 end
+local laneFrame: any, laneRows: {any} = nil, {}
+local laneMode = false -- the lane is in use right now (flag on, the lane rect is known, no menu open)
+local function drawLane()
+    local shown=notifyQueue.visible
+    local first=math.max(1,#shown-LaneLines+1)
+    for i,row in laneRows do
+        local entry=shown[first+i-1]
+        row.entry=entry
+        row.frame.Visible=entry~=nil
+        if entry then
+            local text=entry.text
+            if entry.count>1 and not entry.amount then text=text.."  x"..entry.count end
+            RarityWord.set(row.text,text) -- one line: the title only (the lane holds words, not cards)
+            row.text.TextColor3=if entry.tint and Theme.RarityColors[entry.tint] then Theme.RarityColors[entry.tint] else Color3.new(1,1,1)
+            if row.seq~=entry.seq then
+                row.seq=entry.seq
+                for _,child in row.icon:GetChildren() do if child:IsA("GuiObject") then child:Destroy() end end
+                local made=if entry.icon then Theme.icon(row.icon,entry.icon) else nil
+                if made then made.Position,made.Size=UDim2.fromScale(0,0),UDim2.fromScale(1,1) end
+                if motion() then
+                    local pop=row.frame:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+                    pop.Scale,pop.Parent=1.12,row.frame
+                    Theme.animate(pop,.2,{Scale=1},Enum.EasingStyle.Back)
+                end
+            end
+            row.icon.Visible=entry.icon~=nil
+        else
+            row.seq=0
+        end
+    end
+end
+local function layoutLane(lane: Rect, textSize: number)
+    laneFrame.Position,laneFrame.Size=UDim2.fromOffset(lane.Min.X,lane.Min.Y),UDim2.fromOffset(lane.Width,lane.Height)
+    local lineH=lane.Height/LaneLines
+    for i,row in laneRows do
+        row.frame.Position,row.frame.Size=UDim2.fromOffset(0,(i-1)*lineH),UDim2.new(1,0,0,lineH)
+        row.text.TextSize=textSize
+        local iconS=math.floor(lineH*.9)
+        row.icon.Size=UDim2.fromOffset(iconS,iconS)
+    end
+end
 -- The rect of a GuiObject in the canvas px of `gui` (nil when it is not there).
 local function canvasRect(o: any): ToastSlot.Rect?
     if o == nil or not o.Visible then return nil end
@@ -79,6 +125,22 @@ local function menuRect(): ToastSlot.Rect?
     return canvasRect(best)
 end
 local function pumpToasts()
+    if LaneOn and laneFrame then
+        local lane=gui:GetAttribute("ToastLaneRect") :: Rect?
+        local useLane=lane~=nil and not shade.Visible
+        if useLane~=laneMode then
+            laneMode=useLane
+            laneFrame.Visible=useLane
+            toastLayer.Visible=not useLane
+        end
+        if useLane then
+            player:SetAttribute("MenuOpen",false)
+            layoutLane(lane :: Rect,gui:GetAttribute("ToastLaneText") or 19)
+            NotifyQueue.update(notifyQueue,os.clock(),false)
+            drawLane()
+            return
+        end
+    end
     -- Slide the stack right, clear of the owner's admin panel (AdminPanel sets AdminPanelRight: px from the left edge, 0 = closed).
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
     if toastScale.Scale~=wroteScale then baseScale=toastScale.Scale wroteScale=baseScale end -- Bootstrap's layout pass wrote a new scale
@@ -153,6 +215,33 @@ function Toasts.attach(d: any)
             end
         end
         toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0,tap=tap}
+    end
+    if LaneOn then -- BD-1260: the lane rows (outlined words with an icon on the left, centred, no card)
+        laneFrame=Instance.new("Frame")
+        laneFrame.Name,laneFrame.BackgroundTransparency,laneFrame.ZIndex,laneFrame.Visible,laneFrame.Parent="ToastLane",1,50,false,gui
+        for i=1,LaneLines do
+            local row=Instance.new("TextButton")
+            row.Name,row.Text,row.BackgroundTransparency,row.AutoButtonColor,row.ZIndex,row.Visible="Line"..i,"",1,false,50,false
+            local list=Instance.new("UIListLayout")
+            list.FillDirection,list.HorizontalAlignment,list.VerticalAlignment,list.Padding=Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Center,UDim.new(0,6)
+            list.SortOrder,list.Parent=Enum.SortOrder.LayoutOrder,row
+            local holder=Instance.new("Frame")
+            holder.Name,holder.BackgroundTransparency,holder.LayoutOrder,holder.ZIndex,holder.Parent="Icon",1,1,51,row
+            local text=Instance.new("TextLabel")
+            text.Name,text.BackgroundTransparency,text.Font,text.TextColor3,text.LayoutOrder,text.ZIndex="Text",1,Enum.Font.FredokaOne,Color3.new(1,1,1),2,52
+            text.AutomaticSize,text.Size,text.TextTruncate=Enum.AutomaticSize.X,UDim2.fromScale(0,1),Enum.TextTruncate.AtEnd
+            local line=Instance.new("UIStroke")
+            line.Color,line.Thickness,line.LineJoinMode,line.Parent=C.outline,2.5,Enum.LineJoinMode.Round,text
+            text.Parent=row
+            row.Parent=laneFrame
+            local entryRow={frame=row,text=text,icon=holder,seq=0,entry=nil}
+            row.Activated:Connect(function()
+                local entry=entryRow.entry
+                if entry and entry.action and NotifyQueue.dismiss(notifyQueue,entry) then drawLane() task.spawn(entry.action) return end
+                if entry and NotifyQueue.dismiss(notifyQueue,entry) then drawLane() end
+            end)
+            laneRows[i]=entryRow
+        end
     end
     Toasts.layer, Toasts.scale = toastLayer, toastScale
     task.spawn(function()

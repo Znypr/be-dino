@@ -14,7 +14,7 @@ local Words = require(Shared:WaitForChild("TimerWords"))
 local ProgressionConfig = require(Shared:WaitForChild("ProgressionConfig"))
 local ProgressionRules = require(Shared:WaitForChild("ProgressionRules"))
 
-local Chips = {}
+local Chips: any = {}
 local CHIP, GAP, BAR_H = 26, 2, 4
 local TRACK, FILL = Color3.fromRGB(13, 15, 20), Color3.fromRGB(255, 210, 43) -- docs/114 s5: outline and the crystal amber
 local KINDS = {"speed", "growth", "loot"} -- fixed left-to-right order
@@ -51,6 +51,7 @@ end
 
 -- buffs: the profile's active buffs, {[kind]: {id: string, expiresAt: number}}; now: server time.
 function Chips.update(buffs: {[string]: {id: string, expiresAt: number}}, now: number)
+    Chips.lastBuffs = buffs -- BD-1268: the phone HUD (PhoneHud.client) draws its potion timers from the same buffs
     local frame, pad = strip, padding
     if not frame or not pad then return end
     local ids, kinds = {}, {}

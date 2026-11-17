@@ -50,10 +50,11 @@ style(open, "Tell us!", if (Config :: any).MenusCohesionEnabled == true then Col
 if (Config :: any).MenusCohesionEnabled == true then open.TextStrokeTransparency, open.TextStrokeColor3 = 0, Color3.fromRGB(13, 15, 20) end -- R2: white with an ink outline on colour
 local uiRoot: Instance? = nil
 local function pin()
-    local r = if uiRoot then uiRoot:GetAttribute("FeedbackRect") else nil
+    local phone = if uiRoot then uiRoot:GetAttribute("PhoneHudFeedbackRect") else nil -- BD-1258: the phone HUD's spot under DINOS wins (flag on only)
+    local r = if typeof(phone) == "Rect" then phone elseif uiRoot then uiRoot:GetAttribute("FeedbackRect") else nil
     local pos, size = FALLBACK_POS, FALLBACK_SIZE
     if typeof(r) == "Rect" then pos, size = UDim2.fromOffset(r.Min.X, r.Min.Y), UDim2.fromOffset(r.Width, r.Height) end
-    local plate = if uiRoot then uiRoot:FindFirstChild("EggsPlate", true) else nil
+    local plate = if uiRoot and typeof(phone) ~= "Rect" then uiRoot:FindFirstChild("EggsPlate", true) else nil
     if plate and plate:IsA("GuiObject") and plate.AbsoluteSize.X > 0 then
         -- Safety net: resolve the target spot to pixels; if it still touches the real egg plate, sit just above the plate instead.
         local space = gui.AbsoluteSize
@@ -73,6 +74,7 @@ task.spawn(function()
     if not ui then return end
     uiRoot = ui
     ui:GetAttributeChangedSignal("FeedbackRect"):Connect(pin)
+    ui:GetAttributeChangedSignal("PhoneHudFeedbackRect"):Connect(pin)
     local function hookPlate(plate: Instance)
         if plate.Name ~= "EggsPlate" or not plate:IsA("GuiObject") then return end
         plate:GetPropertyChangedSignal("AbsolutePosition"):Connect(pin)
