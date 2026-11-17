@@ -106,6 +106,8 @@ Every picture the proposal sheet uses, checked against docs/77, AssetSlots / Pro
 | Shop tabs Auras / Trails / Colours / Eggs | flat Blender symbols | `shop-tab-*-A..D.png` | **A** for tabs, **C** (on a tile) for the Shop landing tiles |
 | Shop landing tiles (Eggs, Auras, Trails, Colours) | Blender scenes on a flat colour | same `shop-tab-*-C.png` | **C** |
 
+**B done 2026-11-17 (owner picks: "trail Ds, shop tabs Cs, auras Ds"; B gold coin rejected):** 10 trails D (`icons/trail-*-v2.png`), shop tabs and landing tiles C (`icons/shop-tab-*-v2.png`, `icons/shop-tile-*-v2.png`, tabs and tiles share one picture), 3 auras D (`items/aura-*-v3.png`). Converted to RGBA (palette PNGs never load), uploaded, image ids bound (AssetSlots, ProgressionConfig.TrailIconAssetIds), docs/77 rows. Studio: `docs/evidence/2026-11-17-menu-study/studio-trails-D.jpg`, `studio-shop-tiles-C.jpg`, `studio-auras-D.jpg` (all 17 load). Left in group B: the **Crystals** tile and tab are still the flat Blender picture (no candidate in this set: use the owner's `crystals_m` upload or make one, group C below). Unused uploads: the A versions of the trails and tabs (uploaded first, before the owner's pick; not bound).
+
 **C. Missing: make new with ChatGPT (owner's account, same style prompt as docs/216: glossy, thick dark outline, transparent PNG, one icon per picture at 1024 px)**
 
 | Needed by | Picture | Prompt idea |
@@ -113,6 +115,7 @@ Every picture the proposal sheet uses, checked against docs/77, AssetSlots / Pro
 | Settings tabs | Sound (speaker), Look (paint palette), Controls (game pad), Help (question bubble) | four tab icons, same family as the station icons |
 | Codes window | a gift box with a ribbon (window icon) and a treasure chest (group gift) | gift box closed; chest half open with amber glow |
 | Dino Index | 6 region pictures (Meadow, Beach, Forest, Marsh, Volcano, Cave) for the region card | small square landscape vignette per biome, low-poly island style (or Studio renders of our own world) |
+| Crystal Shop | the Crystals tab / tile in the same C style (crystals on a tile) | three amber crystals on a rounded tile, like the C tab set |
 | Shop featured banner | a wide banner background (sky + confetti) behind the featured egg | 3:1 banner, no text |
 | Big trail / shop cards | the picked trail / tab icons once more at full size (candidates are about 360 px stretched to 512) | "the chosen icon alone, 1024 px" (docs/216 size warning) |
 

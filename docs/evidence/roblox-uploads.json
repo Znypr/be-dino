@@ -1260,5 +1260,305 @@
     "uploaded": "2026-11-16T13:39:47Z",
     "imageId": "105558778837923",
     "note": "BD-1211 hatch can: paint area see-through, SurfaceAppearance ColorMap (resources/roblox/HatchBucketSurfaces.rbxmx)"
+  },
+  {
+    "assetId": "94502203651968",
+    "assetType": "Decal",
+    "displayName": "trail_fern_v2",
+    "file": "trail-fern-v2.png",
+    "bytes": 94518,
+    "sha256": "8c1b3a0d5daf3e7df78e4f7f3a6d965221a703a7c9c3b700072b40df3a766874",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:13Z"
+  },
+  {
+    "assetId": "111510628106544",
+    "assetType": "Decal",
+    "displayName": "trail_white_v2",
+    "file": "trail-white-v2.png",
+    "bytes": 56778,
+    "sha256": "168738df06cb50f48f7721d78e1f415ae8657bd53e76e178770d07e3f87cf946",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:24Z"
+  },
+  {
+    "assetId": "97256805898410",
+    "assetType": "Decal",
+    "displayName": "trail_tidal_v2",
+    "file": "trail-tidal-v2.png",
+    "bytes": 84750,
+    "sha256": "ca29929ac786fe5e1f8e9357c73d75bd47079401974ef71d5821e47c0b994291",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:28Z"
+  },
+  {
+    "assetId": "110679815908760",
+    "assetType": "Decal",
+    "displayName": "trail_ember_v2",
+    "file": "trail-ember-v2.png",
+    "bytes": 88292,
+    "sha256": "975bc60ab602e37abb80b815565bcdc721e6b3153da147f31683c0513f289a83",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:31Z"
+  },
+  {
+    "assetId": "129136547202573",
+    "assetType": "Decal",
+    "displayName": "trail_violet_v2",
+    "file": "trail-violet-v2.png",
+    "bytes": 69844,
+    "sha256": "2bbb6e2656ae01663f75cbafde94e9f10c420fe9c5a317164894b38ed8922915",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:35Z"
+  },
+  {
+    "assetId": "70758825436006",
+    "assetType": "Decal",
+    "displayName": "trail_electric_v2",
+    "file": "trail-electric-v2.png",
+    "bytes": 69891,
+    "sha256": "fa8ad6003f3f66f66b802aece1d63c64123048ea893e853f1a835dce77d31b19",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:39Z"
+  },
+  {
+    "assetId": "89800636381286",
+    "assetType": "Decal",
+    "displayName": "trail_frost_v2",
+    "file": "trail-frost-v2.png",
+    "bytes": 69665,
+    "sha256": "b1c0313446ade6a2709e5a8b89bebb81d60d2de7eb72c2b00f69c6f830a23ca9",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:42Z"
+  },
+  {
+    "assetId": "133295267518605",
+    "assetType": "Decal",
+    "displayName": "trail_solar_v2",
+    "file": "trail-solar-v2.png",
+    "bytes": 77312,
+    "sha256": "2eeee16857530255ad61df9b6d32e48c1dae66b10514ab3ff8250c79e576d39e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:46Z"
+  },
+  {
+    "assetId": "86292816766627",
+    "assetType": "Decal",
+    "displayName": "trail_nova_v2",
+    "file": "trail-nova-v2.png",
+    "bytes": 97203,
+    "sha256": "927301c020191ec8974d1336f180ec6d1f6701ba1f0868382b5492aa21553358",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:50Z"
+  },
+  {
+    "assetId": "140616411936261",
+    "assetType": "Decal",
+    "displayName": "trail_astra_v2",
+    "file": "trail-astra-v2.png",
+    "bytes": 71373,
+    "sha256": "6d3663e99b1004fb84c7a9de7d9db7636c23be103807733b780b2f20fadfa3e1",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:54Z"
+  },
+  {
+    "assetId": "139564380352840",
+    "assetType": "Decal",
+    "displayName": "shop_tab_auras_v2",
+    "file": "shop-tab-auras-v2.png",
+    "bytes": 73813,
+    "sha256": "d86ef9fae1bab3c032a72f4f5de46eedde4a949521968832ee827804aa481a7f",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:48:58Z"
+  },
+  {
+    "assetId": "84069114274564",
+    "assetType": "Decal",
+    "displayName": "shop_tab_trails_v2",
+    "file": "shop-tab-trails-v2.png",
+    "bytes": 94345,
+    "sha256": "ed020c0586bb87ac01737af08a6211aa62debdd5fb671b53a033cacb1a848c28",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:01Z"
+  },
+  {
+    "assetId": "133802044810566",
+    "assetType": "Decal",
+    "displayName": "shop_tab_conditions_v2",
+    "file": "shop-tab-conditions-v2.png",
+    "bytes": 96370,
+    "sha256": "c02d478e0d1c9c376a5202303fa26e838006ee34de7564a33de26f2c5bb8f8c9",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:05Z"
+  },
+  {
+    "assetId": "76432911616687",
+    "assetType": "Decal",
+    "displayName": "shop_tile_auras_v2",
+    "file": "shop-tile-auras-v2.png",
+    "bytes": 83639,
+    "sha256": "80bc401a4873271a97984f8e249d9df47b1f6b32700a648d2af04a56c2083986",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:09Z"
+  },
+  {
+    "assetId": "119392593859065",
+    "assetType": "Decal",
+    "displayName": "shop_tile_trails_v2",
+    "file": "shop-tile-trails-v2.png",
+    "bytes": 95067,
+    "sha256": "d737d7cb7d52c1da326f2e5a0aa9998bd7e89956c851d3079fa4285ab1380aae",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:12Z"
+  },
+  {
+    "assetId": "77687371539795",
+    "assetType": "Decal",
+    "displayName": "shop_tile_conditions_v2",
+    "file": "shop-tile-conditions-v2.png",
+    "bytes": 106693,
+    "sha256": "cb91fa26fc768e99ed47020b3c10bf05875b6b4d134b37d9c91dd9222e9c6103",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:16Z"
+  },
+  {
+    "assetId": "96769109563147",
+    "assetType": "Decal",
+    "displayName": "shop_tile_eggs_v2",
+    "file": "shop-tile-eggs-v2.png",
+    "bytes": 96492,
+    "sha256": "87a8dad312a3c9b73c96305ecf1599b3702d4cff868d7a17cd7e38125b1cb72e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:19Z"
+  },
+  {
+    "assetId": "97446637518953",
+    "assetType": "Decal",
+    "displayName": "trail_white_v2_D",
+    "file": "trail-white-v2.png",
+    "bytes": 68019,
+    "sha256": "57d8c1d78a5ca0502253e616b19ab892c0c1ce07d4a84f4d14147d3136f53a3c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:44Z"
+  },
+  {
+    "assetId": "123675789848126",
+    "assetType": "Decal",
+    "displayName": "trail_fern_v2_D",
+    "file": "trail-fern-v2.png",
+    "bytes": 106225,
+    "sha256": "2d16cab280d86d2374263757d54b9fb1bc6bbe992062ffb0e2a61f0e2bc47c9a",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:48Z"
+  },
+  {
+    "assetId": "85480576899020",
+    "assetType": "Decal",
+    "displayName": "trail_tidal_v2_D",
+    "file": "trail-tidal-v2.png",
+    "bytes": 85999,
+    "sha256": "50e347a5b7046a27cf24b39db64b1d5b82a5c4a58852a770f6c5c562b6e3a703",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:52Z"
+  },
+  {
+    "assetId": "94104540590062",
+    "assetType": "Decal",
+    "displayName": "trail_ember_v2_D",
+    "file": "trail-ember-v2.png",
+    "bytes": 96872,
+    "sha256": "8f544965b0f32328c57829eb4ecbe0260fa6a9d2d9e17b443825b828ca2d8d23",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:56Z"
+  },
+  {
+    "assetId": "73615897055703",
+    "assetType": "Decal",
+    "displayName": "trail_violet_v2_D",
+    "file": "trail-violet-v2.png",
+    "bytes": 73372,
+    "sha256": "a4f7bb7f77ff75edf02c8ec202d1a7f63c8669a94192a61aa3fee23b9424574f",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:49:59Z"
+  },
+  {
+    "assetId": "131437045681246",
+    "assetType": "Decal",
+    "displayName": "trail_electric_v2_D",
+    "file": "trail-electric-v2.png",
+    "bytes": 81251,
+    "sha256": "c3f11d20e9f422a7b7eed9968eb9792bff2f20613304cafd9d43c26f42e7edf1",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:03Z"
+  },
+  {
+    "assetId": "132449834213969",
+    "assetType": "Decal",
+    "displayName": "trail_frost_v2_D",
+    "file": "trail-frost-v2.png",
+    "bytes": 74262,
+    "sha256": "b156bff7e9b6beee5c3cc91e624f32c5a58a232106daf3b550b725a7251e5382",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:07Z"
+  },
+  {
+    "assetId": "74007272192235",
+    "assetType": "Decal",
+    "displayName": "trail_solar_v2_D",
+    "file": "trail-solar-v2.png",
+    "bytes": 87975,
+    "sha256": "76b9dbfacb3bbd8c9ca6c53aaf0af4d45c23ce31c56e80e7c5e82875da5f42a7",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:10Z"
+  },
+  {
+    "assetId": "121353943009453",
+    "assetType": "Decal",
+    "displayName": "trail_nova_v2_D",
+    "file": "trail-nova-v2.png",
+    "bytes": 96828,
+    "sha256": "9140a9ee467e7fa0553a6aecfad1bb080bda9da0ac24980f22ed97c52382bcd0",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:14Z"
+  },
+  {
+    "assetId": "120339945847245",
+    "assetType": "Decal",
+    "displayName": "trail_astra_v2_D",
+    "file": "trail-astra-v2.png",
+    "bytes": 71981,
+    "sha256": "523237e8d5ab0b734f3291d5d6ac03fb70e9f144b54b2c6fd9a161593f722b2b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:18Z"
+  },
+  {
+    "assetId": "118225802358317",
+    "assetType": "Decal",
+    "displayName": "aura_meadow_v3_D",
+    "file": "aura-meadow-v3.png",
+    "bytes": 129210,
+    "sha256": "663712ac47442e762e7d038e706fc3761d5c663a0bc40a70b6fe4e43a91ccd99",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:22Z"
+  },
+  {
+    "assetId": "128329937813392",
+    "assetType": "Decal",
+    "displayName": "aura_tidal_v3_D",
+    "file": "aura-tidal-v3.png",
+    "bytes": 99253,
+    "sha256": "4bfe46be0f8b6052642e43870f33ffbc7921e7e70146f3a3023b89cec4193a88",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:25Z"
+  },
+  {
+    "assetId": "137873005499474",
+    "assetType": "Decal",
+    "displayName": "aura_royal_v3_D",
+    "file": "aura-royal-v3.png",
+    "bytes": 131678,
+    "sha256": "59d3a7fba2bf724c2dad6eb32d25ca6565c132209fb12469950cc7ede7f24c05",
+    "moderation": "Approved",
+    "uploaded": "2026-11-17T21:50:29Z"
   }
 ]
