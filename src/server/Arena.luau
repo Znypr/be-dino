@@ -18,6 +18,7 @@ local WorldToon = require(ReplicatedStorage.Shared.WorldToon)
 local Veg2 = require(ReplicatedStorage.Shared.VegetationV2) -- BD-1239
 local Fill = require(ReplicatedStorage.Shared.WorldFill) -- BD-1245 / BD-1246
 local PlazaHubLayout = require(ReplicatedStorage.Shared.PlazaHubLayout)
+local PlazaShopsLayout = require(ReplicatedStorage.Shared.PlazaShopsLayout)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
@@ -609,7 +610,10 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
-    if V3 and PlazaHubLayout.enabled(Config) then require(script.Parent.PlazaHub).build(world, V3.CenterX, V3.CenterZ) end -- BD-1221: stalls on the plaza
+    if V3 and PlazaHubLayout.enabled(Config) then -- BD-1221: stalls on the plaza; BD-1248: themed shop buildings instead (PlazaShopsV2Enabled)
+        if PlazaShopsLayout.enabled(Config) then require(script.Parent.PlazaShops).build(world, V3.CenterX, V3.CenterZ)
+        else require(script.Parent.PlazaHub).build(world, V3.CenterX, V3.CenterZ) end
+    end
     if kitMode then biomeKit(world) if V3 then v3Landmarks(world, V3) end else
     for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         local center = c * S
