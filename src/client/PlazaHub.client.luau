@@ -27,7 +27,9 @@ local function attach(anchor: Instance)
     local station, screen = anchor:GetAttribute("PlazaStation"), anchor:GetAttribute("PlazaScreen")
     if typeof(station) ~= "string" or typeof(screen) ~= "string" then return end
     local prompt = Instance.new("ProximityPrompt")
-    prompt.Name, prompt.ActionText, prompt.ObjectText = "PlazaOpen", "Open", SignCopy.sign(station) or ""
+    -- BD-1248: with the shop buildings the signboard is the ONE label of a shop, so the prompt shows no object name (PlazaOneLabel)
+    prompt.Name, prompt.ActionText = "PlazaOpen", "Open"
+    prompt.ObjectText = if anchor:GetAttribute("PlazaOneLabel") == true then "" else SignCopy.sign(station) or ""
     prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode[Layout.PromptKey], Enum.KeyCode[Layout.PromptGamepad]
     prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight = 0, Layout.PromptDistance, false
     prompt.Triggered:Connect(function()
