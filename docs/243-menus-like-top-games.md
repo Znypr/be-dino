@@ -4,7 +4,7 @@ Owner 2026-11-17: "not all ui menus really look like the top famous roblox exper
 
 Status: **study + spec + backlog.** The owner's message is the decision (newest owner statement wins over the cream pick of 2026-11-14); the body style is a LEAD decision (docs/115, BD-1252). Nothing in the game changed because of this page yet. It corrects [242](242-full-benchmark-2026-11-16.md) row 11, which called menus "covered": they follow our own style tile ([240](240-cohesion-style-bible.md)), not the top games.
 
-Mockup board (decision aid, our own art only): `docs/evidence/2026-11-17-menu-study/menu-mock-v1.jpg`, generator `tools/menu_study_mock.py`. Today's windows for comparison: `docs/evidence/2026-11-17-final-checks/phone-828x374-potion-shop.jpg` (PR #627; panel D of the board), `docs/evidence/2026-11-15-cohesion/current/index.jpg`.
+**Full proposal sheet** (owner 2026-11-17: "build full proposal sheet of new menus"; decision aid, our own art only): `docs/evidence/2026-11-17-menu-study/menu-proposal-sheet-v2.jpg` (every window, section 4b), generator `tools/menu_study_mock.py`. First board (3 windows): `menu-mock-v1.jpg` in the same folder. Today's windows for comparison: `docs/evidence/2026-11-17-final-checks/phone-828x374-potion-shop.jpg` (PR #627; panel D of the board), `docs/evidence/2026-11-15-cohesion/current/index.jpg`.
 
 ## 1. What I looked at (and what not)
 
@@ -54,6 +54,29 @@ Our Toybox kit (`resources/ui/v2/toybox/final/`) already IS this grammar: dark s
 - **B Potion Shop:** purple header, crystals chip and restock line in the top row, six rarity-filled cards each with its own green price button, Potions / Auras / Trails / Crystals as big tiles left of the window.
 - **C Fusion:** one page that explains itself with pictures (3 slots, lines to the result, one big FUSE!).
 - Every window: about 65-75 % of the screen wide, dark studded body, header colour per menu, red X, world visible.
+
+### 4b. The full sheet: every window (v2)
+
+| # | Window | Header | What changes against today |
+| --- | --- | --- | --- |
+| 1 | Dino Index | blue | rarity-filled cards, ??? silhouettes, region card with its reward, CLAIM ALL, fat "Found 14 / 55"; Colours / Patterns tiles outside |
+| 2 | Dino detail | blue | the dino big on its rarity card; Class / Size / Looks as dark plates with icons; copies bar; EQUIP green + FUSE purple |
+| 3 | Eggs and nests | amber | five nest cards with live state (Ready! / 3 min / Empty / Locked); the egg big; one huge OPEN EGG |
+| 4 | Shop (landing) | green | one FEATURED banner (Rainbow Egg, crystals price, "New in 2 h"); Eggs / Auras / Trails / Colours as big coloured tiles |
+| 5 | Egg chances | amber | one row per rarity in its colour with "1 in N" in big numbers; rare ones as silhouettes; OPEN 1 / OPEN 3, Exact % |
+| 6 | Potion Shop | purple | rarity-filled potion cards, a price button on each, crystals + restock line on top; shop tabs as tiles left |
+| 7 | Auras | red | big aura art on rarity cards; EQUIPPED grey, EQUIP green, price green, Locked dark |
+| 8 | Trails | blue | the same card grammar, price under each picture, OWNED grey |
+| 9 | Fusion | purple | the rule told with pictures: 3 slots, lines, the result, one FUSE! |
+| 10 | Home (Sanctuary) | green | the dino big, three facts with icons, a giant EXPLORE!, OPEN EGGS, Change dino |
+| 11 | Run complete | amber | the trophy, "You found 3 eggs!" with the eggs as pictures, four number plates, OPEN EGGS + HOME |
+| 12 | Defeat | amber | "Your eggs are safe!" first in green, eggs shown, crystals kept, PLAY AGAIN |
+| 13 | Settings | dark | calm on purpose: rows as dark plates with icons, green sliders; Sound / Look / Controls / Help tiles |
+| 14 | Food guide | green | food big on cards from plain to rare, "+N grow" in green, one tip plate, GOT IT! |
+| 15 | Buy confirm | amber | small window, the only one that dims the world; the egg as a picture, price, BUY / CANCEL |
+| 16 | Codes and gifts | purple | white type box + GO!, the group gift as a golden card |
+
+Not windows, so not on the sheet: the hatch (a full stage, BD-1179), HUD, toasts and world labels (cream plates stay, rule G3).
 
 Style-tile changes this needs (docs/240, done with BD-1252): R1 becomes "dark studded body, cream only for text plates", R3 becomes "one green button per card, the window's main action biggest", R4 becomes "rarity colour fills the card".
 
