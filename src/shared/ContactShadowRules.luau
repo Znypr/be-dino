@@ -74,6 +74,29 @@ function Rules.centreDarkness(): number
     return 1 - through
 end
 
+-- BD-1261 (Config.BlobShadowEnabled, owner 2026-11-17 "dino shadows are really low quality"): ONE soft blob instead of the three discs.
+-- A flat invisible block with a Decal on its top face: Roblox's built-in rbxasset://textures/glow.png (ships with every client, no upload) tinted
+-- Rules.Color. Studio test 2026-11-17 (docs/evidence/review-2026-10-17/590-592, option C): smooth falloff, no ring; Decal.Transparency .25 at
+-- full opacity (option D at .10 was too dark), 1.25 x the footprint. One part per dino instead of three; same caps, airborne fade and raycast.
+Rules.Blob = table.freeze({texture = "rbxasset://textures/glow.png", transparency = .25, scale = 1.25, thickness = .05})
+
+function Rules.blobEnabled(config: any): boolean
+    return type(config) == "table" and config.BlobShadowEnabled == true
+end
+
+-- Decal transparency of the blob for an opacity factor in [0, 1] (1 = on the ground, 0 = gone).
+function Rules.blobTransparency(opacity: number): number
+    local o = if opacity ~= opacity then 0 else math.clamp(opacity, 0, 1)
+    return 1 - (1 - Rules.Blob.transparency) * o
+end
+
+-- Blob size (width across, length along) in studs for this VisualScale and airborne size factor.
+function Rules.blobSize(visualScale: number, sizeFactor: number): (number, number)
+    local w, l = Rules.footprint(visualScale)
+    local k = Rules.Blob.scale * math.clamp(if sizeFactor ~= sizeFactor then 1 else sizeFactor, 0, 1)
+    return w * k, l * k
+end
+
 -- Ground normals flatter than this (nearly a wall) fall back to straight up.
 Rules.MinNormalY = .35
 

@@ -107,7 +107,8 @@ def scan():
     shadow = (ROOT / 'src/client/ContactShadow.client.luau').read_text(encoding='utf-8')
     for needle in ('CanCollide, part.CanQuery, part.CanTouch, part.CastShadow', 'Parent = camera', 'Rules.pick(', 'Settings.effects()', 'Rules.airborne('):
         assert needle in shadow, 'ContactShadow.client.luau lacks ' + needle
-    assert shadow.count('Instance.new') == 2, 'only the folder and the pooled disc parts are created, never per frame'
+    assert shadow.count('Instance.new') == 3, 'only the folder, the pooled disc parts and (BD-1261 blob) one decal are created, never per frame'
+    assert 'Instance.new("Decal")' in shadow and shadow.index('local function newShadow') < shadow.index('Instance.new("Decal")') < shadow.index('local function hide'), 'the blob decal is built only in newShadow'
     assert 'Instance.new("Part")' in shadow and shadow.index('local function newShadow') < shadow.index('Instance.new("Part")') < shadow.index('local function hide'), 'discs are built only in newShadow'
     # Grass: owner decision 2026-10-16 = Roblox's built-in Grass. BeDino_Meadow stays in MaterialService with all its IDs but is NOT bound.
     root = ET.fromstring((ROOT / 'resources/world-materials.rbxmx').read_text(encoding='utf-8'))
