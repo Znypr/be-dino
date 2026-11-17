@@ -30,5 +30,5 @@ Owner 2026-11-16, spawn screenshot: "game still looks empty", then "Yes, build a
 Still above the docs/107 phone rule of thumb (about 3,000 parts in range, BD-1222); this adds about 2%. No phone check yet.
 
 ## Lead review 2026-11-16 (before the PR)
-- Spawn view: three babies (triceratops, stegosaurus, parasaurolophus at 0.7 size) 40-48 studs from spawn either side of the main path, and the two plaza butterfly flocks 1.5x bigger, 16-22 studs from spawn: all in the spawn frame (`after-spawn.jpg`, Studio screen positions checked).
+- Spawn view (re-taken 2026-11-17 on main with #623 and #625): three babies (triceratops, stegosaurus, parasaurolophus at 0.7 size) 38-43 studs from spawn either side of the main path, clear of the new plaza shops, and the two plaza butterfly flocks 1.5x bigger, 16-24 studs from spawn: all in the spawn frame (`after-spawn.jpg`, Studio screen positions checked). Parts within 300 studs of spawn on that tree: 4,610 (life 84).
 - NESTS and POTIONS showed twice (a word on the stone sign plus a floating word, already on main): fixed by #625 (BD-1248 plaza shops v2, one signboard per shop), so this PR leaves the plaza signs alone.

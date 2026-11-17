@@ -120,9 +120,9 @@ end
 -- about 55 studs from the spawn camera. Angle and distance from the plaza centre. LEAD decision (owner delegated 2026-10-16), docs/115.
 -- Lead review 2026-11-16: three babies 40-60 studs from spawn, a little bigger (scale), so they read in that first frame.
 IslandLife.SpawnHerd = {
-    {angle = 48, r = 40, species = "triceratops", zone = "meadow", scale = .7},
-    {angle = 92, r = 42, species = "stegosaurus", zone = "forest", scale = .7},
-    {angle = 104, r = 48, species = "parasaurolophus", zone = "forest", scale = .7},
+    {angle = 46, r = 40, species = "triceratops", zone = "meadow", scale = .7},
+    {angle = 86, r = 40, species = "stegosaurus", zone = "forest", scale = .7}, -- clear of the BD-1248 Potions shop (Studio scan 2026-11-17)
+    {angle = 96, r = 36, species = "parasaurolophus", zone = "forest", scale = .7},
 }
 function IslandLife.spawnSpots(world: any): {{x: number, z: number, species: string, zone: string, scale: number?}}
     local out = {}
