@@ -51,6 +51,7 @@ FULL_SCREEN_REVIEWED = {
     ('DupProgressClient.luau', 'tap'): 'a progress bar tap on the Index species page (fills its own bar inside the My dinos column, BD-1170)',
     ('ShopToyboxCard.luau', 'tap'): 'the Info tap fills only its own art box inside a shop card (BD-1178); the X and the end buttons are not under it',
     ('Toasts.luau', 'tap'): 'a toast card tap (inside the card; the toast stack moved out of Bootstrap, BD-1088)',
+    ('MenuWindow.luau', 'veil'): 'BD-1266: the Buy X? confirm veil covers only the standard window BODY (it starts under the title bar), so the red X stays tappable; its own Buy / Not now buttons sit above it',
     ('Bootstrap.client.luau', 'crystalOpen'): 'OpenShop inside the crystal plate',
     ('DinoIndexPanels.luau', 'scrim'): 'EggPopup inside the Dino Index body (OK button + tap outside the card)',
     ('FusionMenu.luau', 'scrim'): 'FusionScrim (the Fusion menu itself; its panel and X sit above it)',

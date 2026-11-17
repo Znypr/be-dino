@@ -29,6 +29,7 @@ local endRun: any, setSkipRemote: any
 function Screens.attach(d: any)
     body, heading, header, label, box, button, art = d.body, d.heading, d.header, d.label, d.box, d.button, d.art
     open, close, notify, viewportScale, touchMode, num, str, decoded = d.open, d.close, d.notify, d.viewportScale, d.touchMode, d.num, d.str, d.decoded
+    Screens.closeMenu = d.close -- BD-1266: the standard window closes Bootstrap's own window before it opens (two windows never stack)
     modalVersion, motionNow, celebrate = d.modalVersion, d.motion, d.celebrate
     skipped, clearSkipped, markTutorialSeen, ownsAutoOpen, autoOpenSelection = d.skipped, d.clearSkipped, d.markTutorialSeen, d.ownsAutoOpen, d.autoOpenSelection
     local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder

@@ -75,7 +75,37 @@ function Shop.attach(d: any)
         if ok then Sfx.play("shop_buy") end
         notify(if ok then "Done!" else NotifyQueue.statusText(status),if ok then C.accent else C.red,{key=if ok then "ok" else "error"})
         local current=isActive() if current=="auras" or current=="potions" then body:ClearAllChildren() render(current) end
+        if Config.StandardMenuEnabled==true then require(script.Parent.ShopWindowPages).refresh() end -- BD-1266: the standard window draws the new numbers
     end)
+    if Config.StandardMenuEnabled==true then Shop.standardRoutes() end -- BD-1266 (docs/244 s2.14): the Crystal Shop and the Potion Shop open on the standard window
+end
+
+-- BD-1266 / BD-1267 / BD-1270 (docs/244 s2.12 to s2.14): with Config.StandardMenuEnabled the Crystal Shop ("auras") and the Potion Shop ("potions") open on the
+-- ONE standard window (MenuWindow + ShopWindowPages) instead of Bootstrap's window. Same remote, token and server checks (transact); the egg purchase,
+-- the egg chances, the luck upgrade and the potion replace pages stay Bootstrap screens and come back here. Flag off: nothing is registered.
+function Shop.standardRoutes()
+    local Guard=require(script.Parent.ModalGuard)
+    local Pages=require(script.Parent.ShopWindowPages)
+    local PaidRandomGate=require(Shared.PaidRandomGate)
+    local helpers={
+        gui=function() local parts=require(script.Parent.ModalCompact).parts() return if parts then parts.gui else nil end,
+        num=num,str=str,progression=progression,notify=notify,open=open,transact=transact,
+        randomBlocked=function() return PaidRandomGate.blocked(Config.DeveloperProducts,Config.PaidRandomItemsEnabled,require(script.Parent.PrivateState).get("PaidRandomEligible")) end,
+        openChances=function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end,
+        openReplace=function(id) potionChoice.id=id open("potionReplace") end,
+        closeMenu=function() -- only when Bootstrap's window is really open (its close also stops auto-hatching)
+            local parts=require(script.Parent.ModalCompact).parts()
+            local shade=parts and parts.panel.Parent
+            if isActive()~="" and shade and (shade :: any).Visible then require(script.Parent.SmallScreens).closeMenu() end
+            local fusionModule=script.Parent:FindFirstChild("FusionMenu") -- the Fusion Menu is its own window too
+            if fusionModule then
+                local ok,fusion=pcall(require,fusionModule)
+                if ok and type(fusion)=="table" and fusion.isOpen and fusion.isOpen() then fusion.close() end
+            end
+        end,
+    }
+    for name in Pages.Names do Guard.Routes[name]=function() return Pages.show(name,helpers) end end
+    Guard.onOther=function() Pages.close() end
 end
 
 -- Bootstrap's HUD tick: a purchase with no answer after 8 s is sent again with the same token (a delayed result cannot charge twice).

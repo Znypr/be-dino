@@ -9,8 +9,17 @@ local Guard = {}
 Guard.OwnMenus = {fusion = true}
 Guard.EmptyText = "Nothing here yet"
 
+-- BD-1266 (docs/244 s2.14): screens that moved onto the standard window register here (ShopScreens.attach, only while
+-- Config.StandardMenuEnabled is on): route() opens that window and returns true. Any other screen first calls onOther (it closes the
+-- standard window), so two windows never stack. Both stay empty with the flag off.
+Guard.Routes = {} :: {[string]: () -> boolean}
+Guard.onOther = nil :: (() -> ())?
+
 -- openOwn: the function that opens the own menu (Bootstrap's openFusion; nil while it is not set up yet).
 function Guard.routed(name: string, openOwn: (() -> ())?): boolean
+    local route = Guard.Routes[name]
+    if route and route() then return true end
+    if Guard.onOther then Guard.onOther() end
     if Guard.OwnMenus[name] and openOwn then
         openOwn()
         return true

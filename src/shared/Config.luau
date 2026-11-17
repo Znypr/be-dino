@@ -279,6 +279,16 @@ return table.freeze({
     -- Same spots, prompts and "At home" rule. false = the BD-1221 stalls exactly as before. Pinned off in the default profile, ON in the
     -- playtest profile (docs/157). Free, no Robux.
     PlazaShopsV2Enabled = false,
+    -- BD-1266 + BD-1267 (docs/244 s2.12 to s2.14, owner 2026-11-17 "Yes, build it"): true = the Crystal Shop and the Potion Shop open on the ONE
+    -- standard window (src/client/MenuWindow.luau): a striped title bar in the window colour, a big red square X, a dark stud body, the world
+    -- blurred and the HUD left visible, sizes as shares of the screen, "-- NAME --" section headers, offer and item cards, side category tabs
+    -- outside the window. Same remote, token and server checks; prices in crystals only. false = both shops exactly as before.
+    -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    StandardMenuEnabled = false,
+    -- BD-1270 (docs/244 s2.12): true = with StandardMenuEnabled the Crystal Shop opens on a "Featured" tab: this week's aura or trail on one big
+    -- card, "-- NEW --" with two more, "3 days left" in kid words. Weekly from the server clock, the same for everyone, crystal items only.
+    -- false = no Featured tab. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    ShopFeaturedEnabled = false,
     -- BD-1227 (docs/242 gap 17): true = the rare hatch news names the hatcher by Roblox display name ("Mia hatched a Legendary T-Rex!") in the
     -- two-line banner plus one plain chat line, and an Epic species makes news too. Same server rate limits as BD-428; nothing stored.
     -- false = the BD-428 / BD-1121 announcement exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free.
