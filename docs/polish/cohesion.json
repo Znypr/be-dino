@@ -72,7 +72,7 @@
     "R7": "-",
     "R8": "P"
    },
-   "note": "cream plates, no debug lines, LEAP grey, badges on the edge (BD-1213, HudCohesionEnabled, playtest); BD-1237: Codes and Tell us! grey (docs/evidence/2026-11-16-menus-style/after-hud-codes-tellus-grey.jpg)"
+   "note": "cream plates, no debug lines, LEAP grey, badges on the edge (BD-1213, HudCohesionEnabled, playtest); BD-1237: Codes and Tell us! grey (docs/evidence/2026-11-16-menus-style/after-hud-codes-tellus-grey.jpg); BD-1241 2026-11-17: home rail now a cream plate with ink words, Codes moved clear of the weather chip on short canvases (home-hud-after-1274x481.jpg)"
   },
   {
    "name": "Welcome steps",
@@ -93,7 +93,7 @@
   {
    "name": "Home (Sanctuary)",
    "group": "home",
-   "shot": "docs/evidence/2026-11-16-screens-cohesion/after-home-compact-first-pass.jpg",
+   "shot": "docs/evidence/2026-11-17-final-checks/home-sanctuary-after-1274x481.jpg",
    "marks": {
     "R1": "P",
     "R2": "P",
@@ -104,7 +104,7 @@
     "R7": "P",
     "R8": "P"
    },
-   "note": "BD-1214: dino on a cream preview, facts in ink, Explore green, OPEN EGGS grey"
+   "note": "BD-1214: dino on a cream preview, facts in ink, Explore green, OPEN EGGS grey; 2026-11-17: right panel clear of the frame on a compact canvas"
   },
   {
    "name": "Eggs screen",
@@ -120,7 +120,7 @@
     "R7": "P",
     "R8": "P"
    },
-   "note": "on the rules (BD-1195)"
+   "note": "on the rules (BD-1195); BD-1241 2026-11-17: panels clear of the frame on a compact canvas (eggs-screen-after-1274x481.jpg); empty-nest pictures cut at the top there (BD-1251)"
   },
   {
    "name": "Dino Index list",
@@ -232,12 +232,12 @@
     "R7": "P",
     "R8": "P"
    },
-   "note": "on the rules; BD-1237: Help tab How to play grey beside the one green FOOD GUIDE (docs/evidence/2026-11-16-menus-style/after-settings-help.jpg)"
+   "note": "on the rules; BD-1237: Help tab How to play grey beside the one green FOOD GUIDE (docs/evidence/2026-11-16-menus-style/after-settings-help.jpg); BD-1241 2026-11-17: tabs, sliders and numbers clear of the scroll bar on a compact canvas (settings-sound-after-1274x481.jpg)"
   },
   {
    "name": "Food guide",
    "group": "menu",
-   "shot": "docs/evidence/2026-11-16-menus-style/after-food-guide-3d-first-pass.jpg",
+   "shot": "docs/evidence/2026-11-17-final-checks/food-guide-egg-turn-1274x481.jpg",
    "marks": {
     "R1": "P",
     "R2": "P",
@@ -248,7 +248,7 @@
     "R7": "P",
     "R8": "P"
    },
-   "note": "BD-1237: real V3 food meshes on cream cards, ink names and grow chips; the egg mesh now gets its RotX turn (re-capture BD-1243)"
+   "note": "BD-1243 2026-11-17: re-captured after the egg turn fix: the egg stands upright in its nest; four cream cards with real V3 food meshes, ink names, grow chips, kid tip line"
   },
   {
    "name": "Hatch: egg",
@@ -413,39 +413,39 @@
   {
    "name": "Defeat",
    "group": "play",
-   "shot": null,
+   "shot": "docs/evidence/2026-11-17-final-checks/defeat-after-1274x481.jpg",
    "marks": {
-    "R1": "?",
-    "R2": "?",
-    "R3": "?",
-    "R4": "?",
-    "R5": "?",
-    "R6": "?",
-    "R7": "?",
-    "R8": "?"
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "-",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "P"
    },
-   "note": "not captured: the wild predator never bit in Studio; BD-1240"
+   "note": "BD-1240 2026-11-17: after a real wild-predator knock-out in Studio (two NPC bites, test-only HP in a throwaway build). Oops! Good try!, Your eggs are safe!, one green Back home; R8 fixed: the right panel ran 4 px into the frame on a compact canvas (before: defeat-before-1274x481.jpg)"
   },
   {
    "name": "Phone layout (touch)",
    "group": "play",
-   "shot": null,
+   "shot": "docs/evidence/2026-11-17-final-checks/phone-634x344-hud-home.jpg",
    "marks": {
-    "R1": "?",
-    "R2": "?",
-    "R3": "?",
-    "R4": "?",
-    "R5": "?",
-    "R6": "?",
-    "R7": "?",
-    "R8": "?"
+    "R1": "P",
+    "R2": "P",
+    "R3": "P",
+    "R4": "P",
+    "R5": "P",
+    "R6": "P",
+    "R7": "P",
+    "R8": "F"
    },
-   "note": "the MCP cannot switch the device emulator; compact 1274x481 and offline 667x375 checked only; BD-1241"
+   "note": "BD-1241 2026-11-17 EMULATOR PASS, NOT A REAL PHONE: Studio viewport resized to 828x374 and 634x344, desktop input. Fixed: panels clear of the frame, Codes clear of the weather chip, home rail and walk-up bubble cream. R8 still fails: toasts over the weather chip / under the bubble and over OPEN EGGS (BD-1249), taps under 44 px (BD-1250), nest pictures cut (BD-1251). Real phone: owner (BD-1222)"
   },
   {
    "name": "3D dinos (V3 low-poly)",
    "group": "world",
-   "shot": "docs/evidence/2026-11-16-v3-dinos/01-rest-v3-compy.jpg",
+   "shot": "docs/evidence/2026-11-17-final-checks/dino-v3-player-compy.jpg",
    "marks": {
     "R1": "-",
     "R2": "-",
@@ -456,28 +456,12 @@
     "R7": "-",
     "R8": "-"
    },
-   "note": "Blender low-poly V3 set in one style (dino-rig session); Parasaurolophus odd BD-1188; fresh Studio check BD-1243"
+   "note": "BD-1243 2026-11-17 Studio: player Compy and the baby herd (dino-v3-baby-stegosaurus.jpg) are the V3 low-poly set with eyes and the BD-1217 clips; hatch shows the V3 Raptor (hatch-common-1274x481.jpg). Small: at a close side angle the far eye reads as a flat black patch. Parasaurolophus still needs an owner Model id (BD-1216)"
   },
   {
    "name": "World props (trees, rocks, plants)",
    "group": "world",
-   "shot": "docs/evidence/2026-11-16-world-look/ground-03-after-mid-height.jpg",
-   "marks": {
-    "R1": "-",
-    "R2": "-",
-    "R3": "-",
-    "R4": "-",
-    "R5": "F",
-    "R6": "-",
-    "R7": "-",
-    "R8": "-"
-   },
-   "note": "toon ground and round bushes (BD-1220-1224) fit; rocks and plants still the placeholder kit: BD-206, vegetation v2 queued BD-1239 (PR #615)"
-  },
-  {
-   "name": "Food models in the world",
-   "group": "world",
-   "shot": "docs/evidence/2026-11-15-food-v3/in-game-playtest-food-v3.jpg",
+   "shot": "docs/evidence/2026-11-17-final-checks/world-nest-set-piece-food-vegetation.jpg",
    "marks": {
     "R1": "-",
     "R2": "-",
@@ -488,7 +472,23 @@
     "R7": "-",
     "R8": "-"
    },
-   "note": "V3 food meshes from the approved icons (BD-1208), the same meshes the Food guide shows now; hosts BD-1238 (PR #614)"
+   "note": "BD-1243 2026-11-17 Studio: vegetation v2 bushes and trees, mossy boulders and mushrooms, one set piece per spoke (nest, campfire, signpost, fossil dig, log bridge), plaza shops v2 with dino shopkeepers (world-plaza-shops-v2.jpg, world-rocks-mushrooms-food-closeup.jpg); the placeholder kit is gone"
+  },
+  {
+   "name": "Food models in the world",
+   "group": "world",
+   "shot": "docs/evidence/2026-11-17-final-checks/world-rocks-mushrooms-food-closeup.jpg",
+   "marks": {
+    "R1": "-",
+    "R2": "-",
+    "R3": "-",
+    "R4": "-",
+    "R5": "P",
+    "R6": "-",
+    "R7": "-",
+    "R8": "-"
+   },
+   "note": "BD-1243 2026-11-17 Studio: V3 food meshes along the paths (berries, apples, amber, eggs in nests), the same meshes the Food guide shows (world-nest-set-piece-food-vegetation.jpg)"
   },
   {
    "name": "Sound and music",

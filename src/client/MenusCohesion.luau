@@ -23,7 +23,7 @@ M.Main = Color3.fromRGB(93, 237, 31) -- the kit's green: only the confirm popups
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
 local function size(r: Rules.Rect): UDim2 return UDim2.fromOffset(r.w, r.h) end
 local function pos(r: Rules.Rect): UDim2 return UDim2.fromOffset(r.x, r.y) end
-local function body(): (number, number, number) return ModalCompact.bodyWidth(), ModalCompact.bodyHeight(), ModalCompact.bodyScale() end
+local function body(): (number, number, number) return ModalCompact.usableWidth(), ModalCompact.bodyHeight(), ModalCompact.bodyScale() end
 
 -- R8 on a resize: drawn again for the body that is on screen now (the ScreensCohesion pattern); stops once another screen replaced the mark.
 local function live(parent: Frame, draw: () -> GuiObject)
@@ -180,7 +180,7 @@ function M.food(d: any)
     live(d.body, function() return M.drawFood(d) end)
 end
 function M.drawFood(d: any): GuiObject
-    local w, h = ModalCompact.bodyWidth(), ModalCompact.bodyHeight()
+    local w, h = ModalCompact.usableWidth(), ModalCompact.bodyHeight()
     local lay = Rules.food(w, h, #Rules.Food)
     local first: GuiObject? = nil
     for i, food in Rules.Food do

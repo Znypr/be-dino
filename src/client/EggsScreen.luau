@@ -39,9 +39,14 @@ end
 -- isActive(), openEgg(), openNest(id), openSettings(tab?), autoOpenText(), notify(text, color?)
 -- Returns refresh(): cheap once-a-second text updates (timers).
 -- BD-1067: bodyH / bodyScale are the visible body height and the scale it renders at (ModalCompact), read NOW by render() below.
+-- BD-1241 (emulator pass 2026-11-17): with MenusCohesionEnabled the panels keep clear of the stud frame on a compact canvas (ModalCompact.usableWidth).
+local function toyboxWidth(): number
+    local compact = require(script.Parent.ModalCompact)
+    return if Config.MenusCohesionEnabled == true then compact.usableWidth() else compact.bodyWidth()
+end
 local function build(ctx: any, bodyH: number, bodyScale: number)
     -- BD-1195 (docs/232): flag on = three cream panels on the Toybox layout rules (src/client/EggsPanels); flag off = the screen below, unchanged.
-    if Theme.Toybox then return require(script.Parent.EggsPanels).build(ctx, require(script.Parent.ModalCompact).bodyWidth(), bodyH, bodyScale) end
+    if Theme.Toybox then return require(script.Parent.EggsPanels).build(ctx, toyboxWidth(), bodyH, bodyScale) end
     local body, C, label, box, button, art = ctx.body, ctx.C, ctx.label, ctx.box, ctx.button, ctx.art
     local capacity = Config.NestStorageCapacity
     local duration = Config.NestIncubationSeconds
@@ -263,7 +268,7 @@ function EggsScreen.render(ctx: any)
     local ModalCompact = require(script.Parent.ModalCompact)
     local gui = ctx.body:FindFirstAncestorOfClass("ScreenGui")
     local drawnH, drawnScale = ctx.bodyH or 402, ctx.bodyScale or 1
-    local drawnW = if Theme.Toybox then ModalCompact.bodyWidth() else 824 -- BD-1195: the Toybox screen also fills the body WIDTH
+    local drawnW = if Theme.Toybox then toyboxWidth() else 824 -- BD-1195: the Toybox screen also fills the body WIDTH
     local before: {[Instance]: boolean} = {}
     for _, child in ctx.body:GetChildren() do before[child] = true end
     local current = build(ctx, drawnH, drawnScale)
@@ -283,7 +288,7 @@ function EggsScreen.render(ctx: any)
             pending = false
             if not marker.Parent then return end
             local h, s = ModalCompact.bodyHeight(), ModalCompact.bodyScale()
-            local w = if Theme.Toybox then ModalCompact.bodyWidth() else 824
+            local w = if Theme.Toybox then toyboxWidth() else 824
             if w ~= drawnW then drawnW, drawnH = w, -1 end -- BD-1195: a new body width redraws too
             if h == drawnH and s == drawnScale then return end
             drawnH, drawnScale = h, s
