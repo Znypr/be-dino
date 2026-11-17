@@ -80,6 +80,46 @@ Not windows, so not on the sheet: the hatch (a full stage, BD-1179), HUD, toasts
 
 Style-tile changes this needs (docs/240, done with BD-1252): R1 becomes "dark studded body, cream only for text plates", R3 becomes "one green button per card, the window's main action biggest", R4 becomes "rarity colour fills the card".
 
+## 6. Asset audit for the new menus (owner 2026-11-17: "make sure to not use placeholder assets, find out which assets we have and which we might have to redo with chatgpt")
+
+Every picture the proposal sheet uses, checked against docs/77, AssetSlots / ProgressionConfig ids and a look at the files. Side-by-side of the weak ones: `docs/evidence/2026-11-17-menu-study/icons-today-vs-candidates.jpg`.
+
+**A. Final, in game, keep (no redo)**
+
+| Pictures | Made by | Where |
+| --- | --- | --- |
+| Toybox kit: 7 headers, studs tile, panel frame, 6 rarity cards, 8 buttons, red X | Blender, owner picked draft A 2026-11-13 | `resources/ui/v2/toybox/final/`, AssetSlots `toybox_*` (docs/77 rows still say "not uploaded": stale, the ids are bound) |
+| 12 potion icons | owner ChatGPT | `resources/ui/v2/items/potion-*.png` |
+| 3 auras (Meadow, Tidal, Royal) | owner ChatGPT | `items/aura-*-v2.png`, AssetSlots `aura_*` |
+| 6 station icons, 6 rarity badges, 4 crystal sizes, Index Colours / Patterns tabs | owner uploads 2026-11-14 | AssetSlots `station_*`, `rarity_*`, `crystals_*`, `index_tab_*` |
+| 4 class badges, trophy, home, fusion, heart, star, level, crystal glyph, weather | owner ChatGPT / earlier icon sets | `resources/ui/v2/icons/` |
+| 5 egg pictures (dirty, normal, rainbow, astra, cracked), nest | Blender renders | `resources/ui/v2/stage/eggs/`, `icons/egg-nest*` |
+| 4 food pictures | owner ChatGPT batch 1 | `items/food-*-v1.png` |
+| V3 dino cutouts | owner (Place1 v3) | main checkout `resources/ui/v2/dinos/v3/` (not in git yet: add them before the cards use them) |
+| 7 mutation badges | Blender (BD-190) | `icons/mutation-*-v1.png` |
+
+**B. Placeholder-looking, replace with the ChatGPT candidates we already have (owner picks, then upload and bind)**
+
+| Pictures | Today | Ready candidates (docs/216, owner style) | Recommended |
+| --- | --- | --- | --- |
+| 10 trail icons (white, fern, tidal, ember, violet, electric, frost, solar, nova, astra) | flat Blender symbols (cloud, leaf, bubbles, flame, rings, sun, star) | `candidates/art-batch2/shop-trail-*-A..D.png` | **A** (a swoosh with its motif, reads as a trail) |
+| Shop tabs Auras / Trails / Colours / Eggs | flat Blender symbols | `shop-tab-*-A..D.png` | **A** for tabs, **C** (on a tile) for the Shop landing tiles |
+| Shop landing tiles (Eggs, Auras, Trails, Colours) | Blender scenes on a flat colour | same `shop-tab-*-C.png` | **C** |
+
+**C. Missing: make new with ChatGPT (owner's account, same style prompt as docs/216: glossy, thick dark outline, transparent PNG, one icon per picture at 1024 px)**
+
+| Needed by | Picture | Prompt idea |
+| --- | --- | --- |
+| Settings tabs | Sound (speaker), Look (paint palette), Controls (game pad), Help (question bubble) | four tab icons, same family as the station icons |
+| Codes window | a gift box with a ribbon (window icon) and a treasure chest (group gift) | gift box closed; chest half open with amber glow |
+| Dino Index | 6 region pictures (Meadow, Beach, Forest, Marsh, Volcano, Cave) for the region card | small square landscape vignette per biome, low-poly island style (or Studio renders of our own world) |
+| Shop featured banner | a wide banner background (sky + confetti) behind the featured egg | 3:1 banner, no text |
+| Big trail / shop cards | the picked trail / tab icons once more at full size (candidates are about 360 px stretched to 512) | "the chosen icon alone, 1024 px" (docs/216 size warning) |
+
+Code-drawn things that stay code (allowed, docs/72): the "?" on a locked card, bars, number plates, the dark tint on a locked silhouette.
+
+**Build order with art:** the window frame, header colours, dark body and rarity cards use only group A, so they start now. Trail cards, shop tabs and tiles switch to the picked group-B pictures once uploaded; until then those screens keep today's icons behind the flag-off path (no placeholder is shown in the new look: Trails and the Shop landing join the new look only after the pick).
+
 ## 5. Backlog (priority order, nothing built yet)
 
 | Row | What | Why first |
