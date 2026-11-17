@@ -14,7 +14,7 @@ Runs the REAL VegetationV2 and the World V3 / toon placement in the pinned Luau 
   * thin() keeps only ground cover thinned (every other layer and its order untouched) at about CoverKeep, and the island has fewer parts.
 Source guards: the flag ships false, is pinned off in the default profile, ON in the playtest profile and in the rehearsal list; Arena
 uses the v2 visual only through veg2Prop and thins only with the flag; the loader fetches the family only with the flag; Bootstrap.client
-is untouched; the plaza sign shows its word once, on the board (BD-1239 overlap, BD-1244 lead review).
+is untouched; the plaza sign word is sized in studs (BD-1239 NESTS / POTIONS overlap).
 Usage: python tools/verify_vegetation_v2.py --runner luau.exe"""
 from pathlib import Path
 import argparse
@@ -137,8 +137,8 @@ def source_checks():
     if 'Veg2' in read('src/client/Bootstrap.client.luau') or 'Vegetation' in read('src/client/Bootstrap.client.luau'):
         errors.append('Bootstrap.client must not change')
     plaza = read('src/server/PlazaHub.luau')
-    if 'BillboardGui' in plaza or 'UDim2.fromOffset(b.width' in plaza:  # BD-1244 lead review: one word per stall (no floating word)
-        errors.append('the plaza sign must show its word once (on the board, no floating BillboardGui)')
+    if 'UDim2.fromScale(Layout.Sign.size[1]' not in plaza or 'UDim2.fromOffset(b.width' in plaza:
+        errors.append('the plaza sign word must be sized in studs')
     registry = read('docs/77-asset-registry.md')
     veg = read('src/shared/VegetationV2.luau')
     items = re.findall(r'(veg2_\w+) = \{assetId = "(\d+)", tris = \d+, ref = "(\w+)"', veg)

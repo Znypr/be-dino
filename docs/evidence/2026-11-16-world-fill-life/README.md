@@ -31,4 +31,4 @@ Still above the docs/107 phone rule of thumb (about 3,000 parts in range, BD-122
 
 ## Lead review 2026-11-16 (before the PR)
 - Spawn view: three babies (triceratops, stegosaurus, parasaurolophus at 0.7 size) 40-48 studs from spawn either side of the main path, and the two plaza butterfly flocks 1.5x bigger, 16-22 studs from spawn: all in the spawn frame (`after-spawn.jpg`, Studio screen positions checked).
-- NESTS and POTIONS showed twice: the word on the stone sign plus a small floating word above it (PlazaHub `SignBillboard`, already on main, BD-1221/BD-1239). The floating word is removed on the plaza; each stall shows its word once (the cave home's own signs are unchanged).
+- NESTS and POTIONS showed twice (a word on the stone sign plus a floating word, already on main): fixed by #625 (BD-1248 plaza shops v2, one signboard per shop), so this PR leaves the plaza signs alone.

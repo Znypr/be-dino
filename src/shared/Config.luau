@@ -272,6 +272,13 @@ return table.freeze({
     -- the rail's own path (HubTravelClient.press, then openScreen), so a run keeps its "At home" rule. No save, economy or reward change.
     -- false = the plaza exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     PlazaHubEnabled = false,
+    -- BD-1248 (owner 2026-11-16: the plaza stalls are "not what famous roblox experiences do with their 3d shops and texts"; concept approved
+    -- "Yes, build them"): true = with WorldV3Enabled and PlazaHubEnabled the four stalls become themed shop buildings (Shared/PlazaShopsLayout):
+    -- a giant egg house, a mushroom potion hut, a crystal stall and a fossil-skull hut (one generated mesh each, docs/77), ONE big wooden
+    -- signboard per shop with the word and an icon on its face (no floating words), and a small low-poly dino shopkeeper behind each counter.
+    -- Same spots, prompts and "At home" rule. false = the BD-1221 stalls exactly as before. Pinned off in the default profile, ON in the
+    -- playtest profile (docs/157). Free, no Robux.
+    PlazaShopsV2Enabled = false,
     -- BD-1227 (docs/242 gap 17): true = the rare hatch news names the hatcher by Roblox display name ("Mia hatched a Legendary T-Rex!") in the
     -- two-line banner plus one plain chat line, and an Epic species makes news too. Same server rate limits as BD-428; nothing stored.
     -- false = the BD-428 / BD-1121 announcement exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free.
