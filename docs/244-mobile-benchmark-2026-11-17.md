@@ -1,4 +1,4 @@
-# 244 Mobile benchmark on the owner's phone (BD-1258 to BD-1264), 2026-11-17
+# 244 Mobile benchmark on the owner's phone (BD-1258 to BD-1270), 2026-11-17
 
 Owner 2026-11-17, after playing the playtest build on a Samsung S23 Ultra: "dino shadows are really low quality, ui is really messy and all over the place. and overlapping often, tiny font sometimes". The owner asked for a comparison with famous Roblox experiences **on mobile**. Later the same evening the owner said: "use my phone instead for current famous games on phone, but prio private servers", "click everything and get a full understanding of the full UI menus, settings, shops, where ui is placed how big", and "prio steal an egg, and ps 99".
 
@@ -146,17 +146,68 @@ The faceted green dino looks rough at phone distance (`bedino-02`, `03`). This i
 
 Both top games offer a **low-graphics or hide-pets switch** for phones (PS99 Potato Mode, SAE View Other's Pets). Our Effects setting (Full / Lite / Off) is the same idea, so no gap.
 
+### 2.12 The owner's standard: the Steal an Egg shop with Passes open (OWNER TARGET)
+
+The owner sent a screenshot from their own phone, the Steal an Egg shop scrolled to PASSES. It is stored local only as `be-dino-reference-shots/mobile-2026-11-17/owner-phone-current-1.png` (the same screen as `sae-phone-03` to `06`). The owner's words: "really clean nice colors, easy to read, minimal. especially the passes and sub menus like featured or the shop or counters timers should be in our game similar". **This is now the standard for layout, size and look on the phone.**
+
+Measured on the owner's screenshot (3088 x 1440). "% h" is the share of the screen height. "Design px" assumes the phone canvas is about 480 design px tall, so 1 % h is about 4.8 design px. Use Scale values (% h) in Toybox and `Chip.apply`, never fixed px, so the look is the same on every phone.
+
+| Piece | Theirs, measured | % h | Our kit target |
+| --- | --- | --- | --- |
+| Window | Centred, 1780 x 963 px, top edge at 22 % h | width 58 % of the **screen width**, height 67 % h | Every menu: width 58 % of the screen width (min 540, max 1100 design px), height 67 % h, centred 3 % h below the middle |
+| Title bar | Bright diagonal stripes, 150 px tall | 10.4 % h | 10 % h, the screen's colour, stripes in the art |
+| Title word | "Shop", white, black outline, 65 px cap | 4.5 % h | 4.5 % h, outline 2.5 design px |
+| Close X | Red square with a white X, 115 x 118 px, top-right inside the title bar | 8.2 % h | 8 % h red square, inside the title bar, on the right |
+| Body | Dark studded pattern panel | - | Dark patterned body (Toybox skin "dark"), cards stand out on it |
+| Section header | "-- PASSES --", yellow or pink, black outline, 55 px cap | 3.8 % h | 3.8 % h, coloured fill, black outline, dashes on both sides |
+| Card grid | 2 columns, gap 55 px | gap 3.8 % h | 2 columns on the phone (3 on desktop), gap 3.5 % h |
+| Card | 805 x 400 px, bright gradient | 28 % h tall | 28 % h tall, gradient by rarity or theme |
+| Card icon | Big 3D icon on the left, about 190 x 225 px | 15.6 % h | 15 % h, left third of the card |
+| Card title | "x2 Growth", white, outlined, 50 px cap | 3.5 % h | 3.5 % h, outlined |
+| Card line | One line, highlight word in green ("x2"), 45 px | 3.1 % h | ONE line, 3.1 % h, highlight word coloured |
+| Price button | Green, 568 x 95 px, price 45 px | 6.6 % h | 6.6 % h, green, **crystal icon + number** (never R$) |
+| Gift button | Small purple square beside the price | 6.6 % h | Leave out: no gifting on our paid lines (they stay off) |
+| Side category tabs | Right of the window, OUTSIDE it: a 3D icon about 138 px plus an outlined word about 33 px (Featured, Stars, Speed, Money), no plate | icon 9.6 % h, word 2.3 % h | Icon 9.5 % h, word **3 % h** (raised to the 40 px floor of BD-1259), outlined, no plate, 1.5 % h between items |
+| Small square tiles | 120 x 120 px coloured squares (egg, paw) | 8.3 % h | Our right-hand column (BD-1258): 8.5 % h squares |
+| Left HUD button | "Shop": red, icon plus word, 385 x 128 px, word 60 px cap | 8.9 % h, word 4.2 % h | Left rail word buttons 9 % h tall, word 4.2 % h, outlined, each its own colour |
+| Counters | Bottom-left, an icon (112 px) plus a huge bold italic number, 60 to 68 px cap, coloured fill (money green), thick black stroke, **no box** | number 4.4 % h | Crystals and eggs: icon 7.5 % h plus the number at 4.4 % h, italic, coloured fill (crystals amber, eggs cream), black stroke 3 design px, no plate |
+| Timer | Bottom-right, an icon plus "in 32s", same style, 45 px cap | 3.1 % h | Weather: icon plus "in 3 min" at 3.2 % h, same style, bottom-right above jump |
+
+Everything has a thick black outline. Titles are 4.5 % h, labels 3.1 to 3.8 % h, and nothing on the HUD is under 3 % h. That matches the BD-1259 floor (40 px at 1440 = 2.8 % h).
+
+**Do not copy:** the "x32 Speed ONLY 48 R$" promo button, Robux prices, pass lines bought with Robux, crossed-out prices and pay-to-skip offers. Our paid lines stay off (docs/43), so every price is in crystals.
+
+**How our screens map onto it:**
+
+| Our screen (`docs/evidence/2026-11-15-cohesion/current/`) | Today | Becomes |
+| --- | --- | --- |
+| Crystal Shop (`shop.jpg`) | A cream window about 44 % wide; tabs are small cream pills inside (Auras, Trails, Eggs, Crystals); 3 cards per row; small titles with no outline | The standard window. Tabs move to the right side as 3D icons with words: **Featured**, Auras, Trails, Eggs. Section headers ("-- AURAS --"). 2 cards per row on the phone, crystal prices on green buttons |
+| Potion Shop (`potions.jpg`) | 6 small cards in 3 columns with tiny text | The standard window, side tabs (Potions, Your potions), cards with "Speed +20%" as the one highlighted line |
+| Eggs (`eggs.jpg`) | A cream window with 5 small nest boxes | The standard window. Nests as cards with a timer in the counter style ("in 3 min") |
+| Index tabs (`index.jpg`) | Full-screen, tabs across the top (Dinos, Patterns, Colours) | The standard window; Dinos / Patterns / Colours as side tabs on the right |
+| Wallet and crystal counter (plates top-right today) | A cream plate 600 px wide for one digit | The counter style, bottom-left, no plate |
+| EGGS plate (top-left) | A cream plate | The counter style, under the crystal counter |
+| Weather chip (top-right) | A cream plate 740 px wide, "Next: 1 min" at 33 px | The timer style, bottom-right, "in 1 min" |
+| HUD buttons (HOME, rail) | HOME bottom-centre; the rail inside the menus | Left rail word buttons (Home, Shop, Dinos, Eggs, Potions) in the standard size |
+
+**Featured tab idea (Crystal Shop):** the first side tab and the page the shop opens on. One big card for this week's new thing (a new aura, trail or egg), with its odds row in kid words for eggs, a crystal price, and "3 days left" in the timer style. Under it, "-- NEW --" with 2 more cards. Rules: crystals only, no crossed-out "worth" prices, no countdown pressure beyond the plain "days left", and it rotates from content we already have (no Robux line). The row is BD-1270.
+
 ## 3. Ranked rows (added 2026-11-17, Backlog)
 
 | Rank | Row | Pri | What |
 | --- | --- | --- | --- |
 | 1 | BD-1258 | P1 | Phone HUD zones: one job per corner, the centre box empty, health inside the SIZE plate |
-| 2 | BD-1259 | P1 | Text floor 40 px (TextSize 19), counters 50 px, outlines on every HUD word |
-| 3 | BD-1260 | P1 | One toast lane bottom-centre above HOME, outlined line, no card, every HUD rect kept clear |
-| 4 | BD-1261 | P1 | Soft blob shadow: one glow.png decal instead of three discs (Studio-tested) |
-| 5 | BD-1262 | P2 | World labels short, outlined, clamped to the safe area |
-| 6 | BD-1263 | P2 | `tools/phone_capture.py`: adb burst, tap and sheet with the Roblox-in-front and lock-screen guard |
-| 7 | BD-1264 | P3 | Loading screen polish (logo letter, plate gap, number on the bar) |
+| 2 | BD-1266 | P1 | Owner standard menu window (Steal an Egg shop look): 58 % width x 67 % h, striped title bar, red X, dark body, section headers, 2-column cards |
+| 3 | BD-1268 | P1 | Counters and timers without plates: icon + big bold italic outlined number (crystals and eggs bottom-left, weather bottom-right) |
+| 4 | BD-1259 | P1 | Text floor 40 px (TextSize 19), counters 50 px, outlines on every HUD word |
+| 5 | BD-1260 | P1 | One toast lane bottom-centre above HOME, outlined line, no card, every HUD rect kept clear |
+| 6 | BD-1261 | P1 | Soft blob shadow: one glow.png decal instead of three discs (Studio-tested) |
+| 7 | BD-1267 | P1 | Side category tabs outside the window: 3D icon + outlined word, no plate |
+| 8 | BD-1269 | P1 | Left rail word buttons in the owner standard size (Shop-button look) |
+| 9 | BD-1262 | P2 | World labels short, outlined, clamped to the safe area |
+| 10 | BD-1270 | P2 | Crystal Shop "Featured" tab, crystals only |
+| 11 | BD-1263 | P2 | `tools/phone_capture.py`: adb burst, tap and sheet with the Roblox-in-front and lock-screen guard |
+| 12 | BD-1264 | P3 | Loading screen polish (logo letter, plate gap, number on the bar) |
 
 ## 4. Rules learned for phone captures
 
