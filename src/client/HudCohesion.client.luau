@@ -181,7 +181,7 @@ local function rail(frame: Frame)
 end
 local function findRail(): Frame?
     for _, child in gui:GetChildren() do
-        if child:IsA("Frame") then
+        if child:IsA("Frame") and child.Name ~= "PhoneHud" then -- BD-1258: the phone HUD layer holds the DINOS button too; it is not the rail
             for _, button in child:GetChildren() do
                 if button:IsA("TextButton") and button:FindFirstChild("Art_dinos") then return child end
             end

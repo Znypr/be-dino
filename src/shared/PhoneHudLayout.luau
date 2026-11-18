@@ -1,0 +1,256 @@
+--!strict
+-- BD-1258 / BD-1259 / BD-1260 / BD-1268 / BD-1269 / BD-1271 (docs/244 s2.14, owner phone test 2026-11-17, approved mock
+-- docs/evidence/2026-11-17-ui-hud/mock-01-hud.png): the phone HUD zones. One job per corner and the middle box stays empty.
+--   top-centre    the event banner (weather icon, one line, a short timer line, a faint strip), then the SIZE plate (health inside it)
+--   left          exactly two word buttons, SHOP and DINOS (9 % h, word 4.2 % h, icon 6.5 % h)
+--   right         one column of square tiles 8.5 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
+--                 does not fit above the jump button
+--   bottom-left   counters without plates: crystals, then eggs (icon 7.5 % h, number 4.4 % h)
+--   bottom-right  the potion timers (icon 6 % h, "3 min left" 3.2 % h) left of the jump button, and the jump button itself (Roblox's)
+--   bottom-centre LEAP and CHOMP as dark see-through squares; the one toast lane sits just above them
+-- The middle box (x 33-67 %, y 25-80 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
+-- 3 s, BD-1260 puts it above the ability buttons) and the first-run goal hint under the SIZE plate. Neither may touch a persistent piece.
+-- Sizes are a share of the canvas height ("% h") on the phone canvas; a tall desktop canvas keeps phone proportions (the unit is capped at
+-- DesignH). Text sizes come from cap heights (cap = 0.7 x TextSize, measured on the owner's phone, docs/244 method), never under the phone
+-- floor of TextSize 19 on a touch screen (BD-1259) and never under 14 anywhere (docs/72).
+-- Pure numbers, no Roblox services: src/client/PhoneHud.client.luau draws it, tools/verify_phone_hud.py runs it on three phone canvases.
+local L = {}
+
+L.DesignH = 560 -- the unit is min(H, DesignH) / 100: a desktop canvas does not blow the HUD up
+L.CapRatio = 0.7 -- cap height / TextSize of FredokaOne
+L.PhoneFloor, L.MinText = 19, 14 -- BD-1259: TextSize >= 19 on a touch screen; docs/72: >= 14 everywhere
+L.MinTarget = 44 -- docs/72 tap target, design px
+
+-- docs/244 s2.14, in % h (the unit).
+L.Spec = {
+    margin = 1.5,
+    banner = {icon = 6, line = 3.0, timer = 2.8, pad = 0.5, top = 0.5, minW = 62, share = 0.34, maxShare = 0.5},
+    sizePlate = {h = 6.5, w = 46, gap = 0.6, word = 2.8},
+    hint = {cap = 3.0, gap = 0.5, w = 90},
+    left = {h = 9, word = 4.2, icon = 6.5, gap = 1.4, top = 0.28, minH = 46},
+    tile = {side = 8.5, gap = 1.5, top = 0.12},
+    counter = {icon = 7.5, cap = 4.4, gap = 0.5, chars = 9},
+    timer = {icon = 6, cap = 3.2, gap = 0.4, chars = 10, rows = 3},
+    square = {side = 17, gap = 1.5, word = 3.0, minSide = 50},
+    toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
+    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.80},
+}
+L.Stroke = {word = 2.5, counter = 3} -- design px, black (Kit.Outline)
+L.CharW, L.CharWLower = 0.62, 0.44 -- FredokaOne width / TextSize of a capital and of a mixed-case word (estimates for box widths)
+
+export type Rect = {x: number, y: number, w: number, h: number}
+
+function L.unit(H: number): number
+    return math.min(H, L.DesignH) / 100
+end
+
+-- TextSize for a cap height in % h.
+function L.textSize(capPct: number, H: number, touch: boolean): number
+    local size = math.floor(capPct * L.unit(H) / L.CapRatio + 0.5)
+    return math.max(size, if touch then L.PhoneFloor else L.MinText)
+end
+
+local function lineH(textSize: number): number
+    return math.ceil(textSize * 1.15)
+end
+
+function L.overlaps(a: Rect, b: Rect): boolean
+    return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h
+end
+
+-- Roblox's jump button when it has not been measured yet (TouchJumpController: 70 px on a screen whose short side is <= 500, else 120).
+function L.jumpGuess(W: number, H: number): Rect
+    local small = H <= 500
+    local size = if small then 70 else 120
+    local y = if small then H - size - 20 else H - size * 1.75
+    return {x = W - (size * 1.5 - 10), y = y, w = size, h = size}
+end
+
+-- Short counter numbers: 1,250 / 12.4K / 3.4M / 1.2B (whole numbers below 10,000 are grouped).
+function L.counterText(value: any): string
+    local n = if typeof(value) == "number" and value == value then math.max(0, math.floor(value + 0.5)) else 0
+    local function short(v: number, suffix: string): string
+        local text = string.format("%.1f", math.floor(v * 10) / 10)
+        text = string.gsub(text, "%.0$", "")
+        return text .. suffix
+    end
+    if n >= 1e9 then return short(n / 1e9, "B") end
+    if n >= 1e6 then return short(n / 1e6, "M") end
+    if n >= 1e4 then return short(n / 1e3, "K") end
+    local digits = tostring(n)
+    local out = string.reverse((string.gsub(string.reverse(digits), "(%d%d%d)", "%1,")))
+    if string.sub(out, 1, 1) == "," then out = string.sub(out, 2) end
+    return out
+end
+
+-- Kid timer words (docs/72): "3 min left", "40 s left", never "2:59". Minutes round UP (2 min 59 s reads "3 min", like the mock).
+function L.duration(seconds: number): string
+    local total = math.max(0, math.ceil(seconds))
+    if total < 60 then return total .. " s" end
+    if total < 3600 then return math.ceil(total / 60) .. " min" end
+    return math.ceil(total / 3600) .. " h"
+end
+function L.timeLeft(seconds: number): string return L.duration(seconds) .. " left" end
+
+-- The banner words. id = workspace WeatherId ("clear" between events), name = WeatherName, secondsLeft to the end (event) or to the next one (clear).
+function L.bannerWords(id: any, name: any, secondsLeft: number): (string, string)
+    if id == nil or id == "clear" or id == "" then
+        return "Sunny!", "Weather in " .. L.duration(secondsLeft)
+    end
+    local what = if type(name) == "string" and name ~= "" then name else tostring(id)
+    return what .. " is here!", L.timeLeft(secondsLeft)
+end
+
+-- The Home tile shows one short word only when it is not a home picture: "GO" at home (start a run), the home picture in a run.
+function L.homeWord(runState: any): string?
+    if runState == "Active" then return nil end
+    if runState == "Sanctuary" then return "GO" end
+    return "..."
+end
+
+-- p = {W, H (canvas design px), touch, jump: Rect? (measured), tiles: number of visible right tiles, chomp: CHOMP shown, timers: potion rows (0-3)}
+function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles: number, chomp: boolean, timers: number?}): any
+    local W, H, touch = p.W, p.H, p.touch
+    local u = L.unit(H)
+    local S = L.Spec
+    local m = S.margin * u
+    local out: any = {W = W, H = H, unit = u, touch = touch, text = {}}
+    local t = out.text
+    t.bannerLine, t.bannerTimer = L.textSize(S.banner.line, H, touch), L.textSize(S.banner.timer, H, touch)
+    t.sizeWord, t.hint = L.textSize(S.sizePlate.word, H, touch), L.textSize(S.hint.cap, H, touch)
+    t.leftWord, t.counter = L.textSize(S.left.word, H, touch), L.textSize(S.counter.cap, H, touch)
+    t.timer, t.squareWord = L.textSize(S.timer.cap, H, touch), L.textSize(S.square.word, H, touch)
+    t.toast, t.homeWord = L.textSize(S.toast.cap, H, touch), L.textSize(S.square.word, H, touch)
+
+    -- top-centre: banner, SIZE plate, hint
+    local bannerIcon = S.banner.icon * u
+    local bannerH = math.max(bannerIcon, lineH(t.bannerLine) + lineH(t.bannerTimer)) + 2 * S.banner.pad * u
+    local bannerW = math.min(W * S.banner.maxShare, math.max(W * S.banner.share, S.banner.minW * u))
+    out.banner = {x = (W - bannerW) / 2, y = S.banner.top * u, w = bannerW, h = bannerH, icon = bannerIcon}
+    local plateH = math.max(S.sizePlate.h * u, lineH(t.sizeWord) + 4)
+    local plateW = math.min(S.sizePlate.w * u, W * 0.4)
+    out.sizePlate = {x = (W - plateW) / 2, y = out.banner.y + bannerH + S.sizePlate.gap * u, w = plateW, h = plateH}
+    local hintW = math.min(S.hint.w * u, W * 0.6)
+    out.hint = {x = (W - hintW) / 2, y = out.sizePlate.y + plateH + S.hint.gap * u, w = hintW, h = lineH(t.hint)}
+
+    -- left: SHOP and DINOS
+    local leftH = math.max(S.left.h * u, S.left.minH)
+    local leftIcon = math.min(S.left.icon * u, leftH - 6)
+    local leftW = math.ceil(u + leftIcon + u + 5 * L.CharW * t.leftWord + 2 * u)
+    local leftGap = S.left.gap * u
+    local leftY = S.left.top * H
+    out.left = {
+        {x = m, y = leftY, w = leftW, h = leftH, icon = leftIcon},
+        {x = m, y = leftY + leftH + leftGap, w = leftW, h = leftH, icon = leftIcon},
+    }
+
+    -- under DINOS: one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
+    local chipH, chipGap = L.MinTarget, S.left.gap * u
+    local chipY = out.left[2].y + leftH + leftGap
+    out.chips = {
+        tellUs = {x = m, y = chipY, w = 100, h = chipH},
+        admin = {x = m + 100 + chipGap, y = chipY, w = 88, h = chipH},
+    }
+
+    -- bottom-left: crystals over eggs
+    local counterIcon = S.counter.icon * u
+    local counterRow = math.max(counterIcon, lineH(t.counter))
+    local counterW = math.ceil(counterIcon + u + S.counter.chars * L.CharW * t.counter)
+    out.eggs = {x = m, y = H - m - counterRow, w = counterW, h = counterRow, icon = counterIcon}
+    out.crystals = {x = m, y = out.eggs.y - S.counter.gap * u - counterRow, w = counterW, h = counterRow, icon = counterIcon}
+
+    -- bottom-right: Roblox's jump button, the potion timers left of it
+    local jump = p.jump or L.jumpGuess(W, H)
+    out.jump = jump
+    local timerIcon = S.timer.icon * u
+    local timerRow = math.max(timerIcon, lineH(t.timer))
+    local timerW = math.ceil(timerIcon + u + S.timer.chars * L.CharWLower * t.timer)
+    local rows = math.clamp(p.timers or S.timer.rows, 0, S.timer.rows)
+    local timersH = rows * timerRow + math.max(rows - 1, 0) * S.timer.gap * u
+    local timerRight = math.min(jump.x - u, W - m)
+    out.timers = {x = timerRight - timerW, y = H - m - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
+
+    -- bottom-centre: LEAP and CHOMP squares, the toast lane above them
+    local side = math.max(S.square.side * u, S.square.minSide)
+    local squareW = math.max(side, math.ceil(5 * 0.66 * t.squareWord + 10)) -- "CHOMP" fits on one line at the text floor
+    local gap = S.square.gap * u
+    local count = if p.chomp then 2 else 1
+    local rowW = count * squareW + (count - 1) * gap
+    out.squares = {}
+    for i = 1, count do
+        table.insert(out.squares, {x = (W - rowW) / 2 + (i - 1) * (squareW + gap), y = H - m - side, w = squareW, h = side})
+    end
+    out.action = {x = (W - rowW) / 2, y = H - m - side, w = rowW, h = side}
+    -- as wide as the gap between the counters and the timers allows (a toast never covers either)
+    local laneHalf = math.min(out.timers.x - u - W / 2, W / 2 - (out.crystals.x + out.crystals.w) - u)
+    local laneW = math.min(S.toast.w * u, W * S.toast.share, 2 * laneHalf)
+    local laneLine = lineH(t.toast) + math.floor(u)
+    local laneH = S.toast.lines * laneLine
+    out.lane = {x = (W - laneW) / 2, y = out.action.y - S.toast.gap * u - laneH, w = laneW, h = laneH, line = laneLine}
+
+    -- right: the square tiles, top down; a second column (to the left) only when one does not fit above the jump button
+    local tile = math.max(S.tile.side * u, L.MinTarget)
+    local tileGap = S.tile.gap * u
+    local colX = W - m - tile
+    local columnHitsJump = colX < jump.x + jump.w and jump.x < colX + tile
+    local bottom = if columnHitsJump then jump.y - u else H - m
+    local top = math.max(m, S.tile.top * H)
+    local need = p.tiles * tile + math.max(p.tiles - 1, 0) * tileGap
+    if top + need > bottom then top = m end
+    local perColumn = math.max(1, math.floor((bottom - top + tileGap) / (tile + tileGap)))
+    out.tiles = {}
+    for i = 1, p.tiles do
+        local column = (i - 1) // perColumn
+        local row = (i - 1) % perColumn
+        table.insert(out.tiles, {x = colX - column * (tile + tileGap), y = top + row * (tile + tileGap), w = tile, h = tile})
+    end
+    out.tileSide = tile
+
+    -- the Studio-only "Test game: not saved" chip (HudCohesion) goes to the empty top-left corner
+    out.testChip = {x = m, y = m, w = 176, h = 28}
+
+    out.middle = {x = S.middle.x0 * W, y = S.middle.y0 * H, w = (S.middle.x1 - S.middle.x0) * W, h = (S.middle.y1 - S.middle.y0) * H}
+    return out
+end
+
+-- Every persistent HUD piece with a name (the middle box must stay clear of all of them, and none may touch another).
+function L.persistent(layout: any): {{name: string, rect: Rect}}
+    local list = {
+        {name = "banner", rect = layout.banner}, {name = "sizePlate", rect = layout.sizePlate},
+        {name = "shop", rect = layout.left[1]}, {name = "dinos", rect = layout.left[2]},
+        {name = "crystals", rect = layout.crystals}, {name = "eggs", rect = layout.eggs},
+        {name = "jump", rect = layout.jump},
+        {name = "tellUs", rect = layout.chips.tellUs}, {name = "admin", rect = layout.chips.admin},
+    }
+    if layout.timers.h > 0 then table.insert(list, {name = "timers", rect = layout.timers}) end
+    for i, r in layout.squares do table.insert(list, {name = "square" .. i, rect = r}) end
+    for i, r in layout.tiles do table.insert(list, {name = "tile" .. i, rect = r}) end
+    return list
+end
+
+-- Problems of a layout (empty = fine): two persistent pieces touch, one sits in the middle box or off the canvas, a lane touches a piece,
+-- a tap target is under 44 px or a text size is under the floor.
+function L.problems(layout: any): {string}
+    local out = {}
+    local items = L.persistent(layout)
+    local W, H = layout.W, layout.H
+    for i, a in items do
+        local r = a.rect
+        if a.name ~= "jump" and (r.x < -0.5 or r.y < -0.5 or r.x + r.w > W + 0.5 or r.y + r.h > H + 0.5) then table.insert(out, a.name .. " is off the canvas") end
+        if L.overlaps(r, layout.middle) then table.insert(out, a.name .. " is in the middle box") end
+        for j = i + 1, #items do
+            if L.overlaps(r, items[j].rect) then table.insert(out, a.name .. " overlaps " .. items[j].name) end
+        end
+        if L.overlaps(r, layout.lane) then table.insert(out, "the toast lane covers " .. a.name) end
+        if a.name ~= "sizePlate" and L.overlaps(r, layout.hint) then table.insert(out, "the goal hint covers " .. a.name) end
+    end
+    for _, r in layout.squares do if r.w < L.MinTarget or r.h < L.MinTarget then table.insert(out, "a square is under 44 px") end end
+    for _, r in layout.tiles do if r.w < L.MinTarget then table.insert(out, "a tile is under 44 px") end end
+    for _, r in layout.left do if r.h < L.MinTarget then table.insert(out, "a word button is under 44 px") end end
+    local floor = if layout.touch then L.PhoneFloor else L.MinText
+    for name, size in layout.text do if size < floor then table.insert(out, "text " .. name .. " is " .. size .. " (< " .. floor .. ")") end end
+    if layout.text.counter < layout.text.timer then table.insert(out, "counters must be bigger than timer words") end
+    return out
+end
+
+return L

@@ -53,6 +53,7 @@ end
 function M.place(buttons: {GuiObject}, layout: any)
     local rail = layout.rail
     for i, b in buttons do
+        if b:GetAttribute("PhoneHudOwned") == true then continue end -- BD-1258: the phone HUD places this button itself (Config.PhoneHudZonesEnabled)
         local gear = M.isGear(b) and rail.gear ~= nil
         local cell = if gear then rail.gearCell else rail.button
         local at = if gear then rail.gear else M.position(buttons, i, rail.positions, rail.gear ~= nil)

@@ -241,6 +241,18 @@
    "contains": "round.CornerRadius,round.Parent=UDim.new(0,14),track",
    "kind": "bar",
    "why": "BD-1214: the cream loading bar of the warm loading screen (style tile v3 board 8), a 44 px progress bar with the panel corner, not a tag"
+  },
+  {
+   "file": "src/client/PhoneHud.client.luau",
+   "contains": "local c = Instance.new(\"UICorner\") c.CornerRadius = UDim.new(0.5, 0) c.Parent = t",
+   "kind": "bar",
+   "why": "BD-1258: the growth and health tracks inside the SIZE plate are round bars, like the old SIZE bar"
+  },
+  {
+   "file": "src/client/PhoneHud.client.luau",
+   "contains": "local fc = Instance.new(\"UICorner\") fc.CornerRadius = UDim.new(0.5, 0) fc.Parent = f",
+   "kind": "bar",
+   "why": "BD-1258: the fill of those round bars"
   }
  ]
 }
