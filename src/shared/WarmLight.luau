@@ -13,7 +13,7 @@ end
 
 WarmLight.FadeSeconds = 3
 -- Added on top of the weather grade (ColorCorrection effects stack). Clear weather's own grade is saturation +.04, contrast 0 (WeatherLooks).
-WarmLight.Grade = {tint = {255, 239, 216}, saturation = .2, contrast = .08, brightness = .02} -- Studio A/B: .12 / 245,230 was hard to see
+WarmLight.Grade = {tint = {255, 246, 228}, saturation = .25, contrast = .1, brightness = .04} -- v7 (owner 2026-11-21 "more vibrant, kid friendly"): saturation at the docs/87 calm cap .25; was 255,239,216 / .2 / .08 / .02
 WarmLight.Bloom = {intensity = .4, size = 26, threshold = .86} -- only the brightest highlights (sun on water, white petals) glow a little
 WarmLight.Rays = {intensity = .06, spread = .35} -- soft rays when the sun is in view
 

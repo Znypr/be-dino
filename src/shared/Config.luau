@@ -262,6 +262,11 @@ return table.freeze({
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.
     -- Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     WarmLightEnabled = false,
+    -- BD-1258 / BD-1259 / BD-1260 / BD-1268 / BD-1269 / BD-1271 (docs/244 s2.14, owner phone test 2026-11-17, "Yes, build it"): the phone HUD zones
+    -- (src/client/PhoneHud.client.luau, Shared/PhoneHudLayout): event banner top-centre, SHOP and DINOS left, square tiles right, counters without
+    -- plates bottom-left, potion timers bottom-right, LEAP and CHOMP squares bottom-centre, one toast lane above them, the middle box empty.
+    -- Client presentation only. Off by default; ON in the playtest profile (tools/release_profiles.py).
+    PhoneHudZonesEnabled = false,
     -- BD-1245 (owner 2026-11-16 "game still looks empty"): true = with WorldV3Enabled, ToonWorldEnabled and VegetationV2Enabled the ground gets detail
     -- (Shared/WorldFill): a darker grass lip along the paths and soft grass / earth patches (terrain only), generated edge stones, pebbles and a log
     -- along each spoke, flower-and-grass patches (one mesh each) in the open grass; the single ground cover clumps are thinned to pay for them
