@@ -3,7 +3,7 @@
 -- docs/evidence/2026-11-17-ui-hud/mock-01-hud.png): the phone HUD zones. One job per corner and the middle box stays empty.
 --   top-centre    the event banner (weather icon, one line, a short timer line, a faint strip), then the SIZE plate (health inside it)
 --   left          exactly two word buttons, SHOP and DINOS (15 % h, word 6.5 % h, icon 12 % h)
---   right         one column of square tiles 14 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
+--   right         one column of square tiles 13.5 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
 --                 does not fit above the jump button
 --   bottom-left   counters without plates: crystals, then eggs (icon 9.5 % h, number 6 % h)
 --   bottom-right  the potion timers (icon 6 % h, "3 min left" 3.2 % h) left of the jump button, and the jump button itself (Roblox's)
@@ -24,14 +24,14 @@ L.MinTarget = 44 -- docs/72 tap target, design px
 -- docs/244 s2.14, in % h (the unit).
 -- Owner 2026-11-21 on the first build: "more padding around, closer look to reference". Every size below was re-measured on the
 -- approved mock (mock-01-hud.png, % of its height): side margin 5, bottom margin 3, SHOP/DINOS 15 tall, tiles 14, counters 9.5 / 6,
--- LEAP/CHOMP 19 with a 4.3 word, SIZE plate 50 x 7. The middle box ends at 76 % like the mock's dino (the squares start at 77 %).
+-- LEAP/CHOMP 19 with a 4.3 word, tiles 13.5 (mock 14), SIZE plate 50 x 7. The middle box ends at 76 % like the mock's dino (the squares start at 77 %).
 L.Spec = {
     margin = 5, marginY = 3,
     banner = {icon = 6, line = 3.0, timer = 2.8, pad = 0.5, top = 0.5, minW = 62, share = 0.34, maxShare = 0.5},
     sizePlate = {h = 7, w = 50, gap = 0.8, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
     left = {h = 15, word = 6.5, icon = 12, gap = 2.4, top = 0.28, minH = 46},
-    tile = {side = 14, gap = 1.5, top = 0.12},
+    tile = {side = 13.5, gap = 1.5, top = 0.12}, -- 13.5 (mock 14): five tiles fit one column above the jump button on a 1274 x 423 canvas,
     counter = {icon = 9.5, cap = 6.0, gap = 0.5, chars = 9},
     timer = {icon = 6, cap = 3.2, gap = 0.4, chars = 10, rows = 3},
     square = {side = 19, gap = 2, word = 4.3, minSide = 50},
@@ -155,6 +155,10 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
         tellUs = {x = m, y = chipY, w = 100, h = chipH},
         admin = {x = m + 100 + chipGap, y = chipY, w = 88, h = chipH},
     }
+    -- Owner 2026-11-21 ("closer look to reference"): the Codes button (GiftsPanel) joins this row when it fits left of the banner;
+    -- otherwise it is nil and GiftsPanel keeps its own clear-spot rule (CodesButtonSpot).
+    local codes = {x = out.chips.admin.x + out.chips.admin.w + chipGap, y = chipY, w = 96, h = chipH}
+    if codes.x + codes.w <= out.banner.x - u then out.chips.codes = codes end
 
     -- bottom-left: crystals over eggs
     local counterIcon = S.counter.icon * u
@@ -226,6 +230,7 @@ function L.persistent(layout: any): {{name: string, rect: Rect}}
         {name = "jump", rect = layout.jump},
         {name = "tellUs", rect = layout.chips.tellUs}, {name = "admin", rect = layout.chips.admin},
     }
+    if layout.chips.codes then table.insert(list, {name = "codes", rect = layout.chips.codes}) end
     if layout.timers.h > 0 then table.insert(list, {name = "timers", rect = layout.timers}) end
     for i, r in layout.squares do table.insert(list, {name = "square" .. i, rect = r}) end
     for i, r in layout.tiles do table.insert(list, {name = "tile" .. i, rect = r}) end

@@ -438,6 +438,9 @@ local function layout()
     for name, r in {PhoneHudFeedbackRect = lay.chips.tellUs, PhoneHudAdminRect = lay.chips.admin} do
         gui:SetAttribute(name, Rect.new(r.x, r.y, r.x + r.w, r.y + r.h))
     end
+    -- GiftsPanel's Codes button: in the chip row when it fits, else nil (GiftsPanel then keeps its CodesButtonSpot rule)
+    local codes = lay.chips.codes
+    gui:SetAttribute("PhoneHudCodesSpot", if codes then Rect.new(codes.x, codes.y, codes.x + codes.w, codes.y + codes.h) else nil)
     for _, item in L.persistent(lay) do
         local r = item.rect
         gui:SetAttribute("PhoneHud_" .. item.name, Rect.new(r.x, r.y, r.x + r.w, r.y + r.h))
