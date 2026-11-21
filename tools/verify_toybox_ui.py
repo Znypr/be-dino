@@ -66,6 +66,7 @@ STYLE_HOOKS = [
     '    if TextStyle.SkinThickness then stroke.Thickness = TextStyle.SkinThickness(label.TextSize) end -- BD-1177\n',
     '    if TextStyle.SkinThickness and stroke.Parent == label then stroke.Thickness = TextStyle.SkinThickness(label.TextSize) end -- BD-1177\n',
 ]
+COMPACT_TOP_LOOK = '    if Theme.Toybox and topLook then require(Shared:WaitForChild("ToyboxKit")).useTopLook() end -- BD-1253: a header colour per menu (docs/243 G2)\n'
 COMPACT_PLACE = '    if screen and Theme.Toybox then Theme.Toybox.place(screen) end\n'
 COMPACT_WINDOW = '    if Theme.Toybox then Theme.Toybox.window({panel = context.panel, header = context.header, heading = context.heading, closeButton = context.closeButton, scale = context.scale}) end -- BD-1177\n'
 FUSION_WINDOW = '    if Theme.Toybox then Theme.Toybox.window({panel = frame, header = header, heading = titleLabel, closeButton = closeX, place = "fusion"}) end -- BD-1177: purple header, stud body, red gloss X\n'
@@ -140,7 +141,8 @@ def static_checks(read):
     compact = read(COMPACT)
     assert compact.count('local function doLayout(screen: string?)\n    local c = ctx\n    if not c then return end\n' + COMPACT_PLACE) == 1, 'ModalCompact.layout recolours the header only when it is given a screen name'
     assert compact.count(COMPACT_WINDOW + '    M.layout()\n') == 1, 'ModalCompact.attach skins the menu window (flag on only)'
-    assert code_only(compact).count('Toybox') == 4, 'ModalCompact mentions Toybox only in its two hook lines'
+    assert compact.count(COMPACT_TOP_LOOK) == 1, 'ModalCompact.attach switches the kit to the per-menu header colours only with MenusTopLookEnabled (BD-1253)'
+    assert code_only(compact).count('Toybox') == 6, 'ModalCompact mentions Toybox only in its three hook lines'
     fusion = read(FUSION)
     assert fusion.count(FUSION_WINDOW) == 1 and code_only(fusion).count('Theme.Toybox') == 3, 'the Fusion Menu window asks Theme.Toybox once, with the place "fusion" (plus the flag-gated layout require and the toyboxBody / frame helpers, docs/232 Fusion)'
     boot = read(BOOT)

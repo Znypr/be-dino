@@ -45,6 +45,13 @@ function Panels.autoState(line: string): string
     return "AUTO: ON"
 end
 
+-- BD-1278 (polish P-9bc921): the line beside the toggle says what auto-open DOES, not the state again ("AUTO: OFF" + "Auto-open: off" said it twice).
+-- On: the rarities it opens ("Auto-open: Common, Rare"); off: what turning it on would do; locked: unchanged (it says how to unlock).
+function Panels.autoLine(line: string): string
+    if line == "Auto-open: off" then return "Opens eggs for you" end
+    return line
+end
+
 -- ctx: the EggsScreen context (body, C, label, art, queue, str, num, nestList, rarityNames, rarityColors, notify, openNest, openEgg, openSettings,
 -- autoOpenText, explore, collectionCopies, scale). Returns refresh(): the once-a-second timer update.
 function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number): () -> ()
@@ -209,7 +216,7 @@ function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number)
     local autoLineText = ctx.autoOpenText()
     local gear = L.actionButton(info, Panels.autoState(autoLineText), size(lay.auto), pos(lay.auto), GREY, true, function() ctx.openSettings("help") end)
     gear.Name = "AutoOpenSettingsButton"
-    L.text(info, autoLineText, size(lay.autoLine), pos(lay.autoLine), Kit.Type.body, "label").Name = "AutoLine"
+    L.text(info, Panels.autoLine(autoLineText), size(lay.autoLine), pos(lay.autoLine), Kit.Type.body, "label").Name = "AutoLine"
 
     local function refresh()
         if not root.Parent then return end
@@ -219,7 +226,7 @@ function Panels.build(ctx: any, bodyW: number, bodyH: number, bodyScale: number)
             local v = slotViews[i]
             v.info = slot
             local empty = slot.state == "empty"
-            v.card.BackgroundColor3 = L.tone(if slot.state == "ready" then "ready" elseif slot.state == "opening" then "busy" else "card")
+            v.card.BackgroundColor3 = L.tone(if slot.state == "ready" then "ready" elseif slot.state == "opening" then "busy" else "card", v.card)
             v.text.Text = if slot.state == "opening" then UIFormat.duration(slot.remaining) else slot.text
             L.ink(v.text, if empty then "label" else "value")
             v.emptyNest.Visible, v.icon.Visible = empty, not empty -- BD-1202: an empty slot = the nest without the egg, never the egg art

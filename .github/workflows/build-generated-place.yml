@@ -117,6 +117,7 @@ jobs:
           python tools/verify_warm_light.py --runner /tmp/luau/luau
           python tools/verify_world_fill.py --runner /tmp/luau/luau
           python tools/verify_plaza_shops.py --runner /tmp/luau/luau
+          python tools/verify_blob_shadow.py --runner /tmp/luau/luau
           python tools/verify_colossal_lod.py --runner /tmp/luau/luau
           python tools/verify_scale_ladder.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
@@ -175,6 +176,7 @@ jobs:
           python tools/verify_dup_progress.py --runner /tmp/luau/luau
           python tools/verify_ui_motion.py --runner /tmp/luau/luau
           python tools/verify_toybox_ui.py --runner /tmp/luau/luau
+          python tools/verify_menus_top_look.py --runner /tmp/luau/luau
           python tools/verify_toybox_shop.py --runner /tmp/luau/luau
           python tools/verify_toybox_layout.py --runner /tmp/luau/luau
           python tools/verify_hud_cohesion.py --runner /tmp/luau/luau

@@ -83,6 +83,15 @@ Kit.ScreenPlace = {
     eggs = "eggs", hatch = "eggs", results = "eggs", batchSummary = "eggs", starter = "eggs",
     settings = "settings", food = "settings", exit = "settings",
 }
+-- BD-1253 (docs/243 G2, owner 2026-11-17 "menus looking like [steal an egg, grow a garden]"): with Config.MenusTopLookEnabled every menu has its
+-- own header colour, as on the proposal sheet (docs/evidence/2026-11-17-menu-study/menu-proposal-sheet-v2.jpg): green Shop, purple Potions and
+-- Fusion, blue Dinos, amber Eggs / Run complete, dark Settings, green Home and Food guide. Kit stays plain data: ToyboxSkin calls useTopLook once.
+Kit.TopLookHeader = {shop = "green", potions = "purple", dinos = "blue", fusion = "purple", eggs = "amber", settings = "dark", home = "green", food = "green", confirm = "amber"}
+Kit.TopLookScreens = {home = "home", food = "food", exit = "confirm"}
+function Kit.useTopLook()
+    Kit.PlaceHeader = Kit.TopLookHeader
+    for screen, place in Kit.TopLookScreens do Kit.ScreenPlace[screen] = place end
+end
 function Kit.placeOf(screen: string?): string
     return (if screen then Kit.ScreenPlace[screen] else nil) or Kit.DefaultPlace
 end

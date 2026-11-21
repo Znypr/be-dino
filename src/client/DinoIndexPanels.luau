@@ -464,7 +464,7 @@ function Panels.species(ctx)
         button.Name, button.Text, button.AutoButtonColor, button.LayoutOrder = "Dino_" .. order, "", false, order
         local stroke: UIStroke
         if TB then
-            button.BackgroundColor3 = L.tone("card") -- a cream card; the stage is the pill on it
+            button.BackgroundColor3 = L.tone("card", button.Parent) -- a cream card; the stage is the pill on it
             local round = Instance.new("UICorner") round.CornerRadius = UDim.new(0, Kit.CardCorner) round.Parent = button
             stroke = Instance.new("UIStroke") stroke.Parent = button
         else

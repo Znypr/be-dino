@@ -252,6 +252,11 @@ return table.freeze({
     -- within 150 studs of the camera, capped per device, no physics, never catchable or seen by the NPC predators. Look only: no save, economy
     -- or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     IslandLifeEnabled = false,
+    -- BD-1253 / BD-1254 (owner 2026-11-17 "menus looking like [steal an egg, grow a garden]", docs/243): true = menu windows in the top-game look:
+    -- a header colour per menu, a dark studded body with white outlined words instead of the cream panels, and a lighter cover so the world
+    -- stays visible behind a window. HUD, toasts and world labels keep their cream plates. Client look only: no save, economy or reward change.
+    -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    MenusTopLookEnabled = false,
     -- BD-1247 (owner 2026-11-16 "game still looks empty"): true = on the island in clear weather a warmer, slightly more saturated colour
     -- grade, gentle bloom on highlights, soft sun rays and slow floating pollen / motes per World V3 zone (client/WarmLight.client.luau,
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.
@@ -284,6 +289,12 @@ return table.freeze({
     -- Same spots, prompts and "At home" rule. false = the BD-1221 stalls exactly as before. Pinned off in the default profile, ON in the
     -- playtest profile (docs/157). Free, no Robux.
     PlazaShopsV2Enabled = false,
+    -- BD-1261 (docs/244 s2.14; owner 2026-11-17 phone test: "dino shadows are really low quality"; new phone UI standard approved "Yes, build
+    -- it", first slice): true = ONE soft blob under each dino, a Decal of Roblox's built-in glow texture on one flat invisible part
+    -- (ContactShadowRules.Blob), instead of the three stacked discs that read as a dark disc with hard rings. Same caps, raycast and airborne
+    -- fade; 1 part per dino instead of 3. Client presentation only. false = the BD-460 discs exactly as before. Pinned off in the default
+    -- profile, ON in the playtest profile (docs/157). Free, no Robux.
+    BlobShadowEnabled = false,
     -- BD-1227 (docs/242 gap 17): true = the rare hatch news names the hatcher by Roblox display name ("Mia hatched a Legendary T-Rex!") in the
     -- two-line banner plus one plain chat line, and an Epic species makes news too. Same server rate limits as BD-428; nothing stored.
     -- false = the BD-428 / BD-1121 announcement exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free.

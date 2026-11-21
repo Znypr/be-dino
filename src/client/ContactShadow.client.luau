@@ -12,6 +12,9 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("ContactShadowRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
+local Config = require(Shared:WaitForChild("Config"))
+-- BD-1261 (Config.BlobShadowEnabled): one soft blob decal per dino (Rules.Blob) instead of the three stacked discs.
+local BLOB = Rules.blobEnabled(Config)
 
 local localPlayer = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -23,7 +26,7 @@ local function deviceClass(): string
 end
 local device = deviceClass()
 
-type Shadow = {parts: {Part}, shown: boolean, width: number, length: number}
+type Shadow = {parts: {Part}, decal: Decal?, shown: boolean, width: number, length: number}
 local folder = Instance.new("Folder")
 folder.Name = "ContactShadows"
 folder.Parent = camera
@@ -40,24 +43,33 @@ end
 local function newShadow(): Shadow
     local parts = {}
     local c = Rules.Color
-    for i = 1, #Rules.Layers do
+    local decal: Decal? = nil
+    for i = 1, if BLOB then 1 else #Rules.Layers do
         local part = Instance.new("Part")
-        part.Name = "ContactShadow" .. i
-        part.Shape = Enum.PartType.Cylinder
+        part.Name = if BLOB then "ContactShadowBlob" else "ContactShadow" .. i
+        part.Shape = if BLOB then Enum.PartType.Block else Enum.PartType.Cylinder
         part.Material = Enum.Material.SmoothPlastic
         part.Color = Color3.fromRGB(c[1], c[2], c[3])
         part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow, part.Massless = true, false, false, false, false, true
-        part.Size = Vector3.new(Rules.Thickness, 1, 1)
+        part.Size = if BLOB then Vector3.new(1, Rules.Blob.thickness, 1) else Vector3.new(Rules.Thickness, 1, 1)
         part.Transparency = 1
+        if BLOB then -- the part stays invisible; the glow decal on its top face is the shadow
+            local d = Instance.new("Decal")
+            d.Name, d.Face, d.Texture = "Blob", Enum.NormalId.Top, Rules.Blob.texture
+            d.Color3, d.Transparency = part.Color, 1
+            d.Parent = part
+            decal = d
+        end
         part.Parent = folder
         parts[i] = part
     end
-    return {parts = parts, shown = false, width = 0, length = 0}
+    return {parts = parts, decal = decal, shown = false, width = 0, length = 0}
 end
 
 local function hide(shadow: Shadow)
     if not shadow.shown then return end
     shadow.shown = false
+    if shadow.decal then shadow.decal.Transparency = 1 return end
     for _, part in shadow.parts do part.Transparency = 1 end
 end
 
@@ -82,6 +94,15 @@ local function place(shadow: Shadow, character: Model): boolean
     forward = if forward.Magnitude < 1e-3 then normal:Cross(Vector3.xAxis) else forward.Unit
     local across = forward:Cross(normal)
     shadow.shown = true
+    if shadow.decal then
+        -- One flat block: local Y = the ground normal (the decal sits on its top face), X across the dino, Z along it.
+        local blobWidth, blobLength = Rules.blobSize(scale, sizeFactor)
+        local part = shadow.parts[1]
+        part.CFrame = CFrame.fromMatrix(result.Position + normal * Rules.Lift, across, normal)
+        part.Size = Vector3.new(blobWidth, Rules.Blob.thickness, blobLength)
+        shadow.decal.Transparency = Rules.blobTransparency(opacity)
+        return true
+    end
     for i, part in shadow.parts do
         local layer = Rules.Layers[i]
         local origin = result.Position + normal * (Rules.Lift + (i - 1) * Rules.LayerStep)

@@ -43,6 +43,10 @@ local function ink(label: TextLabel, which: string?): TextLabel
     return label
 end
 local function inkColour(label: TextLabel, colour: Color3): TextLabel
+    if L and L.windowed(label) and (colour == L.tone("value") or colour == L.tone("label")) then -- BD-1254: light words with an outline on the dark body
+        label.TextColor3, label.TextStrokeTransparency, label.TextStrokeColor3 = if colour == L.tone("value") then L.tone("value", true) else L.tone("label", true), 0, C.outline
+        return label
+    end
     if L then
         label.TextColor3, label.TextStrokeTransparency = colour, 1
         for _, child in label:GetChildren() do
@@ -68,7 +72,7 @@ end
 local function flatButton(parent: Instance, size: UDim2, position: UDim2, on: boolean, callback: () -> ()): TextButton
     local b = Instance.new("TextButton")
     b.Text, b.AutoButtonColor, b.Size, b.Position = "", false, size, position
-    b.BackgroundColor3 = L.tone(if on then "previewTop" else "card")
+    b.BackgroundColor3 = if on then L.tone("previewTop") else L.tone("card", parent)
     local round = Instance.new("UICorner")
     round.CornerRadius = UDim.new(0, Kit.ChipCorner)
     round.Parent = b
@@ -330,12 +334,12 @@ local function cardLook(d)
     local valuable = #Sel.valuableReasons(d) > 0
     entry.stroke.Color = if at then (if valuable then C.purple else C.accent) else C.outline
     entry.stroke.Thickness = if at then 5 else 3
-    entry.button.BackgroundColor3 = if L then L.tone(if reason then "slot" else "card") elseif reason then C.outline else C.card
+    entry.button.BackgroundColor3 = if L then L.tone(if reason then "slot" else "card", entry.button) elseif reason then C.outline else C.card
     entry.status.Text = if at then "In slot " .. at .. (if valuable then " (Special)" else "")
         elseif reason then (Sel.ReasonText[reason] or reason)
         elseif valuable then "Special! Tap" else "Tap to add"
     if L then
-        inkColour(entry.status, if at then INK_GOOD elseif valuable and not reason then C.purple else L.tone(if reason then "label" else "value")) -- hints are plain dark text
+        inkColour(entry.status, if at then INK_GOOD elseif valuable and not reason then C.purple else L.tone(if reason then "label" else "value", entry.status)) -- hints are plain dark text (light on the top look)
     else
         entry.status.TextColor3 = if at then C.accent elseif reason then C.red elseif valuable then C.purple else C.text
     end
@@ -379,7 +383,7 @@ local function buildGrid(grid: ScrollingFrame)
         card.BackgroundColor3 = C.card
         if L then
             -- Toybox: a flat cream card (12 px corners, 2 px dark outline), not the glossy button picture
-            card.BackgroundColor3 = L.tone("card")
+            card.BackgroundColor3 = L.tone("card", card)
             local round = Instance.new("UICorner")
             round.CornerRadius = UDim.new(0, Kit.CardCorner)
             round.Parent = card
@@ -529,7 +533,7 @@ updateColumn = function()
             if L then
                 -- Toybox: a flat cream card (purple outline for a special dino) instead of the glossy button picture
                 slot = flatButton(col.slots, UDim2.new(), UDim2.new(), false, function() toggle(d) end)
-                slot.BackgroundColor3 = L.tone("card")
+                slot.BackgroundColor3 = L.tone("card", slot)
                 local line = slot:FindFirstChildOfClass("UIStroke")
                 if line and #Sel.valuableReasons(d) > 0 then line.Color = C.purple end
             else
