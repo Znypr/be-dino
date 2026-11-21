@@ -33,14 +33,14 @@ L.MinTarget = 44 -- docs/72 tap target, design px
 -- gap 1.9; LEAP/CHOMP 22.4 x 20.5, 2.5 from the bottom, 3 apart; banner capsule 93 x 11 at top 1.5 (title 5.8, timer 3.7, icon 7.5);
 -- SIZE bar 50.5 x 7.5; outlines 6 px at 720 p (0.85 % h); counters icon 10.5, upright.
 L.Spec = {
-    margin = 5.7, marginR = 5.8, marginY = 2.5,
+    margin = 5.7, marginR = 6.4, marginY = 2.5, -- v8 (ChatGPT round 3, 7.5/10): rail 46 px from the right at 720 p
     banner = {icon = 7.5, line = 5.3, timer = 3.5, pad = 0.5, top = 1.5, w = 93, h = 11, maxShare = 0.6},
     sizePlate = {h = 7.5, w = 50.5, gap = 1, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
-    left = {w = 45, h = 15.8, word = 7.1, icon = 11.5, gap = 2.3, top = 0.281, pad = 2.2, minH = 46}, -- pad/icon tightened so the word gets the mock's ~58 % of the width
-    tile = {side = 13.1, gap = 1.1, top = 0.178, aspect = 1}, -- v7 ChatGPT: four 94 px squares, 8 px apart, 128 px from the top
-    counter = {icon = 10.6, cap = 5.8, gap = 1.1, chars = 6.5}, -- v7 ChatGPT spec: icon 76 px, TextSize 59 px at 720 p, rows 8 px apart
-    timer = {icon = 8, cap = 3.4, gap = 0.8, h = 7.5, chars = 6, rows = 3}, -- v7: PS99-style capsules, big icon popping out
+    left = {w = 42, h = 15.5, word = 7.1, icon = 11.5, gap = 1.7, top = 0.281, pad = 2.2, minH = 46}, -- v8: 10 % narrower -- pad/icon tightened so the word gets the mock's ~58 % of the width
+    tile = {side = 13.1, gap = 1.1, top = 0.125, aspect = 1}, -- v7/v8 ChatGPT: four 94 px squares, 8 px apart, 90 px from the top
+    counter = {icon = 10.2, cap = 5.6, gap = 1.8, chars = 6.5}, -- v8 ChatGPT: egg 68 px tall, EGGS 54 px, rows 13 px apart; crystals +15 % in the client
+    timer = {icon = 8, cap = 3.4, gap = 1.1, h = 6.7, chars = 6, rows = 3, clear = 2.5, bottom = 3.3}, -- v8: 48 px capsules, 8 px apart, 18 px clear of the rail, 24 px up
     square = {side = 20.5, w = 22.4, gap = 3, word = 4.8, minSide = 50},
     toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
     middle = {x0 = 0.33, x1 = 0.67, y0 = 0.31, y1 = 0.76}, -- v5: the mock's SIZE bar ends at 30.8 %, its squares start at 77 %
@@ -195,8 +195,8 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local timerW = math.ceil(timerRow * 0.1 + math.max(timerIcon, timerRow * 1.2) + 6 + S.timer.chars * 0.55 * t.timer + timerRow * 0.3)
     local rows = math.clamp(p.timers or S.timer.rows, 0, S.timer.rows)
     local timersH = rows * timerRow + math.max(rows - 1, 0) * S.timer.gap * u
-    local timerRight = math.min(jump.x - u, W - mr)
-    out.timers = {x = timerRight - timerW, y = H - my - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
+    local timerRight = math.min(jump.x - u, W - mr - math.floor(S.tile.side * u + 0.5) - S.timer.clear * u)
+    out.timers = {x = timerRight - timerW, y = H - S.timer.bottom * u - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
 
     -- bottom-centre: LEAP and CHOMP squares, the toast lane above them
     local side = math.max(S.square.side * u, S.square.minSide)

@@ -365,7 +365,7 @@ local function vivid(top: string, mid: string, bottom: string): {Color3}
 end
 local MOCK = {
     green = vivid("#C7FF63", "#80F73A", "#43DC12"),
-    orange = vivid("#FFDB91", "#FFAE57", "#FF812B"),
+    orange = {Color3.fromHex("#FFD080"), Color3.fromHex("#FFD080"), Color3.fromHex("#FFAC4D"), Color3.fromHex("#F47718"), Color3.fromHex("#C6530D")}, -- v8: stronger lower half
     gold = vivid("#FFF08B", "#FFD641", "#FFB323"),
     cyan = vivid("#8BFCFF", "#31E9FA", "#00BDE6"),
     purple = vivid("#F4ADFF", "#CF6CFA", "#9B30DB"),
@@ -528,8 +528,8 @@ local function layout()
         local row, number, r = c[1] :: Frame, c[2] :: TextLabel, c[3]
         place(row, r)
         inner(row:FindFirstChild("Icon") :: Frame, {x = 0, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
-        inner(number, {x = r.icon + 1.4 * u, y = 0, w = r.w - r.icon - 1.4 * u, h = r.h})
-        number.TextSize = T.counter
+        inner(number, {x = r.icon + 0.8 * u, y = 0, w = r.w - r.icon - 0.8 * u, h = r.h})
+        number.TextSize = if number == crystalsText then math.floor(T.counter * 1.15 + 0.5) else T.counter -- v8: the crystal value never looks lighter than EGGS
         local line = number:FindFirstChildOfClass("UIStroke")
         if line then line.Thickness = math.max(3, math.floor(0.62 * u + 0.5)) end -- 4.5 px at 720 p
     end
