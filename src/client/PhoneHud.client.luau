@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 local TextService = game:GetService("TextService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -105,9 +106,9 @@ end
 local banner = box(root, "EventBanner", 5)
 local strip = Instance.new("Frame") -- black at 65 % transparency with soft ends, no plate, no border
 -- v5 audit: a bright cyan see-through capsule (#18BBDD at 40 %), fully round ends, a faint light top edge
-strip.Name, strip.Size, strip.BackgroundColor3, strip.BackgroundTransparency, strip.BorderSizePixel, strip.ZIndex = "Strip", UDim2.fromScale(1, 1), Color3.fromHex("#18BBDD"), 0.6, 0, 5
+strip.Name, strip.Size, strip.BackgroundColor3, strip.BackgroundTransparency, strip.BorderSizePixel, strip.ZIndex = "Strip", UDim2.fromScale(1, 1), Color3.fromHex("#149FC7"), 0.65, 0, 5
 local capsule = Instance.new("UICorner") capsule.CornerRadius = UDim.new(0.5, 0) capsule.Parent = strip
-local rim = Instance.new("UIStroke") rim.Color, rim.Transparency, rim.Thickness, rim.ApplyStrokeMode = Color3.fromHex("#C5FFFF"), 0.7, 1.5, Enum.ApplyStrokeMode.Border
+local rim = Instance.new("UIStroke") rim.Color, rim.Transparency, rim.Thickness, rim.ApplyStrokeMode = Color3.fromHex("#C8FFFF"), 0.7, 1, Enum.ApplyStrokeMode.Border
 rim.Parent = strip
 strip.Parent = banner
 local bannerIcon = box(banner, "Icon", 6)
@@ -140,12 +141,12 @@ local hintLabel = word(root, "GoalHint", 6)
 hintLabel.Visible = false
 
 -- ===== Counters (BD-1268) =====
-local function counter(name: string, iconId: string, fill: Color3): (Frame, TextLabel, UIScale)
+local function counter(name: string, iconId: string, fill: Color3, italic: boolean?): (Frame, TextLabel, UIScale)
     local row = box(root, name, 5)
     local holder = box(row, "Icon", 6)
     icon(holder, iconId)
     local number = word(row, "Number", 7, fill, L.Stroke.counter)
-    number.FontFace, number.TextXAlignment = UPRIGHT, Enum.TextXAlignment.Left -- v5 audit: upright, not italic
+    number.FontFace, number.TextXAlignment = if italic then ITALIC else UPRIGHT, Enum.TextXAlignment.Left -- round 2: the crystal value slants, EGGS is upright
     -- v3 (owner 2026-11-21 "looks flat"; ref_compare: the mock's numbers are 70 luma lighter on top): a top-light gradient on the words
     number.TextColor3 = Color3.new(1, 1, 1) -- a UIGradient multiplies the text colour, so the colour lives in the gradient
     local shine = Instance.new("UIGradient")
@@ -154,7 +155,7 @@ local function counter(name: string, iconId: string, fill: Color3): (Frame, Text
     local scale = Instance.new("UIScale") scale.Parent = row
     return row, number, scale
 end
-local crystalsRow, crystalsText, crystalsPop = counter("Crystals", "amber", Color3.fromHex("#FFDC32"))
+local crystalsRow, crystalsText, crystalsPop = counter("Crystals", "amber", Color3.fromHex("#FFDC32"), true)
 local eggsRow, eggsText, eggsPop = counter("Eggs", "egg", Color3.new(1, 1, 1))
 
 -- ===== Potion timers (BD-1268) =====
@@ -392,7 +393,8 @@ local function layout()
     for _, o in tileList do if o.button.Visible then table.insert(visibleTiles, o) end end
     local jump = jumpRect()
     lastJump = if jump then string.format("%d,%d,%d,%d", jump.x, jump.y, jump.w, jump.h) else ""
-    local lay = L.compute({W = size.X, H = size.Y, touch = touchMode(), jump = jump, tiles = #visibleTiles, chomp = chomp ~= nil, timers = 3})
+    local lay = L.compute({W = size.X, H = size.Y, touch = touchMode(), jump = jump, tiles = #visibleTiles, chomp = chomp ~= nil, timers = 3,
+        inset = if gui.IgnoreGuiInset then 0 else GuiService:GetGuiInset().Y})
     local u, T = lay.unit, lay.text
     -- banner: icon left, two centred lines
     place(banner, lay.banner)
@@ -608,8 +610,9 @@ task.spawn(function()
             lastLeapWord = shown
             ;(leap.word :: TextLabel).Text = shown
         end
-        leap.face.BackgroundTransparency = if pieces.leap.Active then 0.3 else 0.55
-        if chomp then chomp.face.BackgroundTransparency = if chomp.button.Active then 0.3 else 0.55 end
+        -- v6 (ChatGPT round 2): solid when ready (it was 30 % see-through, the brown read as light taupe); see-through only on cooldown
+        leap.face.BackgroundTransparency = if pieces.leap.Active then 0 else 0.45
+        if chomp then chomp.face.BackgroundTransparency = if chomp.button.Active then 0 else 0.45 end
         -- Home tile: the home picture in a run, GO at home
         local homeWord = L.homeWord(state)
         local hw = home.word :: TextLabel
