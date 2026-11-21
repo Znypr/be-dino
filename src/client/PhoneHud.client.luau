@@ -144,6 +144,11 @@ local function counter(name: string, iconId: string, fill: Color3): (Frame, Text
     icon(holder, iconId)
     local number = word(row, "Number", 7, fill, L.Stroke.counter)
     number.FontFace, number.TextXAlignment = ITALIC, Enum.TextXAlignment.Left
+    -- v3 (owner 2026-11-21 "looks flat"; ref_compare: the mock's numbers are 70 luma lighter on top): a top-light gradient on the words
+    number.TextColor3 = Color3.new(1, 1, 1) -- a UIGradient multiplies the text colour, so the colour lives in the gradient
+    local shine = Instance.new("UIGradient")
+    shine.Color = ColorSequence.new(fill:Lerp(Color3.new(1, 1, 1), 0.45), fill:Lerp(Color3.new(0, 0, 0), 0.22))
+    shine.Rotation, shine.Parent = 90, number
     local scale = Instance.new("UIScale") scale.Parent = row
     return row, number, scale
 end
@@ -218,8 +223,17 @@ local function adopt(button: GuiButton, kind: string, fill: Color3, iconId: stri
         local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Transparency, s.ApplyStrokeMode, s.Parent = INK, 2, 0.4, Enum.ApplyStrokeMode.Border, face
     else
         Chip.apply(face, fill, INK)
-        local gloss = Instance.new("UIGradient") -- a lighter top, like the mock's toy buttons
-        gloss.Color = ColorSequence.new(fill:Lerp(Color3.new(1, 1, 1), 0.22), fill:Lerp(Color3.new(0, 0, 0), 0.1))
+        -- v3 (owner 2026-11-21 "looks flat"): the mock's toy button, measured with tools/ref_compare.py (top minus bottom brightness 50-85):
+        -- a bright top, the colour through the middle, a darker lip along the bottom (a hard step at 80 %), inside a thick black outline.
+        local white, black = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+        local gloss = Instance.new("UIGradient")
+        gloss.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, fill:Lerp(white, 0.38)),
+            ColorSequenceKeypoint.new(0.45, fill),
+            ColorSequenceKeypoint.new(0.79, fill:Lerp(black, 0.06)),
+            ColorSequenceKeypoint.new(0.8, fill:Lerp(black, 0.32)),
+            ColorSequenceKeypoint.new(1, fill:Lerp(black, 0.4)),
+        })
         gloss.Rotation, gloss.Parent = 90, face
     end
     local holder = box(face, "Icon", face.ZIndex + 1)
@@ -235,6 +249,13 @@ local function adopt(button: GuiButton, kind: string, fill: Color3, iconId: stri
     hold(o)
     button.Parent = root
     return o
+end
+-- the toy face's outline and corner follow the button's size (outline 0.8 % h, corner 22 % of the short side)
+local function toy(o: Owned, r: any, stroke: number)
+    local s = o.face:FindFirstChildOfClass("UIStroke")
+    if s then s.Thickness, s.Transparency = stroke, 0 end
+    local c = o.face:FindFirstChildOfClass("UICorner")
+    if c then c.CornerRadius = UDim.new(0, math.floor(math.min(r.w, r.h) * 0.22 + 0.5)) end
 end
 local function put(o: Owned, r: any)
     o.want = {pos = UDim2.fromOffset(math.floor(r.x + 0.5), math.floor(r.y + 0.5)), size = UDim2.fromOffset(math.floor(r.w + 0.5), math.floor(r.h + 0.5))}
@@ -386,16 +407,18 @@ local function layout()
     for i, o in {shop, dinos} do
         local r = lay.left[i]
         put(o, r)
-        inner(o.holder :: Frame, {x = u, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
+        toy(o, r, lay.buttonStroke)
+        inner(o.holder :: Frame, {x = u * 1.2, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
         local w = o.word :: TextLabel
-        inner(w, {x = u * 2 + r.icon, y = 0, w = r.w - r.icon - u * 3, h = r.h})
-        w.TextSize = T.leftWord
+        inner(w, {x = u * 2.2 + r.icon, y = -r.h * 0.04, w = r.w - r.icon - u * 3.2, h = r.h}) -- the word right after the icon, a hair high (the lip)
+        w.TextSize, w.TextXAlignment = T.leftWord, Enum.TextXAlignment.Left
     end
     -- right tiles (hidden ones keep their last spot: they are not shown)
     for i, o in visibleTiles do
         local r = lay.tiles[i]
         put(o, r)
-        local inset = r.w * 0.14
+        toy(o, r, lay.buttonStroke)
+        local inset = r.w * 0.11
         inner(o.holder :: Frame, {x = inset, y = inset, w = r.w - 2 * inset, h = r.h - 2 * inset})
         if o.word then
             inner(o.word :: TextLabel, {x = 0, y = 0, w = r.w, h = r.h})
@@ -423,8 +446,8 @@ local function layout()
         if r == nil then continue end
         put(o :: Owned, r)
         local own = o :: Owned
-        inner(own.holder :: Frame, {x = r.w * 0.22, y = r.h * 0.08, w = r.w * 0.56, h = r.h * 0.56})
-        inner(own.word :: TextLabel, {x = 2, y = r.h * 0.62, w = r.w - 4, h = r.h * 0.34})
+        inner(own.holder :: Frame, {x = r.w * 0.08, y = r.h * 0.0, w = r.w * 0.84, h = r.h * 0.7}) -- v3: the mock's big icon (ref_compare edge layer)
+        inner(own.word :: TextLabel, {x = 2, y = r.h * 0.66, w = r.w - 4, h = r.h * 0.3})
         ;(own.word :: TextLabel).TextSize = T.squareWord
     end
     -- the toast lane (Toasts.luau) and the rects other HUD code keeps clear of

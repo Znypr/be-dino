@@ -2,13 +2,13 @@
 -- BD-1258 / BD-1259 / BD-1260 / BD-1268 / BD-1269 / BD-1271 (docs/244 s2.14, owner phone test 2026-11-17, approved mock
 -- docs/evidence/2026-11-17-ui-hud/mock-01-hud.png): the phone HUD zones. One job per corner and the middle box stays empty.
 --   top-centre    the event banner (weather icon, one line, a short timer line, a faint strip), then the SIZE plate (health inside it)
---   left          exactly two word buttons, SHOP and DINOS (15 % h, word 6.5 % h, icon 12 % h)
+--   left          exactly two word buttons, SHOP and DINOS (17 % h, word 8 % h, icon 13 % h)
 --   right         one column of square tiles 13.5 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
 --                 does not fit above the jump button
 --   bottom-left   counters without plates: crystals, then eggs (icon 9.5 % h, number 6 % h)
 --   bottom-right  the potion timers (icon 6 % h, "3 min left" 3.2 % h) left of the jump button, and the jump button itself (Roblox's)
 --   bottom-centre LEAP and CHOMP as dark see-through squares; the one toast lane sits just above them
--- The middle box (x 33-67 %, y 25-76 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
+-- The middle box (x 33-67 %, y 25-74 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
 -- 3 s, BD-1260 puts it above the ability buttons) and the first-run goal hint under the SIZE plate. Neither may touch a persistent piece.
 -- Sizes are a share of the canvas height ("% h") on the phone canvas; a tall desktop canvas keeps phone proportions (the unit is capped at
 -- DesignH). Text sizes come from cap heights (cap = 0.7 x TextSize, measured on the owner's phone, docs/244 method), never under the phone
@@ -25,20 +25,23 @@ L.MinTarget = 44 -- docs/72 tap target, design px
 -- Owner 2026-11-21 on the first build: "more padding around, closer look to reference". Every size below was re-measured on the
 -- approved mock (mock-01-hud.png, % of its height): side margin 5, bottom margin 3, SHOP/DINOS 15 tall, tiles 14, counters 9.5 / 6,
 -- LEAP/CHOMP 19 with a 4.3 word, tiles 13.5 (mock 14), SIZE plate 50 x 7. The middle box ends at 76 % like the mock's dino (the squares start at 77 %).
+-- v3 (owner 2026-11-21 "still looks way off, looks flat, black outline is off, spacing is off"): measured with tools/ref_compare.py
+-- (mock vs Studio, % of the SCREEN height; the canvas is the screen minus the top bar, so canvas values are a little larger):
+-- edge padding 5.6, SHOP top 27.9, tiles 13.8 tall 1.5 apart, crystals number 8.6 tall, button outline 0.7 % h, gloss 50-85 luma.
 L.Spec = {
-    margin = 5, marginY = 3,
+    margin = 6.5, marginY = 3,
     banner = {icon = 6, line = 3.0, timer = 2.8, pad = 0.5, top = 0.5, minW = 62, share = 0.34, maxShare = 0.5},
     sizePlate = {h = 7, w = 50, gap = 0.8, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
-    left = {h = 15, word = 6.5, icon = 12, gap = 2.4, top = 0.28, minH = 46},
-    tile = {side = 13.5, gap = 1.5, top = 0.12}, -- 13.5 (mock 14): five tiles fit one column above the jump button on a 1274 x 423 canvas,
-    counter = {icon = 9.5, cap = 6.0, gap = 0.5, chars = 9},
+    left = {h = 17, word = 8, icon = 13, gap = 3.5, top = 0.18, minH = 46},
+    tile = {side = 14, gap = 1.2, top = 0.12}, -- 14 (mock 13.8 of the screen = 15.7 of the canvas; 14 keeps five tiles in one column above the jump button),
+    counter = {icon = 11, cap = 7.5, gap = 0.5, chars = 6.5},
     timer = {icon = 6, cap = 3.2, gap = 0.4, chars = 10, rows = 3},
-    square = {side = 19, gap = 2, word = 4.3, minSide = 50},
+    square = {side = 22, gap = 2.2, word = 4.8, minSide = 50},
     toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
-    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.76},
+    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.74},
 }
-L.Stroke = {word = 2.5, counter = 3} -- design px, black (Kit.Outline)
+L.Stroke = {word = 3.5, counter = 4, button = 0.8} -- word/counter: design px; button: % h (min 3 px), black (Kit.Outline)
 L.CharW, L.CharWLower = 0.62, 0.44 -- FredokaOne width / TextSize of a capital and of a mixed-case word (estimates for box widths)
 
 export type Rect = {x: number, y: number, w: number, h: number}
@@ -134,8 +137,6 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local plateH = math.max(S.sizePlate.h * u, lineH(t.sizeWord) + 4)
     local plateW = math.min(S.sizePlate.w * u, W * 0.4)
     out.sizePlate = {x = (W - plateW) / 2, y = out.banner.y + bannerH + S.sizePlate.gap * u, w = plateW, h = plateH}
-    local hintW = math.min(S.hint.w * u, W * 0.6)
-    out.hint = {x = (W - hintW) / 2, y = out.sizePlate.y + plateH + S.hint.gap * u, w = hintW, h = lineH(t.hint)}
 
     -- left: SHOP and DINOS
     local leftH = math.max(S.left.h * u, S.left.minH)
@@ -147,6 +148,10 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
         {x = m, y = leftY, w = leftW, h = leftH, icon = leftIcon},
         {x = m, y = leftY + leftH + leftGap, w = leftW, h = leftH, icon = leftIcon},
     }
+
+    -- the first-run hint under the SIZE plate: never wider than the room between the word buttons (v3: SHOP sits higher now)
+    local hintW = math.min(S.hint.w * u, W * 0.6, W - 2 * (m + leftW + u))
+    out.hint = {x = (W - hintW) / 2, y = out.sizePlate.y + plateH + S.hint.gap * u, w = hintW, h = lineH(t.hint)}
 
     -- top-left corner (empty in the mock): one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
     local chipH, chipGap = L.MinTarget, 1.5 * u
@@ -205,6 +210,14 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local top = math.max(m, S.tile.top * H)
     local need = p.tiles * tile + math.max(p.tiles - 1, 0) * tileGap
     if top + need > bottom then top = my end
+    -- v3: shrink the tiles (to 12 % h, never under 44 px) before a second column is ever used
+    if p.tiles > 0 and top + need > bottom then
+        local fit = math.floor((bottom - top - math.max(p.tiles - 1, 0) * tileGap) / p.tiles)
+        if fit >= math.max(12 * u, L.MinTarget) then
+            tile = fit
+            colX = W - m - tile
+        end
+    end
     local perColumn = math.max(1, math.floor((bottom - top + tileGap) / (tile + tileGap)))
     out.tiles = {}
     for i = 1, p.tiles do
@@ -213,9 +226,10 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
         table.insert(out.tiles, {x = colX - column * (tile + tileGap), y = top + row * (tile + tileGap), w = tile, h = tile})
     end
     out.tileSide = tile
+    out.buttonStroke = math.max(3, math.floor(L.Stroke.button * u + 0.5))
 
     -- the Studio-only "Test game: not saved" chip (HudCohesion) goes to the empty top-left corner
-    out.testChip = {x = m, y = chipY + chipH + chipGap, w = 176, h = 28} -- under the chips
+    out.testChip = {x = m, y = out.left[2].y + out.left[2].h + leftGap, w = 176, h = 28} -- under DINOS (Studio only)
 
     out.middle = {x = S.middle.x0 * W, y = S.middle.y0 * H, w = (S.middle.x1 - S.middle.x0) * W, h = (S.middle.y1 - S.middle.y0) * H}
     return out
