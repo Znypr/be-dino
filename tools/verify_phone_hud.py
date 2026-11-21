@@ -42,7 +42,7 @@ local function run(W, H, touch, tiny)
                 local tag = string.format("%dx%d tiles=%d chomp=%s timers=%d", W, H, tiles, tostring(chomp), timers)
                 for _, p in L.problems(lay) do check(tiny == true and string.find(p, "middle box", 1, true) ~= nil, tag .. ": " .. p) end
                 check(#lay.left == 2, tag .. ": exactly two word buttons")
-                for _, r in lay.tiles do check(math.abs(r.w - math.floor(r.h * 1.117 + 0.5)) < 0.01 and r.h >= math.max(9.5 * lay.unit, 44) - 0.01, tag .. ": tiles 1.117 wide, 13.7 % h shrinking to no less than 9.5 % h / 44 px") end
+                for _, r in lay.tiles do check(math.abs(r.w - math.floor(r.h * 1 + 0.5)) < 0.01 and r.h >= math.max(9.5 * lay.unit, 44) - 0.01, tag .. ": square tiles, 13.1 % h shrinking to no less than 9.5 % h / 44 px") end
                 check(lay.lane.y + lay.lane.h <= lay.action.y, tag .. ": the toast lane sits above LEAP and CHOMP")
                 check(lay.lane.w <= W * 0.5 + 0.01, tag .. ": the lane is at most half the screen wide")
                 check(#lay.squares == (if chomp then 2 else 1), tag .. ": LEAP (and CHOMP) squares")

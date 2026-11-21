@@ -72,25 +72,70 @@ local function box(parent: Instance, name: string, z: number): Frame
     f.Parent = parent
     return f
 end
+-- v7 (owner 2026-11-21 "icons miss the bold black outline"; ChatGPT spec: 4-5 px #10100B at 720 p): until the icon PNGs get a baked
+-- outline (art task), each icon gets 8 black copies behind it, offset by the outline width in the 8 directions.
+local ICON_INK = Color3.fromHex("#10100B")
+local outlinePx = 3 -- set from the layout (0.6 % of the screen height)
+local outlined: {{copy: GuiObject, dx: number, dy: number, base: UDim2}} = {}
+local DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {0.71, 0.71}, {-0.71, 0.71}, {0.71, -0.71}, {-0.71, -0.71}}
+local function blacken(root: Instance)
+    for _, d in root:GetDescendants() do
+        if d:IsA("ImageLabel") or d:IsA("ImageButton") then d.ImageColor3 = ICON_INK
+        elseif d:IsA("TextLabel") then d.TextColor3 = ICON_INK
+        elseif d:IsA("UIGradient") then d:Destroy()
+        elseif d:IsA("UIStroke") then d.Color = ICON_INK end
+        if d:IsA("GuiObject") and d.BackgroundTransparency < 1 then d.BackgroundColor3 = ICON_INK end
+    end
+    if root:IsA("ImageLabel") then root.ImageColor3 = ICON_INK end
+    if root:IsA("GuiObject") and root.BackgroundTransparency < 1 then root.BackgroundColor3 = ICON_INK end
+end
+local function addOutline(holder: Frame, made: GuiObject)
+    for _, dir in DIRS do
+        local copy = made:Clone()
+        copy.Name = "Outline"
+        copy.ZIndex = made.ZIndex - 1
+        for _, d in copy:GetDescendants() do if d:IsA("GuiObject") then d.ZIndex = math.max(d.ZIndex - 1, 1) end end
+        blacken(copy)
+        copy.Parent = holder
+        table.insert(outlined, {copy = copy, dx = dir[1], dy = dir[2], base = made.Position})
+    end
+end
+local function placeOutlines()
+    for i = #outlined, 1, -1 do
+        local o = outlined[i]
+        if o.copy.Parent == nil then table.remove(outlined, i) continue end
+        o.copy.Position = o.base + UDim2.fromOffset(math.floor(o.dx * outlinePx + 0.5), math.floor(o.dy * outlinePx + 0.5))
+    end
+end
 -- Theme.icon draws at a fixed design size (its inner pictures are offsets), so the icon keeps that size and a UIScale fits it to its holder.
-local function icon(holder: Frame, id: string): GuiObject?
+local function icon(holder: Frame, id: string, noOutline: boolean?): GuiObject?
     for _, child in holder:GetChildren() do if child:IsA("GuiObject") or child:IsA("UIScale") then child:Destroy() end end
     local made = Theme.icon(holder, id)
     if made == nil then return nil end
     local base = math.max(made.Size.X.Offset, 1)
-    made.AnchorPoint, made.Position, made.ZIndex = Vector2.zero, UDim2.fromScale(0, 0), holder.ZIndex + 1
+    made.AnchorPoint, made.Position, made.ZIndex = Vector2.zero, UDim2.fromScale(0, 0), holder.ZIndex + 2
     local fit = Instance.new("UIScale")
     fit.Parent = made
-    local function size() fit.Scale = math.max(holder.AbsoluteSize.X, 1) / base end
+    if not noOutline then addOutline(holder, made) end
+    local function size()
+        local scale = math.max(holder.AbsoluteSize.X, 1) / base
+        for _, child in holder:GetChildren() do
+            local s = child:FindFirstChildOfClass("UIScale")
+            if s then s.Scale = scale end
+        end
+    end
     size()
     holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(size)
+    placeOutlines()
     return made
 end
 local function image(holder: Frame, id: any): ImageLabel?
     if not (type(id) == "string" and string.match(id, "^rbxassetid://%d+$")) then return nil end
     local pic = Instance.new("ImageLabel")
-    pic.Name, pic.BackgroundTransparency, pic.Image, pic.ScaleType, pic.Size, pic.ZIndex = "Picture", 1, id, Enum.ScaleType.Fit, UDim2.fromScale(1, 1), holder.ZIndex + 1
+    pic.Name, pic.BackgroundTransparency, pic.Image, pic.ScaleType, pic.Size, pic.ZIndex = "Picture", 1, id, Enum.ScaleType.Fit, UDim2.fromScale(1, 1), holder.ZIndex + 2
     pic.Parent = holder
+    addOutline(holder, pic)
+    placeOutlines()
     return pic
 end
 local function pop(scale: UIScale)
@@ -150,7 +195,9 @@ local function counter(name: string, iconId: string, fill: Color3, italic: boole
     -- v3 (owner 2026-11-21 "looks flat"; ref_compare: the mock's numbers are 70 luma lighter on top): a top-light gradient on the words
     number.TextColor3 = Color3.new(1, 1, 1) -- a UIGradient multiplies the text colour, so the colour lives in the gradient
     local shine = Instance.new("UIGradient")
-    shine.Color = ColorSequence.new(fill:Lerp(Color3.new(1, 1, 1), 0.45), fill:Lerp(Color3.new(0, 0, 0), 0.22))
+    shine.Color = if italic -- v7 ChatGPT spec: golden crystal number #FFF36A -> #FFD522 (45 %) -> #FF9D00; EGGS white -> #F5F1E8
+        then ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("#FFF36A")), ColorSequenceKeypoint.new(0.45, Color3.fromHex("#FFD522")), ColorSequenceKeypoint.new(1, Color3.fromHex("#FF9D00"))})
+        else ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHex("#F5F1E8"))
     shine.Rotation, shine.Parent = 90, number
     local scale = Instance.new("UIScale") scale.Parent = row
     return row, number, scale
@@ -310,13 +357,19 @@ local timerFrame = pieces.leap.Parent
 local function stops(hi: string, a: string, b: string, c: string, lip: string): {Color3}
     return {Color3.fromHex(hi), Color3.fromHex(a), Color3.fromHex(b), Color3.fromHex(c), Color3.fromHex(lip)}
 end
+-- v7 (owner 2026-11-21 "reference is far more vibrant and kid friendly, ours is too cool and boring"): ChatGPT's brighter palette,
+-- top / middle / bottom, plus the thin darker lip along the bottom (bottom colour 40 % darker)
+local function vivid(top: string, mid: string, bottom: string): {Color3}
+    local b = Color3.fromHex(bottom)
+    return {Color3.fromHex(top), Color3.fromHex(top), Color3.fromHex(mid), b, b:Lerp(Color3.new(0, 0, 0), 0.4)}
+end
 local MOCK = {
-    green = stops("#E6FFA3", "#A6FA2A", "#79ED16", "#4FDB03", "#228C11"),
-    orange = stops("#FFE2A2", "#FBB35A", "#F48A2E", "#F96F04", "#9B3D04"),
-    gold = stops("#FFF0A5", "#FBDB64", "#FAC307", "#FDBE0E", "#9D7000"),
-    cyan = stops("#D4FFFF", "#49F6FC", "#03E2F1", "#0BD9E6", "#087D80"),
-    purple = stops("#FCE4FF", "#EDADF9", "#CB63FF", "#AE45FA", "#771CB7"),
-    grey = stops("#DFDDDB", "#AFAAA8", "#7C7A7D", "#6C6B69", "#363435"),
+    green = vivid("#C7FF63", "#80F73A", "#43DC12"),
+    orange = vivid("#FFDB91", "#FFAE57", "#FF812B"),
+    gold = vivid("#FFF08B", "#FFD641", "#FFB323"),
+    cyan = vivid("#8BFCFF", "#31E9FA", "#00BDE6"),
+    purple = vivid("#F4ADFF", "#CF6CFA", "#9B30DB"),
+    grey = vivid("#D5D6D9", "#999DA4", "#585E68"),
     brown = stops("#766751", "#5A4A34", "#544832", "#504330", "#3A3026"),
 }
 local OUTLINE = Color3.fromHex("#10100C") -- the audit: near-black, not grey
@@ -350,6 +403,7 @@ local function jumpRect(): any?
     return {x = jump.AbsolutePosition.X - origin.X, y = jump.AbsolutePosition.Y - origin.Y, w = jump.AbsoluteSize.X, h = jump.AbsoluteSize.Y}
 end
 local lastJump = ""
+local lastRunState: any = nil
 local testChipRect: any = nil
 -- HudCohesion's Studio-only test chip follows the old notice slot; it is held in the top-left corner instead
 local function holdTestChip(chip: Instance)
@@ -390,12 +444,25 @@ local function layout()
     local size = gui.AbsoluteSize
     if size.X <= 0 or size.Y <= 0 then return end
     local visibleTiles = {}
-    for _, o in tileList do if o.button.Visible then table.insert(visibleTiles, o) end end
+    -- owner 2026-11-21 "remove go": at home the rail is the mock's four tiles (a run starts at the island gate); in a run the Home tile
+    -- (the home picture) comes back as the way home
+    local character = player.Character
+    local inRun = character ~= nil and character:GetAttribute("RunState") == "Active"
+    for _, o in tileList do
+        local show = o.button.Visible and (o ~= home or inRun)
+        if o == home then
+            home.face.Visible = show
+            if not show then put(home, {x = -2000, y = -2000, w = 1, h = 1}) end -- nothing to tap at home
+        end
+        if show then table.insert(visibleTiles, o) end
+    end
     local jump = jumpRect()
     lastJump = if jump then string.format("%d,%d,%d,%d", jump.x, jump.y, jump.w, jump.h) else ""
     local lay = L.compute({W = size.X, H = size.Y, touch = touchMode(), jump = jump, tiles = #visibleTiles, chomp = chomp ~= nil, timers = 3,
         inset = if gui.IgnoreGuiInset then 0 else GuiService:GetGuiInset().Y})
     local u, T = lay.unit, lay.text
+    outlinePx = math.max(2, math.floor(0.6 * u + 0.5)) -- 4-5 px at 720 p
+    placeOutlines()
     -- banner: icon left, two centred lines
     place(banner, lay.banner)
     bannerBox, bannerText = lay.banner, T
@@ -448,8 +515,8 @@ local function layout()
     for i, o in visibleTiles do
         local r = lay.tiles[i]
         put(o, r)
-        toy(o, r, lay.buttonStroke, 0.24)
-        local iconS = r.h * 0.74 -- v4: the mock's icons fill about 80 % of the tile height, centred
+        toy(o, r, lay.buttonStroke, 0.19)
+        local iconS = r.h * 0.76 -- v4: the mock's icons fill about 80 % of the tile height, centred
         inner(o.holder :: Frame, {x = (r.w - iconS) / 2, y = (r.h - iconS) / 2, w = iconS, h = iconS})
         if o.word then
             inner(o.word :: TextLabel, {x = 0, y = 0, w = r.w, h = r.h})
@@ -461,8 +528,10 @@ local function layout()
         local row, number, r = c[1] :: Frame, c[2] :: TextLabel, c[3]
         place(row, r)
         inner(row:FindFirstChild("Icon") :: Frame, {x = 0, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
-        inner(number, {x = r.icon + u, y = 0, w = r.w - r.icon - u, h = r.h})
+        inner(number, {x = r.icon + 1.4 * u, y = 0, w = r.w - r.icon - 1.4 * u, h = r.h})
         number.TextSize = T.counter
+        local line = number:FindFirstChildOfClass("UIStroke")
+        if line then line.Thickness = math.max(3, math.floor(0.62 * u + 0.5)) end -- 4.5 px at 720 p
     end
     -- potion timers: rows from the bottom up, the words right-aligned against the icon
     place(timers, lay.timers)
@@ -537,20 +606,44 @@ local function rebuildTimers(buffs: any, now: number)
         timerRows = {}
         local rowH, iconS, gap = timers:GetAttribute("Row") or 24, timers:GetAttribute("Icon") or 24, timers:GetAttribute("Gap") or 2
         for i, buff in rows do
+            -- v7 (owner: "famous Roblox experience style timers"; ChatGPT spec): a dark rounded capsule with a big outlined potion icon
+            -- and a big countdown, stacked upward; kid words ("3 min", "40 s"), never "2:59" (docs/72)
             local row = box(timers, "Potion" .. i, 6)
             row.AnchorPoint, row.Position, row.Size = Vector2.new(0, 1), UDim2.new(0, 0, 1, -(i - 1) * (rowH + gap)), UDim2.new(1, 0, 0, rowH)
-            iconS = math.max(iconS, rowH)
-            PotionArt.icon(row, buff.id, UDim2.fromOffset(iconS, iconS), UDim2.new(1, -iconS, 0.5, 0), 7)
-            local t = word(row, "Time", 7, Color3.new(1, 1, 1))
-            t.FontFace, t.TextXAlignment, t.TextSize = ITALIC, Enum.TextXAlignment.Right, timers:GetAttribute("TextSize") or 19
-            t.Size = UDim2.new(1, -iconS - 4, 1, 0)
+            row.BackgroundColor3, row.BackgroundTransparency = Color3.fromHex("#382C25"), 0.08
+            local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, math.floor(rowH * 0.26 + 0.5)) corner.Parent = row
+            local edge = Instance.new("UIStroke") edge.Color, edge.Thickness, edge.ApplyStrokeMode = ICON_INK, 3, Enum.ApplyStrokeMode.Border
+            edge.Parent = row
+            local pulse = Instance.new("UIScale") pulse.Name = "Pulse" pulse.Parent = row
+            iconS = math.max(iconS, rowH * 1.2) -- the potion pops out of the capsule, PS99 style
+            local pic = PotionArt.icon(row, buff.id, UDim2.fromOffset(iconS, iconS), UDim2.new(0, math.floor(rowH * 0.1), 0.5, 0), 8)
+            if pic then
+                for _, dir in DIRS do
+                    local copy = pic:Clone()
+                    copy.Name, copy.ZIndex, copy.ImageColor3 = "Outline", 7, ICON_INK
+                    copy.Position = pic.Position + UDim2.fromOffset(math.floor(dir[1] * outlinePx + 0.5), math.floor(dir[2] * outlinePx + 0.5))
+                    copy.Parent = row
+                end
+            end
+            local t = word(row, "Time", 9, Color3.new(1, 1, 1))
+            t.FontFace, t.TextXAlignment, t.TextSize = UPRIGHT, Enum.TextXAlignment.Left, timers:GetAttribute("TextSize") or 19
+            t.Position, t.Size = UDim2.fromOffset(math.floor(rowH * 0.1 + iconS + 6), 0), UDim2.new(1, -math.floor(rowH * 0.1 + iconS + 10), 1, 0)
             row:SetAttribute("ExpiresAt", buff.expiresAt)
             table.insert(timerRows, row)
         end
     end
     for _, row in timerRows do
+        local left = (row:GetAttribute("ExpiresAt") or now) - now
         local t = row:FindFirstChild("Time") :: TextLabel?
-        if t then t.Text = L.timeLeft((row:GetAttribute("ExpiresAt") or now) - now) end
+        if t then
+            t.Text = L.duration(left)
+            -- under 10 s: yellow-orange, the last 3 s red, and a soft pulse (none with Reduce Motion)
+            t.TextColor3 = if left <= 3 then Color3.fromHex("#FF5757") elseif left <= 10 then Color3.fromHex("#FFCB35") else Color3.new(1, 1, 1)
+        end
+        local pulse = row:FindFirstChild("Pulse") :: UIScale?
+        if pulse then
+            pulse.Scale = if left <= 10 and Theme.MotionEnabled then 1 + 0.03 * (1 + math.sin(os.clock() * math.pi * 2 / 0.8)) else 1
+        end
     end
 end
 
@@ -613,7 +706,9 @@ task.spawn(function()
         -- v6 (ChatGPT round 2): solid when ready (it was 30 % see-through, the brown read as light taupe); see-through only on cooldown
         leap.face.BackgroundTransparency = if pieces.leap.Active then 0 else 0.45
         if chomp then chomp.face.BackgroundTransparency = if chomp.button.Active then 0 else 0.45 end
-        -- Home tile: the home picture in a run, GO at home
+        -- the rail changes between home (4 tiles) and a run (Home tile back): lay out again when the run state flips
+        if state ~= lastRunState then lastRunState = state queue() end
+        -- Home tile: the home picture in a run (hidden at home since owner 2026-11-21)
         local homeWord = L.homeWord(state)
         local hw = home.word :: TextLabel
         hw.Text, hw.Visible = homeWord or "", homeWord ~= nil

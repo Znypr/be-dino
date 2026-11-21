@@ -13,10 +13,10 @@ WorldToon.VariantPrefix = "BeDinoToon_" -- the authored variants (resources/visu
 -- Flat toon colours (Studio A/B 2026-11-16, docs/evidence/2026-11-16-world-look): soft fresh greens like the tree crowns, warm sand and
 -- paths, warm earth, and grey-violet volcano rock. Values are the terrain colour multipliers over the white map.
 WorldToon.Palette = {
-    Grass = {126, 188, 86},
-    LeafyGrass = {102, 164, 74},
-    Sand = {240, 222, 168},
-    Limestone = {230, 202, 146}, -- plaza and paths
+    Grass = {110, 227, 66}, -- v7 (owner 2026-11-21 "too cool and boring", ChatGPT target #6EE342; was 126,188,86)
+    LeafyGrass = {105, 217, 75}, -- #69D94B (was 102,164,74)
+    Sand = {252, 209, 140}, -- the mock's golden sand #FCD18C (was 240,222,168)
+    Limestone = {252, 204, 128}, -- plaza and paths: v7 golden like the mock's sand (renders paler under the sun; was 230,202,146)
     Ground = {180, 136, 92},
     Mud = {136, 106, 78},
     Rock = {152, 148, 140},
