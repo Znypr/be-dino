@@ -2,13 +2,13 @@
 -- BD-1258 / BD-1259 / BD-1260 / BD-1268 / BD-1269 / BD-1271 (docs/244 s2.14, owner phone test 2026-11-17, approved mock
 -- docs/evidence/2026-11-17-ui-hud/mock-01-hud.png): the phone HUD zones. One job per corner and the middle box stays empty.
 --   top-centre    the event banner (weather icon, one line, a short timer line, a faint strip), then the SIZE plate (health inside it)
---   left          exactly two word buttons, SHOP and DINOS (9 % h, word 4.2 % h, icon 6.5 % h)
---   right         one column of square tiles 8.5 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
+--   left          exactly two word buttons, SHOP and DINOS (15 % h, word 6.5 % h, icon 12 % h)
+--   right         one column of square tiles 14 % h, 1.5 % h apart (Home, Eggs, Fusion, Potions, gear); a second column only when one
 --                 does not fit above the jump button
---   bottom-left   counters without plates: crystals, then eggs (icon 7.5 % h, number 4.4 % h)
+--   bottom-left   counters without plates: crystals, then eggs (icon 9.5 % h, number 6 % h)
 --   bottom-right  the potion timers (icon 6 % h, "3 min left" 3.2 % h) left of the jump button, and the jump button itself (Roblox's)
 --   bottom-centre LEAP and CHOMP as dark see-through squares; the one toast lane sits just above them
--- The middle box (x 33-67 %, y 25-80 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
+-- The middle box (x 33-67 %, y 25-76 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
 -- 3 s, BD-1260 puts it above the ability buttons) and the first-run goal hint under the SIZE plate. Neither may touch a persistent piece.
 -- Sizes are a share of the canvas height ("% h") on the phone canvas; a tall desktop canvas keeps phone proportions (the unit is capped at
 -- DesignH). Text sizes come from cap heights (cap = 0.7 x TextSize, measured on the owner's phone, docs/244 method), never under the phone
@@ -22,18 +22,21 @@ L.PhoneFloor, L.MinText = 19, 14 -- BD-1259: TextSize >= 19 on a touch screen; d
 L.MinTarget = 44 -- docs/72 tap target, design px
 
 -- docs/244 s2.14, in % h (the unit).
+-- Owner 2026-11-21 on the first build: "more padding around, closer look to reference". Every size below was re-measured on the
+-- approved mock (mock-01-hud.png, % of its height): side margin 5, bottom margin 3, SHOP/DINOS 15 tall, tiles 14, counters 9.5 / 6,
+-- LEAP/CHOMP 19 with a 4.3 word, SIZE plate 50 x 7. The middle box ends at 76 % like the mock's dino (the squares start at 77 %).
 L.Spec = {
-    margin = 1.5,
+    margin = 5, marginY = 3,
     banner = {icon = 6, line = 3.0, timer = 2.8, pad = 0.5, top = 0.5, minW = 62, share = 0.34, maxShare = 0.5},
-    sizePlate = {h = 6.5, w = 46, gap = 0.6, word = 2.8},
+    sizePlate = {h = 7, w = 50, gap = 0.8, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
-    left = {h = 9, word = 4.2, icon = 6.5, gap = 1.4, top = 0.28, minH = 46},
-    tile = {side = 8.5, gap = 1.5, top = 0.12},
-    counter = {icon = 7.5, cap = 4.4, gap = 0.5, chars = 9},
+    left = {h = 15, word = 6.5, icon = 12, gap = 2.4, top = 0.28, minH = 46},
+    tile = {side = 14, gap = 1.5, top = 0.12},
+    counter = {icon = 9.5, cap = 6.0, gap = 0.5, chars = 9},
     timer = {icon = 6, cap = 3.2, gap = 0.4, chars = 10, rows = 3},
-    square = {side = 17, gap = 1.5, word = 3.0, minSide = 50},
+    square = {side = 19, gap = 2, word = 4.3, minSide = 50},
     toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
-    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.80},
+    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.76},
 }
 L.Stroke = {word = 2.5, counter = 3} -- design px, black (Kit.Outline)
 L.CharW, L.CharWLower = 0.62, 0.44 -- FredokaOne width / TextSize of a capital and of a mixed-case word (estimates for box widths)
@@ -113,7 +116,8 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local W, H, touch = p.W, p.H, p.touch
     local u = L.unit(H)
     local S = L.Spec
-    local m = S.margin * u
+    local m = S.margin * u -- left and right
+    local my = S.marginY * u -- bottom
     local out: any = {W = W, H = H, unit = u, touch = touch, text = {}}
     local t = out.text
     t.bannerLine, t.bannerTimer = L.textSize(S.banner.line, H, touch), L.textSize(S.banner.timer, H, touch)
@@ -144,9 +148,9 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
         {x = m, y = leftY + leftH + leftGap, w = leftW, h = leftH, icon = leftIcon},
     }
 
-    -- under DINOS: one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
-    local chipH, chipGap = L.MinTarget, S.left.gap * u
-    local chipY = out.left[2].y + leftH + leftGap
+    -- top-left corner (empty in the mock): one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
+    local chipH, chipGap = L.MinTarget, 1.5 * u
+    local chipY = my
     out.chips = {
         tellUs = {x = m, y = chipY, w = 100, h = chipH},
         admin = {x = m + 100 + chipGap, y = chipY, w = 88, h = chipH},
@@ -156,7 +160,7 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local counterIcon = S.counter.icon * u
     local counterRow = math.max(counterIcon, lineH(t.counter))
     local counterW = math.ceil(counterIcon + u + S.counter.chars * L.CharW * t.counter)
-    out.eggs = {x = m, y = H - m - counterRow, w = counterW, h = counterRow, icon = counterIcon}
+    out.eggs = {x = m, y = H - my - counterRow, w = counterW, h = counterRow, icon = counterIcon}
     out.crystals = {x = m, y = out.eggs.y - S.counter.gap * u - counterRow, w = counterW, h = counterRow, icon = counterIcon}
 
     -- bottom-right: Roblox's jump button, the potion timers left of it
@@ -168,7 +172,7 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local rows = math.clamp(p.timers or S.timer.rows, 0, S.timer.rows)
     local timersH = rows * timerRow + math.max(rows - 1, 0) * S.timer.gap * u
     local timerRight = math.min(jump.x - u, W - m)
-    out.timers = {x = timerRight - timerW, y = H - m - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
+    out.timers = {x = timerRight - timerW, y = H - my - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
 
     -- bottom-centre: LEAP and CHOMP squares, the toast lane above them
     local side = math.max(S.square.side * u, S.square.minSide)
@@ -178,9 +182,9 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local rowW = count * squareW + (count - 1) * gap
     out.squares = {}
     for i = 1, count do
-        table.insert(out.squares, {x = (W - rowW) / 2 + (i - 1) * (squareW + gap), y = H - m - side, w = squareW, h = side})
+        table.insert(out.squares, {x = (W - rowW) / 2 + (i - 1) * (squareW + gap), y = H - my - side, w = squareW, h = side})
     end
-    out.action = {x = (W - rowW) / 2, y = H - m - side, w = rowW, h = side}
+    out.action = {x = (W - rowW) / 2, y = H - my - side, w = rowW, h = side}
     -- as wide as the gap between the counters and the timers allows (a toast never covers either)
     local laneHalf = math.min(out.timers.x - u - W / 2, W / 2 - (out.crystals.x + out.crystals.w) - u)
     local laneW = math.min(S.toast.w * u, W * S.toast.share, 2 * laneHalf)
@@ -193,10 +197,10 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local tileGap = S.tile.gap * u
     local colX = W - m - tile
     local columnHitsJump = colX < jump.x + jump.w and jump.x < colX + tile
-    local bottom = if columnHitsJump then jump.y - u else H - m
+    local bottom = if columnHitsJump then jump.y - u else H - my
     local top = math.max(m, S.tile.top * H)
     local need = p.tiles * tile + math.max(p.tiles - 1, 0) * tileGap
-    if top + need > bottom then top = m end
+    if top + need > bottom then top = my end
     local perColumn = math.max(1, math.floor((bottom - top + tileGap) / (tile + tileGap)))
     out.tiles = {}
     for i = 1, p.tiles do
@@ -207,7 +211,7 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     out.tileSide = tile
 
     -- the Studio-only "Test game: not saved" chip (HudCohesion) goes to the empty top-left corner
-    out.testChip = {x = m, y = m, w = 176, h = 28}
+    out.testChip = {x = m, y = chipY + chipH + chipGap, w = 176, h = 28} -- under the chips
 
     out.middle = {x = S.middle.x0 * W, y = S.middle.y0 * H, w = (S.middle.x1 - S.middle.x0) * W, h = (S.middle.y1 - S.middle.y0) * H}
     return out
