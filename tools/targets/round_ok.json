@@ -253,6 +253,12 @@
    "contains": "local fc = Instance.new(\"UICorner\") fc.CornerRadius = UDim.new(0.5, 0) fc.Parent = f",
    "kind": "bar",
    "why": "BD-1258: the fill of those round bars"
+  },
+  {
+   "file": "src/client/PhoneHud.client.luau",
+   "contains": "local capsule = Instance.new(\"UICorner\") capsule.CornerRadius = UDim.new(0.5, 0) capsule.Parent = strip",
+   "kind": "bar",
+   "why": "BD-1271 v5 (ChatGPT spec, owner OK 2026-11-21): the top-centre event banner is a see-through cyan capsule with round ends, a banner strip, not a tag"
   }
  ]
 }
