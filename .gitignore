@@ -50,3 +50,4 @@ Screenshot 20*.png
 # tools/studio_cycle.py test places (one per session, --name): local only
 build/*-test.rbxlx
 build/*-test.manifest.json
+build/ref-compare/
