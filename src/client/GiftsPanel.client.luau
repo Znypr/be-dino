@@ -151,6 +151,12 @@ task.spawn(function()
         local function place()
             local size = gui.AbsoluteSize
             if size.X <= 0 or size.Y <= 0 then return end
+            local chip = u:GetAttribute("PhoneHudCodesSpot") -- BD-1258 (owner 2026-11-21): the phone HUD's chip row, top-left, when it fits
+            if typeof(chip) == "Rect" then
+                open.Position, open.Size = UDim2.fromOffset(chip.Min.X, chip.Min.Y), UDim2.fromOffset(chip.Width, chip.Height)
+                return
+            end
+            open.Size = UDim2.fromOffset(110, 44)
             local blockers = {}
             for name, value in u:GetAttributes() do
                 if string.sub(name, -4) == "Rect" then
@@ -161,7 +167,7 @@ task.spawn(function()
             local r = Spot.place({x = size.X - 128, y = 162, w = 110, h = 44}, blockers, size.X, size.Y)
             open.Position = UDim2.fromOffset(r.x, r.y)
         end
-        u.AttributeChanged:Connect(function(name: string) if string.sub(name, -4) == "Rect" then place() end end)
+        u.AttributeChanged:Connect(function(name: string) if string.sub(name, -4) == "Rect" or name == "PhoneHudCodesSpot" then place() end end)
         gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
         place()
     end
