@@ -29,7 +29,7 @@ Shop.names = {auras = true, oddsSimple = true, eggOdds = true, eggOutcomes = tru
 
 -- Bootstrap's screen helpers, set by attach.
 local body: any, heading: any, header: any, label: any, box: any, button: any, art: any
-local open: any, notify: any, viewportScale: any, num: any, str: any, decoded: any, progression: any, render: any, isActive: any
+local open: any, closeModal: any, notify: any, viewportScale: any, num: any, str: any, decoded: any, progression: any, render: any, isActive: any
 local shopAction: any, shopResult: any
 
 local chosenAura="meadow"
@@ -59,10 +59,11 @@ local function buttonH(minH: number): number
     return if require(script.Parent.ModalCompact).model().mode=="compact" then math.max(minH,math.ceil(45/require(script.Parent.ModalCompact).bodyScale())) else minH
 end
 
--- d: {body, heading, header, label, box, button, art, open, notify, viewportScale, num, str, decoded, progression, render, active}
+-- d: {body, heading, header, label, box, button, art, open, close, notify, viewportScale, num, str, decoded, progression, render, active}
 function Shop.attach(d: any)
     body, heading, header, label, box, button, art = d.body, d.heading, d.header, d.label, d.box, d.button, d.art
     open, notify, num, str, decoded = d.open, d.notify, d.num, d.str, d.decoded
+    closeModal = d.close -- BD-1287: the compact landing window has its own X
     -- BD-1101: the scale the body REALLY renders at (ModalCompact.bodyScale = panel scale x the narrow-width fit), not only the panel scale: at 500 px the fit is 0.71, so a
     -- button laid out for 45 px at the panel scale rendered 32 px and the floor pass grew it up over the heading strip.
     viewportScale = function() return require(script.Parent.ModalCompact).bodyScale() end
@@ -116,7 +117,7 @@ function Shop.render(name: string)
         local shopTabs=require(Shared.FtueP1).shopTabs(num("AccountLevel"))
         if ShopTiles.landing then
             ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals"),randomBlocked),
-                onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end})
+                onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end,close=closeModal})
             return
         end
         local bodyW=require(Shared.ToyboxShop).usableWidth(require(script.Parent.ModalCompact).bodyWidth(),require(script.Parent.ModalCompact).model().mode=="compact")

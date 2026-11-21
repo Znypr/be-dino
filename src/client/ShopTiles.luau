@@ -12,6 +12,8 @@ local Cohesion = if (require(Shared.Config) :: any).MenusCohesionEnabled == true
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
 -- BD-1254 (docs/243, owner 2026-11-17): with Config.MenusTopLookEnabled each landing tile is filled with its own colour (proposal sheet panel 4).
 local TopLook = (require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")) :: any).MenusTopLookEnabled == true
+-- BD-1287 (docs/246 slice 1): with Config.MenusSaeFrameEnabled the landing page is the compact Steal-an-Egg window with the outside rail (ShopSaeLanding).
+local SaeFrame = (require(Shared.Config) :: any).MenusSaeFrameEnabled == true
 
 local Tiles = {}
 -- true when the shop was opened from SHOP / the crystal counter and the landing page should show instead of a category.
@@ -59,6 +61,7 @@ end
 -- Each tile is ONE button (the whole card), far larger than the 44 px tap target. Words are live text, never baked into the picture.
 Tiles.TopLookFill = {eggs = {255, 200, 64}, auras = {255, 122, 107}, trails = {96, 196, 255}, conditions = {186, 128, 255}, crystals = {255, 176, 72}}
 function Tiles.build(ui, body: GuiObject, spec)
+    if SaeFrame and require(script.Parent.ShopSaeLanding).build(body, spec) then return end
     local layout = Art.tileLayout(#spec.tabs)
     local total = #spec.tabs * layout.width + (#spec.tabs - 1) * Art.TileGap
     local x0 = math.floor((824 - total) / 2)
