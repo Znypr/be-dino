@@ -37,10 +37,10 @@ L.Spec = {
     banner = {icon = 7.5, line = 5.3, timer = 3.5, pad = 0.5, top = 1.5, w = 93, h = 11, maxShare = 0.6},
     sizePlate = {h = 7.5, w = 50.5, gap = 1, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
-    left = {w = 42, h = 15.5, word = 7.1, icon = 11.5, gap = 1.7, top = 0.281, pad = 2.2, minH = 46}, -- v8: 10 % narrower -- pad/icon tightened so the word gets the mock's ~58 % of the width
-    tile = {side = 13.1, gap = 1.1, top = 0.125, aspect = 1}, -- v7/v8 ChatGPT: four 94 px squares, 8 px apart, 90 px from the top
+    left = {w = 40.3, h = 14.1, word = 7.1, icon = 11, gap = 1.7, top = 0.281, pad = 2.2, minH = 46}, -- v9 (ChatGPT v8 8.2/10): 4 % narrower, 9 % lower -- pad/icon tightened so the word gets the mock's ~58 % of the width
+    tile = {side = 13.1, gap = 0.7, top = 0.125, aspect = 1}, -- v7/v8 ChatGPT: four 94 px squares, 8 px apart, 90 px from the top
     counter = {icon = 10.2, cap = 5.6, gap = 1.8, chars = 6.5}, -- v8 ChatGPT: egg 68 px tall, EGGS 54 px, rows 13 px apart; crystals +15 % in the client
-    timer = {icon = 8, cap = 3.4, gap = 1.1, h = 6.7, chars = 6, rows = 3, clear = 2.5, bottom = 3.3}, -- v8: 48 px capsules, 8 px apart, 18 px clear of the rail, 24 px up
+    timer = {icon = 6.5, cap = 3.4, gap = 0.6, chars = 11, rows = 3, clear = 2.5, bottom = 3.3}, -- v9 (owner: "check the screenshots we made", sae-phone-02): no plate, icon + bold italic outlined words like the counters -- v8: 48 px capsules, 8 px apart, 18 px clear of the rail, 24 px up
     square = {side = 20.5, w = 22.4, gap = 3, word = 4.8, minSide = 50},
     toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
     middle = {x0 = 0.33, x1 = 0.67, y0 = 0.31, y1 = 0.76}, -- v5: the mock's SIZE bar ends at 30.8 %, its squares start at 77 %
@@ -191,8 +191,8 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local jump = p.jump or L.jumpGuess(W, H)
     out.jump = jump
     local timerIcon = S.timer.icon * u
-    local timerRow = math.max(S.timer.h * u, lineH(t.timer) + 4)
-    local timerW = math.ceil(timerRow * 0.1 + math.max(timerIcon, timerRow * 1.2) + 6 + S.timer.chars * 0.55 * t.timer + timerRow * 0.3)
+    local timerRow = math.max(timerIcon, lineH(t.timer))
+    local timerW = math.ceil(timerIcon + u + S.timer.chars * L.CharWLower * t.timer)
     local rows = math.clamp(p.timers or S.timer.rows, 0, S.timer.rows)
     local timersH = rows * timerRow + math.max(rows - 1, 0) * S.timer.gap * u
     local timerRight = math.min(jump.x - u, W - mr - math.floor(S.tile.side * u + 0.5) - S.timer.clear * u)

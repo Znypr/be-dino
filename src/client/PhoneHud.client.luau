@@ -365,7 +365,7 @@ local function vivid(top: string, mid: string, bottom: string): {Color3}
 end
 local MOCK = {
     green = vivid("#C7FF63", "#80F73A", "#43DC12"),
-    orange = {Color3.fromHex("#FFD080"), Color3.fromHex("#FFD080"), Color3.fromHex("#FFAC4D"), Color3.fromHex("#F47718"), Color3.fromHex("#C6530D")}, -- v8: stronger lower half
+    orange = {Color3.fromHex("#FFD080"), Color3.fromHex("#FFD080"), Color3.fromHex("#FFAC4D"), Color3.fromHex("#E96A0B"), Color3.fromHex("#C6530D")}, -- v8/v9: stronger lower half
     gold = vivid("#FFF08B", "#FFD641", "#FFB323"),
     cyan = vivid("#8BFCFF", "#31E9FA", "#00BDE6"),
     purple = vivid("#F4ADFF", "#CF6CFA", "#9B30DB"),
@@ -529,7 +529,7 @@ local function layout()
         place(row, r)
         inner(row:FindFirstChild("Icon") :: Frame, {x = 0, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
         inner(number, {x = r.icon + 0.8 * u, y = 0, w = r.w - r.icon - 0.8 * u, h = r.h})
-        number.TextSize = if number == crystalsText then math.floor(T.counter * 1.15 + 0.5) else T.counter -- v8: the crystal value never looks lighter than EGGS
+        number.TextSize = if number == crystalsText then math.floor(T.counter * 1.24 + 0.5) else T.counter -- v8: the crystal value never looks lighter than EGGS
         local line = number:FindFirstChildOfClass("UIStroke")
         if line then line.Thickness = math.max(3, math.floor(0.62 * u + 0.5)) end -- 4.5 px at 720 p
     end
@@ -606,17 +606,12 @@ local function rebuildTimers(buffs: any, now: number)
         timerRows = {}
         local rowH, iconS, gap = timers:GetAttribute("Row") or 24, timers:GetAttribute("Icon") or 24, timers:GetAttribute("Gap") or 2
         for i, buff in rows do
-            -- v7 (owner: "famous Roblox experience style timers"; ChatGPT spec): a dark rounded capsule with a big outlined potion icon
-            -- and a big countdown, stacked upward; kid words ("3 min", "40 s"), never "2:59" (docs/72)
+            -- v9 (owner 2026-11-21 "timers don't fit what we researched", Steal an Egg sae-phone-02): no plate; an outlined potion icon and
+            -- the time in bold italic white with a thick black outline, the counters' style, sitting on the world; kid words ("5 min left")
             local row = box(timers, "Potion" .. i, 6)
             row.AnchorPoint, row.Position, row.Size = Vector2.new(0, 1), UDim2.new(0, 0, 1, -(i - 1) * (rowH + gap)), UDim2.new(1, 0, 0, rowH)
-            row.BackgroundColor3, row.BackgroundTransparency = Color3.fromHex("#382C25"), 0.08
-            local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, math.floor(rowH * 0.26 + 0.5)) corner.Parent = row
-            local edge = Instance.new("UIStroke") edge.Color, edge.Thickness, edge.ApplyStrokeMode = ICON_INK, 3, Enum.ApplyStrokeMode.Border
-            edge.Parent = row
             local pulse = Instance.new("UIScale") pulse.Name = "Pulse" pulse.Parent = row
-            iconS = math.max(iconS, rowH * 1.2) -- the potion pops out of the capsule, PS99 style
-            local pic = PotionArt.icon(row, buff.id, UDim2.fromOffset(iconS, iconS), UDim2.new(0, math.floor(rowH * 0.1), 0.5, 0), 8)
+            local pic = PotionArt.icon(row, buff.id, UDim2.fromOffset(iconS, iconS), UDim2.new(0, 0, 0.5, 0), 8)
             if pic then
                 for _, dir in DIRS do
                     local copy = pic:Clone()
@@ -626,8 +621,10 @@ local function rebuildTimers(buffs: any, now: number)
                 end
             end
             local t = word(row, "Time", 9, Color3.new(1, 1, 1))
-            t.FontFace, t.TextXAlignment, t.TextSize = UPRIGHT, Enum.TextXAlignment.Left, timers:GetAttribute("TextSize") or 19
-            t.Position, t.Size = UDim2.fromOffset(math.floor(rowH * 0.1 + iconS + 6), 0), UDim2.new(1, -math.floor(rowH * 0.1 + iconS + 10), 1, 0)
+            t.FontFace, t.TextXAlignment, t.TextSize = ITALIC, Enum.TextXAlignment.Left, timers:GetAttribute("TextSize") or 19
+            local line = t:FindFirstChildOfClass("UIStroke")
+            if line then line.Thickness = math.max(3, outlinePx) end
+            t.Position, t.Size = UDim2.fromOffset(iconS + 6, 0), UDim2.new(1, -(iconS + 6), 1, 0)
             row:SetAttribute("ExpiresAt", buff.expiresAt)
             table.insert(timerRows, row)
         end
@@ -636,7 +633,7 @@ local function rebuildTimers(buffs: any, now: number)
         local left = (row:GetAttribute("ExpiresAt") or now) - now
         local t = row:FindFirstChild("Time") :: TextLabel?
         if t then
-            t.Text = L.duration(left)
+            t.Text = L.timeLeft(left)
             -- under 10 s: yellow-orange, the last 3 s red, and a soft pulse (none with Reduce Motion)
             t.TextColor3 = if left <= 3 then Color3.fromHex("#FF5757") elseif left <= 10 then Color3.fromHex("#FFCB35") else Color3.new(1, 1, 1)
         end
