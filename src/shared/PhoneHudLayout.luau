@@ -8,7 +8,7 @@
 --   bottom-left   counters without plates: crystals, then eggs (icon 9.5 % h, number 6 % h)
 --   bottom-right  the potion timers (icon 6 % h, "3 min left" 3.2 % h) left of the jump button, and the jump button itself (Roblox's)
 --   bottom-centre LEAP and CHOMP as dark see-through squares; the one toast lane sits just above them
--- The middle box (x 33-67 %, y 25-74 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
+-- The middle box (x 33-67 %, y 31-76 %) holds no persistent HUD piece. Two lanes are transient and may cross it: the toast lane (a toast lasts
 -- 3 s, BD-1260 puts it above the ability buttons) and the first-run goal hint under the SIZE plate. Neither may touch a persistent piece.
 -- Sizes are a share of the canvas height ("% h") on the phone canvas; a tall desktop canvas keeps phone proportions (the unit is capped at
 -- DesignH). Text sizes come from cap heights (cap = 0.7 x TextSize, measured on the owner's phone, docs/244 method), never under the phone
@@ -28,20 +28,24 @@ L.MinTarget = 44 -- docs/72 tap target, design px
 -- v3 (owner 2026-11-21 "still looks way off, looks flat, black outline is off, spacing is off"): measured with tools/ref_compare.py
 -- (mock vs Studio, % of the SCREEN height; the canvas is the screen minus the top bar, so canvas values are a little larger):
 -- edge padding 5.6, SHOP top 27.9, tiles 13.8 tall 1.5 apart, crystals number 8.6 tall, button outline 0.7 % h, gloss 50-85 luma.
+-- v5 (owner 2026-11-21 "use ChatGPT as a critic"): the ChatGPT art-director audit of v4 (5/10) gave a full spec in % of the
+-- gameplay height; these are its numbers: SHOP/DINOS 42.5 x 16 at left 5.7, top 28, gap 2.4; tiles 15.3 x 13.7 at right 6.4, top 12,
+-- gap 1.9; LEAP/CHOMP 22.4 x 20.5, 2.5 from the bottom, 3 apart; banner capsule 93 x 11 at top 1.5 (title 5.8, timer 3.7, icon 7.5);
+-- SIZE bar 50.5 x 7.5; outlines 6 px at 720 p (0.85 % h); counters icon 10.5, upright.
 L.Spec = {
-    margin = 6.5, marginY = 3,
-    banner = {icon = 6, line = 3.0, timer = 2.8, pad = 0.5, top = 0.5, minW = 62, share = 0.34, maxShare = 0.5},
-    sizePlate = {h = 7, w = 50, gap = 0.8, word = 3.0},
+    margin = 5.7, marginR = 6.4, marginY = 2.5,
+    banner = {icon = 7.5, line = 5.8, timer = 3.7, pad = 0.5, top = 1.5, w = 93, h = 11, maxShare = 0.6},
+    sizePlate = {h = 7.5, w = 50.5, gap = 1, word = 3.0},
     hint = {cap = 3.0, gap = 0.5, w = 90},
-    left = {h = 17, word = 8, icon = 13, gap = 3.5, top = 0.18, minH = 46},
-    tile = {side = 14, gap = 1.2, top = 0.12}, -- 14 (mock 13.8 of the screen = 15.7 of the canvas; 14 keeps five tiles in one column above the jump button),
-    counter = {icon = 11, cap = 7.5, gap = 0.5, chars = 6.5},
+    left = {w = 42.5, h = 16, word = 7.1, icon = 11.5, gap = 2.4, top = 0.28, pad = 2.2, minH = 46}, -- pad/icon tightened so the word gets the mock's ~58 % of the width
+    tile = {side = 13.7, gap = 1.9, top = 0.12, aspect = 1.117},
+    counter = {icon = 10.5, cap = 7.5, gap = 0.5, chars = 6.5},
     timer = {icon = 6, cap = 3.2, gap = 0.4, chars = 10, rows = 3},
-    square = {side = 22, gap = 2.2, word = 4.8, minSide = 50},
+    square = {side = 20.5, w = 22.4, gap = 3, word = 4.8, minSide = 50},
     toast = {cap = 3.2, lines = 2, gap = 1, w = 100, share = 0.5},
-    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.25, y1 = 0.74},
+    middle = {x0 = 0.33, x1 = 0.67, y0 = 0.31, y1 = 0.76}, -- v5: the mock's SIZE bar ends at 30.8 %, its squares start at 77 %
 }
-L.Stroke = {word = 3.5, counter = 4, button = 0.8} -- word/counter: design px; button: % h (min 3 px), black (Kit.Outline)
+L.Stroke = {word = 3.5, counter = 4, button = 0.85} -- word/counter: design px; button: % h (min 3 px), black (Kit.Outline)
 L.CharW, L.CharWLower = 0.62, 0.44 -- FredokaOne width / TextSize of a capital and of a mixed-case word (estimates for box widths)
 
 export type Rect = {x: number, y: number, w: number, h: number}
@@ -119,7 +123,8 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local W, H, touch = p.W, p.H, p.touch
     local u = L.unit(H)
     local S = L.Spec
-    local m = S.margin * u -- left and right
+    local m = S.margin * u -- left
+    local mr = S.marginR * u -- right
     local my = S.marginY * u -- bottom
     local out: any = {W = W, H = H, unit = u, touch = touch, text = {}}
     local t = out.text
@@ -130,9 +135,17 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     t.toast, t.homeWord = L.textSize(S.toast.cap, H, touch), L.textSize(S.square.word, H, touch)
 
     -- top-centre: banner, SIZE plate, hint
+    -- top-left corner (empty in the mock): one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
+    local chipH, chipGap = L.MinTarget, 1.5 * u
+    local chipY = S.marginY * u
+    out.chips = {
+        tellUs = {x = m, y = chipY, w = 100, h = chipH},
+        admin = {x = m + 100 + chipGap, y = chipY, w = 88, h = chipH},
+    }
     local bannerIcon = S.banner.icon * u
-    local bannerH = math.max(bannerIcon, lineH(t.bannerLine) + lineH(t.bannerTimer)) + 2 * S.banner.pad * u
-    local bannerW = math.min(W * S.banner.maxShare, math.max(W * S.banner.share, S.banner.minW * u))
+    local bannerH = math.max(S.banner.h * u, math.ceil((t.bannerLine + t.bannerTimer) * 0.9) + 2 * S.banner.pad * u) -- tight lines (0.9 x size)
+    local chipsRight = out.chips.admin.x + out.chips.admin.w
+    local bannerW = math.min(S.banner.w * u, W * S.banner.maxShare, W - 2 * (chipsRight + u))
     out.banner = {x = (W - bannerW) / 2, y = S.banner.top * u, w = bannerW, h = bannerH, icon = bannerIcon}
     local plateH = math.max(S.sizePlate.h * u, lineH(t.sizeWord) + 4)
     local plateW = math.min(S.sizePlate.w * u, W * 0.4)
@@ -141,8 +154,12 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     -- left: SHOP and DINOS
     local leftH = math.max(S.left.h * u, S.left.minH)
     local leftIcon = math.min(S.left.icon * u, leftH - 6)
-    local leftW = math.ceil(u + leftIcon + u + 5 * L.CharW * t.leftWord + 2 * u)
-    local leftGap = S.left.gap * u
+    local leftW = math.ceil(S.left.w * u)
+    -- the word fits the fixed width: "DINOS" (5 capitals) between the icon and the right padding, never under the text floor
+    local roomForWord = leftW - S.left.pad * u - leftIcon - u - S.left.pad * u
+    -- 0.5 x TextSize per capital: measured on the mock ("DINOS" is 2.44 x its TextSize wide); L.CharW (0.62) is a safe box estimate only
+    t.leftWord = math.max(math.min(t.leftWord, math.floor(roomForWord / (5 * 0.5))), if touch then L.PhoneFloor else L.MinText) -- the client refits it with TextService
+    local leftGap = S.left.gap * u + 2 * math.max(3, math.floor(L.Stroke.button * u + 0.5)) -- clear gap + both outlines
     local leftY = S.left.top * H
     out.left = {
         {x = m, y = leftY, w = leftW, h = leftH, icon = leftIcon},
@@ -153,13 +170,6 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local hintW = math.min(S.hint.w * u, W * 0.6, W - 2 * (m + leftW + u))
     out.hint = {x = (W - hintW) / 2, y = out.sizePlate.y + plateH + S.hint.gap * u, w = hintW, h = lineH(t.hint)}
 
-    -- top-left corner (empty in the mock): one row of small chips (the playtest "Tell us!" button, then the owner's Admin button), 44 px tall
-    local chipH, chipGap = L.MinTarget, 1.5 * u
-    local chipY = my
-    out.chips = {
-        tellUs = {x = m, y = chipY, w = 100, h = chipH},
-        admin = {x = m + 100 + chipGap, y = chipY, w = 88, h = chipH},
-    }
     -- Owner 2026-11-21 ("closer look to reference"): the Codes button (GiftsPanel) joins this row when it fits left of the banner;
     -- otherwise it is nil and GiftsPanel keeps its own clear-spot rule (CodesButtonSpot).
     local codes = {x = out.chips.admin.x + out.chips.admin.w + chipGap, y = chipY, w = 96, h = chipH}
@@ -180,12 +190,12 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
     local timerW = math.ceil(timerIcon + u + S.timer.chars * L.CharWLower * t.timer)
     local rows = math.clamp(p.timers or S.timer.rows, 0, S.timer.rows)
     local timersH = rows * timerRow + math.max(rows - 1, 0) * S.timer.gap * u
-    local timerRight = math.min(jump.x - u, W - m)
+    local timerRight = math.min(jump.x - u, W - mr)
     out.timers = {x = timerRight - timerW, y = H - my - timersH, w = timerW, h = timersH, row = timerRow, icon = timerIcon, gap = S.timer.gap * u}
 
     -- bottom-centre: LEAP and CHOMP squares, the toast lane above them
     local side = math.max(S.square.side * u, S.square.minSide)
-    local squareW = math.max(side, math.ceil(5 * 0.66 * t.squareWord + 10)) -- "CHOMP" fits on one line at the text floor
+    local squareW = math.max(S.square.w * u, math.ceil(5 * 0.66 * t.squareWord + 10)) -- "CHOMP" fits on one line at the text floor
     local gap = S.square.gap * u
     local count = if p.chomp then 2 else 1
     local rowW = count * squareW + (count - 1) * gap
@@ -203,33 +213,38 @@ function L.compute(p: {W: number, H: number, touch: boolean, jump: Rect?, tiles:
 
     -- right: the square tiles, top down; a second column (to the left) only when one does not fit above the jump button
     local tile = math.max(S.tile.side * u, L.MinTarget)
-    local tileGap = S.tile.gap * u
-    local colX = W - m - tile
+    local stroke = math.max(3, math.floor(L.Stroke.button * u + 0.5))
+    -- v4: the outline is drawn OUTSIDE each frame, so the clear gap between two tiles is gap + 2 outlines (mock: 1.6 % h clear)
+    local tileGap = S.tile.gap * u + 2 * stroke
+    local colX = W - mr - tile
     local columnHitsJump = colX < jump.x + jump.w and jump.x < colX + tile
     local bottom = if columnHitsJump then jump.y - u else H - my
-    local top = math.max(m, S.tile.top * H)
+    local top = math.max(my, S.tile.top * H)
     local need = p.tiles * tile + math.max(p.tiles - 1, 0) * tileGap
     if top + need > bottom then top = my end
     -- v3: shrink the tiles (to 12 % h, never under 44 px) before a second column is ever used
     if p.tiles > 0 and top + need > bottom then
         local fit = math.floor((bottom - top - math.max(p.tiles - 1, 0) * tileGap) / p.tiles)
-        if fit >= math.max(12 * u, L.MinTarget) then
+        if fit >= math.max(10.5 * u, L.MinTarget) then -- v5: 10.5 lets five tiles (GO included) stay in one column
             tile = fit
-            colX = W - m - tile
+            colX = W - mr - tile
         end
     end
+    local tileW = math.floor(tile * S.tile.aspect + 0.5) -- the mock's tiles are a little wider than tall (15.3 x 13.7 % h)
+    colX = W - mr - tileW
     local perColumn = math.max(1, math.floor((bottom - top + tileGap) / (tile + tileGap)))
     out.tiles = {}
     for i = 1, p.tiles do
         local column = (i - 1) // perColumn
         local row = (i - 1) % perColumn
-        table.insert(out.tiles, {x = colX - column * (tile + tileGap), y = top + row * (tile + tileGap), w = tile, h = tile})
+        table.insert(out.tiles, {x = colX - column * (tileW + tileGap), y = top + row * (tile + tileGap), w = tileW, h = tile})
     end
     out.tileSide = tile
     out.buttonStroke = math.max(3, math.floor(L.Stroke.button * u + 0.5))
 
     -- the Studio-only "Test game: not saved" chip (HudCohesion) goes to the empty top-left corner
-    out.testChip = {x = m, y = out.left[2].y + out.left[2].h + leftGap, w = 176, h = 28} -- under DINOS (Studio only)
+    -- Studio only: between the counters and LEAP, on the bottom line (no player ever sees it)
+    out.testChip = {x = out.crystals.x + out.crystals.w + u, y = H - my - 28, w = 176, h = 28}
 
     out.middle = {x = S.middle.x0 * W, y = S.middle.y0 * H, w = (S.middle.x1 - S.middle.x0) * W, h = (S.middle.y1 - S.middle.y0) * H}
     return out

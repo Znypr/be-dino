@@ -5,7 +5,7 @@ src/client/PhoneHud.client.luau), docs/244 s2.14, owner phone test 2026-11-17.
 Runs the REAL PhoneHudLayout in the pinned Luau runtime on phone canvases (3088x1440, 2400x1080 and 1334x750 landscape in design px, each
 with a 36 px Roblox top bar and with the bigger Studio top bar of the evidence captures) and a desktop canvas, with 5 tiles (home) and 3
 tiles (in a run), with and without CHOMP, and checks:
-  * no two persistent HUD pieces touch, none sits in the middle box (x 33-67 %, y 25-74 %) or off the canvas;
+  * no two persistent HUD pieces touch, none sits in the middle box (x 33-67 %, y 31-76 %) or off the canvas;
   * the toast lane and the goal hint never cover a persistent piece; the lane sits above LEAP / CHOMP and is at most half the screen wide;
   * every text size is >= 19 on a touch canvas (>= 14 on desktop), counters bigger than timer words, every tap target >= 44 px;
   * exactly two word buttons on the left, the right tiles are squares 14 % h (shrunk to no less than 12 % h before a second column) (or the 44 px floor);
@@ -42,7 +42,7 @@ local function run(W, H, touch, tiny)
                 local tag = string.format("%dx%d tiles=%d chomp=%s timers=%d", W, H, tiles, tostring(chomp), timers)
                 for _, p in L.problems(lay) do check(tiny == true and string.find(p, "middle box", 1, true) ~= nil, tag .. ": " .. p) end
                 check(#lay.left == 2, tag .. ": exactly two word buttons")
-                for _, r in lay.tiles do check(math.abs(r.w - r.h) < 0.01 and r.w >= math.max(12 * lay.unit, 44) - 0.01, tag .. ": square tiles, 14 % h shrinking to no less than 12 % h / 44 px") end
+                for _, r in lay.tiles do check(math.abs(r.w - math.floor(r.h * 1.117 + 0.5)) < 0.01 and r.h >= math.max(10.5 * lay.unit, 44) - 0.01, tag .. ": tiles 1.117 wide, 13.7 % h shrinking to no less than 10.5 % h / 44 px") end
                 check(lay.lane.y + lay.lane.h <= lay.action.y, tag .. ": the toast lane sits above LEAP and CHOMP")
                 check(lay.lane.w <= W * 0.5 + 0.01, tag .. ": the lane is at most half the screen wide")
                 check(#lay.squares == (if chomp then 2 else 1), tag .. ": LEAP (and CHOMP) squares")

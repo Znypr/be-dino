@@ -40,6 +40,7 @@ local INK, CREAM, SLOT = rgb(Kit.Outline), rgb(Kit.Tone.panel), rgb(Kit.Tone.slo
 local A = Kit.ButtonAnchors
 local ORANGE = Color3.fromRGB(255, 150, 46) -- docs/244 s2.14 s7: DINOS is orange
 local DARK = rgb(A.dark)
+local UPRIGHT = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 local ITALIC = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold, Enum.FontStyle.Italic)
 
 -- The layer under the menus (the scrim is ZIndex 20) and the parking frame for the old pieces.
@@ -103,10 +104,11 @@ end
 -- ===== Event banner (BD-1271) =====
 local banner = box(root, "EventBanner", 5)
 local strip = Instance.new("Frame") -- black at 65 % transparency with soft ends, no plate, no border
-strip.Name, strip.Size, strip.BackgroundColor3, strip.BackgroundTransparency, strip.BorderSizePixel, strip.ZIndex = "Strip", UDim2.fromScale(1, 1), Color3.new(0, 0, 0), 0, 0, 5
-local soft = Instance.new("UIGradient")
-soft.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.65), NumberSequenceKeypoint.new(0.8, 0.65), NumberSequenceKeypoint.new(1, 1)})
-soft.Parent = strip
+-- v5 audit: a bright cyan see-through capsule (#18BBDD at 40 %), fully round ends, a faint light top edge
+strip.Name, strip.Size, strip.BackgroundColor3, strip.BackgroundTransparency, strip.BorderSizePixel, strip.ZIndex = "Strip", UDim2.fromScale(1, 1), Color3.fromHex("#18BBDD"), 0.6, 0, 5
+local capsule = Instance.new("UICorner") capsule.CornerRadius = UDim.new(0.5, 0) capsule.Parent = strip
+local rim = Instance.new("UIStroke") rim.Color, rim.Transparency, rim.Thickness, rim.ApplyStrokeMode = Color3.fromHex("#C5FFFF"), 0.7, 1.5, Enum.ApplyStrokeMode.Border
+rim.Parent = strip
 strip.Parent = banner
 local bannerIcon = box(banner, "Icon", 6)
 local bannerLine = word(banner, "Line", 7)
@@ -143,7 +145,7 @@ local function counter(name: string, iconId: string, fill: Color3): (Frame, Text
     local holder = box(row, "Icon", 6)
     icon(holder, iconId)
     local number = word(row, "Number", 7, fill, L.Stroke.counter)
-    number.FontFace, number.TextXAlignment = ITALIC, Enum.TextXAlignment.Left
+    number.FontFace, number.TextXAlignment = UPRIGHT, Enum.TextXAlignment.Left -- v5 audit: upright, not italic
     -- v3 (owner 2026-11-21 "looks flat"; ref_compare: the mock's numbers are 70 luma lighter on top): a top-light gradient on the words
     number.TextColor3 = Color3.new(1, 1, 1) -- a UIGradient multiplies the text colour, so the colour lives in the gradient
     local shine = Instance.new("UIGradient")
@@ -152,8 +154,8 @@ local function counter(name: string, iconId: string, fill: Color3): (Frame, Text
     local scale = Instance.new("UIScale") scale.Parent = row
     return row, number, scale
 end
-local crystalsRow, crystalsText, crystalsPop = counter("Crystals", "amber", rgb(A.gold))
-local eggsRow, eggsText, eggsPop = counter("Eggs", "egg", CREAM)
+local crystalsRow, crystalsText, crystalsPop = counter("Crystals", "amber", Color3.fromHex("#FFDC32"))
+local eggsRow, eggsText, eggsPop = counter("Eggs", "egg", Color3.new(1, 1, 1))
 
 -- ===== Potion timers (BD-1268) =====
 local timers = box(root, "Timers", 5)
@@ -213,29 +215,23 @@ local function hold(o: Owned)
 end
 
 -- kind: "word" (left), "tile" (right), "square" (bottom-centre)
-local function adopt(button: GuiButton, kind: string, fill: Color3, iconId: string?, picture: string?, text: string?): Owned
+local function adopt(button: GuiButton, kind: string, fill: {Color3}, iconId: string?, picture: string?, text: string?): Owned
     button:SetAttribute("PhoneHudOwned", true)
     local face = box(button, "PhoneFace", button.ZIndex + 1)
     face.Size, face.BackgroundTransparency = UDim2.fromScale(1, 1), 0
-    if kind == "square" then -- dark see-through square
-        face.BackgroundColor3, face.BackgroundTransparency = DARK, 0.3
-        local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0.16, 0) c.Parent = face
-        local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Transparency, s.ApplyStrokeMode, s.Parent = INK, 2, 0.4, Enum.ApplyStrokeMode.Border, face
-    else
-        Chip.apply(face, fill, INK)
-        -- v3 (owner 2026-11-21 "looks flat"): the mock's toy button, measured with tools/ref_compare.py (top minus bottom brightness 50-85):
-        -- a bright top, the colour through the middle, a darker lip along the bottom (a hard step at 80 %), inside a thick black outline.
-        local white, black = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
-        local gloss = Instance.new("UIGradient")
-        gloss.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, fill:Lerp(white, 0.38)),
-            ColorSequenceKeypoint.new(0.45, fill),
-            ColorSequenceKeypoint.new(0.79, fill:Lerp(black, 0.06)),
-            ColorSequenceKeypoint.new(0.8, fill:Lerp(black, 0.32)),
-            ColorSequenceKeypoint.new(1, fill:Lerp(black, 0.4)),
-        })
-        gloss.Rotation, gloss.Parent = 90, face
-    end
+    -- every kind is a solid toy face now (v5: LEAP/CHOMP are solid warm brown, not see-through grey)
+    Chip.apply(face, fill[3], OUTLINE)
+    local gloss = Instance.new("UIGradient")
+    gloss.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, fill[1]),
+        ColorSequenceKeypoint.new(0.08, fill[2]),
+        ColorSequenceKeypoint.new(0.55, fill[3]),
+        ColorSequenceKeypoint.new(0.899, fill[4]),
+        ColorSequenceKeypoint.new(0.9, fill[5]),
+        ColorSequenceKeypoint.new(1, fill[5]),
+    })
+    gloss.Rotation, gloss.Parent = 90, face
+    face.BackgroundColor3 = Color3.new(1, 1, 1) -- a UIGradient MULTIPLIES the background colour: the colour lives in the gradient only
     local holder = box(face, "Icon", face.ZIndex + 1)
     if picture then image(holder, picture) elseif iconId then icon(holder, iconId) end
     local label: TextLabel? = nil
@@ -250,12 +246,13 @@ local function adopt(button: GuiButton, kind: string, fill: Color3, iconId: stri
     button.Parent = root
     return o
 end
--- the toy face's outline and corner follow the button's size (outline 0.8 % h, corner 22 % of the short side)
-local function toy(o: Owned, r: any, stroke: number)
+-- the toy face's outline and corner follow the button's size (v5 audit: corner 29 % of the height on SHOP/DINOS, 24 % on tiles, 17 % on
+-- LEAP/CHOMP; outline 6 px at 720 p, 3 px on LEAP/CHOMP)
+local function toy(o: Owned, r: any, stroke: number, corner: number)
     local s = o.face:FindFirstChildOfClass("UIStroke")
     if s then s.Thickness, s.Transparency = stroke, 0 end
     local c = o.face:FindFirstChildOfClass("UICorner")
-    if c then c.CornerRadius = UDim.new(0, math.floor(math.min(r.w, r.h) * 0.22 + 0.5)) end
+    if c then c.CornerRadius = UDim.new(0, math.floor(r.h * corner + 0.5)) end
 end
 local function put(o: Owned, r: any)
     o.want = {pos = UDim2.fromOffset(math.floor(r.x + 0.5), math.floor(r.y + 0.5)), size = UDim2.fromOffset(math.floor(r.w + 0.5), math.floor(r.h + 0.5))}
@@ -307,18 +304,33 @@ local bite = gui:FindFirstChild("BiteButton", true) :: GuiButton?
 local railFrame = pieces.shop.Parent
 local timerFrame = pieces.leap.Parent
 
-local shop = adopt(pieces.shop, "word", rgb(A.green), "amber", nil, "SHOP")
-local dinos = adopt(pieces.dinos, "word", ORANGE, Nav.collection, nil, "DINOS")
-local home = adopt(pieces.home, "tile", rgb(A.green), Nav.home, nil, "")
+-- v5 (ChatGPT art-director audit of v4, 2026-11-21): exact gradient stops per button, top to bottom:
+-- highlight 0-8 %, main fill 8 % -> 55 % -> 90 %, then the dark lip 90-100 %. Colours: the audit's reproduction targets from the mock.
+local function stops(hi: string, a: string, b: string, c: string, lip: string): {Color3}
+    return {Color3.fromHex(hi), Color3.fromHex(a), Color3.fromHex(b), Color3.fromHex(c), Color3.fromHex(lip)}
+end
+local MOCK = {
+    green = stops("#E6FFA3", "#A6FA2A", "#79ED16", "#4FDB03", "#228C11"),
+    orange = stops("#FFE2A2", "#FBB35A", "#F48A2E", "#F96F04", "#9B3D04"),
+    gold = stops("#FFF0A5", "#FBDB64", "#FAC307", "#FDBE0E", "#9D7000"),
+    cyan = stops("#D4FFFF", "#49F6FC", "#03E2F1", "#0BD9E6", "#087D80"),
+    purple = stops("#FCE4FF", "#EDADF9", "#CB63FF", "#AE45FA", "#771CB7"),
+    grey = stops("#DFDDDB", "#AFAAA8", "#7C7A7D", "#6C6B69", "#363435"),
+    brown = stops("#766751", "#5A4A34", "#544832", "#504330", "#3A3026"),
+}
+local OUTLINE = Color3.fromHex("#10100C") -- the audit: near-black, not grey
+local shop = adopt(pieces.shop, "word", MOCK.green, "amber", nil, "SHOP")
+local dinos = adopt(pieces.dinos, "word", MOCK.orange, Nav.collection, nil, "DINOS")
+local home = adopt(pieces.home, "tile", MOCK.green, Nav.home, nil, "")
 local tileList: {Owned} = {
     home,
-    adopt(pieces.eggs, "tile", rgb(A.gold), Nav.eggs),
-    adopt(pieces.fusion, "tile", rgb(A.blue), Nav.fusion),
-    adopt(pieces.potions, "tile", rgb(A.purple), Nav.potions),
-    adopt(pieces.settings, "tile", rgb(A.grey), Nav.settings),
+    adopt(pieces.eggs, "tile", MOCK.gold, Nav.eggs),
+    adopt(pieces.fusion, "tile", MOCK.cyan, Nav.fusion),
+    adopt(pieces.potions, "tile", MOCK.purple, Nav.potions),
+    adopt(pieces.settings, "tile", MOCK.grey, Nav.settings),
 }
-local leap = adopt(pieces.leap, "square", DARK, "leap", nil, "LEAP")
-local chomp: Owned? = if bite then adopt(bite, "square", DARK, "bite", (Slots.Images :: any).hud_bite, "CHOMP") else nil
+local leap = adopt(pieces.leap, "square", MOCK.brown, "leap", nil, "LEAP")
+local chomp: Owned? = if bite then adopt(bite, "square", MOCK.brown, "bite", (Slots.Images :: any).hud_bite, "CHOMP") else nil
 for _, old in {pieces.crystal, pieces.eggPlate.Parent, pieces.sizeBar, pieces.hint, pieces.goal, railFrame, timerFrame} do park(old) end
 
 -- ===== Layout =====
@@ -362,7 +374,7 @@ end
 local function placeBanner()
     local b, T = bannerBox, bannerText
     if b == nil or T == nil then return end
-    local lineH, timerH = math.ceil(T.bannerLine * 1.15), math.ceil(T.bannerTimer * 1.15)
+    local lineH, timerH = math.ceil(T.bannerLine * 0.9), math.ceil(T.bannerTimer * 0.9) -- v5: tight lines, the capsule is 11 % h
     local iconS = math.min(b.h * 0.86, b.icon * 1.4)
     local gap = math.max(4, b.h * 0.12)
     local maxText = b.w - iconS - gap - b.h
@@ -403,23 +415,40 @@ local function layout()
     end
     place(hintLabel, lay.hint)
     hintLabel.TextSize = T.hint
-    -- left word buttons
+    -- left word buttons: ONE TextSize for both words, the largest that fits the narrower word box (measured with TextService, v5)
+    do
+        local r = lay.left[1]
+        local pad = L.Spec.left.pad * u
+        local room = r.w - r.icon - pad * 2 - u
+        local size = T.leftWord
+        local floor = if lay.touch then L.PhoneFloor else L.MinText
+        while size > floor do
+            local wide = 0
+            for _, text in {"SHOP", "DINOS"} do
+                wide = math.max(wide, TextService:GetTextSize(text, size, Enum.Font.FredokaOne, Vector2.new(10000, 10000)).X + 2 * L.Stroke.word)
+            end
+            if wide <= room then break end
+            size -= 1
+        end
+        T.leftWord = size
+    end
     for i, o in {shop, dinos} do
         local r = lay.left[i]
         put(o, r)
-        toy(o, r, lay.buttonStroke)
-        inner(o.holder :: Frame, {x = u * 1.2, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
+        toy(o, r, lay.buttonStroke, 0.29)
+        local pad = L.Spec.left.pad * u
+        inner(o.holder :: Frame, {x = pad, y = (r.h - r.icon) / 2, w = r.icon, h = r.icon})
         local w = o.word :: TextLabel
-        inner(w, {x = u * 2.2 + r.icon, y = -r.h * 0.04, w = r.w - r.icon - u * 3.2, h = r.h}) -- the word right after the icon, a hair high (the lip)
+        inner(w, {x = pad + r.icon + u, y = -r.h * 0.05, w = r.w - r.icon - pad * 2 - u, h = r.h}) -- right after the icon, a hair high (the lip)
         w.TextSize, w.TextXAlignment = T.leftWord, Enum.TextXAlignment.Left
     end
     -- right tiles (hidden ones keep their last spot: they are not shown)
     for i, o in visibleTiles do
         local r = lay.tiles[i]
         put(o, r)
-        toy(o, r, lay.buttonStroke)
-        local inset = r.w * 0.11
-        inner(o.holder :: Frame, {x = inset, y = inset, w = r.w - 2 * inset, h = r.h - 2 * inset})
+        toy(o, r, lay.buttonStroke, 0.24)
+        local iconS = r.h * 0.74 -- v4: the mock's icons fill about 80 % of the tile height, centred
+        inner(o.holder :: Frame, {x = (r.w - iconS) / 2, y = (r.h - iconS) / 2, w = iconS, h = iconS})
         if o.word then
             inner(o.word :: TextLabel, {x = 0, y = 0, w = r.w, h = r.h})
             ;(o.word :: TextLabel).TextSize = T.homeWord
@@ -446,6 +475,7 @@ local function layout()
         if r == nil then continue end
         put(o :: Owned, r)
         local own = o :: Owned
+        toy(own, r, math.max(2, math.floor(lay.buttonStroke / 2 + 0.5)), 0.17)
         inner(own.holder :: Frame, {x = r.w * 0.08, y = r.h * 0.0, w = r.w * 0.84, h = r.h * 0.7}) -- v3: the mock's big icon (ref_compare edge layer)
         inner(own.word :: TextLabel, {x = 2, y = r.h * 0.66, w = r.w - 4, h = r.h * 0.3})
         ;(own.word :: TextLabel).TextSize = T.squareWord
