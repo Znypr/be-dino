@@ -32,3 +32,7 @@ Owner 2026-11-14: "i shouldnt have to tell you all of this, critique your own ga
 
 - Screens that need game state (hatch reveal, purchase confirms, run complete) are not in the tour; they need a Studio state script (next step of BD-1191).
 - Sound cannot be judged from pictures; a sound pass needs the owner's ears or a recorded clip.
+
+## Reference vs game, measured (BD-1279, owner 2026-11-21)
+
+`python tools/ref_compare.py REF GAME [--crop-game x,y,w,h] [--boxes boxes.json]` compares a reference (ChatGPT mock, YouTube frame, top-game screenshot) with a Studio or phone capture and writes `build/ref-compare/<name>/report.html` + `report.json` (not committed). Every number is in % of the picture height, the `PhoneHudLayout` unit; left pieces are measured from the left edge, right pieces from the right edge, so different aspect ratios line up. Layers: whole (both, boxes drawn), nine zones (ref | game | onion | edges, 5 % ruler), matched pieces (edge padding, top, size, gap to the piece above, outline px at 720 h, fill hex and ΔE, gloss = top minus bottom brightness: 0 is flat, the mock's toy buttons are 50-85) and a "change X by N % h" list. Named boxes in `--boxes` give exact pairs when automatic matching is not enough. First use: the phone HUD v3 (PR #632, docs/evidence/2026-11-21-ui-hud-v3). Run it before showing the owner any look that copies a reference.
