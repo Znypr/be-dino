@@ -10,6 +10,8 @@ local C = Theme.Colors
 -- BD-1237: the style rules for the landing tiles while Config.MenusCohesionEnabled is on (nil = the old slate tiles).
 local Cohesion = if (require(Shared.Config) :: any).MenusCohesionEnabled == true then require(Shared.MenusCohesionRules) else nil
 local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
+-- BD-1254 (docs/243, owner 2026-11-17): with Config.MenusTopLookEnabled each landing tile is filled with its own colour (proposal sheet panel 4).
+local TopLook = (require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")) :: any).MenusTopLookEnabled == true
 
 local Tiles = {}
 -- true when the shop was opened from SHOP / the crystal counter and the landing page should show instead of a category.
@@ -55,6 +57,7 @@ end
 
 -- The landing page: one tall illustrated tile per visible tab. ui = Bootstrap's {label, box}; spec = {tabs, info, onPick(tab)}.
 -- Each tile is ONE button (the whole card), far larger than the 44 px tap target. Words are live text, never baked into the picture.
+Tiles.TopLookFill = {eggs = {255, 200, 64}, auras = {255, 122, 107}, trails = {96, 196, 255}, conditions = {186, 128, 255}, crystals = {255, 176, 72}}
 function Tiles.build(ui, body: GuiObject, spec)
     local layout = Art.tileLayout(#spec.tabs)
     local total = #spec.tabs * layout.width + (#spec.tabs - 1) * Art.TileGap
@@ -100,6 +103,14 @@ function Tiles.build(ui, body: GuiObject, spec)
             end
             card.ChildAdded:Connect(function() task.defer(hideFace) end)
             task.defer(hideFace)
+            local fill = Tiles.TopLookFill[tab]
+            if TopLook and fill then -- BD-1254 (docs/243 G4/G5): the tile in its own colour, white outlined words, a green OPEN on every tile
+                back.BackgroundColor3 = rgb(fill)
+                for _, label in {title, sub} do
+                    label.TextColor3, label.TextStrokeTransparency, label.TextStrokeColor3 = Color3.new(1, 1, 1), 0, rgb(Cohesion.Outline)
+                end
+                open.BackgroundColor3 = C.accent
+            end
         end
         card.Activated:Connect(function() spec.onPick(tab) end)
     end

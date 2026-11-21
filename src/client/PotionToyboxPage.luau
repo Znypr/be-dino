@@ -108,6 +108,7 @@ function Page.build(ui, body: GuiObject, header: GuiObject, spec)
         local look = ShopCardState.look({left = left, buyButton = item.price .. " Crystals"}, item.price .. " Crystals")
         local tier = color[item.rarity] or Layout.tone("label")
         local card = Layout.card(scroller, "PotionCard_" .. item.id, size(rect), pos(rect))
+        if Layout.windowed(card) and color[item.rarity] then card.BackgroundColor3 = tier:Lerp(Color3.fromRGB(30, 32, 44), 0.35) end -- BD-1254 (docs/243 G4): the rarity colour fills the card
         local parts = Kit.potionCard(rect.w, rect.h, lay)
         local tile = Layout.preview(card, size(parts.icon), pos(parts.icon))
         tile.Name = "IconTile"

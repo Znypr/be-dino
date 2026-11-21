@@ -135,3 +135,20 @@ Code-drawn things that stay code (allowed, docs/72): the "?" on a locked card, b
 | BD-1257 (P3) | Header live info (timers, currency chip) and one frame-breaking icon per window | G8, G10 |
 
 Phone rule stays: every window and tab tile checked at 634x344 and 828x374 (BD-1241 method), targets at least 44 px.
+
+## 7. Built (2026-11-17, owner "Yes, build it"): first slice behind `MenusTopLookEnabled` (playtest on)
+
+Studio pictures (playtest build, 1274x481): `docs/evidence/2026-11-17-menus-top-look/` (go-home-confirm, run-complete, run-complete-eggs, home-sanctuary, settings, eggs, dino-index, fusion, potion-shop, auras, shop-landing).
+
+| Rule | Done | How |
+| --- | --- | --- |
+| G1 world visible | partly | the cover behind a window is light (0.82 instead of 0.42); the window is still as wide as before on short screens (needs BD-1253 sizing, after PR #627's frame margins) |
+| G2 header colour per menu | yes | `Kit.TopLookHeader` / `Kit.useTopLook` (green Shop and Home, purple Potions and Fusion, blue Dinos, amber Eggs, Run complete and Go home?, dark Settings, green Food guide) |
+| G3 dark studded body | yes | ToyboxLayout draws panels, cards, chips and words dark with white outlined text inside `ModalScrim` / `FusionScrim` only; HUD, toasts and cues stay cream |
+| G4 rarity fills the card | Index, Potions, Auras (already), Shop tiles | DinoIndexList, PotionToyboxPage, ShopTiles; Trails cards next |
+| G5 a button on every card | Potions, Auras, Shop tiles | green OPEN on each Shop tile |
+| G6 tabs outside | not yet | BD-1255 |
+| G7 fat progress | not yet | BD-1256 |
+| G8 / G10 | not yet | BD-1257 |
+
+Known gaps seen in the pictures: Shop landing and the first-eggs "Great job!" page still lay out for the old 824 px width (content sits left on a wide screen), toasts still cover a window's button (BD-1249), the Crystals tile keeps its old picture (section 6).
