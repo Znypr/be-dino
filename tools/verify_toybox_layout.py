@@ -460,6 +460,7 @@ def static_checks(read):
     idx_buttons = re.findall(r'L\.actionButton\(root, [^\n]*?, (GREY|C\.accent), (?:true|false), function', idx_new)
     assert sorted(idx_buttons) == ['C.accent', 'GREY', 'GREY'], 'Index: ONE coloured button (FUSION), the page arrows grey: %r' % idx_buttons
     assert 'Panels.autoState(' in eggs_new and '"AUTO: OFF"' in eggs_new and '"AUTO: LOCKED"' in eggs_new, 'AUTO shows its state on the toggle'
+    assert 'Panels.autoLine(autoLineText)' in eggs_new and '"Opens eggs for you"' in eggs_new, 'BD-1278: the line beside AUTO says what it does, not the state twice'
     assert '"?"' in idx_new and '"???"' not in idx_new and 'look.status' not in idx_new, 'an undiscovered card has ONE "?" line, no "???" twice'
     assert 'Color3.fromRGB(107, 90, 68), 0.35' in idx_new and 'edge.Color = silRarity' in idx_new, 'the undiscovered silhouette is a soft brown tint (0.35) with the rarity colour on the card edge'
     # ---- BD-1202: an empty nest slot never shows the egg ----

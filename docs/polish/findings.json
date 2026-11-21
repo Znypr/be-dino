@@ -474,9 +474,11 @@
   "reach": 3,
   "kind": "copy",
   "id": "P-9bc921",
-  "state": "open",
+  "state": "fixed",
   "first_seen": "2026-11-14",
-  "seen": 1
+  "seen": 1,
+  "note": "BD-1278",
+  "fixed": "2026-11-21"
  },
  {
   "screen": "collection",
