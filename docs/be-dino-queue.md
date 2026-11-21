@@ -31,7 +31,6 @@ Screen scores (latest, 10 = top Roblox game): auras 8, collection 8, eggs 8, fus
 | 4 | P-3c944f | game | No Roblox badges | Badge set for key moments (badge creation is the owner account step). |  |
 | 4 | P-4c506a | game | Index completion gives no reward | Index milestones (5 / 10 / 20 species) give crystals, a nest or a title. |  |
 | 4 | P-b6c84e | game | No return notification when a nest is ready | Opt-in experience notification when a nest finishes (owner sets up the notification string). |  |
-| 3 | P-9bc921 | eggs | "AUTO: OFF" and "Auto-open: off" say the same thing twice | Keep the toggle; replace the line with what auto-open does ("Opens eggs for you"). |  |
 | 3 | P-5eb0e4 | hud | HUD key badges cover the last letter | Reserve the badge corner: word area ends before the badge, or badge outside the word box. |  |
 | 2 | P-98c817 | auras | Long helper line for a kid | "Styling: Compy" with a small "Change" button. |  |
 | 2 | P-fb8a4c | fusion | Empty dark bar on the Fusion donor card | Hide the bar when there is no progress to show, or draw it as a thin cream track with its label. |  |
@@ -39,5 +38,5 @@ Screen scores (latest, 10 = top Roblox game): auras 8, collection 8, eggs 8, fus
 | 2 | P-1b1bb1 | hud | "BUILD" label alone under the eggs plate | Show the full build id or hide it outside Studio/admin. |  |
 | owner | P-51df6c | auras | Aura icons do not fit the icon set | Remake Meadow, Tidal, Royal in the batch-2 style (glossy chunky symbol, no medallion) via ChatGPT, owner picks. |  |
 
-20 open, 27 fixed.
+19 open, 28 fixed.
 <!-- polish-loop:end -->
