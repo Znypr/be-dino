@@ -43,6 +43,14 @@ Stage.Ladder = {
 }
 local stageParts: any = nil
 local pending: any = nil
+-- BD-1288 slice 1 (Config.HatchStoryboardEnabled): Client/HatchStoryboard sets these hooks (HatchStoryboard.init); nil / false = as before.
+Stage.HideCrystals = false -- true: the crystal counter steps aside too (the storyboard stage hides the whole HUD)
+Stage.eggRect = nil :: ((any) -> any)? -- where the paint flipbook goes: {x, y, side} in shade px
+Stage.isNew = nil :: (() -> boolean)? -- one more reason for the NEW! sticker (a species not owned before the batch)
+Stage.revealExtras = nil :: ((any, any, {() -> ()}, (GuiObject, number) -> ()) -> ())? -- colour + pattern chips instead of the colour dots
+Stage.onEnds = nil :: ((any, GuiObject, {() -> ()}) -> ())? -- the last egg's PLAY AGAIN / HOME row was placed
+Stage.onRestore = nil :: (() -> ())? -- the stage closes
+function Stage.parts(): any return stageParts end
 
 local function painted(o: Instance, stop: Instance): GuiObject?
     local node: Instance? = o
@@ -180,7 +188,7 @@ function Stage.apply(p: Parts)
             for _, d in child:GetDescendants() do
                 if d:IsA("TextLabel") and string.find(d.Text, "Crystals", 1, true) then crystals = true break end
             end
-            if not crystals then
+            if not crystals or Stage.HideCrystals then
                 keep(child, "Visible", false)
                 -- the HUD refreshes some pieces every frame (the size bar): keep them hidden while the stage is up
                 table.insert(conns, child:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -506,7 +514,7 @@ function Stage.reveal()
         local name = plain(if info.nameLabel then info.nameLabel.Text else "")
         local plateW = math.min(screen.X * .2, 300 * fitY)
         local plateH = plateW * 137 / 439
-        local plateC = Vector2.new(vc.X + 26, screen.Y * Stage.Layout.plateY)
+        local plateC = Vector2.new(vc.X + (if Stage.revealExtras then 0 else 26), screen.Y * Stage.Layout.plateY)
         local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.BackgroundTransparency, nameLabel.AnchorPoint = 1, Vector2.new(.5, .5)
@@ -519,7 +527,8 @@ function Stage.reveal()
         pop(plate, .12)
         -- the egg's colours as dots left of the plate (kid-minimal: no colour or pattern words)
         local dot = plateH * .62
-        for k, c in Stage.lastColors do
+        if Stage.revealExtras then pcall(Stage.revealExtras, s, {x = plateC.X, y = plateC.Y, w = plateW, h = plateH}, restore, pop) end -- BD-1288: chips instead
+        for k, c in (if Stage.revealExtras then {} else Stage.lastColors) do
             local d = Instance.new("Frame")
             d.Name, d.AnchorPoint, d.ZIndex = "ColourDot" .. k, Vector2.new(.5, .5), plate.ZIndex
             d.Size = UDim2.fromOffset(dot, dot)
@@ -529,6 +538,7 @@ function Stage.reveal()
             table.insert(restore, function() d:Destroy() end)
             pop(d, .18 + k * .05)
         end
+        if not newFind and Stage.isNew then newFind = Stage.isNew() end -- BD-1288: a species new to the player too
         if newFind then
             local sticker = art("HatchStageNew", Stage.Art.new, Vector2.new(plateH * 1.25, plateH * 1.17), Vector2.new(plateC.X + plateW / 2 + plateH * .25, plateC.Y - plateH * .25), plate.ZIndex + 2)
             sticker.Rotation = 12
@@ -566,6 +576,7 @@ function Stage.reveal()
                 end
             end
         end
+        if Stage.onEnds then pcall(Stage.onEnds, s, ends, restore) end -- BD-1288: the storyboard's NEXT -> BEST FIND! summary
     end
     if nextShown then return end
     local hint = s.body:FindFirstChild("TapHint", true) :: TextLabel?
@@ -674,7 +685,10 @@ local function overlayFor(s: any): Frame
     local egg = s.panel:FindFirstChild("HatchEggV2", true) :: GuiObject?
     local base = s.shade.AbsolutePosition
     local cx, cy, side
-    if egg then
+    local hook = if Stage.eggRect then Stage.eggRect(s) else nil -- BD-1288: the storyboard's big egg
+    if hook then
+        cx, cy, side = hook.x, hook.y, hook.side
+    elseif egg then
         cx, cy = egg.AbsolutePosition.X + egg.AbsoluteSize.X / 2 - base.X, egg.AbsolutePosition.Y + egg.AbsoluteSize.Y / 2 - base.Y
         side = egg.AbsoluteSize.Y * 1.35
     else
@@ -884,6 +898,7 @@ end
 
 -- Back to the window look (any screen opens, or the modal closes). Safe to call when nothing was applied.
 function Stage.restore()
+    if Stage.onRestore then pcall(Stage.onRestore) end
     local s = state
     state = nil
     stageParts, pending = nil, nil

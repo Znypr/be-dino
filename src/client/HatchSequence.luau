@@ -375,6 +375,14 @@ function Seq.play(args: Args): Handle
     local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
     local state = Timeline.new(motion, 1, false, a.result == nil)
+    -- BD-1288 slice 1 (Config.HatchStoryboardEnabled, on the stage only): the storyboard pace, the egg waits for a TAP, the egg is drawn bigger
+    -- (HatchStoryboard sets the body attribute HatchEggBoost) and the reveal words are handed to the stage as body attributes. nil = as before.
+    local SB = if Config.HatchStoryboardEnabled == true and Config.HatchStageEnabled == true then require(Shared.HatchStoryboardRules) else nil
+    if SB then Timeline.storyboard(state, SB, true) end
+    local function eggBoost(): number
+        local b = if SB then a.body:GetAttribute("HatchEggBoost") else nil
+        return if type(b) == "number" then b else 1
+    end
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     -- BD-1067: the card sits where Bootstrap / ModalCompact put the body: (18, 98) in the desktop panel, (4, 0) in the phone scroller, and the camera
     -- moves (anchor in the middle) used to assume (18, 98) always, which pushed the whole card 98 px down in a small window. The body is also shrunk,
@@ -902,6 +910,7 @@ function Seq.play(args: Args): Handle
     local function onTap()
         if finished then return end
         if inspect and (inspect :: InspectView.Handle).wasDrag() then return end -- a drag turns the dino, it never advances
+        if state.gate then Timeline.tap(state) return end -- BD-1288: the TAP that opens the waiting egg (storyboard only)
         if state.pending then return end -- Open was just pressed: nothing to skip yet
         if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
         if Timeline.tap(state) == "advance" then advance() end
@@ -1183,6 +1192,16 @@ function Seq.play(args: Args): Handle
             end
         end
         if not motion or fastEgg then a.paint.finish() end -- BD-1164: a fast egg shows its real colours and pattern at once (no buckets)
+        if SB then -- BD-1288: what the storyboard stage names on its big plates and reveal chips (words and colours the result already holds)
+            local c, p, c2 = r.colorReveal, r.patternReveal, r.secondReveal or r.colorReveal
+            local rgb1, rgb2 = Timeline.revealRgb(c), Timeline.revealRgb(c2)
+            for key, value in {HatchSpeciesId = r.speciesId or "", HatchNewFind = r.newFind == true and not failed, HatchFast = fastEgg,
+                HatchColourName = if c then c.name else "", HatchColourTier = if c then c.tier else 0,
+                HatchPatternName = if p then (if p.plain then "" else p.name) else "", HatchPatternTier = if p then p.tier else 0,
+                HatchColourRgb = if rgb1 then Chip.color(rgb1) else paintColors[1], HatchPatternRgb = if rgb2 then Chip.color(rgb2) else paintColors[2]} :: {[string]: any} do
+                a.body:SetAttribute(key, value)
+            end
+        end
     end
 
     table.insert(connections, RunService.Heartbeat:Connect(function(dt)
@@ -1191,6 +1210,10 @@ function Seq.play(args: Args): Handle
         zone.step()
         local frameDt = math.min(dt, 1 / 20) -- a hitch must not skip the whole build-up
         Timeline.step(state, frameDt)
+        if SB then
+            a.body:SetAttribute("HatchTapWait", state.gate == true) -- BD-1288: HatchStoryboard shows the TAP button while this is true
+            if not motion and not burstDone then eggZoom.Scale = eggBoost() end -- Reduce Motion: the big egg without the push-in
+        end
         local t = state.t
         local vt = Timeline.visualT(state)
 
@@ -1210,7 +1233,7 @@ function Seq.play(args: Args): Handle
                 local swayAmp = 1 - math.clamp(bp * 4, 0, 1)
                 a.eggView.Rotation = rot * esc.shakeScale + math.sin(vt * 3.4) * 2.8 * swayAmp
                 a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp)
-                eggZoom.Scale = Timeline.zoom(bp)
+                eggZoom.Scale = Timeline.zoom(bp) * eggBoost()
                 bodyScale.Scale = Timeline.cameraZoom(bp) * fit
                 a.body.Position = UDim2.fromOffset(bodyCenter.X + sx, bodyCenter.Y + sy)
                 a.animateEgg(Timeline.eggClock(durs, t))
@@ -1248,8 +1271,8 @@ function Seq.play(args: Args): Handle
                     m.BackgroundTransparency = 1 - .6 * g
                 end
             end
-        elseif state.pending then
-            return -- Reduced Motion: wait for the server answer before opening anything
+        elseif state.pending or state.gate then
+            return -- Reduced Motion: wait for the server answer (BD-1288: and for the TAP) before opening anything
         else
             if not burstDone then burst() end
             local since = t - durs.build

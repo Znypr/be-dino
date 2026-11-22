@@ -188,6 +188,13 @@ return table.freeze({
     -- rays, "Egg 2 of 5" in a cream chip, cream chips with ink text, grey buttons, the green NEXT EGG kept). Client presentation only; every
     -- other screen keeps its window. false = the hatch window exactly as before. Pinned off in the default profile, ON in the playtest profile.
     HatchStageEnabled = false,
+    -- BD-1288 slice 1 (owner OK 2026-11-22, docs/evidence/2026-11-22-hatch-storyboard, storyboard 1): true = the hatch on the stage follows the
+    -- storyboard: the whole HUD hides and the world blurs, a purple kit bar says "Egg 1 of 3", the egg is big (about 40 % of the screen) and waits
+    -- for a big green TAP, the colour and the pattern each get a big name plate with a rarity chip, a short crack build-up in the rarity colour,
+    -- the reveal shows colour and pattern chips and NEW!, and a batch ends on a BEST FIND! summary with PLAY AGAIN / HOME (they do what they did).
+    -- Needs HatchStageEnabled. Client presentation only (src/client/HatchStoryboard.luau, Shared/HatchStoryboardRules): no server, odds or save
+    -- change. false = the hatch exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    HatchStoryboardEnabled = false,
     -- BD-1213 (docs/240 step 2, style tile v2 board 1): true = the in-run HUD and the world labels on the style rules R1-R8
     -- (src/client/HudCohesion.client.luau, Shared/HudCohesionRules): cream plates with an ink outline for the eggs, SIZE, crystals and goal,
     -- no debug lines on the HUD (one small "Test game: not saved" chip in an unsaved Studio preview), LEAP grey (CHOMP the one green button),
