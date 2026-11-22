@@ -40,6 +40,10 @@
     "src/client/DinoIndexKit.luau": {
       "count": 1,
       "reason": "BD-1296 kit Dino Index panel: the word sits on the kit 2 rarity CARD of that tier (the card art carries the tier colour), in white kit words like the slice 1 shop cards."
+    },
+    "src/client/DinoIndexZones.luau": {
+      "count": 1,
+      "reason": "BD-1299 zones Dino Index (owner's proposed picture): the rarity word under the selected dino's name in light kit words, as on the picture; the tier colour is carried by the kit 2 rarity cards of the grid."
     }
   }
 }

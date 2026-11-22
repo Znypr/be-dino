@@ -61,6 +61,7 @@ end
 -- eventMutation(id), ownedTraits(id), speciesIndex(id), selected() -> id, select(id), openDetail(), openFusion(), notify(text), open(name),
 -- close()}. Returns false when the kit window does not draw this page (another Index tab is chosen, or the kit frame is not bound).
 function M.build(body: GuiObject, d: any): boolean
+    if (Config :: any).IndexZonesEnabled == true then return require(script.Parent.DinoIndexZones).build(body, d) end -- BD-1299: the zones look
     if Config.PatternColourIndexEnabled == true and IndexTabs.lastTab() ~= "dinos" then return false end
     local order = Secret.indexOrder(Config.SpeciesOrder, Config.SecretSpeciesEnabled)
     local perPage = Menu.Index.cols * Menu.Index.rows

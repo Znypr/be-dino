@@ -118,6 +118,7 @@ Slots.Images = {
     -- BD-1287: the shop menu kit 2 (ChatGPT art from the owner-approved Aura Shop design, 2026-11-22; Shared/ShopKit2)
     shopkit2_header_green = "rbxassetid://135281684853956",
     shopkit2_header_purple = "rbxassetid://112349325785296",
+    shopkit2_header_cyan = "rbxassetid://105626265964959", -- BD-1299: the green kit 2 header recoloured to the Index cyan #21DFF3
     shopkit2_close = "rbxassetid://87256955386705",
     shopkit2_card_common = "rbxassetid://74073435081111",
     shopkit2_card_uncommon = "rbxassetid://79293009432615",
