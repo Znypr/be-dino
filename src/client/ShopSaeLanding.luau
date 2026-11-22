@@ -61,9 +61,12 @@ end
 -- One whole window + rail for a screen of this size. Returns the holder (a full-screen, input-transparent frame).
 local function draw(shade: GuiObject, size: Vector2, spec: any): Frame
     local tabs: {string} = spec.tabs
-    local titles = {}
-    for _, tab in tabs do table.insert(titles, Art.Titles[tab] or tab) end
     local cardTabs = Rules.cardTabs(tabs)
+    -- the rail: every shop tab, then POTIONS (its own screen, opened the way the HUD POTIONS button opens it)
+    local railTabs = table.clone(tabs)
+    if spec.openPotions then table.insert(railTabs, "potions") end
+    local titles = {}
+    for _, tab in railTabs do table.insert(titles, if tab == "potions" then "Potions" else (Art.Titles[tab] or tab)) end
     local lay = Rules.layout(size.X, size.Y, titles, #cardTabs)
     local holder = Instance.new("Frame")
     holder.Name, holder.BackgroundTransparency, holder.Size, holder.ZIndex, holder.Parent = "SaeShopLanding", 1, UDim2.fromScale(1, 1), 30, shade
@@ -138,27 +141,37 @@ local function draw(shade: GuiObject, size: Vector2, spec: any): Frame
         edge.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, rgb(Rules.Open)), ColorSequenceKeypoint.new(0.78, rgb(Rules.Open)), ColorSequenceKeypoint.new(0.8, rgb(Rules.OpenEdge)), ColorSequenceKeypoint.new(1, rgb(Rules.OpenEdge))})
         open.Activated:Connect(pick)
     end
-    -- the rail outside the window
-    for i, tab in tabs do
+    -- the rail outside the window: toy-button tiles like the phone HUD (gloss gradient, near-black outline outside the tile)
+    for i, tab in railTabs do
         local s = lay.rail.slots[i]
         if not s then break end
         local fill = Rules.Fill[tab] or Rules.Fill.eggs
         local tileX = s.x + math.floor((s.w - lay.rail.tile) / 2)
-        local tile = frame(holder, "SaeRail_" .. tab, tileX, s.y, lay.rail.tile, lay.rail.tile, fill, 31)
+        local tile = frame(holder, "SaeRail_" .. tab, tileX, s.y, lay.rail.tile, lay.rail.tile, {255, 255, 255}, 31)
         tile.Active = true
-        corner(tile, 6)
-        outline(tile, 3)
-        local icon = Art.tabIconId(Slots.Images, tab) or Art.tileId(Slots.Images, tab)
-        if icon then picture(tile, "SaeRailIcon", icon, 4, 4, lay.rail.tile - 8, 32) end
-        tapArea(tile, "SaeRailTap", 0, 0, lay.rail.tile, lay.rail.tile, 33, function() spec.onPick(tab) end)
+        corner(tile, 8)
+        local ink = Instance.new("UIStroke")
+        ink.Color, ink.Thickness, ink.ApplyStrokeMode, ink.LineJoinMode, ink.Parent = rgb(Rules.RailInk), lay.rail.stroke, Enum.ApplyStrokeMode.Border, Enum.LineJoinMode.Round, tile
+        local g = Rules.gloss(fill) -- a UIGradient multiplies the white face, so the colour lives in the gradient
+        local gloss = Instance.new("UIGradient")
+        gloss.Rotation, gloss.Parent = 90, tile
+        gloss.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, rgb(g[1])), ColorSequenceKeypoint.new(0.08, rgb(g[1])), ColorSequenceKeypoint.new(0.55, rgb(g[2])),
+            ColorSequenceKeypoint.new(0.899, rgb(g[3])), ColorSequenceKeypoint.new(0.9, rgb(g[4])), ColorSequenceKeypoint.new(1, rgb(g[4]))})
+        local icon = if tab == "potions" then Slots.Images.potion_icon_speed_common else (Art.tabIconId(Slots.Images, tab) or Art.tileId(Slots.Images, tab))
+        if icon and icon ~= "" then
+            local inset = math.floor(lay.rail.tile * 0.1)
+            picture(tile, "SaeRailIcon", icon, inset, inset, lay.rail.tile - 2 * inset, 32)
+        end
+        local go = if tab == "potions" then function() spec.openPotions() end else function() spec.onPick(tab) end
+        tapArea(tile, "SaeRailTap", 0, 0, lay.rail.tile, lay.rail.tile, 33, go)
         if lay.rail.labels then
-            words(holder, "SaeRailLabel_" .. tab, Art.Titles[tab] or tab, s.x, s.y + lay.rail.tile + 2, s.w, lay.rail.labelSize + 2, lay.rail.labelSize, 31, 2)
+            words(holder, "SaeRailLabel_" .. tab, titles[i], s.x, s.y + lay.rail.tile + lay.rail.stroke + 1, s.w, lay.rail.labelSize + 2, lay.rail.labelSize, 31, 2)
         end
     end
     return holder
 end
 
--- body: the Bootstrap panel body; spec: ShopTiles.build's {tabs, info, onPick(tab), close()}. Returns false when the shared window is not
+-- body: the Bootstrap panel body; spec: ShopTiles.build's {tabs, info, onPick(tab), close(), openPotions()}. Returns false when the shared window is not
 -- attached yet (the caller then draws the old landing tiles).
 function M.build(body: GuiObject, spec: any): boolean
     local parts = require(script.Parent.ModalCompact).parts()

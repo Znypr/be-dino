@@ -28,8 +28,8 @@ LUAU = r'''
 local fails = {}
 local function check(ok, what) if not ok then table.insert(fails, what) end end
 local function near(v, lo, hi) return v >= lo and v <= hi end
-local labels = {"Auras", "Trails", "Eggs", "Crystals"}
-local five = {"Auras", "Trails", "Eggs", "Conditions", "Crystals"}
+local labels = {"Auras", "Trails", "Eggs", "Crystals", "Potions"}
+local five = {"Auras", "Trails", "Eggs", "Conditions", "Crystals", "Potions"}
 
 -- the 720 p targets (docs/246 shared frame)
 local L = R.layout(1280, 720, labels, 3)
@@ -41,11 +41,14 @@ check(near(L.headerH / 720, .095, .1), "header 9.5-10 % H")
 check(near(L.close, 52, 58), "X 52-58 px")
 check(near(L.button, 46, 52) and near(L.buttonText, 25, 28), "OPEN 46-52 px, word 25-28 px")
 check(near(L.cardTitle, 23, 26), "card title 23-26 px")
-check(near(L.art / 720, .13, .17), "picture about 14-17 % H")
+check(L.art / 720 >= .14 and near(L.art / L.cards[1].h, .40, .45), "picture 40-45 % of the card, at least 14 % H")
 check(near(L.pill.h / 720, .04, .06), "crystal pill about 5 % H")
-local gap = L.rail.x - (w.x + w.w)
-check(near(gap / 1280, .01, .015), "rail 1-1.5 % W right of the window")
-check(near(L.rail.tile / 720, .07, .08) and near(L.rail.gap / 720, .008, .012), "rail tiles 7-8 % H, 1 % H apart")
+local gap = L.rail.x - L.rail.stroke - (w.x + w.w + 3)
+check(near(gap / 1280, .01, .015), "rail 1-1.5 % W right of the window (outline to outline)")
+check(near(L.rail.tile / 720, .07, .08) and near((L.rail.gap - 2 * L.rail.stroke) / 720, .008, .012), "rail tiles 7-8 % H, 1 % H clear between the outlines")
+check(L.rail.stroke == 6, "rail outline 6 px at 720 p")
+local g = R.gloss(R.Fill.potions)
+check(#g == 4 and g[1][1] >= g[2][1] and g[4][3] < g[3][3], "toy gloss: light top, dark lip")
 check(L.rail.labels, "labels fit at 720 p")
 check(#L.cards == 3, "three cards across")
 check(R.grouped(1250) == "1,250" and R.grouped(0) == "0" and R.grouped(1234567) == "1,234,567", "whole numbers with commas")
@@ -72,14 +75,15 @@ for _, size in {{1280, 720}, {1920, 1080}, {1366, 768}, {1024, 768}, {844, 390},
         local need = 10 + (l.cardTitle + 6) + (if l.sub then l.subText + 6 else 0) + 8 + l.button + 10 + l.art
         check(need <= l.cards[1].h, tag .. ": card parts fit the card")
         check(l.art >= 40, tag .. ": picture at least 40 px")
+        check(l.art <= l.cards[1].w - 24, tag .. ": picture inside the card width")
         local pw = R.pillWidth("12,345", l)
         check(l.pill.x - pw > 8 + R.textWidth(R.Title, l.titleSize) + l.pad, tag .. ": pill clear of the title")
         check(l.pill.x <= win.w - l.close, tag .. ": pill left of the X")
         check(#l.rail.slots == #set, tag .. ": one rail tile per tab")
         for _, s in l.rail.slots do
-            check(s.x >= win.x + win.w and s.x + l.rail.tile <= sw, tag .. ": rail tile right of the window, on screen")
-            check(s.y + s.h <= sh, tag .. ": rail tile above the bottom")
-            if l.rail.labels then check(s.w >= R.textWidth("Conditions", l.rail.labelSize) or #set == 4, tag .. ": label fits its column") end
+            check(s.x - l.rail.stroke >= win.x + win.w + 3 and s.x + l.rail.tile + l.rail.stroke <= sw, tag .. ": rail tile right of the window, on screen")
+            check(s.y - l.rail.stroke >= 0 and s.y + s.h + l.rail.stroke <= sh, tag .. ": rail tile on screen vertically")
+            if l.rail.labels then local longest = 0 for _, word in set do longest = math.max(longest, R.textWidth(word, l.rail.labelSize)) end check(s.w >= longest, tag .. ": label fits its column") end
         end
     end
 end
@@ -102,7 +106,7 @@ def scan():
     assert '    if SaeFrame and require(script.Parent.ShopSaeLanding).build(body, spec) then return end\n' in tiles, \
         'ShopTiles hands the landing to ShopSaeLanding only with the flag on'
     screens = read('src/client/ShopScreens.luau')
-    assert 'close=closeModal})' in screens and 'closeModal = d.close' in screens, 'ShopScreens passes Bootstrap close to the landing'
+    assert 'close=closeModal,' in screens and 'press("potions") then return end open("potions")' in screens and 'closeModal = d.close' in screens, 'ShopScreens passes Bootstrap close and the HUD POTIONS path to the landing'
     boot = read('src/client/Bootstrap.client.luau')
     assert 'Sae' not in boot and 'ShopScreens.attach({body=body,heading=heading,header=header,label=label,box=box,button=button,art=art,open=open,close=close,' in boot, \
         'Bootstrap only passes its close'

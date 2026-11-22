@@ -16,13 +16,24 @@ R.OpenEdge = {58, 170, 22} -- the darker lower edge of the OPEN button
 R.Outline = {0, 0, 0}
 R.PillFill = {28, 31, 44}
 -- the category colours (the same as ShopTiles.TopLookFill, docs/243 G4)
-R.Fill = {eggs = {255, 200, 64}, auras = {255, 122, 107}, trails = {96, 196, 255}, conditions = {186, 128, 255}, crystals = {255, 176, 72}}
+R.Fill = {eggs = {255, 200, 64}, auras = {255, 122, 107}, trails = {96, 196, 255}, conditions = {186, 128, 255}, crystals = {255, 176, 72},
+    potions = {207, 108, 250}} -- potions: the phone HUD's POTIONS purple (#CF6CFA)
 R.Cover = 0.94 -- ModalScrim transparency while the window shows: 6 % dim, the world stays visible (docs/246: 0-8 % behind shops)
 R.Blur = 0 -- no modal blur behind it
 R.MinText = 19
 R.MinTap = 44
 R.MinClose = 48
 R.MaxCards = 3
+R.ArtShare = 0.42 -- the card picture's share of the card height
+R.RailInk = {16, 16, 12} -- #10100C, the phone HUD's near-black outline
+-- the rail tiles' toy-button gradient (like PhoneHud): highlight on top, the colour, a darker bottom with a thin lip
+function R.gloss(fill: {number}): {{number}}
+    local function mix(t: {number}, to: number, k: number): {number}
+        return {math.floor(t[1] + (to - t[1]) * k + 0.5), math.floor(t[2] + (to - t[2]) * k + 0.5), math.floor(t[3] + (to - t[3]) * k + 0.5)}
+    end
+    local bottom = mix(fill, 0, 0.18)
+    return {mix(fill, 255, 0.4), fill, bottom, mix(bottom, 0, 0.4)}
+end
 R.Title = "Shop"
 
 local function round(x: number): number return math.floor(x + 0.5) end
@@ -50,7 +61,7 @@ export type Layout = {
     pill: Rect, pillText: number, pillIcon: number,
     pad: number, cardGap: number, cards: {Rect}, art: number, cardTitle: number, sub: boolean, subText: number,
     button: number, buttonText: number,
-    rail: {x: number, y: number, tile: number, gap: number, colW: number, labels: boolean, labelSize: number, slots: {Rect}},
+    rail: {x: number, y: number, stroke: number, tile: number, gap: number, colW: number, labels: boolean, labelSize: number, slots: {Rect}},
 }
 
 -- w, h: ScreenGui AbsoluteSize. labels: the rail words (one per tab). cards: how many cards the window shows (1..3).
@@ -76,12 +87,14 @@ function R.layout(w: number, h: number, labels: {string}, cards: number): Layout
     local winX = round((w - winW) / 2)
     local winY = round(h * 0.215)
     if winY + winH > h - 4 then winY = math.max(4, round((h - winH) / 2)) end
-    -- cards fill the body; the picture takes the room left over, never more than 17 % H nor wider than the card
+    -- cards fill the body; the picture is about 42 % of the card height (lead 2026-11-21: "40-45 % of the card", at least 14 % H), never
+    -- wider than the card. The short line under the title drops first when the picture would not fit with it.
     local bodyH = winH - headerH - 2 * pad
     local cardW = math.floor((winW - 2 * pad - (nCards - 1) * cardGap) / nCards)
-    local sub = bodyH - fixedSub >= minArt
+    local want = math.min(math.max(round(bodyH * R.ArtShare), round(h * 0.14)), cardW - 24)
+    local sub = bodyH - fixedSub >= want
     local fixed = if sub then fixedSub else fixedSub - (subText + 6)
-    local art = math.max(0, math.min(round(h * 0.17), cardW - 24, bodyH - fixed))
+    local art = math.max(0, math.min(want, bodyH - fixed))
     local list: {Rect} = {}
     for i = 1, nCards do
         table.insert(list, {x = pad + (i - 1) * (cardW + cardGap), y = headerH + pad, w = cardW, h = bodyH})
@@ -91,9 +104,12 @@ function R.layout(w: number, h: number, labels: {string}, cards: number): Layout
     local pillText = math.max(R.MinText, round(pillH * 0.6))
     local pillIcon = pillH - 6
     -- the rail: right of the window, from its top; a word under each tile only where it fits
-    local gap = math.max(6, round(h * 0.01))
+    -- toy-button tiles like the phone HUD: near-black outline 0.85 % H (6 px at 720 p, at least 3) drawn OUTSIDE the tile, so the clear gap
+    -- between two tiles is 1 % H plus both outlines
+    local railStroke = math.max(3, round(h * 0.0085))
+    local gap = math.max(4, round(h * 0.01)) + 2 * railStroke
     local tile = math.max(R.MinTap, round(h * 0.075))
-    local railX = winX + winW + math.max(6, round(w * 0.0125))
+    local railX = winX + winW + 3 + math.max(6, round(w * 0.0125)) + railStroke
     local room = w - 6 - railX
     local labelSize = if h >= 600 then 20 else R.MinText
     local longest = 0
@@ -108,7 +124,11 @@ function R.layout(w: number, h: number, labels: {string}, cards: number): Layout
     local colW = if labelsFit then math.max(tile, longest + 4) else tile
     colW = math.min(colW, math.max(tile, room))
     local slots: {Rect} = {}
-    local y = winY
+    local slotH0 = tile + (if labelsFit then labelSize + 4 else 0)
+    local railH = n * slotH0 + math.max(0, n - 1) * gap
+    local railY = winY
+    if railY + railH > h - 4 - railStroke then railY = math.max(4 + railStroke, h - 4 - railStroke - railH) end -- a short screen: the rail moves up, never off screen
+    local y = railY
     for _ = 1, n do
         local slotH = tile + (if labelsFit then labelSize + 4 else 0)
         table.insert(slots, {x = railX, y = y, w = colW, h = slotH})
@@ -122,7 +142,7 @@ function R.layout(w: number, h: number, labels: {string}, cards: number): Layout
         pillText = pillText, pillIcon = pillIcon,
         pad = pad, cardGap = cardGap, cards = list, art = art, cardTitle = cardTitle, sub = sub, subText = subText,
         button = button, buttonText = buttonText,
-        rail = {x = railX, y = winY, tile = tile, gap = gap, colW = colW, labels = labelsFit, labelSize = labelSize, slots = slots},
+        rail = {x = railX, y = railY, stroke = railStroke, tile = tile, gap = gap, colW = colW, labels = labelsFit, labelSize = labelSize, slots = slots},
     }
 end
 

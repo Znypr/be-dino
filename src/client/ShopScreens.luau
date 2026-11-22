@@ -117,7 +117,8 @@ function Shop.render(name: string)
         local shopTabs=require(Shared.FtueP1).shopTabs(num("AccountLevel"))
         if ShopTiles.landing then
             ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals"),randomBlocked),
-                onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end,close=closeModal})
+                onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end,close=closeModal,
+                openPotions=function() Sfx.play("ui_click") ShopTiles.landing=false if require(script.Parent.HubTravelClient).press("potions") then return end open("potions") end})
             return
         end
         local bodyW=require(Shared.ToyboxShop).usableWidth(require(script.Parent.ModalCompact).bodyWidth(),require(script.Parent.ModalCompact).model().mode=="compact")
