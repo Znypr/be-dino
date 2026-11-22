@@ -157,6 +157,10 @@ Still NOT verified:
 
 Roblox's FBX importer **ignores `axis_forward`**: the Compy exported with forward `Z` and with `-Z` arrived identical, head at Roblox +Z (the back). Blender +Y always arrives as Roblox +Z. `tools/blender_export_roblox.py` therefore turns a `--faces +Y` model 180 degrees about Z (real geometry, parts-only exports) before writing; checked in Studio with `LoadAsset` (asset 122878777932897: head Z < body Z like the generated dinos, left arm at -X, part rotations 0). Every earlier Blender upload that faces +Y (cockatoo, Compy V2/V3 tries) arrived backwards; the low-poly animator then put the head, tail and leg joints at the wrong ends.
 
+### Vertex colours with baked textures, settled (2026-11-22, BD-1297 Pachy)
+
+Roblox **multiplies vertex colour by texture** on a MeshPart. The baked dino builders (Compy V3 route) paint vertex colours, bake them into the texture and kept both, so every colour arrived roughly squared: Pachy V5 (asset 110481121294523) showed #6086D4 as royal blue and the cream dome as tan. Proof in Studio: the same texture in a 2D ImageLabel matched the hex swatches exactly, a plain Part in #6086D4 was lighter than the model, and the copy without vertex colours (118889310886467) matched the swatches. `tools/blender_export_roblox.py --embed-textures` now writes the FBX with no vertex colours (`fbx_colors_type`); models coloured only by vertex colour (no `--embed-textures`) keep them. The Compy V3 candidates (122878777932897, 109434792230390) still carry both and look too saturated in Studio: re-export them before any of them goes live.
+
 ## 7. Files (this PR)
 
 `tools/roblox_asset_upload.py`, `tools/blender_export_roblox.py` (+ `--faces`, rest pose), `tools/blender/make_acceptance_cube.py`, `tools/studio/insert_uploaded_model.luau`, `tools/studio/render_insert_snippet.py`, `tests/test_roblox_asset_upload.py`, this page, the BD-659 kanban row, a pointer in [160](160-agent-brief.md), and two ignored folders in `.gitignore` (`build/pipeline-test/`, `build/blender-export/`).
