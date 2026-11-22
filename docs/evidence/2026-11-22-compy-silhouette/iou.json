@@ -1,0 +1,271 @@
+{
+ "method": "(visual hull per part, then controlled low poly):\n  1. the sheet (docs/evidence/2026-11-22-dino-ranking/compy-sheet-v1.jpg) is segmented per view (non-grey = dino) and shrunk by its\n     black outline (6 px of ~395); front and side views are calibrated to 3.0 studs tall (feet z 0, model faces +Y, +X = right).\n  2. every part is a LOFT of cross-section rings (10-16 verts): WIDTH (x) at a ring comes from the front-view mask, DEPTH / HEIGHT from\n     the side-view mask, inside a hand-set window per part (the views overlap: arm over chest, thigh over belly, tail behind the hips);\n     torso / legs / tail / arms rings are superellipses, the head rings follow the front view's head outline (top and jaw chamfered) so\n     each ring band is a broad flat plane; near-coplanar faces are then merged (planes, not noise) and 1-segment bevels soften the\n     main silhouette edges.\n  3. gate: black silhouettes of the model from front / side / 3/4 (3/4 yaw and tilt swept, best kept) against the sheet masks, IoU at\n     120 and 512 px, written to docs/evidence/2026-11-22-compy-silhouette/iou.json per round.",
+ "rounds": [
+  {
+   "round": "R1",
+   "note": "first fit; tail tables were in the wrong order (tail too wide), eye highlights were holes in the sheet mask",
+   "iou": {
+    "front": {
+     "iou120": 0.9176,
+     "iou512": 0.9196
+    },
+    "side": {
+     "iou120": 0.8896,
+     "iou512": 0.8933
+    },
+    "q34": {
+     "iou120": 0.8736,
+     "iou512": 0.8741,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 538,
+    "Head": 968,
+    "Tail": 396,
+    "ArmL": 304,
+    "ArmR": 304,
+    "LegL": 600,
+    "LegR": 600
+   },
+   "total_tris": 3710,
+   "head_to_torso_width": 1.354
+  },
+  {
+   "round": "R2",
+   "note": "tables fixed, highlight holes filled, eye bulge, wider arms",
+   "iou": {
+    "front": {
+     "iou120": 0.9353,
+     "iou512": 0.9398
+    },
+    "side": {
+     "iou120": 0.9459,
+     "iou512": 0.9502
+    },
+    "q34": {
+     "iou120": 0.8867,
+     "iou512": 0.886,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 538,
+    "Head": 736,
+    "Tail": 362,
+    "ArmL": 294,
+    "ArmR": 294,
+    "LegL": 624,
+    "LegR": 624
+   },
+   "total_tris": 3472,
+   "head_to_torso_width": 1.486
+  },
+  {
+   "round": "R3",
+   "note": "spherical-cap eyes + 20 % highlight, bigger claws, softer spikes, sharp edges per part",
+   "iou": {
+    "front": {
+     "iou120": 0.9379,
+     "iou512": 0.9423
+    },
+    "side": {
+     "iou120": 0.9466,
+     "iou512": 0.9509
+    },
+    "q34": {
+     "iou120": 0.8852,
+     "iou512": 0.8852,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 386,
+    "ArmL": 294,
+    "ArmR": 294,
+    "LegL": 624,
+    "LegR": 624
+   },
+   "total_tris": 3700,
+   "head_to_torso_width": 1.245
+  },
+  {
+   "round": "R4",
+   "note": "gentler snout taper (look only)",
+   "iou": {
+    "front": {
+     "iou120": 0.9381,
+     "iou512": 0.942
+    },
+    "side": {
+     "iou120": 0.9466,
+     "iou512": 0.9509
+    },
+    "q34": {
+     "iou120": 0.887,
+     "iou512": 0.885,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 386,
+    "ArmL": 294,
+    "ArmR": 294,
+    "LegL": 624,
+    "LegR": 624
+   },
+   "total_tris": 3700,
+   "head_to_torso_width": 1.245
+  },
+  {
+   "round": "R5",
+   "note": "eyes turned forward, cream band, arms in",
+   "iou": {
+    "front": {
+     "iou120": 0.9373,
+     "iou512": 0.9406
+    },
+    "side": {
+     "iou120": 0.9463,
+     "iou512": 0.9507
+    },
+    "q34": {
+     "iou120": 0.8877,
+     "iou512": 0.8862,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 386,
+    "ArmL": 294,
+    "ArmR": 294,
+    "LegL": 624,
+    "LegR": 624
+   },
+   "total_tris": 3700,
+   "head_to_torso_width": 1.245
+  },
+  {
+   "round": "R6",
+   "note": "joints buried deeper (tail root, hip and shoulder caps inside the body)",
+   "iou": {
+    "front": {
+     "iou120": 0.9353,
+     "iou512": 0.9387
+    },
+    "side": {
+     "iou120": 0.9461,
+     "iou512": 0.9505
+    },
+    "q34": {
+     "iou120": 0.8872,
+     "iou512": 0.8862,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 374,
+    "ArmL": 290,
+    "ArmR": 290,
+    "LegL": 638,
+    "LegR": 638
+   },
+   "total_tris": 3708,
+   "head_to_torso_width": 1.245
+  },
+  {
+   "round": "R7",
+   "note": "tail root / hip windows centred on the part boxes (no anchors outside the body)",
+   "iou": {
+    "front": {
+     "iou120": 0.9353,
+     "iou512": 0.9387
+    },
+    "side": {
+     "iou120": 0.9459,
+     "iou512": 0.9505
+    },
+    "q34": {
+     "iou120": 0.8872,
+     "iou512": 0.8862,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 394,
+    "ArmL": 290,
+    "ArmR": 290,
+    "LegL": 648,
+    "LegR": 648
+   },
+   "total_tris": 3748,
+   "head_to_torso_width": 1.245
+  },
+  {
+   "round": "R8",
+   "note": "cream throat and belly wrap like the sheet (final)",
+   "iou": {
+    "front": {
+     "iou120": 0.9353,
+     "iou512": 0.9387
+    },
+    "side": {
+     "iou120": 0.9459,
+     "iou512": 0.9505
+    },
+    "q34": {
+     "iou120": 0.8872,
+     "iou512": 0.8862,
+     "yaw": 40,
+     "tilt": 8
+    }
+   },
+   "tris": {
+    "Body": 550,
+    "Head": 928,
+    "Tail": 394,
+    "ArmL": 290,
+    "ArmR": 290,
+    "LegL": 648,
+    "LegR": 648
+   },
+   "total_tris": 3748,
+   "head_to_torso_width": 1.245
+  }
+ ],
+ "gate": {
+  "target": "IoU >= 0.90 front/side, >= 0.85 3/4 (120 and 512 px, height-normalised, bottoms aligned, best sideways shift within 6 %)",
+  "q34_camera": "best of yaw 25-55 deg from the front x tilt 0/8/15 deg"
+ },
+ "motion": {
+  "tool": "tools/blender/preview_lowpoly_anim.py (game clips idle/walk/run/stop/jump+land/eat/happy, 342 frames)",
+  "max_gap_studs": {
+   "Head": 0.031,
+   "Tail": 0.0,
+   "ArmL": 0.045,
+   "ArmR": 0.045,
+   "LegL": 0.0,
+   "LegR": 0.0
+  },
+  "worst_frame": "211 (landing tuck); every other frame <= 0.031",
+  "cut_faces_showing_at_rest": 0.0,
+  "floor_max_studs": 0.105
+ }
+}
