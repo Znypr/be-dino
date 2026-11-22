@@ -62,6 +62,10 @@ MENU_REPORTS = [
     "build/menu-check/{screen}/**/report.json",
     "docs/evidence/*{key}*/**/report.json",
 ]
+# A screen with no check yet can still show a Studio picture of its build on the BUILD side (no boxes): screen -> glob, newest file wins.
+MENU_SAMPLE_BUILDS = {
+    "dino-index": "docs/evidence/2026-11-23-index-proposal/1-*.jpg",
+}
 
 
 def rel(p: Path) -> str:
@@ -139,7 +143,7 @@ def image_size(p: Path):
 
 def spec_elements(spec: dict, size):
     """Spec elements (card* templates expanded) with their box in % of the proposal PICTURE (what the desk draws)."""
-    cards = ("card1", "card2", "card3")
+    cards = spec.get("cards") or ("card1", "card2", "card3")   # the screen's own card list (Dino Index has 8)
     raw = {}
     for k, e in spec.get("elements", {}).items():
         if k.startswith("card*."):
@@ -234,10 +238,17 @@ def menus():
         found = {f for pat in MENU_REPORTS for f in ROOT.glob(pat.format(screen=screen, key=screen.split("-")[0]))}
         checks = [c for c in (read_report(f, screen, by_id) for f in found) if c]
         checks.sort(key=lambda c: c["at"], reverse=True)
+        sample = None
+        if not checks and screen in MENU_SAMPLE_BUILDS:
+            pics = sorted(ROOT.glob(MENU_SAMPLE_BUILDS[screen]), key=lambda f: f.stat().st_mtime, reverse=True)
+            if pics:
+                sample = {"report": None, "at": datetime.fromtimestamp(pics[0].stat().st_mtime).isoformat(timespec="seconds"),
+                          "step": None, "self_test": False, "sample": True, "misses": [], "shot": rel(pics[0]),
+                          "shot_size": image_size(pics[0]), "owner_pins": [], "rows": []}
         out.append({"screen": screen, "spec": rel(sp), "proposal": prop, "proposal_size": size,
                     "window_px": spec.get("proposal_window_px"), "tolerance_pct": spec.get("tolerance_pct", 1.5),
                     "steps": spec.get("steps", []), "elements": elems,
-                    "latest": checks[0] if checks else None,
+                    "latest": checks[0] if checks else sample,
                     "history": [{"report": c["report"], "at": c["at"], "step": c["step"], "misses": len(c["misses"])} for c in checks[:20]]})
     return out
 

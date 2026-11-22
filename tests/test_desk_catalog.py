@@ -92,6 +92,36 @@ class DeskCatalogTest(unittest.TestCase):
         self.assertEqual(rows["card1"]["status"], "missing")
         self.assertEqual(len(m["history"]), 2)
 
+    def test_menus_card_list_and_sample_build(self):
+        """A spec's own "cards" list expands card*; a screen with no check shows its sample build picture (no rows)."""
+        old, old_samples = desk_catalog.ROOT, dict(desk_catalog.MENU_SAMPLE_BUILDS)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                spec_dir = root / "docs/menu-specs/dino-index"
+                spec_dir.mkdir(parents=True)
+                (spec_dir / "proposal.png").write_bytes(PNG)
+                spec = {"screen": "dino-index", "proposal": "docs/menu-specs/dino-index/proposal.png", "proposal_window_px": [0, 0, 1, 1],
+                        "cards": ["card1", "card8"], "elements": {"window": {"box": [0, 0, 100, 100]}, "card1": {"box": [0, 0, 10, 10]},
+                                                                  "card8": {"box": [50, 0, 10, 10]}, "card*.name": {"box": [0, 0, 50, 50]},
+                                                                  "zone.beach": {"box": [104, 10, 8, 8]}}}
+                (spec_dir / "spec.json").write_text(json.dumps(spec))
+                ev = root / "docs/evidence/2026-11-23-index-proposal"
+                ev.mkdir(parents=True)
+                (ev / "1-meadow.png").write_bytes(PNG)
+                desk_catalog.MENU_SAMPLE_BUILDS = {"dino-index": "docs/evidence/2026-11-23-index-proposal/1-*.png"}
+                cat = self.run_catalog(root)
+        finally:
+            desk_catalog.ROOT, desk_catalog.MENU_SAMPLE_BUILDS = old, old_samples
+        m = cat["menus"][0]
+        ids = [e["id"] for e in m["elements"]]
+        self.assertIn("card8.name", ids)
+        self.assertNotIn("card2.name", ids)
+        self.assertEqual(next(e for e in m["elements"] if e["id"] == "zone.beach")["pct"][0], 104.0)   # outside the window is kept
+        self.assertTrue(m["latest"]["sample"])
+        self.assertEqual(m["latest"]["shot"], "docs/evidence/2026-11-23-index-proposal/1-meadow.png")
+        self.assertEqual(m["latest"]["rows"], [])
+
     def test_image_size_reads_png_and_jpeg(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "a.png"

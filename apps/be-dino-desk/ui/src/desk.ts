@@ -16,7 +16,7 @@ export type MenuEl = { id: string; kind: string; parent?: string | null; pct: Bo
 export type MenuRow = { id: string; kind: string; status: 'pass' | 'miss' | 'missing'; misses: string[]; missing?: boolean;
   pct_ref?: Box; pct_game?: Box; box_ref?: Box; box_game?: Box; ref?: Measures; game?: Measures; fill_dE?: number;
   gui?: Record<string, unknown>; words?: Record<string, unknown>; owner?: string[]; pair?: string };
-export type MenuCheck = { report: string; at: string; step: number | null; self_test: boolean; misses: string[]; shot: string | null;
+export type MenuCheck = { report: string | null; at: string; step: number | null; self_test: boolean; sample?: boolean; misses: string[]; shot: string | null;
   shot_size: [number, number] | null; owner_pins: unknown[]; rows: MenuRow[] };
 export type MenuScreen = { screen: string; spec: string; proposal: string; proposal_size: [number, number] | null; window_px: Box;
   tolerance_pct: number; steps: { name: string; elements: string[] }[]; elements: MenuEl[]; latest: MenuCheck | null;

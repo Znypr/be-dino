@@ -30,7 +30,7 @@ type View = { s: number; x: number; y: number };
 type Sel = { type: 'el'; id: string } | { type: 'pin'; id: string } | { type: 'newpin'; x: number; y: number; side: Side } | null;
 type Form = { tags: string[]; note: string; severity: Severity; should: string };
 const EMPTY: Form = { tags: [], note: '', severity: 'must', should: '' };
-const COLOR: Record<Status, string> = { pass: '#22c55e', miss: '#ef4444', missing: '#a1a1aa', unchecked: '#a1a1aa' };
+const COLOR: Record<Status, string> = { pass: '#22c55e', miss: '#ef4444', missing: '#d4d4d8', unchecked: '#d4d4d8' };
 const STATUS_WORD: Record<Status, string> = { pass: 'within tolerance', miss: 'miss', missing: 'not built', unchecked: 'not checked' };
 
 const hex = (c?: number[] | null) => (c && c.length >= 3 ? '#' + c.slice(0, 3).map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('').toUpperCase() : null);
@@ -144,7 +144,7 @@ function Boxes({ items, sel, hover, s }: { items: Drawn[]; sel?: string; hover?:
           <div key={d.id} data-box={d.id} data-status={d.status} className="absolute"
             style={{ left: d.box[0] + '%', top: d.box[1] + '%', width: d.box[2] + '%', height: d.box[3] + '%',
               border: `${(on ? 2.5 : hv ? 2 : 1.25) / s}px ${d.ghost ? 'dashed' : 'solid'} ${COLOR[d.status]}`,
-              boxShadow: on ? `0 0 0 ${1.5 / s}px #fff, 0 0 ${10 / s}px ${COLOR[d.status]}` : undefined,
+              boxShadow: on ? `0 0 0 ${1.5 / s}px #fff, 0 0 ${10 / s}px ${COLOR[d.status]}` : `0 0 0 ${0.75 / s}px rgba(0,0,0,.55), inset 0 0 0 ${0.75 / s}px rgba(0,0,0,.55)`,   // dark halo: lines read on any art
               background: on ? COLOR[d.status] + '22' : undefined, opacity: d.ghost && !on ? 0.75 : 1 }}>
             {(on || hv) && (
               <span className="absolute left-0 whitespace-nowrap rounded-sm px-1 font-medium text-black"
@@ -318,6 +318,7 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
   const winP = els.find((e) => e.id === 'window')?.pct || null;
   const winG = rows.window?.pct_game || null;
   const shot = last?.shot || null;
+  const canOverlay = !!shot && !!winP && !!winG;   // onion / blink / wipe need both windows to line the pictures up
   const aP = m?.proposal_size ? m.proposal_size[0] / m.proposal_size[1] : 16 / 9;
   const aG = last?.shot_size ? last.shot_size[0] / last.shot_size[1] : aP;
   const status = (id: string): Status => rows[id]?.status || 'unchecked';
@@ -391,7 +392,7 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
       if (e.key === 'Enter' && !e.shiftKey && sel && sel.type !== 'pin') { e.preventDefault(); save(); return; }
       if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
       const k = e.key.toLowerCase();
-      if (k === 'b' && shot) { if (mode !== 'blink') { setMode('blink'); setBlinkB(true); } else setBlinkB((v) => !v); e.preventDefault(); }
+      if (k === 'b' && canOverlay) { if (mode !== 'blink') { setMode('blink'); setBlinkB(true); } else setBlinkB((v) => !v); e.preventDefault(); }
       else if (k === 'p') { setPinMode((v) => !v); e.preventDefault(); }
       else if (k === 'f') { (document.querySelector('[data-fit]') as HTMLElement | null)?.click(); e.preventDefault(); }
       else if (/^[1-9]$/.test(e.key) && sel && sel.type !== 'pin') {
@@ -402,11 +403,11 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
     };
     document.addEventListener('keydown', h);
     return () => document.removeEventListener('keydown', h);
-  }, [sel, save, mode, shot]);
+  }, [sel, save, mode, canOverlay]);
 
   // stage geometry: the proposal fitted into its pane; the build scaled and placed so its menu WINDOW lands exactly on the proposal's
   // window (same size, same place: zoom and pan stay locked on the same spot); no window in the build = same height, centred
-  const side = mode === 'side' || !shot;
+  const side = mode === 'side' || !canOverlay;
   const paneW = side ? (size.w - 8) / 2 : size.w, paneH = Math.max(0, size.h - 24);
   const hP = Math.max(50, Math.min(paneH - 16, (paneW - 16) / aP));
   const rectP: Rect = { w: hP * aP, h: hP, l: (paneW - hP * aP) / 2, t: (paneH - hP) / 2 };
@@ -480,8 +481,8 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
                 <img src={desk.media(s.proposal)} alt="" className="h-10 w-16 shrink-0 rounded-sm object-cover" />
                 <span className="flex min-w-0 flex-col text-xs">
                   <span className="truncate font-medium">{s.screen}</span>
-                  <span className={cn('text-[11px]', s.latest ? (s.latest.misses.length ? 'text-[#fca5a5]' : 'text-ok') : 'text-muted-foreground')}>
-                    {s.latest ? `${s.latest.misses.length} misses · ${shortAt(s.latest.at)}` : 'no check yet'}</span>
+                  <span className={cn('text-[11px]', s.latest && !s.latest.sample ? (s.latest.misses.length ? 'text-[#fca5a5]' : 'text-ok') : 'text-muted-foreground')}>
+                    {s.latest && !s.latest.sample ? `${s.latest.misses.length} misses · ${shortAt(s.latest.at)}` : s.latest ? 'no check yet · build picture' : 'no check yet'}</span>
                   <span className="text-[11px] text-muted-foreground">{n} owner note{n === 1 ? '' : 's'}</span>
                 </span>
               </button>
@@ -509,9 +510,9 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
       <div className="flex min-h-0 min-w-0">
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <ToggleGroup type="single" size="sm" variant="outline" value={shot ? mode : 'side'} onValueChange={(v) => v && setMode(v as Mode)}>
+            <ToggleGroup type="single" size="sm" variant="outline" value={canOverlay ? mode : 'side'} onValueChange={(v) => v && setMode(v as Mode)}>
               {(['side', 'onion', 'blink', 'wipe'] as Mode[]).map((md) => (
-                <ToggleGroupItem key={md} value={md} data-mode={md} disabled={!shot && md !== 'side'} className="px-2 text-xs">
+                <ToggleGroupItem key={md} value={md} data-mode={md} disabled={!canOverlay && md !== 'side'} className="px-2 text-xs">
                   {md === 'side' ? 'Side by side' : md === 'onion' ? 'Onion 50 %' : md === 'blink' ? 'Blink (B)' : 'Wipe'}
                 </ToggleGroupItem>
               ))}
@@ -526,8 +527,8 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
             <span className="ml-auto flex items-center gap-3 text-muted-foreground">
               <span><span className="mr-1 inline-block size-2 rounded-full bg-[#22c55e]" />{counts.pass} ok</span>
               <span><span className="mr-1 inline-block size-2 rounded-full bg-[#ef4444]" />{counts.miss} miss</span>
-              <span><span className="mr-1 inline-block size-2 rounded-full bg-[#a1a1aa]" />{counts.grey} not built</span>
-              <span title={last?.report}>{last ? `check ${shortAt(last.at)}${last.step ? ' · step ' + last.step : ''}${last.self_test ? ' · self-test' : ''}` : 'no check yet: run tools/menu_spec_check.py'}</span>
+              <span><span className="mr-1 inline-block size-2 rounded-full bg-[#d4d4d8]" />{counts.grey} not built</span>
+              <span title={last?.report ?? undefined}>{last?.sample ? 'no check yet: build picture only, run tools/menu_spec_check.py for boxes' : last ? `check ${shortAt(last.at)}${last.step ? ' · step ' + last.step : ''}${last.self_test ? ' · self-test' : ''}` : 'no check yet: run tools/menu_spec_check.py'}</span>
             </span>
           </div>
           <div ref={stage} className="flex min-h-0 flex-1 gap-2" data-stage>

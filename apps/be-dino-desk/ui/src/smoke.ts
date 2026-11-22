@@ -60,14 +60,26 @@ async function smokeMenus(cat: Catalog, nav: Nav) {
   if (!cat.menus || !cat.menus.length) { r.error = 'no menus in the catalog'; return r; }
   nav.setTab(cat.tabs.length); await wait(1800);
   r.screens = document.querySelectorAll('[data-screen]').length;
+  // every screen's proposal and boxes render; then work on a screen that has a real check (rows), else the first
+  r.perScreen = [] as unknown[];
+  for (const s of cat.menus) {
+    (document.querySelector(`[data-screen="${s.screen}"]`) as HTMLElement | null)?.click(); await wait(700);
+    const im = document.querySelector('[data-sheet="proposal"] img') as HTMLImageElement | null;
+    (r.perScreen as unknown[]).push({ screen: s.screen, loaded: !!im && im.complete && im.naturalWidth > 0,
+      boxes: document.querySelectorAll('[data-side="proposal"] [data-box]').length, elements: s.elements.length });
+    await desk.smokeShot('menus-0-' + s.screen);
+  }
+  const menu = cat.menus.find((s) => s.latest?.rows?.length) || cat.menus[0];
+  (document.querySelector(`[data-screen="${menu.screen}"]`) as HTMLElement | null)?.click(); await wait(900);
   const prop = document.querySelector('[data-sheet="proposal"] img') as HTMLImageElement | null;
   r.proposalLoaded = !!prop && prop.complete && prop.naturalWidth > 0;
   r.boxesProposal = document.querySelectorAll('[data-side="proposal"] [data-box]').length;
   r.boxesBuild = document.querySelectorAll('[data-side="build"] [data-box]').length;
-  r.checked = !!cat.menus[0].latest;
+  r.screen = menu.screen;
+  r.checked = !!menu.latest?.rows?.length;
   await desk.smokeShot('menus-1-compare');
   // click an element ON the picture: the smallest box under the point wins (title, else the first text element, else any)
-  const want = ['title', ...cat.menus[0].elements.filter((e) => e.kind === 'text').map((e) => e.id)];
+  const want = ['title', ...menu.elements.filter((e) => e.kind === 'text').map((e) => e.id)];
   const box = want.map((id) => document.querySelector(`[data-side="proposal"] [data-box="${id}"]`)).find(Boolean) as HTMLElement | undefined;
   const vp = document.querySelector('[data-viewport="proposal"]');
   if (box && vp) {
@@ -117,7 +129,8 @@ async function smokeMenus(cat: Catalog, nav: Nav) {
     (document.querySelector('[data-mode="side"]') as HTMLElement | null)?.click(); await wait(200);
   }
   const ns = r.noteSave as { smoke: boolean; saved: boolean } | null, ps = r.pinSave as { smoke: boolean; saved: boolean } | null;
-  r.ok = (r.screens as number) >= 1 && !!r.proposalLoaded && (r.boxesProposal as number) > 0 && (!r.checked || (r.boxesBuild as number) > 0)
+  const all = (r.perScreen as { loaded: boolean; boxes: number; elements: number }[]).every((x) => x.loaded && x.boxes === x.elements);
+  r.ok = all && (r.screens as number) === cat.menus.length && !!r.proposalLoaded && (r.boxesProposal as number) > 0 && (!r.checked || (r.boxesBuild as number) > 0)
     && !!r.panel && (!r.checked || !!r.panelMeasures) &&!!r.tagOn && !!ns && ns.smoke && !ns.saved && (r.noteListed as number) >= 1
     && !!r.pinPanel && !!ps && ps.smoke && !ps.saved && (r.pinDots as number) >= 1 && (!r.checked || !!r.onion);
   return r;
