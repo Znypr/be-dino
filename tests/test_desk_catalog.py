@@ -37,7 +37,7 @@ class DeskCatalogTest(unittest.TestCase):
         tabs = {t["name"]: t for t in cat["tabs"]}
         icons = next(g for g in tabs["UI kit"]["groups"] if g["name"] == "Icons")
         self.assertEqual([i["id"] for i in icons["items"]], ["resources/ui/v2/icons/star.png"])
-        veg = next(g for g in tabs["World"]["groups"] if g["name"] == "Vegetation")
+        veg = next(g for g in tabs["World"]["groups"] if g["name"] == "Vegetation (screenshots)")
         self.assertEqual(veg["items"][0]["src"], "docs/evidence/2026-11-20-vegetation-v9/oak.jpg")
         self.assertIn("Text and buttons", tabs)
         for t in cat["tabs"]:

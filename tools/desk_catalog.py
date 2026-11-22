@@ -19,6 +19,14 @@ SOURCES = [
     ("Dinos", "Portraits (uniform capture)", "build/hatch-mock/portraits/*-v2.png",
      "Every V3 species from the same camera: 3/4 front, 22 degrees up, 20 degree lens (portrait tool, 2026-11-22)."),
     ("Dinos", "Old cutouts (resources)", "resources/ui/v2/dinos/v3/*.png", "The 256 px cutouts the UI used before."),
+    ("World", "Vegetation (in game)", "build/hatch-mock/world/cut/veg2_*.png",
+     "Every vegetation model the game places, same capture: scaled to one size, 3/4 view, 18 degrees up (world_pairs.luau, 2026-11-22)."),
+    ("World", "Trees and rocks (world kit)", "build/hatch-mock/world/cut/tree_*.png|build/hatch-mock/world/cut/rock_*.png|build/hatch-mock/world/cut/bush.png",
+     "WorldGeneratedMeshes trees, rocks and bush."),
+    ("World", "Landmarks and statues", "build/hatch-mock/world/cut/landmark_*.png|build/hatch-mock/world/cut/hub_statue_*.png", "Landmarks and the cave hub statues."),
+    ("World", "Food pickups", "build/hatch-mock/world/cut/food_*.png", "Food v3 pickups."),
+    ("World", "Cave", "build/hatch-mock/world/cut/cave_*.png", "Cave rocks, stalagmites, moss, lava."),
+    ("World", "Cave hub props", "build/hatch-mock/world/cut/hub_*.png", "Stalls, furniture, lanterns, crystals in the cave hub (statues are under Landmarks)."),
     ("UI kit", "Shop kit 2", "resources/ui/v2/shopkit2/*.png", "Cards, buttons, headers of the approved Aura Shop look (BD-1287)."),
     ("UI kit", "Toybox kit", "resources/ui/v2/toybox/final/*.png", "Owner's Toybox kit pieces."),
     ("UI kit", "Hatch kit (proposal)", "build/hatch-mock/art/*.png", "Pieces of the hatch mock on the Design Board (not in the game yet)."),
@@ -31,10 +39,10 @@ SOURCES = [
 
 # docs/evidence folders -> (tab, group) by keyword; newest folders first, at most MAX_FOLDERS per group
 EVIDENCE = [
-    ("World", "Vegetation", ("vegetation", "trees", "plants", "grass")),
-    ("World", "Decoration and statues", ("props", "landmark", "plaza", "world-fill", "statue", "decor")),
-    ("World", "Food", ("food",)),
-    ("World", "Cave", ("cave",)),
+    ("World", "Vegetation (screenshots)", ("vegetation", "trees", "plants", "grass")),
+    ("World", "Decoration and statues (screenshots)", ("props", "landmark", "plaza", "world-fill", "statue", "decor")),
+    ("World", "Food (screenshots)", ("food",)),
+    ("World", "Cave (screenshots)", ("cave",)),
     ("World", "Map and world look", ("world-look", "world-art", "-world", "map", "ui-world")),
     ("Screens", "HUD", ("hud",)),
     ("Screens", "Menus and shops", ("menu", "shop", "sae")),
@@ -70,7 +78,10 @@ def catalog():
             tabs.setdefault(tab, []).append({"id": tab + "/" + name, "name": name, "note": note, "items": items})
 
     for tab, name, pattern, note in SOURCES:
-        group(tab, name, note, items_for(sorted(ROOT.glob(pattern))))
+        files = sorted({f for pat in pattern.split("|") for f in ROOT.glob(pat)})
+        if name == "Cave hub props":
+            files = [f for f in files if not f.name.startswith("hub_statue_")]
+        group(tab, name, note, items_for(files))
     ev = ROOT / "docs" / "evidence"
     folders = sorted([d for d in ev.iterdir() if d.is_dir()], key=lambda d: d.name, reverse=True) if ev.is_dir() else []
     loose = sorted([f for f in ev.iterdir() if f.is_file()], key=lambda f: f.name, reverse=True) if ev.is_dir() else []
