@@ -221,9 +221,10 @@ if not INSIDE:
             sys.exit(r.returncode)
         res = gate(masks, arg("--round", "dev"), arg("--note", ""))
         os.makedirs(EVID, exist_ok=True)
-        overlays(masks, res, os.path.join(EVID if "--final" in ARGS else WORK, "silhouette-overlays.png"))
+        sfx = arg("--suffix", "")          # r2 outputs: --suffix -r2 (keeps the first round's pictures)
+        overlays(masks, res, os.path.join(EVID if "--final" in ARGS else WORK, "silhouette-overlays%s.png" % sfx))
         if "--final" in ARGS:
-            compare(res, os.path.join(EVID, "compare-sheet.png"))
+            compare(res, os.path.join(EVID, "compare-sheet%s.png" % sfx))
     raise SystemExit(0)
 
 
@@ -394,17 +395,20 @@ NECK_LEAN = 22.0     # degrees forward, the neck above the head's underside (hid
 HEAD_LO = 1.86       # head underside (neck below)
 
 # Head: loft forward along y; z range from the side mask, width from the front view's head outline x taper(y).
-HEAD_TAPER = ((0.0, 0.62), (0.08, 0.86), (0.25, 0.97), (0.55, 1.0), (0.74, 0.94), (0.88, 0.85), (0.96, 0.79), (1.0, 0.74))
-HEAD_F = (0.0, 0.16, 0.40, 0.64, 0.86, 1.0)           # ring heights (fraction of the z range): jaw, cheek, eye, brow, crown
-HEAD_CHAMFER = {0: 0.80, 5: 0.66}                      # jaw and crown plane width share
-EYE_C = (0.70, 2.46)                                   # side view eye centre (y, z)
-EYE_SHARE, EYE_PROTRUDE, HILITE = 0.32, 0.25, 0.20
+HEAD_TAPER = ((0.0, 0.62), (0.08, 0.86), (0.25, 0.97), (0.55, 1.0), (0.74, 0.94), (0.86, 0.87), (0.92, 0.82), (0.965, 0.76), (1.0, 0.66))
+HEAD_F = (0.0, 0.26, 0.48, 0.68, 0.87, 1.0)           # ring heights (fraction of the z range): jaw, cheek, eye, brow, crown
+HEAD_CHAMFER = {0: 0.70, 5: 0.66}                      # jaw (one broad lower bevel, r2) and crown plane width share
+MUZZLE_ROUND = {0: 0.22, 1: 0.08, 4: 0.06, 5: 0.18}    # r2: extra corner rounding toward the snout tip (jaw / crown corners)
+EYE_C = (0.80, 2.46)                                   # eye centre (y, z); r2: +6 % of head length forward
+EYE_SHARE, EYE_PROTRUDE, HILITE = 0.36, 0.25, 0.20      # r2: +12 % diameter
+EYE_AIM, EYE_FWD = 36.0, 0.80                           # r2: placed from 36 deg toward the front, axis turned ~12 deg more forward
 NOSTRIL = (0.17, 2.30)
 
 # Tail: loft back along -y; z range from the side mask (below the hip line the thigh is cut off), width from the hip width share.
 TAIL_ROOT_Z = 1.13   # the root ring's centre = the tail box's z centre (the game's pivot), so no anchor is needed above the back
 TAIL_Y = (-0.26, -0.58, -0.78, -0.98, -1.16, -1.32)
-TAIL_HALFX = ((-1.32, 0.065), (-1.16, 0.10), (-0.98, 0.15), (-0.78, 0.20), (-0.58, 0.24), (-0.40, 0.24), (-0.26, 0.20))   # ascending y
+TAIL_HALFX = ((-1.32, 0.06), (-1.16, 0.095), (-0.98, 0.14), (-0.78, 0.18), (-0.58, 0.215), (-0.40, 0.215), (-0.26, 0.18))  # ascending y; r2 root -10 %
+TAIL_DROP = 0.115    # r2: tip lowered ~10 % of the head height (droop concentrated near the tip)
 TAIL_ZLO = ((-0.78, 0.0), (-0.74, 0.88), (-0.40, 0.92))
 
 # Leg (right, +x), loft up z. Below the crotch both masks are the leg; above it the thigh is a hand window inside the hip block.
@@ -418,8 +422,8 @@ CLAW_ROOM = 0.075    # the foot stops this far behind the sheet's toe tip (the c
 ARM_PATH = (V((0.26, 0.20, 1.36)), V((0.42, 0.27, 1.20)), V((0.44, 0.38, 1.03)), V((0.42, 0.52, 0.96)), V((0.40, 0.62, 0.92)))
 ARM_R = ((0.105, 0.105), (0.16, 0.14), (0.13, 0.12), (0.12, 0.115), (0.10, 0.09))
 
-SPIKES_BODY = (-0.12, -0.30, -0.46)
-SPIKES_TAIL = (-0.66, -0.82, -0.98, -1.12, -1.26, -1.38)
+SPIKES_BODY = (-0.18, -0.40)                    # r2: 6 instead of 9, spacing varied
+SPIKES_TAIL = (-0.70, -0.90, -1.06, -1.25)
 
 
 # ------------------------------------------------------------------ parts
@@ -457,17 +461,19 @@ def build_head(F, S):
     bm, tag = new_bm()
     yb = S.extent(2.05, 2.85)[0]       # back of the skull
     yf = S.extent(1.95, 2.70)[1]       # snout front
-    ys = [yb + 0.03, yb + 0.12, yb + 0.30] + [yb + (yf - yb) * t for t in (0.42, 0.60, 0.76, 0.88, 0.96)] + [yf]
+    ys = [yb + 0.03, yb + 0.12, yb + 0.30] + [yb + (yf - yb) * t for t in (0.42, 0.60, 0.76, 0.86, 0.92, 0.965, 0.99)] + [yf]
     w = head_width(F)
     rings = []
     for y in ys:
         zr = S.col_run(y, 2.45, HEAD_LO, 9)
         t = (y - yb) / (yf - yb)
         tp = lerp_table(HEAD_TAPER, t)
+        m = max(0.0, (t - 0.74) / 0.26)          # 0 behind the muzzle -> 1 at the snout tip: corners round off (r2)
         side = []
         for i, f in enumerate(HEAD_F):
             z = zr[0] + f * (zr[1] - zr[0])
-            side.append((w(z) * tp * HEAD_CHAMFER.get(i, 1.0), z))
+            ch = HEAD_CHAMFER.get(i, 1.0) * (1 - m * MUZZLE_ROUND.get(i, 0.0))
+            side.append((w(z) * tp * ch, z))
         ring = [V((x, y, z)) for x, z in side] + [V((-x, y, z)) for x, z in reversed(side)]
         rings.append(ring)
     loft(bm, tag, rings)
@@ -483,10 +489,11 @@ def build_tail(F, S):
         zref = 1.18 + (-0.40 - y) * 0.2
         zr = S.col_run(min(y, -0.58), zref, lerp_table(TAIL_ZLO, y), 9)
         a = lerp_table(TAIL_HALFX, y)
-        c = V((0, y, (zr[0] + zr[1]) / 2 if y < -0.5 else TAIL_ROOT_Z))
-        rings.append(superellipse_ring(c, X, Z, a, (zr[1] - zr[0]) / 2 * (0.78 if y > -0.5 else 1.0), 2.2, 12))
+        u = max(0.0, (-0.58 - y) / (-0.58 - tip_y))                 # r2: gentle droop toward the tip
+        c = V((0, y, ((zr[0] + zr[1]) / 2 - TAIL_DROP * u ** 2.6) if y < -0.5 else TAIL_ROOT_Z))
+        rings.append(superellipse_ring(c, X, Z, a, (zr[1] - zr[0]) / 2 * (0.70 if y > -0.5 else 1.0), 2.2, 12))
     zr = S.col_run(tip_y + 0.05, 1.4, 1.0, 9)
-    loft(bm, tag, rings, start_tag=CAP_TAG, end_apex=V((0, tip_y, (zr[0] + zr[1]) / 2)))
+    loft(bm, tag, rings, start_tag=CAP_TAG, end_apex=V((0, tip_y, (zr[0] + zr[1]) / 2 - TAIL_DROP)))
     return finish("Tail", bm, bevel=0.012)
 
 
@@ -503,7 +510,7 @@ def build_leg(F, S):
         else:
             yr = win
         c = V(((xr[0] + xr[1]) / 2, (yr[0] + yr[1]) / 2, z))
-        n = 2.6 if z < 0.25 else 2.4
+        n = 2.6 if z < 0.15 else 2.15 if z < 0.6 else 2.4   # r2: rounder shin
         rings.append(superellipse_ring(c, X, Y, (xr[1] - xr[0]) / 2, (yr[1] - yr[0]) / 2, n, 12))
     loft(bm, tag, rings, start_tag=0, end_tag=CAP_TAG)
     return finish("LegR", bm, bevel=0.015)
@@ -539,11 +546,14 @@ def add_eyes_and_nostrils(head, head_h):
     r = head_h * EYE_SHARE / 2
     cy, cz = EYE_C
     for s in (1, -1):
-        hit = bvh.ray_cast(V((s * 3.0, cy, cz)), V((-s, 0, 0)))
+        # r2: aimed from EYE_AIM degrees toward the front (the eye sits on the cheek corner, so the front view shows it inside the head)
+        a = math.radians(EYE_AIM)
+        d = V((-s * math.cos(a), -math.sin(a), 0.0))
+        hit = bvh.ray_cast(V((0, cy, cz)) - d * 3.0, d)
         c, n = hit[0], hit[1].normalized()
         if n.x * s < 0:
             n = -n
-        ax = (n + V((s * 0.1, 0.50, 0.0))).normalized()   # looks a bit forward and out, like the sheet
+        ax = (n + V((0.0, EYE_FWD, 0.0))).normalized()   # looks forward and out, like the sheet
         tip = 2 * r * EYE_PROTRUDE
         Rs = (r * r + tip * tip) / (2 * tip)                 # the eye is a spherical cap: base radius r, height tip
         O = c + ax * (tip - Rs)
@@ -620,10 +630,13 @@ def add_claws(leg):
             continue
         c = hit[0]
         f = V((0, 1, 0))
-        r = half * 0.37
-        rings = [v3.disc(c - f * 0.05 + V((0, 0, 0.01)), f, r, 8), v3.disc(c + f * 0.035, f, r * 0.95, 8),
-                 [q + V((0, 0, -0.01)) for q in v3.disc(c + f * 0.075, f, r * 0.70, 8)]]
-        v3.shell(bm, tag, rings, TAG_CLAW, apex=c + f * 0.10 + V((0, 0, -0.025)))
+        r = half * 0.31
+        # r2: a separate rounded lime toe (8-sided, 3 rings) per claw, the dark claw on its tip
+        toe = [superellipse_ring(c + f * dy, X, Z, r * k, r * 0.82 * k, 2.2, 8) for dy, k in ((-0.07, 1.0), (0.0, 1.04), (0.03, 0.86))]
+        v3.shell(bm, tag, toe, 0, apex=c + f * 0.045)
+        rings = [v3.disc(c + f * 0.012 + V((0, 0, 0.004)), f, r * 0.95, 8), v3.disc(c + f * 0.05, f, r * 0.82, 8),
+                 [q + V((0, 0, -0.008)) for q in v3.disc(c + f * 0.075, f, r * 0.62, 8)]]
+        v3.shell(bm, tag, rings, TAG_CLAW, apex=c + f * 0.095 + V((0, 0, -0.02)))
     v3.finish_shells(bm)
     bm.to_mesh(me)
     bm.free()
@@ -704,7 +717,7 @@ def cap_joint(ob):
 
 # ------------------------------------------------------------------ colour and shading
 SHARP_DEG = {"Head": 14, "Body": 30, "Tail": 30, "LegR": 30, "LegL": 30, "ArmR": 35, "ArmL": 35}  # hard edge above this
-CREAM_W = ((0.58, 0.0), (0.75, 0.14), (0.95, 0.26), (1.20, 0.33), (1.45, 0.34), (1.95, 0.34))
+CREAM_W = ((0.46, 0.05), (0.54, 0.12), (0.68, 0.18), (0.95, 0.28), (1.20, 0.33), (1.45, 0.34), (1.95, 0.34))  # r2: lower, rounded point
 
 
 def material_index(name, c, n, tg):
@@ -716,7 +729,8 @@ def material_index(name, c, n, tg):
         return 2
     if tg in (CAP_TAG, ANCHOR_TAG):
         return 0
-    if name == "Body" and 0.55 < c.z < 1.95 and n.y > (0.12 if c.z < 1.45 else -0.15) and abs(c.x) < lerp_table(CREAM_W, c.z):
+    ny = -0.85 if c.z < 0.70 else 0.12 if c.z < 1.45 else -0.15     # r2: the crotch faces (down-front) join the band
+    if name == "Body" and 0.44 < c.z < 1.95 and n.y > ny and c.y > (-0.40 if c.z < 0.70 else -0.15) and abs(c.x) < lerp_table(CREAM_W, c.z):
         return 1
     if name == "Tail" and n.z < -0.25 and c.y > -1.30:
         return 1
@@ -832,11 +846,12 @@ def render_look(objs, out, q34):
     bg = next(n for n in sc.world.node_tree.nodes if n.type == "BACKGROUND")
     bg.inputs["Color"].default_value = (0.42, 0.42, 0.42, 1)
     bg.inputs["Strength"].default_value = 0.45
-    for name, loc, energy, size in (("key", (4.0, 3.5, 6.5), 950, 3.0), ("fill", (-5.0, 3.5, 2.0), 260, 4.0),
+    for name, loc, energy, size in (("key", (4.5, 4.0, 4.5), 650, 3.5), ("fill", (-5.0, 3.5, 2.0), 260, 4.0),
                                     ("rim", (-2.0, -5.0, 5.0), 700, 2.0)):
         ld = bpy.data.lights.new(name, "AREA")
         ld.energy = energy
         ld.size = size
+        ld.shape = "DISK"   # round reflections in the glossy eyes (r2)
         lo = bpy.data.objects.new(name, ld)
         lo.location = loc
         lo.rotation_euler = (V((0, 0, 1.5)) - V(loc)).to_track_quat("-Z", "Y").to_euler()
@@ -859,8 +874,8 @@ def main():
     leg_r, arm_r = build_leg(F, S), build_arm()
     head_lo, head_hi = box(head)
     add_eyes_and_nostrils(head, head_hi.z - head_lo.z)
-    add_spikes(body, SPIKES_BODY, 0.055, 0.055)
-    add_spikes(tail, SPIKES_TAIL, [0.06, 0.056, 0.052, 0.047, 0.04, 0.032], [0.055, 0.052, 0.048, 0.044, 0.038, 0.032])
+    add_spikes(body, SPIKES_BODY, 0.038, 0.06)          # r2: ~30 % lower, wider base = soft bumps
+    add_spikes(tail, SPIKES_TAIL, [0.04, 0.037, 0.033, 0.028], [0.056, 0.052, 0.046, 0.04])
     add_claws(leg_r)
     leg_l, arm_l = mirror_x(leg_r, "LegL"), mirror_x(arm_r, "ArmL")
     objs = {o.name: o for o in (body, head, tail, arm_l, arm_r, leg_l, leg_r)}
