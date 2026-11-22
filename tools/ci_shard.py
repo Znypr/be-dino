@@ -4,8 +4,13 @@
 The list lives in .github/workflows/build-generated-place.yml as the `CI_LUAU_CHECKS: |` block (one command per line, comments
 allowed). The verifiers and tools/release_playtest.py read their own lines from that file, so the lines stay there verbatim.
 
-    python tools/ci_shard.py --shard 2/4            # run every 4th command starting with the 2nd; report all failures
+    python tools/ci_shard.py --shard 2/4            # run shard 2 of 4; report all failures
     python tools/ci_shard.py --list --shard 2/4     # print the commands of that shard, run nothing
+    python tools/ci_shard.py --estimate --shards 4  # expected seconds per shard from tools/ci_shard_times.json
+    python tools/ci_shard.py --update-times LOG...  # refresh the times from CI shard logs ("[i/n]  12.3s ok: <command>" lines)
+
+Shards are balanced by measured time (BD-1303): tools/ci_shard_times.json holds each command's seconds from a real CI run; the
+longest command goes first onto the least loaded shard. A command missing from the file counts as the median time.
     python tools/ci_shard.py --needs-luau --base origin/main --head HEAD
         # prints "luau=true" or "luau=false" (also appended to $GITHUB_OUTPUT when set): false only when no changed file is
         # game input (src, resources, assets, place file, workflow) and none is mentioned by any script on the list
@@ -28,6 +33,7 @@ WORKFLOW = ROOT / ".github/workflows/build-generated-place.yml"
 MARKER = "CI_LUAU_CHECKS: |"
 # changes under these always need the Luau checks (game input, the place file, the workflow and this script)
 ALWAYS = ("src/", "resources/", "assets/", "default.project.json", ".github/", "tools/ci_shard.py")
+TIMES = ROOT / "tools" / "ci_shard_times.json"
 
 
 def check_lines(text: str | None = None) -> list[str]:
@@ -48,11 +54,60 @@ def check_lines(text: str | None = None) -> list[str]:
     return out
 
 
-def shard(lines: list[str], k: int, n: int) -> list[str]:
-    """Round-robin: shard k (1-based) of n gets lines k-1, k-1+n, ... so heavy neighbours spread out."""
+def load_times() -> dict[str, float]:
+    import json
+    try:
+        return {k: float(v) for k, v in json.loads(TIMES.read_text(encoding="utf-8")).items()}
+    except (OSError, ValueError):
+        return {}
+
+
+def cost_of(lines: list[str], times: dict[str, float]) -> list[float]:
+    known = sorted(times[l] for l in lines if l in times)
+    default = known[len(known) // 2] if known else 1.0
+    return [times.get(l, default) for l in lines]
+
+
+def assign(lines: list[str], n: int, times: dict[str, float] | None = None) -> list[list[int]]:
+    """Indices of each shard: longest command first onto the least loaded shard (ties: lower shard). Deterministic."""
+    times = load_times() if times is None else times
+    cost = cost_of(lines, times)
+    loads, groups = [0.0] * n, [[] for _ in range(n)]
+    for i in sorted(range(len(lines)), key=lambda i: (-cost[i], i)):
+        k = min(range(n), key=lambda k: (loads[k], k))
+        loads[k] += cost[i]
+        groups[k].append(i)
+    return [sorted(g) for g in groups]
+
+
+def shard(lines: list[str], k: int, n: int, times: dict[str, float] | None = None) -> list[str]:
+    """Shard k (1-based) of n, in list order, balanced by measured time."""
     if not (1 <= k <= n):
         raise SystemExit(f"bad shard {k}/{n}")
-    return lines[k - 1::n]
+    return [lines[i] for i in assign(lines, n, times)[k - 1]]
+
+
+def estimate(lines: list[str], n: int, times: dict[str, float] | None = None) -> list[float]:
+    times = load_times() if times is None else times
+    cost = cost_of(lines, times)
+    return [round(sum(cost[i] for i in g), 1) for g in assign(lines, n, times)]
+
+
+def update_times(logs: list[str]) -> int:
+    import json
+    times = load_times()
+    found = 0
+    for log in logs:
+        for raw in Path(log).read_text(encoding="utf-8", errors="replace").splitlines():
+            m = re.search(r"\[\d+/\d+\]\s+([0-9.]+)s ok: (.+)$", raw.rstrip())
+            if m:
+                times[m.group(2).strip()] = round(float(m.group(1)), 1)
+                found += 1
+    current = set(check_lines())
+    times = {k: v for k, v in sorted(times.items()) if k in current}
+    TIMES.write_text(json.dumps(times, indent=1) + "\n", encoding="utf-8")
+    print(f"{found} timings read, {len(times)} commands in {TIMES.name}")
+    return 0
 
 
 def scripts_of(lines: list[str]) -> list[Path]:
@@ -119,8 +174,17 @@ def main(argv=None) -> int:
     ap.add_argument("--needs-luau", action="store_true")
     ap.add_argument("--base")
     ap.add_argument("--head", default="HEAD")
+    ap.add_argument("--estimate", action="store_true")
+    ap.add_argument("--shards", type=int, default=4)
+    ap.add_argument("--update-times", nargs="+", metavar="LOG")
     a = ap.parse_args(argv)
+    if a.update_times:
+        return update_times(a.update_times)
     lines = check_lines()
+    if a.estimate:
+        est = estimate(lines, a.shards)
+        print("expected seconds per shard:", est, " slowest:", max(est))
+        return 0
     if a.needs_luau:
         needed, why = needs_luau(changed_files(a.base, a.head) if a.base else [], lines)
         print(f"luau={'true' if needed else 'false'}  ({why})")
