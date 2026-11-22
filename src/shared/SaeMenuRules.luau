@@ -30,7 +30,7 @@ M.IndexRail = {"dinos", "patterns", "colours", "fusion"}
 M.IndexRailWords = {dinos = "Dinos", patterns = "Patterns", colours = "Colours", fusion = "Fusion"}
 M.LookWord, M.HatchWord, M.NotFoundWord = "View", "Find it!", "Not found yet!"
 -- the preview boxes are bigger than their render rect (the camera leaves a margin): found dinos, the panel dino, silhouettes (each side)
-M.CardZoom, M.PanelZoom, M.SilhouetteZoom = 0.30, 0.30, 0.24
+M.CardZoom, M.PanelZoom, M.SilhouetteZoom = 0.30, 0.445, 0.305 -- lead polish round 2: the panel dino +18 %, silhouettes +9 %
 
 local function round(x: number): number return math.floor(x + 0.5) end
 -- Estimated width in px of a FredokaOne word (SaeFrameRules.textWidth: 0.56 em per character).
@@ -193,7 +193,7 @@ function M.indexLayout(w: number, guiH: number, inset: number?, railWords: {stri
     local pageW = M.MinTap + 6
     local nxt = {x = gridX + gridW - pageW, y = rowY, w = pageW, h = rowH}
     local prev = {x = nxt.x - 6 - pageW, y = rowY, w = pageW, h = rowH}
-    local barRect = {x = gridX, y = rowY + math.floor((rowH - bar) / 2), w = prev.x - 8 - gridX, h = bar, text = math.clamp(round(bar * 0.6), M.MinText, 24)}
+    local barRect = {x = gridX, y = rowY + math.floor((rowH - bar) / 2), w = prev.x - 8 - gridX, h = bar, text = math.clamp(round(bar * 0.6), M.MinText, 24), minFill = math.max(8, round(h * 0.015))}
     local panel = {x = gridX + gridW + side, y = gridY, w = panelW, h = rowY + rowH - gridY}
     -- inside the panel (panel px): the name, the rarity word, the big render, the "You have 3" strip, the Look button
     local pEdge = math.max(4, round(h * 0.008))

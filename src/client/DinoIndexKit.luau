@@ -27,6 +27,7 @@ local M = {}
 
 local state = {page = 1}
 local CHARCOAL = Color3.fromRGB(32, 33, 39) -- lead polish 2026-11-23: silhouettes charcoal #202127, not pure black
+local TRACK = Color3.fromRGB(150, 152, 165) -- lead polish round 2: the bar track darker than the window body (multiplies the kit strip)
 local SELECTED = Color3.fromRGB(92, 214, 245) -- the selected card edge: the Index cyan #5CD6F5
 
 local function rarityWord(index: number): string
@@ -176,11 +177,15 @@ function M.build(body: GuiObject, d: any): boolean
             local B = lay.bar
             local bk = B.h / Kit2.Studded[Kit2.StripSlot].h
             local bar = Art.studded(window, "IndexBar", Kit2.StripSlot, B.x, B.y, B.w, B.h, 34, bk, bk) or Art.box(window, "IndexBar", B.x, B.y, B.w, B.h, 34)
+            for _, piece in bar:GetDescendants() do if piece:IsA("ImageLabel") then piece.ImageColor3 = TRACK end end -- a darker track (the kit strip tinted down)
             local total = #Config.SpeciesOrder
             local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0 -- exact (1/22 = 4.5 %)
+            -- lead polish round 2: never thinner than B.minFill (11 px at 720 p) once one dino is found, so a child sees it
+            if unlocked > 0 then fill = math.max(fill, B.minFill) end
             if fill >= 4 then
                 local gk = B.h / Kit2.Studded[Kit2.buttonSlot(false)].h
-                Art.studded(bar, "Fill", Kit2.buttonSlot(false), 0, 0, math.min(B.w, fill), B.h, 35, gk, gk)
+                -- a thin outline (0.6 of the piece's own) so the narrow fill shows mostly bright lime
+                Art.studded(bar, "Fill", Kit2.buttonSlot(false), 0, 0, math.min(B.w, fill), B.h, 35, gk * 0.6, gk)
             end
             Art.words(bar, "Found", TimerWords.found(unlocked, total), 0, -math.floor(B.h * 0.05), B.w, B.h, B.text, 37)
             if pages > 1 then

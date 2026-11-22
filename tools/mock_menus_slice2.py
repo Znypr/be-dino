@@ -297,7 +297,7 @@ def index_mock(L, runner, w, h, inset, dinos):
             ImageDraw.Draw(canvas).rounded_rectangle((x - 2, y - 2, x + cw + 1, y + ch + 1), radius=8, outline=(92, 214, 245, 255), width=4)
         rend = lay['cardRender']
         ry = max(4, (ch - (rend + lay['countText'] + 2)) // 2)
-        big = round(rend * (1.4 if n > 0 else 1.3))  # the game zooms its preview boxes; the cutouts have no margin, so a smaller factor
+        big = round(rend * (1.4 if n > 0 else 1.42))  # the game zooms its preview boxes; the cutouts have no margin, so a smaller factor
         picture(canvas, Path(dinos) / (DINO_FILES.get(sid, sid) + '.png'), x + (cw - big) // 2, y + ry + (rend - big) // 2, big, big, silhouette=n == 0)
         words(canvas, f'x{n}' if n > 0 else '?', x, y + ry + rend - 2, cw, lay['countText'] + 4, lay['countText'])
     p, pp = lay['panel'], lay['panelParts']

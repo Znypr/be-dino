@@ -248,6 +248,8 @@ check(M.LookWord == "View" and M.NotFoundWord == "Not found yet!" and M.NoneWord
 check(M.CardZoom >= .25 and M.PanelZoom >= .25 and M.SilhouetteZoom >= .2, "the dino previews fill their cards (zoomed preview boxes)")
 check(I.panelParts.badge >= 19 + 6 and I.panelParts.renderTop >= I.panelParts.edge + I.panelParts.nameText + I.panelParts.badge, "the rarity badge under the name, above the dino")
 check(near(P.band.h, 48, 52), "the owned strip 48-52 px at 720 p")
+check(near(I.bar.minFill, 10, 12), "a found dino shows at least 10-12 px of fill at 720 p (lead polish round 2)")
+check(M.PanelZoom >= .4 and M.SilhouetteZoom >= .28, "lead polish round 2: the panel dino and the silhouettes bigger")
 check(near(I.headerH / 720, .095, .105) and near(I.titleSize, 36, 40), "Index header 9.5-10 % H, title 36-40 px")
 check(M.IndexTitle == "Dino Index" and M.IndexColour == "cyan" and M.IndexRail[1] == "dinos" and M.IndexRail[2] == "patterns" and M.IndexRail[3] == "colours", "one cyan title; Dinos / Patterns / Colours on the rail")
 for _, L in {P, I} do
@@ -344,7 +346,8 @@ def scan2(src):
     need('Art.studded(holder, "KitTabTile_" .. tab, Kit2.buttonSlot(false),' in src['rail'] and '        if selected then\n            -- BD-1296' in src['rail'], 'KitRail: the active tab sits on the lime kit tile (every kit screen)')
     need('function W.potionsIn(secondsLeft: number): string' in src['timer'] and 'return "New in " .. UIFormat.duration(secondsLeft)' in src['timer'], 'New potions in 2 min is its own function; the Toybox page keeps restockIn')
     need('if shade and gold=="silhouette" then viewport:SetAttribute("SilhouetteShade",shade) end' in src['preview'], 'the charcoal silhouette is opt-in (the old Index keeps black)')
-    need('local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0' in index, 'the progress fill is exact (1/22 = 4.5 %)')
+    need('local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0' in index and 'if unlocked > 0 then fill = math.max(fill, B.minFill) end' in index
+         and 'piece.ImageColor3 = TRACK' in index, 'the progress fill is exact with a visible minimum, on a darker track')
     need('K.HeaderCards = {cyan = "rare"}' in src['kit2'], 'the cyan header is the kit 2 Rare card piece')
     need('function Tabs.choose(tab: string) lastTab = Index.validTab(tab) end' in src['tabs'], 'IndexTabs.choose keeps the tab valid')
     need('M.Potion = {w = 0.58, h = 0.67,' in src['rules'] and 'M.Index = {w = 0.50, h = 0.63,' in src['rules'], 'docs/246 window sizes')
@@ -363,6 +366,7 @@ MUTANTS = {
     'a colour fill in the potion screen': ('potion', 'local M = {}', 'local M = {}\nlocal _x = Instance.new("Frame") _x.BackgroundColor3 = Color3.new(1, 0, 0)'),
     'the active rail tab loses its tile': ('rail', '        if selected then\n            -- BD-1296', '        if false then\n            -- BD-1296'),
     'the progress fill rounds up to a square': ('index', 'local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0', 'local fill = math.max(B.h, math.floor(B.w * unlocked / total + 0.5))'),
+    'one found dino shows no fill': ('index', 'if unlocked > 0 then fill = math.max(fill, B.minFill) end', ''),
     'the Index window at shop size': ('rules', 'M.Index = {w = 0.50, h = 0.63,', 'M.Index = {w = 0.58, h = 0.67,'),
 }
 LUAU_MUTANTS = {
