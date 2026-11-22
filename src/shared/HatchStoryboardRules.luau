@@ -63,10 +63,12 @@ end
 
 -- The top bar (storyboard: purple striped kit header across the top, a cream chip in the middle).
 function R.topBar(w: number, h: number)
-    local barH = math.clamp(math.floor(h * .14 + .5), 52, 120)
-    local chipH = math.max(36, math.floor(barH * .8 + .5))
-    local text = math.max(R.MinText, math.floor(chipH * .6 + .5))
-    return {h = barH, chipW = math.max(150, math.floor(text * 7.4 + .5)), chipH = chipH, text = text, titleText = math.max(R.MinText + 5, math.floor(barH * .62 + .5))}
+    -- the kit header picture draws its striped band in about the upper 60 % of its box (the rest is its drop): a box of 19 % H shows a
+    -- band of about 12 % H (storyboard), the chip text about 5 % H
+    local barH = math.clamp(math.floor(h * .19 + .5), 60, 170)
+    local chipH = math.max(36, math.floor(barH * .6 + .5))
+    local text = math.max(R.MinText, math.floor(h * .06 + .5))
+    return {h = barH, chipW = math.max(150, math.floor(text * 7.4 + .5)), chipH = chipH, text = text, titleText = math.max(R.MinText + 5, math.floor(h * .08 + .5))}
 end
 
 -- The big name plate of a splash (panel 2 / 3): right of the egg, the word in white outlined FredokaOne, the rarity chip under it.
@@ -115,14 +117,18 @@ end
 
 -- Panel 5: the reveal stack, in shares of the screen height (the ribbon banner sits at the very top). The colour + pattern chips get their own
 -- row between the name plate and NEXT. The dino view is 44 % of the screen tall (critique #1: 40-50 %), 48 % for Legendary and up.
-R.Reveal = {dinoY = .39, dinoYBig = .38, dinoH = .64, dinoHBig = .66, pedestalY = .6, plateY = .665, chipsY = .79, nextY = .9}
-R.NextScale = 1.5 -- the reveal's NEXT is a big kit button (storyboard panel 5, about 10 % of the screen)
-R.PlateScale = 1.3 -- the reveal's name plate (HatchStage) is bigger too
-R.DinoFill = .62 -- PROVISIONAL (Studio): share of its view the dino model fills, so the dino itself is about 40 % of the stage
-R.EndRowShare = .12 -- PLAY AGAIN / HOME row height on the BEST FIND! summary, share of the screen
+R.Reveal = {dinoY = .35, dinoYBig = .34, dinoH = .9, dinoHBig = .92, pedestalY = .57, plateY = .65, chipsY = .8, nextY = .925}
+R.DinoFill = .47 -- MEASURED in Studio 2026-11-22 (5-reveal.jpg: a .64 view drew a ~30 % dino): share of its view the dino model fills
+-- Under the dino (its feet at about 56 % of the screen): name plate 17 %, chips 11 %, NEXT 11.5 % of the screen (storyboard panel 5).
+function R.revealSizes(w: number, h: number)
+    local plateH = h * .17
+    local chipH = math.max(32, math.floor(h * .11 + .5))
+    return {plateW = math.min(w * .45, plateH * 439 / 137), plateH = plateH, chipH = chipH, nextH = math.max(44, h * .115), nextW = math.max(44, h * .115) * 250 / 66}
+end
+R.EndRowShare = .115 -- PLAY AGAIN / HOME on the BEST FIND! summary: both this share of the screen tall, the same size
 function R.revealChips(w: number, h: number)
-    local ch = math.clamp(math.floor(h * .05 + .5), 32, 46)
-    local text = math.max(R.MinText, math.floor(ch * .58 + .5))
+    local ch = R.revealSizes(w, h).chipH
+    local text = math.max(R.MinText, math.floor(ch * .56 + .5))
     return {h = ch, text = text, swatch = math.floor(ch * .62 + .5), gap = 10, y = h * R.Reveal.chipsY}
 end
 function R.chipWidth(word: string, text: number, swatch: number): number
@@ -131,10 +137,10 @@ end
 -- The vertical stack on a screen: {name = {top, bottom}} with the same sizes HatchStage.reveal uses (plate and NEXT scale with fitY).
 function R.revealStack(w: number, h: number)
     local fitY = math.min(1, h / 793)
-    local plateW = math.min(w * .2, 300 * fitY) * R.PlateScale
-    local plateH = plateW * 137 / 439
+    local sizes = R.revealSizes(w, h)
+    local plateH = sizes.plateW * 137 / 439
     local chips = R.revealChips(w, h)
-    local nextH = 66 * fitY * R.NextScale
+    local nextH = sizes.nextH
     local L = R.Reveal
     local dinoBottom = h * L.dinoY + h * L.dinoH * R.DinoFill / 2 -- the model, not its (transparent) view
     return {
@@ -167,7 +173,7 @@ end
 R.CardMinW = 128
 function R.summary(w: number, h: number, others: number)
     local bar = R.topBar(w, h)
-    local buttonsY = h * .885
+    local buttonsY = h * .9 -- PLAY AGAIN / HOME, each R.EndRowShare of the screen tall
     local top, bottom = bar.h + h * .05, h * .79
     local areaL, areaR = w * .54, w - 16
     local gap = 10
@@ -191,7 +197,7 @@ function R.summary(w: number, h: number, others: number)
         local c, r = (i - 1) % useCols, math.floor((i - 1) / useCols)
         table.insert(cards, {cx = x0 + c * (cardW + gap) + cardW / 2, cy = y0 + r * (cardH + gap) + cardH / 2, w = cardW, h = cardH})
     end
-    local bigH = math.min(h * .52, bottom - top) -- the best dino big (storyboard panel 6: about 40 % of the screen)
+    local bigH = math.min(h * .55, bottom - top) -- the best dino's spot (its view is drawn 1.4x of it: storyboard panel 6)
     local nameText = math.max(R.MinText, math.floor(cardW * .17 + .5))
     return {bar = bar, big = {cx = w * .29, cy = (top + bottom) / 2, h = bigH}, cards = cards, shown = shown, more = more,
         buttonsY = buttonsY, cardText = nameText, chipText = R.MinText}

@@ -17,6 +17,7 @@ Stage.Cream = Color3.fromRGB(255, 247, 227)
 Stage.Ink = Color3.fromRGB(46, 38, 30)
 Stage.Grey = Color3.fromRGB(196, 200, 208)
 Stage.Veil = .78 -- scrim transparency on the stage (the window used .42): the world stays visible under the rays
+Stage.VeilColor = Color3.new(0, 0, 0) -- BD-1288: the storyboard uses a warm white veil
 
 local function luminance(c: Color3): number return .299 * c.R + .587 * c.G + .114 * c.B end
 -- true for the dark navy / slate plates the old window style used (R1)
@@ -147,7 +148,7 @@ function Stage.apply(p: Parts)
     pcall(function() (backdrop :: any).ScreenInsets = Enum.ScreenInsets.None end)
     local veil = Instance.new("Frame")
     veil.Name, veil.Size, veil.BorderSizePixel = "Veil", UDim2.fromScale(1, 1), 0
-    veil.BackgroundColor3, veil.BackgroundTransparency = Color3.new(0, 0, 0), Stage.Veil
+    veil.BackgroundColor3, veil.BackgroundTransparency = Stage.VeilColor, Stage.Veil
     veil.Parent = backdrop
     backdrop.Parent = p.gui.Parent
     table.insert(restore, function() backdrop:Destroy() end)
@@ -893,7 +894,7 @@ function Stage.nextEgg()
     s.shade.BackgroundTransparency = 1
     for _, o in s.shade:GetChildren() do if o.Name == "HatchStageWord" or o.Name == "HatchStageWordDrop" then o:Destroy() end end
     s.sun.ImageColor3, s.sun.ImageTransparency = Color3.new(1, 1, 1), .45
-    s.veil.BackgroundColor3, s.veil.BackgroundTransparency = Color3.new(0, 0, 0), Stage.Veil
+    s.veil.BackgroundColor3, s.veil.BackgroundTransparency = Stage.VeilColor, Stage.Veil
     -- back from a Legendary / Mythic build-up: calm spin, the warm glow at its normal size
     for _, tween in s.buildTweens or {} do tween:Cancel() end
     s.builtUp, s.charge, s.spin.speed, s.buildTweens = false, 1, 6, nil

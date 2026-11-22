@@ -34,7 +34,8 @@ local PURPLE = Theme.Colors.purple
 -- other ScreenGuis that are HUD, not hatch: they step aside while the stage is up (BeDinoUI's own pieces are hidden by HatchStage)
 SB.HideGuis = {FriendBonusGui = true, GiftsGui = true, GrowthBanner = true, HubGuideArrow = true, HubPromptBubbleUI = true, PlaytestFeedback = true, TouchGui = true}
 SB.Blur = 14 -- px of the world blur behind the stage
-SB.Veil = .9 -- the stage veil over the world (HatchStage uses .78): the blurred world stays bright and sunny (lead review 2026-11-22: at most ~10 % darker)
+SB.Veil = .8 -- the stage veil over the world (HatchStage uses .78 black): here a warm WHITE veil, so the blurred world reads lighter and sunny, never darker
+SB.VeilColor = Color3.fromRGB(255, 248, 225)
 SB.Rays = .22 -- the sunburst behind the egg, brighter than the stage's .45
 
 local Stage: any = nil
@@ -216,7 +217,7 @@ function SB.init(stage: any)
     Stage = stage
     Stage.HideCrystals = true
     Stage.Veil = SB.Veil
-    Stage.NextScale, Stage.PlateScale = R.NextScale, R.PlateScale
+    Stage.VeilColor = SB.VeilColor
     for _, tier in Stage.Ladder do tier.veil = math.max(tier.veil, SB.Veil - .06) end -- the reveal keeps the world bright too
     for k, v in R.Reveal do Stage.Layout[k] = v end
     -- the paint flipbook sits on the big egg (its egg is EggShare.want of the screen tall)
@@ -451,6 +452,13 @@ function SB.reveal(info: any)
     if ctx.buildTween then ctx.buildTween:Cancel() ctx.buildTween = nil end
     clear(ctx.egg)
     ctx.bar.Visible = false -- the rarity ribbon takes the top of the screen
+    do -- the reveal's name plate and NEXT at the storyboard's sizes (HatchStage draws them; it is told the scale here, before it draws)
+        local size = screen()
+        local fitY = math.min(1, size.Y / 793)
+        local rs = R.revealSizes(size.X, size.Y)
+        Stage.PlateScale = rs.plateW / math.max(1, math.min(size.X * .2, 300 * fitY))
+        Stage.NextScale = rs.nextH / math.max(1, 66 * fitY)
+    end
     local body = ctx.body
     local id = body:GetAttribute("HatchSpeciesId")
     id = if type(id) == "string" and id ~= "" then id else nil
@@ -527,13 +535,13 @@ function SB.ends(s: any, ends: GuiObject, restore: {() -> ()})
     ctx.ends, ctx.endsPosition = ends, before
     local size = s.shade.AbsoluteSize
     local fitY = math.min(1, size.Y / 793)
-    local big = R.NextScale
-    local b = kitButton(ctx.layer, "StoryboardNext", R.Words.next, size.X / 2, size.Y * R.Reveal.nextY, 250 * fitY * big, math.max(44, 66 * fitY * big), math.max(R.MinText + 3, math.floor(34 * fitY * big)), GREEN, 20)
+    local rs = R.revealSizes(size.X, size.Y)
+    local b = kitButton(ctx.layer, "StoryboardNext", R.Words.next, size.X / 2, size.Y * R.Reveal.nextY, rs.nextW, rs.nextH, math.max(R.MinText + 3, math.floor(rs.nextH * .52)), GREEN, 20)
     ctx.next = b
     pop(b, .05)
     b.Activated:Connect(function() SB.summary() end)
 end
-local function dinoView(entry: any, parent: GuiObject, w: number, h: number, z: number)
+local function dinoView(entry: any, parent: GuiObject, w: number, h: number, z: number, y: number?)
     local view: ViewportFrame? = nil
     if entry.view then
         view = entry.view
@@ -546,7 +554,7 @@ local function dinoView(entry: any, parent: GuiObject, w: number, h: number, z: 
         if d:IsA("UIScale") or d:IsA("GuiObject") then d:Destroy() end
     end
     if not view.CurrentCamera then view.CurrentCamera = view:FindFirstChildOfClass("Camera") end
-    view.AnchorPoint, view.Position, view.Size, view.ZIndex, view.Visible = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(w, h), z, true
+    view.AnchorPoint, view.Position, view.Size, view.ZIndex, view.Visible = Vector2.new(.5, .5), UDim2.fromScale(.5, y or .5), UDim2.fromOffset(w, h), z, true
     view.ImageTransparency, view.Rotation = 0, 0
     view.Parent = parent
 end
@@ -594,11 +602,11 @@ function SB.summary()
         glow.AnchorPoint, glow.Position, glow.Size, glow.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .45), UDim2.fromOffset(L.big.h * 1.5, L.big.h * 1.5), 2
         glow.ImageColor3, glow.ImageTransparency = tint:Lerp(WHITE, .3), .25
         glow.Parent = big
-        dinoView(best, big, L.big.h * 1.1, L.big.h * .95, 4)
+        dinoView(best, big, L.big.h * 1.54, L.big.h * 1.33, 4, .6) -- 1.4x (lead review 2026-11-22), under its ribbon
         local bw = math.min(L.big.h * 1.05, size.X * .3)
         local ribbon = Instance.new("ImageLabel")
         ribbon.Name, ribbon.BackgroundTransparency, ribbon.Image, ribbon.ScaleType = "Ribbon", 1, Stage.Art.ribbon, Enum.ScaleType.Fit
-        ribbon.AnchorPoint, ribbon.Position, ribbon.Size, ribbon.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 0, 0), UDim2.fromOffset(bw, bw * 167 / 444), 6
+        ribbon.AnchorPoint, ribbon.Position, ribbon.Size, ribbon.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 0, bw * 167 / 444 / 2), UDim2.fromOffset(bw, bw * 167 / 444), 6
         ribbon.ImageColor3 = tint:Lerp(WHITE, .12)
         ribbon.Parent = big
         local word = words(ribbon, R.tierWord(Timeline.TierNames[rank]), math.floor(bw * .12), WHITE, INK, 7)
@@ -642,8 +650,20 @@ function SB.summary()
         local home, parent, before = ends.Parent, ends.Parent, ctx.endsPosition
         local k = if ctx.body.Size.X.Offset > 0 then ctx.body.AbsoluteSize.X / ctx.body.Size.X.Offset else 1
         local scale = Instance.new("UIScale")
+        -- PLAY AGAIN and HOME the same size, side by side (only in this view; the restore puts the row back as it was)
+        local play, homeButton = ends:FindFirstChild("End_play"), ends:FindFirstChild("End_home")
         local rowH = if ends.Size.Y.Offset > 0 then ends.Size.Y.Offset else 70
-        scale.Name, scale.Scale = "StoryboardScale", math.max(.5, k, size.Y * R.EndRowShare / rowH) -- PLAY AGAIN / HOME about 12 % of the screen
+        if play and homeButton and play:IsA("GuiObject") and homeButton:IsA("GuiObject") then
+            local was = {ends.Size, homeButton.Size, homeButton.Position, play.Position}
+            local bw, bh, gap = play.Size.X.Offset, play.Size.Y.Offset, 16
+            play.Position, homeButton.Position, homeButton.Size = UDim2.fromOffset(0, 0), UDim2.fromOffset(bw + gap, 0), UDim2.fromOffset(bw, bh)
+            local wasText = (homeButton :: any).TextSize
+            if homeButton:IsA("TextButton") and play:IsA("TextButton") then homeButton.TextSize = play.TextSize end
+            table.insert(ctx.restore, function() (homeButton :: any).TextSize = wasText end)
+            ends.Size, rowH = UDim2.fromOffset(bw * 2 + gap, bh), bh
+            table.insert(ctx.restore, function() ends.Size, homeButton.Size, homeButton.Position, play.Position = was[1], was[2], was[3], was[4] end)
+        end
+        scale.Name, scale.Scale = "StoryboardScale", math.max(.5, size.Y * R.EndRowShare / rowH) -- PLAY AGAIN / HOME each about 10 % of the screen
         scale.Parent = ends
         ends.Parent = layer
         ends.AnchorPoint, ends.Position, ends.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(size.X / 2, L.buttonsY), 30

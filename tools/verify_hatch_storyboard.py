@@ -81,10 +81,10 @@ do
         assert(tap.h >= 44, s[3] .. ": TAP is a big target")
         -- the bar
         local bar = R.topBar(w, h)
-        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .15, s[3] .. ": the bar")
+        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .2 and bar.text >= h * .045, s[3] .. ": the bar")
         assert(cy - eggH / 2 >= bar.h - 2, s[3] .. ": the egg starts under the bar")
         -- the reveal stack: dino 40-50 %, nothing overlaps, everything on screen
-        assert(R.Reveal.dinoH * R.DinoFill >= .38 and R.Reveal.dinoH * R.DinoFill <= .5 and R.Reveal.dinoHBig * R.DinoFill >= .38 and R.Reveal.dinoHBig * R.DinoFill <= .5, "the dino itself is about 40-50 % of the stage")
+        assert(R.Reveal.dinoH * R.DinoFill >= .4 and R.Reveal.dinoH * R.DinoFill <= .45 and R.Reveal.dinoHBig * R.DinoFill >= .4 and R.Reveal.dinoHBig * R.DinoFill <= .45, "the dino itself is about 40-50 % of the stage")
         local st = R.revealStack(w, h)
         assert(not overlap(st.plate, st.chips), s[3] .. ": the name plate and the chips do not overlap")
         assert(not overlap(st.chips, st.next), s[3] .. ": the chips and NEXT do not overlap")
@@ -347,7 +347,7 @@ MUTANTS = {
     'the build-up drags': {RULES: [('R.BuildUp = .7', 'R.BuildUp = 1.4')]},
     'phone words under 19 px': {RULES: [('R.MinText = 19', 'R.MinText = 14')]},
     'the plate covers the egg': {RULES: [('local left = eggCx + eggH * .42 + math.max(12, eggH * .08)', 'local left = eggCx - eggH * .2')]},
-    'chips sit on the name plate': {RULES: [('chipsY = .79', 'chipsY = .72')]},
+    'chips sit on the name plate': {RULES: [('chipsY = .8,', 'chipsY = .66,')]},
     'the card name sits on the chip': {RULES: [('local nameCy = chipCy - chipH / 2 - 3 - nameH / 2', 'local nameCy = chipCy - nameH / 4')]},
     'the summary cards spill off the screen': {RULES: [('local areaL, areaR = w * .54, w - 16', 'local areaL, areaR = w * .54, w + 120')]},
     'the best find is the last egg': {RULES: [('if r > rank then best, rank = i, r end', 'if r >= rank then best, rank = i, r end')]},
