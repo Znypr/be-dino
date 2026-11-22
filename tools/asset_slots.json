@@ -2889,6 +2889,214 @@
    "group": "Images.toybox_card_mythic",
    "table": "Images",
    "pending": "BD-1178 Crystal Shop cards (the Toybox rarity card; ToyboxKit already holds its slice rect)"
+  },
+  {
+   "name": "shopkit2_header_green",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_header_green",
+   "group": "Images.shopkit2_header_green",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_header_purple",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_header_purple",
+   "group": "Images.shopkit2_header_purple",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_close",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_close",
+   "group": "Images.shopkit2_close",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_common",
+   "group": "Images.shopkit2_card_common",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_uncommon",
+   "group": "Images.shopkit2_card_uncommon",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_rare",
+   "group": "Images.shopkit2_card_rare",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_epic",
+   "group": "Images.shopkit2_card_epic",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_legendary",
+   "group": "Images.shopkit2_card_legendary",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_mythic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_mythic",
+   "group": "Images.shopkit2_card_mythic",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_button_green",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_button_green",
+   "group": "Images.shopkit2_button_green",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_button_grey",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_button_grey",
+   "group": "Images.shopkit2_button_grey",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_effect_strip",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_effect_strip",
+   "group": "Images.shopkit2_effect_strip",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_art_aura_meadow",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_art_aura_meadow",
+   "group": "Images.shopkit2_card_art_aura_meadow",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_art_aura_tidal",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_art_aura_tidal",
+   "group": "Images.shopkit2_card_art_aura_tidal",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_art_aura_royal",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_art_aura_royal",
+   "group": "Images.shopkit2_card_art_aura_royal",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
+  },
+  {
+   "name": "shopkit2_card_art_trail_fern_drift",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shopkit2_card_art_trail_fern_drift",
+   "group": "Images.shopkit2_card_art_trail_fern_drift",
+   "table": "Images",
+   "reader": [
+    "src/shared/ShopKit2.luau",
+    "\"shopkit2_"
+   ]
   }
  ]
 }

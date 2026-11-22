@@ -257,6 +257,12 @@ return table.freeze({
     -- stays visible behind a window. HUD, toasts and world labels keep their cream plates. Client look only: no save, economy or reward change.
     -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     MenusTopLookEnabled = false,
+    -- BD-1287 (owner 2026-11-21 "competitive with current famous roblox experiences", docs/246 slice 1): true = the Crystal Shop landing page
+    -- is the owner-approved art-kit shop window (kit frame, studs body, green striped header, "-- FEATURED --" over three ShopKitCard cards,
+    -- the tabs as icon + word outside on the right); the world is blurred and the HUD hidden while it is open. Every other menu is unchanged.
+    -- Client look only: no save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest
+    -- profile (docs/157). Free, no Robux.
+    MenusSaeFrameEnabled = false,
     -- BD-1247 (owner 2026-11-16 "game still looks empty"): true = on the island in clear weather a warmer, slightly more saturated colour
     -- grade, gentle bloom on highlights, soft sun rays and slow floating pollen / motes per World V3 zone (client/WarmLight.client.luau,
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.

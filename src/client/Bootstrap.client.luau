@@ -523,7 +523,7 @@ render=function(name: string)
             openEggs=function() if not require(script.Parent.HubTravelClient).press("eggs",true) then open("eggs") end end})
     end
 end
-ShopScreens.attach({body=body,heading=heading,header=header,label=label,box=box,button=button,art=art,open=open,notify=notify,viewportScale=viewportScale,num=num,str=str,decoded=decoded,progression=progression,render=render,active=function() return active end})
+ShopScreens.attach({body=body,heading=heading,header=header,label=label,box=box,button=button,art=art,open=open,close=close,notify=notify,viewportScale=viewportScale,num=num,str=str,decoded=decoded,progression=progression,render=render,active=function() return active end})
 DinoIndexScreens.attach({body=body,heading=heading,header=header,label=label,box=box,button=button,open=open,notify=notify,viewportScale=viewportScale,num=num,str=str,decoded=decoded,openFusion=function() openFusion() end,equip=equip,copies=copies,bestMutation=bestMutation,eventMutation=eventMutation,ownedTraits=ownedTraits,hero=hero,speciesIndex=speciesIndex,motion=function() return motion end})
 SmallScreens.attach({body=body,heading=heading,header=header,label=label,box=box,button=button,art=art,open=open,close=close,notify=notify,viewportScale=viewportScale,touchMode=touchMode,num=num,str=str,decoded=decoded,modalVersion=function() return modalVersion end,motion=function() return motion end,celebrate=celebrate,skipped=function() return skippedEntries end,clearSkipped=function() skippedEntries={} end,markTutorialSeen=function() seenTutorial=true end,ownsAutoOpen=ownsAutoOpen,autoOpenSelection=autoOpenSelection})
 -- BD-539: Luau allows 200 locals per function and this main chunk was at 198. Everything from here to the end of the script runs inside

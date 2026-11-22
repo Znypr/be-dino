@@ -115,6 +115,23 @@ Slots.Images = {
     toybox_card_epic = "rbxassetid://135957480937538",
     toybox_card_legendary = "rbxassetid://97825459952578",
     toybox_card_mythic = "rbxassetid://101753126519705",
+    -- BD-1287: the shop menu kit 2 (ChatGPT art from the owner-approved Aura Shop design, 2026-11-22; Shared/ShopKit2)
+    shopkit2_header_green = "rbxassetid://135281684853956",
+    shopkit2_header_purple = "rbxassetid://112349325785296",
+    shopkit2_close = "rbxassetid://87256955386705",
+    shopkit2_card_common = "rbxassetid://74073435081111",
+    shopkit2_card_uncommon = "rbxassetid://79293009432615",
+    shopkit2_card_rare = "rbxassetid://91387195075524",
+    shopkit2_card_epic = "rbxassetid://135867003601513",
+    shopkit2_card_legendary = "rbxassetid://126789673438047",
+    shopkit2_card_mythic = "rbxassetid://72721022055585",
+    shopkit2_button_green = "rbxassetid://78317923917714",
+    shopkit2_button_grey = "rbxassetid://84671353627384",
+    shopkit2_effect_strip = "rbxassetid://71327587862275",
+    shopkit2_card_art_aura_meadow = "rbxassetid://110601739921140",
+    shopkit2_card_art_aura_tidal = "rbxassetid://117090366266514",
+    shopkit2_card_art_aura_royal = "rbxassetid://105110086814760",
+    shopkit2_card_art_trail_fern_drift = "rbxassetid://116725730725451",
     -- bind:end Images
 }
 Slots.Meshes = {
