@@ -7,8 +7,33 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# BD-1302 (owner 2026-11-23 "do all"): the old single job ran about 180 Luau checks one after another (15 of 18 minutes).
+# Now `checks` (repo checks, build, unit tests) and four `luau` shards run in parallel; `build` is the one required check and
+# passes when every job passed or was skipped. A pull request skips the Luau shards only when tools/ci_shard.py finds no changed
+# file that is game input or used by a listed script. Build uploads happen on pushes only.
 jobs:
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      luau: ${{ steps.gate.outputs.luau }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Does this change need the Luau checks?
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            python tools/ci_shard.py --needs-luau --base "origin/${{ github.base_ref }}" --head "${{ github.event.pull_request.head.sha }}"
+          else
+            echo "luau=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,236 +65,17 @@ jobs:
         run: python tools/board_summary.py >> "$GITHUB_STEP_SUMMARY"
       - name: Verify image bindings
         run: python tools/bind_artwork.py --check
+      - name: Cache pinned Luau tools
+        id: luau-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/luau
+          key: luau-0.741-ubuntu
       - name: Install pinned Luau tools
+        if: steps.luau-cache.outputs.cache-hit != 'true'
         run: |
           curl --fail --location https://github.com/luau-lang/luau/releases/download/0.741/luau-ubuntu.zip --output /tmp/luau.zip
           unzip /tmp/luau.zip -d /tmp/luau
-      - name: Check Luau sources and behavior
-        run: |
-          python tools/bind_ui_icons.py --check
-          python tools/bind_visual_assets.py --check
-          python tools/bind_products.py --check
-          python tools/verify_robux_line.py --selftest
-          python tools/bind_worldkit_meshes.py --check
-          python tools/verify_asset_slots.py
-          python tools/verify_sources.py --compiler /tmp/luau/luau-compile
-          python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile
-          python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile --selftest
-          python tools/verify_luau.py --runner /tmp/luau/luau
-          python tools/verify_world_art.py --runner /tmp/luau/luau
-          python tools/verify_gameplay.py --runner /tmp/luau/luau
-          python tools/verify_movement_mobile.py --runner /tmp/luau/luau
-          python tools/verify_movement_speed.py --runner /tmp/luau/luau
-          python tools/verify_identity.py --runner /tmp/luau/luau
-          python tools/verify_fusion.py --runner /tmp/luau/luau
-          python tools/verify_cosmetic_ownership.py --runner /tmp/luau/luau
-          python tools/simulate_fusion_ladder.py --check
-          python tools/verify_fusion_ui.py --runner /tmp/luau/luau
-          python tools/verify_next_goal.py --runner /tmp/luau/luau
-          python tools/verify_goals.py --runner /tmp/luau/luau
-          python tools/verify_objectives.py --runner /tmp/luau/luau
-          python tools/verify_objective_hooks.py --runner /tmp/luau/luau
-          python tools/verify_objectives_panel.py --runner /tmp/luau/luau
-          python tools/verify_starter_goals.py --runner /tmp/luau/luau
-          python tools/verify_qa_kit.py --runner /tmp/luau/luau
-          python tools/verify_demo_director.py --runner /tmp/luau/luau
-          python tools/demo/record.py --selftest
-          if command -v ffmpeg >/dev/null; then python tools/demo/edit.py selftest; else echo "ffmpeg not installed: edit.py selftest skipped"; fi
-          python tools/verify_discovery.py --runner /tmp/luau/luau
-          python tools/verify_admin.py --runner /tmp/luau/luau
-          python tools/verify_notify.py --runner /tmp/luau/luau
-          python tools/verify_audio.py --runner /tmp/luau/luau
-          python tools/verify_audio_polish.py --runner /tmp/luau/luau
-          python tools/verify_world_look.py --runner /tmp/luau/luau
-          python tools/verify_social.py --runner /tmp/luau/luau
-          python tools/verify_sound_lab.py
-          python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
-          python tools/verify_egg_toast_count.py --runner /tmp/luau/luau
-          python tools/verify_rare_hatch.py --runner /tmp/luau/luau
-          python tools/verify_rare_find_banner.py --runner /tmp/luau/luau
-          python tools/verify_inspect.py --runner /tmp/luau/luau
-          python tools/verify_eggs_screen.py --runner /tmp/luau/luau
-          python tools/verify_close_paths.py --runner /tmp/luau/luau
-          python tools/verify_key_toggle.py --runner /tmp/luau/luau
-          python tools/verify_egg_origin.py --runner /tmp/luau/luau
-          python tools/verify_load_gate.py --runner /tmp/luau/luau
-          python tools/verify_surface_maps.py
-          python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
-          python tools/verify_dino_motion.py --runner /tmp/luau/luau
-          python tools/verify_hub_scale.py --runner /tmp/luau/luau
-          python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
-          python tools/verify_lowpoly_views.py --runner /tmp/luau/luau
-          python tools/verify_motion_poses.py --runner /tmp/luau/luau --selftest
-          python tools/verify_lowpoly_clips.py --runner /tmp/luau/luau
-          python tools/verify_world_budget.py --runner /tmp/luau/luau
-          python tools/qa/phone_forecast.py --runner /tmp/luau/luau --check
-          python tools/verify_phone_guards.py --runner /tmp/luau/luau
-          python tools/verify_world_overlap.py --runner /tmp/luau/luau
-          python tools/verify_world_props.py --runner /tmp/luau/luau
-          python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
-          python tools/verify_layer_stats.py --runner /tmp/luau/luau
-          python tools/verify_world_layer.py --runner /tmp/luau/luau
-          python tools/verify_food_layer.py --runner /tmp/luau/luau
-          python tools/verify_food_hosts.py --runner /tmp/luau/luau
-          python tools/verify_food_hosts.py --runner /tmp/luau/luau --veg2
-          python tools/verify_vegetation_v2.py --runner /tmp/luau/luau
-          python tools/verify_island_life.py --runner /tmp/luau/luau
-          python tools/verify_warm_light.py --runner /tmp/luau/luau
-          python tools/verify_world_fill.py --runner /tmp/luau/luau
-          python tools/verify_plaza_shops.py --runner /tmp/luau/luau
-          python tools/verify_blob_shadow.py --runner /tmp/luau/luau
-          python tools/verify_colossal_lod.py --runner /tmp/luau/luau
-          python tools/verify_scale_ladder.py --runner /tmp/luau/luau
-          python tools/verify_cave_overlap.py --runner /tmp/luau/luau
-          python tools/verify_cave_terrain.py --runner /tmp/luau/luau
-          python tools/verify_cave_lighting.py --runner /tmp/luau/luau
-          python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
-          # cave and hub
-          python tools/verify_cave_gate.py --runner /tmp/luau/luau
-          python tools/verify_streaming_teleports.py --runner /tmp/luau/luau
-          python tools/verify_cave_hub.py --runner /tmp/luau/luau
-          python tools/verify_cave_lava.py --runner /tmp/luau/luau
-          python tools/verify_cave_weather.py
-          python tools/verify_hub_travel.py --runner /tmp/luau/luau
-          python tools/verify_hub_walk_there.py --runner /tmp/luau/luau
-          python tools/verify_shop_prompt_bubble.py --runner /tmp/luau/luau
-          python tools/verify_spawn.py --runner /tmp/luau/luau
-          # combat
-          python tools/verify_combat_service.py --runner /tmp/luau/luau
-          python tools/verify_combat_state.py --runner /tmp/luau/luau
-          python tools/verify_combat_stats.py --runner /tmp/luau/luau
-          python tools/verify_combat_teamup.py --runner /tmp/luau/luau
-          python tools/verify_npc_predators.py --runner /tmp/luau/luau
-          python tools/verify_hit_sizes.py --runner /tmp/luau/luau
-          python tools/verify_hit_zone.py --runner /tmp/luau/luau
-          # first-time player
-          python tools/verify_ftue_copy.py --runner /tmp/luau/luau
-          python tools/verify_ftue_p1.py --runner /tmp/luau/luau
-          python tools/verify_ftue_rules.py --runner /tmp/luau/luau
-          python tools/verify_safe_eggs_line.py --runner /tmp/luau/luau
-          # hatch and mutation reveal
-          python tools/verify_hatch.py --runner /tmp/luau/luau
-          python tools/verify_hatch_fx.py --runner /tmp/luau/luau
-          python tools/verify_hatch_v2.py --runner /tmp/luau/luau
-          python tools/verify_hatch_polish.py --runner /tmp/luau/luau
-          python tools/verify_hatch_storyboard.py --runner /tmp/luau/luau
-          python tools/verify_chip_style.py --runner /tmp/luau/luau
-          python tools/verify_mutation_reveal.py --runner /tmp/luau/luau
-          python tools/verify_fx_anime.py --runner /tmp/luau/luau
-          python tools/verify_fx_moments.py --runner /tmp/luau/luau
-          # HUD, settings, shop and text
-          python tools/verify_hud.py --runner /tmp/luau/luau
-          python tools/verify_settings.py --runner /tmp/luau/luau
-          python tools/verify_shop_crystals.py --runner /tmp/luau/luau
-          python tools/verify_shop_preview.py --runner /tmp/luau/luau
-          python tools/verify_text_style.py --runner /tmp/luau/luau
-          python tools/verify_rarity_words.py --runner /tmp/luau/luau
-          python tools/verify_phone_scale.py --runner /tmp/luau/luau
-          python tools/verify_small_window.py --runner /tmp/luau/luau
-          python tools/verify_menu_layout.py --runner /tmp/luau/luau
-          python tools/verify_rail_words.py --runner /tmp/luau/luau
-          python tools/verify_shop_card_price.py --runner /tmp/luau/luau
-          python tools/verify_timer_words.py --runner /tmp/luau/luau
-          python tools/verify_welcome_back.py --runner /tmp/luau/luau
-          python tools/verify_play_again.py --runner /tmp/luau/luau
-          python tools/verify_starter_run.py --runner /tmp/luau/luau
-          python tools/verify_starter_trail.py --runner /tmp/luau/luau
-          python tools/verify_dup_progress.py --runner /tmp/luau/luau
-          python tools/verify_ui_motion.py --runner /tmp/luau/luau
-          python tools/verify_toybox_ui.py --runner /tmp/luau/luau
-          python tools/verify_menus_top_look.py --runner /tmp/luau/luau
-          python tools/verify_sae_frame.py --runner /tmp/luau/luau
-          python tools/verify_juice_pass.py --runner /tmp/luau/luau
-          python tools/verify_toybox_shop.py --runner /tmp/luau/luau
-          python tools/verify_toybox_layout.py --runner /tmp/luau/luau
-          python tools/verify_hud_cohesion.py --runner /tmp/luau/luau
-          python tools/verify_phone_hud.py --runner /tmp/luau/luau
-          python tools/verify_index_milestones.py --runner /tmp/luau/luau
-          python tools/verify_loading_scene.py --runner /tmp/luau/luau
-          python tools/verify_play_cues.py --runner /tmp/luau/luau
-          python tools/verify_screens_cohesion.py --runner /tmp/luau/luau
-          python tools/verify_menus_cohesion.py --runner /tmp/luau/luau
-          python tools/verify_codes_button_spot.py --runner /tmp/luau/luau
-          python tools/verify_hatch_pacing.py --runner /tmp/luau/luau
-          python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
-          python tools/verify_tag_fit.py --runner /tmp/luau/luau
-          python tools/verify_hud_clearance.py --runner /tmp/luau/luau
-          python tools/verify_rail_column.py --runner /tmp/luau/luau
-          python tools/verify_fusion_route.py --runner /tmp/luau/luau
-          python tools/verify_price_group.py --runner /tmp/luau/luau
-          python tools/verify_owner_feedback_p1.py --runner /tmp/luau/luau
-          # world and art
-          python tools/verify_camera_occlusion.py --runner /tmp/luau/luau
-          python tools/verify_camera_framing.py --runner /tmp/luau/luau
-          python tools/verify_mouth_reach.py --runner /tmp/luau/luau
-          python tools/verify_lowpoly_budget.py --runner /tmp/luau/luau
-          python tools/verify_lowpoly_patterns.py --runner /tmp/luau/luau
-          python tools/verify_pattern_atlas.py --runner /tmp/luau/luau
-          python tools/verify_fx_textures.py
-          python tools/verify_equip_visual.py
-          # other rules
-          python tools/verify_classes.py --runner /tmp/luau/luau
-          python tools/verify_colour_bonus.py --runner /tmp/luau/luau
-          python tools/verify_rarity.py --runner /tmp/luau/luau
-          python tools/verify_colour_distinct.py
-          python tools/verify_patterns.py --runner /tmp/luau/luau
-          python tools/verify_gene_boost.py --runner /tmp/luau/luau
-          python tools/verify_pattern_colour_index.py --runner /tmp/luau/luau
-          python tools/verify_modal_blur.py --runner /tmp/luau/luau
-          python tools/qa/palette_report.py --runner /tmp/luau/luau
-          python tools/qa/ground_report.py
-          python tools/qa/budget_report.py
-          python tools/fx_budget_report.py --runner /tmp/luau/luau
-          python tools/measure_identity_storage.py --check
-          python tools/verify_progression.py --runner /tmp/luau/luau
-          python tools/verify_potion_shop.py --runner /tmp/luau/luau
-          python tools/verify_potion_purchase.py --runner /tmp/luau/luau
-          python tools/verify_ui_format.py --runner /tmp/luau/luau
-          python tools/verify_weather.py --runner /tmp/luau/luau
-          python tools/verify_env_polish.py --runner /tmp/luau/luau
-          python tools/verify_eggs.py --runner /tmp/luau/luau
-          python tools/verify_rewards.py --runner /tmp/luau/luau
-          python tools/verify_rollback.py --runner /tmp/luau/luau
-          python tools/verify_profile_golden.py --runner /tmp/luau/luau
-          python tools/verify_server_module_size.py
-          python tools/verify_server_module_size.py --selftest
-          python tools/verify_gifts.py --runner /tmp/luau/luau
-          python tools/verify_gift_ui.py --runner /tmp/luau/luau
-          python tools/verify_switch_on.py
-          python tools/verify_skins.py --runner /tmp/luau/luau
-          python tools/verify_nests.py --runner /tmp/luau/luau
-          python tools/verify_mutations.py --runner /tmp/luau/luau
-          python tools/verify_mutation_look.py --runner /tmp/luau/luau
-          python tools/verify_mutation_badges.py
-          python tools/verify_trail_icons.py
-          python tools/verify_shop_tiles.py --runner /tmp/luau/luau
-          python tools/verify_paid_random_gate.py --runner /tmp/luau/luau
-          python tools/verify_secret_species.py --runner /tmp/luau/luau
-          python tools/verify_catalog.py --runner /tmp/luau/luau
-          python tools/verify_fx.py --runner /tmp/luau/luau
-          python tools/verify_creature_genes.py --runner /tmp/luau/luau
-          python tools/verify_visual_growth.py --runner /tmp/luau/luau
-          python tools/verify_outcomes.py --runner /tmp/luau/luau
-          python tools/verify_odds_copy.py --runner /tmp/luau/luau
-          python tools/verify_previews.py --runner /tmp/luau/luau
-          python tools/verify_artwork.py --runner /tmp/luau/luau
-          python tools/verify_load.py --runner /tmp/luau/luau
-          python tools/verify_regression_walk.py --runner /tmp/luau/luau
-          python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
-          python tools/verify_session1_smoke.py --runner /tmp/luau/luau
-          python tools/verify_private_state.py --runner /tmp/luau/luau
-          python tools/verify_run_end_eggs.py --runner /tmp/luau/luau
-          python tools/verify_settle_guard.py --runner /tmp/luau/luau
-          python tools/verify_class_movement.py --runner /tmp/luau/luau
-          python tools/verify_class_picker.py --runner /tmp/luau/luau
-          python tools/verify_server_scaling.py --runner /tmp/luau/luau
-          python tools/verify_telemetry.py --runner /tmp/luau/luau
-          python tools/verify_feedback.py --runner /tmp/luau/luau
-          python tools/verify_remote_fuzz.py --runner /tmp/luau/luau
-          python tools/verify_remote_fuzz.py --runner /tmp/luau/luau --selftest
-          python tools/verify_predation_tick.py --runner /tmp/luau/luau
-          python tools/verify_predation_tick.py --runner /tmp/luau/luau --selftest
-          python tools/generate_sfx.py --check
       - name: Build place
         run: |
           python tools/build.py
@@ -280,6 +86,7 @@ jobs:
           LUAU_RUNNER: /tmp/luau/luau
         run: python -m unittest discover -s tests -v
       - name: Upload current Roblox build
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: BeDino-current-build
@@ -297,6 +104,7 @@ jobs:
             echo "PlaytestPlaceId not recorded yet (BD-004); playtest place not built."
           fi
       - name: Upload playtest build
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: BeDino-playtest-build
@@ -304,3 +112,274 @@ jobs:
             build/${{ env.BE_DINO_BUILD }}-playtest.rbxlx
             build/${{ env.BE_DINO_BUILD }}-playtest.manifest.json
           if-no-files-found: ignore
+
+  luau:
+    needs: changes
+    if: needs.changes.outputs.luau == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: luau (${{ matrix.shard }}/4)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install Pillow numpy
+      - name: Cache pinned Luau tools
+        id: luau-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/luau
+          key: luau-0.741-ubuntu
+      - name: Install pinned Luau tools
+        if: steps.luau-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location https://github.com/luau-lang/luau/releases/download/0.741/luau-ubuntu.zip --output /tmp/luau.zip
+          unzip /tmp/luau.zip -d /tmp/luau
+      - name: Check Luau sources and behavior
+        env:
+          # the check list: tools/ci_shard.py reads this block from this file and runs every 4th line in each shard
+          CI_LUAU_CHECKS: |
+            python tools/bind_ui_icons.py --check
+            python tools/bind_visual_assets.py --check
+            python tools/bind_products.py --check
+            python tools/verify_robux_line.py --selftest
+            python tools/bind_worldkit_meshes.py --check
+            python tools/verify_asset_slots.py
+            python tools/verify_sources.py --compiler /tmp/luau/luau-compile
+            python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile
+            python tools/verify_local_budget.py --ast /tmp/luau/luau-ast --compiler /tmp/luau/luau-compile --selftest
+            python tools/verify_luau.py --runner /tmp/luau/luau
+            python tools/verify_world_art.py --runner /tmp/luau/luau
+            python tools/verify_gameplay.py --runner /tmp/luau/luau
+            python tools/verify_movement_mobile.py --runner /tmp/luau/luau
+            python tools/verify_movement_speed.py --runner /tmp/luau/luau
+            python tools/verify_identity.py --runner /tmp/luau/luau
+            python tools/verify_fusion.py --runner /tmp/luau/luau
+            python tools/verify_cosmetic_ownership.py --runner /tmp/luau/luau
+            python tools/simulate_fusion_ladder.py --check
+            python tools/verify_fusion_ui.py --runner /tmp/luau/luau
+            python tools/verify_next_goal.py --runner /tmp/luau/luau
+            python tools/verify_goals.py --runner /tmp/luau/luau
+            python tools/verify_objectives.py --runner /tmp/luau/luau
+            python tools/verify_objective_hooks.py --runner /tmp/luau/luau
+            python tools/verify_objectives_panel.py --runner /tmp/luau/luau
+            python tools/verify_starter_goals.py --runner /tmp/luau/luau
+            python tools/verify_qa_kit.py --runner /tmp/luau/luau
+            python tools/verify_demo_director.py --runner /tmp/luau/luau
+            python tools/demo/record.py --selftest
+            if command -v ffmpeg >/dev/null; then python tools/demo/edit.py selftest; else echo "ffmpeg not installed: edit.py selftest skipped"; fi
+            python tools/verify_discovery.py --runner /tmp/luau/luau
+            python tools/verify_admin.py --runner /tmp/luau/luau
+            python tools/verify_notify.py --runner /tmp/luau/luau
+            python tools/verify_audio.py --runner /tmp/luau/luau
+            python tools/verify_audio_polish.py --runner /tmp/luau/luau
+            python tools/verify_world_look.py --runner /tmp/luau/luau
+            python tools/verify_social.py --runner /tmp/luau/luau
+            python tools/verify_sound_lab.py
+            python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
+            python tools/verify_egg_toast_count.py --runner /tmp/luau/luau
+            python tools/verify_rare_hatch.py --runner /tmp/luau/luau
+            python tools/verify_rare_find_banner.py --runner /tmp/luau/luau
+            python tools/verify_inspect.py --runner /tmp/luau/luau
+            python tools/verify_eggs_screen.py --runner /tmp/luau/luau
+            python tools/verify_close_paths.py --runner /tmp/luau/luau
+            python tools/verify_key_toggle.py --runner /tmp/luau/luau
+            python tools/verify_egg_origin.py --runner /tmp/luau/luau
+            python tools/verify_load_gate.py --runner /tmp/luau/luau
+            python tools/verify_surface_maps.py
+            python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
+            python tools/verify_dino_motion.py --runner /tmp/luau/luau
+            python tools/verify_hub_scale.py --runner /tmp/luau/luau
+            python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
+            python tools/verify_lowpoly_views.py --runner /tmp/luau/luau
+            python tools/verify_motion_poses.py --runner /tmp/luau/luau --selftest
+            python tools/verify_lowpoly_clips.py --runner /tmp/luau/luau
+            python tools/verify_world_budget.py --runner /tmp/luau/luau
+            python tools/qa/phone_forecast.py --runner /tmp/luau/luau --check
+            python tools/verify_phone_guards.py --runner /tmp/luau/luau
+            python tools/verify_world_overlap.py --runner /tmp/luau/luau
+            python tools/verify_world_props.py --runner /tmp/luau/luau
+            python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
+            python tools/verify_layer_stats.py --runner /tmp/luau/luau
+            python tools/verify_world_layer.py --runner /tmp/luau/luau
+            python tools/verify_food_layer.py --runner /tmp/luau/luau
+            python tools/verify_food_hosts.py --runner /tmp/luau/luau
+            python tools/verify_food_hosts.py --runner /tmp/luau/luau --veg2
+            python tools/verify_vegetation_v2.py --runner /tmp/luau/luau
+            python tools/verify_island_life.py --runner /tmp/luau/luau
+            python tools/verify_warm_light.py --runner /tmp/luau/luau
+            python tools/verify_world_fill.py --runner /tmp/luau/luau
+            python tools/verify_plaza_shops.py --runner /tmp/luau/luau
+            python tools/verify_blob_shadow.py --runner /tmp/luau/luau
+            python tools/verify_colossal_lod.py --runner /tmp/luau/luau
+            python tools/verify_scale_ladder.py --runner /tmp/luau/luau
+            python tools/verify_cave_overlap.py --runner /tmp/luau/luau
+            python tools/verify_cave_terrain.py --runner /tmp/luau/luau
+            python tools/verify_cave_lighting.py --runner /tmp/luau/luau
+            python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
+            # cave and hub
+            python tools/verify_cave_gate.py --runner /tmp/luau/luau
+            python tools/verify_streaming_teleports.py --runner /tmp/luau/luau
+            python tools/verify_cave_hub.py --runner /tmp/luau/luau
+            python tools/verify_cave_lava.py --runner /tmp/luau/luau
+            python tools/verify_cave_weather.py
+            python tools/verify_hub_travel.py --runner /tmp/luau/luau
+            python tools/verify_hub_walk_there.py --runner /tmp/luau/luau
+            python tools/verify_shop_prompt_bubble.py --runner /tmp/luau/luau
+            python tools/verify_spawn.py --runner /tmp/luau/luau
+            # combat
+            python tools/verify_combat_service.py --runner /tmp/luau/luau
+            python tools/verify_combat_state.py --runner /tmp/luau/luau
+            python tools/verify_combat_stats.py --runner /tmp/luau/luau
+            python tools/verify_combat_teamup.py --runner /tmp/luau/luau
+            python tools/verify_npc_predators.py --runner /tmp/luau/luau
+            python tools/verify_hit_sizes.py --runner /tmp/luau/luau
+            python tools/verify_hit_zone.py --runner /tmp/luau/luau
+            # first-time player
+            python tools/verify_ftue_copy.py --runner /tmp/luau/luau
+            python tools/verify_ftue_p1.py --runner /tmp/luau/luau
+            python tools/verify_ftue_rules.py --runner /tmp/luau/luau
+            python tools/verify_safe_eggs_line.py --runner /tmp/luau/luau
+            # hatch and mutation reveal
+            python tools/verify_hatch.py --runner /tmp/luau/luau
+            python tools/verify_hatch_fx.py --runner /tmp/luau/luau
+            python tools/verify_hatch_v2.py --runner /tmp/luau/luau
+            python tools/verify_hatch_polish.py --runner /tmp/luau/luau
+            python tools/verify_hatch_storyboard.py --runner /tmp/luau/luau
+            python tools/verify_chip_style.py --runner /tmp/luau/luau
+            python tools/verify_mutation_reveal.py --runner /tmp/luau/luau
+            python tools/verify_fx_anime.py --runner /tmp/luau/luau
+            python tools/verify_fx_moments.py --runner /tmp/luau/luau
+            # HUD, settings, shop and text
+            python tools/verify_hud.py --runner /tmp/luau/luau
+            python tools/verify_settings.py --runner /tmp/luau/luau
+            python tools/verify_shop_crystals.py --runner /tmp/luau/luau
+            python tools/verify_shop_preview.py --runner /tmp/luau/luau
+            python tools/verify_text_style.py --runner /tmp/luau/luau
+            python tools/verify_rarity_words.py --runner /tmp/luau/luau
+            python tools/verify_phone_scale.py --runner /tmp/luau/luau
+            python tools/verify_small_window.py --runner /tmp/luau/luau
+            python tools/verify_menu_layout.py --runner /tmp/luau/luau
+            python tools/verify_rail_words.py --runner /tmp/luau/luau
+            python tools/verify_shop_card_price.py --runner /tmp/luau/luau
+            python tools/verify_timer_words.py --runner /tmp/luau/luau
+            python tools/verify_welcome_back.py --runner /tmp/luau/luau
+            python tools/verify_play_again.py --runner /tmp/luau/luau
+            python tools/verify_starter_run.py --runner /tmp/luau/luau
+            python tools/verify_starter_trail.py --runner /tmp/luau/luau
+            python tools/verify_dup_progress.py --runner /tmp/luau/luau
+            python tools/verify_ui_motion.py --runner /tmp/luau/luau
+            python tools/verify_toybox_ui.py --runner /tmp/luau/luau
+            python tools/verify_menus_top_look.py --runner /tmp/luau/luau
+            python tools/verify_sae_frame.py --runner /tmp/luau/luau
+            python tools/verify_juice_pass.py --runner /tmp/luau/luau
+            python tools/verify_toybox_shop.py --runner /tmp/luau/luau
+            python tools/verify_toybox_layout.py --runner /tmp/luau/luau
+            python tools/verify_hud_cohesion.py --runner /tmp/luau/luau
+            python tools/verify_phone_hud.py --runner /tmp/luau/luau
+            python tools/verify_index_milestones.py --runner /tmp/luau/luau
+            python tools/verify_loading_scene.py --runner /tmp/luau/luau
+            python tools/verify_play_cues.py --runner /tmp/luau/luau
+            python tools/verify_screens_cohesion.py --runner /tmp/luau/luau
+            python tools/verify_menus_cohesion.py --runner /tmp/luau/luau
+            python tools/verify_codes_button_spot.py --runner /tmp/luau/luau
+            python tools/verify_hatch_pacing.py --runner /tmp/luau/luau
+            python tools/verify_hud_panel_stack.py --runner /tmp/luau/luau
+            python tools/verify_tag_fit.py --runner /tmp/luau/luau
+            python tools/verify_hud_clearance.py --runner /tmp/luau/luau
+            python tools/verify_rail_column.py --runner /tmp/luau/luau
+            python tools/verify_fusion_route.py --runner /tmp/luau/luau
+            python tools/verify_price_group.py --runner /tmp/luau/luau
+            python tools/verify_owner_feedback_p1.py --runner /tmp/luau/luau
+            # world and art
+            python tools/verify_camera_occlusion.py --runner /tmp/luau/luau
+            python tools/verify_camera_framing.py --runner /tmp/luau/luau
+            python tools/verify_mouth_reach.py --runner /tmp/luau/luau
+            python tools/verify_lowpoly_budget.py --runner /tmp/luau/luau
+            python tools/verify_lowpoly_patterns.py --runner /tmp/luau/luau
+            python tools/verify_pattern_atlas.py --runner /tmp/luau/luau
+            python tools/verify_fx_textures.py
+            python tools/verify_equip_visual.py
+            # other rules
+            python tools/verify_classes.py --runner /tmp/luau/luau
+            python tools/verify_colour_bonus.py --runner /tmp/luau/luau
+            python tools/verify_rarity.py --runner /tmp/luau/luau
+            python tools/verify_colour_distinct.py
+            python tools/verify_patterns.py --runner /tmp/luau/luau
+            python tools/verify_gene_boost.py --runner /tmp/luau/luau
+            python tools/verify_pattern_colour_index.py --runner /tmp/luau/luau
+            python tools/verify_modal_blur.py --runner /tmp/luau/luau
+            python tools/qa/palette_report.py --runner /tmp/luau/luau
+            python tools/qa/ground_report.py
+            python tools/qa/budget_report.py
+            python tools/fx_budget_report.py --runner /tmp/luau/luau
+            python tools/measure_identity_storage.py --check
+            python tools/verify_progression.py --runner /tmp/luau/luau
+            python tools/verify_potion_shop.py --runner /tmp/luau/luau
+            python tools/verify_potion_purchase.py --runner /tmp/luau/luau
+            python tools/verify_ui_format.py --runner /tmp/luau/luau
+            python tools/verify_weather.py --runner /tmp/luau/luau
+            python tools/verify_env_polish.py --runner /tmp/luau/luau
+            python tools/verify_eggs.py --runner /tmp/luau/luau
+            python tools/verify_rewards.py --runner /tmp/luau/luau
+            python tools/verify_rollback.py --runner /tmp/luau/luau
+            python tools/verify_profile_golden.py --runner /tmp/luau/luau
+            python tools/verify_server_module_size.py
+            python tools/verify_server_module_size.py --selftest
+            python tools/verify_gifts.py --runner /tmp/luau/luau
+            python tools/verify_gift_ui.py --runner /tmp/luau/luau
+            python tools/verify_switch_on.py
+            python tools/verify_skins.py --runner /tmp/luau/luau
+            python tools/verify_nests.py --runner /tmp/luau/luau
+            python tools/verify_mutations.py --runner /tmp/luau/luau
+            python tools/verify_mutation_look.py --runner /tmp/luau/luau
+            python tools/verify_mutation_badges.py
+            python tools/verify_trail_icons.py
+            python tools/verify_shop_tiles.py --runner /tmp/luau/luau
+            python tools/verify_paid_random_gate.py --runner /tmp/luau/luau
+            python tools/verify_secret_species.py --runner /tmp/luau/luau
+            python tools/verify_catalog.py --runner /tmp/luau/luau
+            python tools/verify_fx.py --runner /tmp/luau/luau
+            python tools/verify_creature_genes.py --runner /tmp/luau/luau
+            python tools/verify_visual_growth.py --runner /tmp/luau/luau
+            python tools/verify_outcomes.py --runner /tmp/luau/luau
+            python tools/verify_odds_copy.py --runner /tmp/luau/luau
+            python tools/verify_previews.py --runner /tmp/luau/luau
+            python tools/verify_artwork.py --runner /tmp/luau/luau
+            python tools/verify_load.py --runner /tmp/luau/luau
+            python tools/verify_regression_walk.py --runner /tmp/luau/luau
+            python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
+            python tools/verify_session1_smoke.py --runner /tmp/luau/luau
+            python tools/verify_private_state.py --runner /tmp/luau/luau
+            python tools/verify_run_end_eggs.py --runner /tmp/luau/luau
+            python tools/verify_settle_guard.py --runner /tmp/luau/luau
+            python tools/verify_class_movement.py --runner /tmp/luau/luau
+            python tools/verify_class_picker.py --runner /tmp/luau/luau
+            python tools/verify_server_scaling.py --runner /tmp/luau/luau
+            python tools/verify_telemetry.py --runner /tmp/luau/luau
+            python tools/verify_feedback.py --runner /tmp/luau/luau
+            python tools/verify_remote_fuzz.py --runner /tmp/luau/luau
+            python tools/verify_remote_fuzz.py --runner /tmp/luau/luau --selftest
+            python tools/verify_predation_tick.py --runner /tmp/luau/luau
+            python tools/verify_predation_tick.py --runner /tmp/luau/luau --selftest
+            python tools/generate_sfx.py --check
+        run: python tools/ci_shard.py --shard "${{ matrix.shard }}/4"
+
+  build:
+    needs: [changes, checks, luau]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed or was skipped
+        run: |
+          echo "changes=${{ needs.changes.result }} checks=${{ needs.checks.result }} luau=${{ needs.luau.result }}"
+          [ "${{ needs.changes.result }}" = "success" ] || exit 1
+          [ "${{ needs.checks.result }}" = "success" ] || exit 1
+          case "${{ needs.luau.result }}" in success|skipped) ;; *) exit 1 ;; esac
