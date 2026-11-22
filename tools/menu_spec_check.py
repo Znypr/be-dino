@@ -48,7 +48,7 @@ def expand(spec: dict) -> dict:
     out = {}
     for key, e in spec["elements"].items():
         if key.startswith("card*."):
-            for c in CARDS:
+            for c in spec.get("cards", CARDS):  # the screen's own card list (Dino Index has 8), else card1-3
                 if c in spec["elements"]:
                     out[c + key[5:]] = dict(e, parent=c)
         else:
