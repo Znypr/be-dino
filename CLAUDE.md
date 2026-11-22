@@ -11,9 +11,9 @@ Roblox dinosaur growth, collection and hatching game: Luau game code built into 
 ## Checks (what "checks pass" means)
 - Fast, every change (each under about 10 s): `python tools/verify_no_conflict_markers.py`, `verify_doc_ids.py`, `verify_kanban_rows.py`, `verify_handbook.py`, `python tools/lint_kid_text.py --baseline`, `python tools/bind_artwork.py --check`.
 - Luau changes: `python tools/verify_sources.py --compiler <luau-compile>` (about 10 s) plus the `verify_*.py --runner <luau>` checks your change touches (a few seconds each; full list in the CI file; runner paths in docs/160).
-- Before a PR: `python tools/build.py` (about 5 s) then `python tools/verify_release.py --profile default` (about 2 s), and `python -m unittest discover -s tests` with `LUAU_RUNNER` set (742 tests, about 9 min: run it in the background with a timeout).
+- Before a PR: `python tools/build.py` (about 5 s) then `python tools/verify_release.py --profile default` (about 2 s), plus the unit tests your change touches (`python -m unittest tests.test_<name>`). The full suite (`python -m unittest discover -s tests` with `LUAU_RUNNER` set, about 8 min) runs in CI on every PR; run it locally only for wide or risky changes (BD-1302).
 - Profile, save or flag work: also `verify_rollback.py`, `verify_profile_golden.py`, `verify_switch_on.py`, `verify_robux_line.py --selftest`, and `python tools/run_rehearsal.py --runner <luau> --compiler <luau-compile> --profile all-on-rehearsal` (about 90 s).
-- After committing, for board changes: `python tools/verify_kanban_merge.py --base origin/main --head HEAD`. CI runs everything above on every PR.
+- After committing, for board changes: `python tools/verify_kanban_merge.py --base origin/main --head HEAD`. CI runs everything above on every PR, in parallel jobs (about 6 min): `checks` plus four Luau shards via `tools/ci_shard.py`; a PR that changes nothing the Luau list uses skips the shards. The one required check is `build`.
 
 ## Rules
 - `main` is protected: work on a branch in your own worktree, open a PR. Merging green, reviewed PRs is delegated to the lead session (docs/160, owner 2026-10-16), logged as a LEAD decision; sub-agents never merge. Never rebase or force-push; catch up with `git merge origin/main`. No `git stash` (shared between worktrees).

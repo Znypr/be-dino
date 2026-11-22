@@ -631,6 +631,8 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "NestsJson", HttpService:JSONEncode(nestSummary))
     -- BD-1230: the Dino Index milestones this save already got (additive field, absent = none); only with the flag on
     if Config.IndexMilestonesEnabled == true then PrivateState.set(player, "IndexMilestonesJson", HttpService:JSONEncode(if typeof(profile.indexMilestones) == "table" then profile.indexMilestones else {})) end
+    -- BD-1299: the Dino Index zone rewards this save already claimed (additive field, absent = none); only with the flag on
+    if Config.IndexZonesEnabled == true then PrivateState.set(player, "IndexZonesJson", HttpService:JSONEncode(if typeof(profile.indexZoneRewards) == "table" then profile.indexZoneRewards else {})) end
     PrivateState.set(player, "RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
     PrivateState.set(player, "SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
@@ -1215,5 +1217,7 @@ require(script.Parent.ProfileGifts)(ProfileRepository, shared)
 require(script.Parent.ProfileSkins)(ProfileRepository, shared)
 -- BD-1233: one-use codes and the group gift chest (inert while Config.CodesEnabled is false)
 require(script.Parent.ProfileCodes)(ProfileRepository, shared)
+-- BD-1299: the Dino Index zone reward claim (inert while Config.IndexZonesEnabled is false)
+require(script.Parent.ProfileIndexZones)(ProfileRepository, shared)
 
 return ProfileRepository

@@ -276,6 +276,13 @@ return table.freeze({
     -- Client presentation only: no save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the
     -- playtest profile (docs/157). Free, no Robux.
     JuicePassEnabled = false,
+    -- BD-1299 (owner 2026-11-23 "Rebuild both now", docs/evidence/2026-11-23-index-proposal): true = the kit Dino Index (with
+    -- MenusSaeFrameEnabled) is split into four ZONES (Meadow, Forest, Beach, Volcano; Shared/IndexZones, PROVISIONAL split) picked with zone
+    -- buttons outside the window, and each zone pays FREE crystals once at half and at all of its species (PROVISIONAL 100 / 250), claimed with
+    -- the CLAIM button through the server-validated IndexZoneAction remote (server/IndexZoneService), stored in the ADDITIVE profile field
+    -- indexZoneRewards. Never Robux, never a paid or random item. false = exactly as before: no remote, nothing read or written. Pinned off in
+    -- the default profile, ON in the playtest profile (docs/157).
+    IndexZonesEnabled = false,
     -- BD-1247 (owner 2026-11-16 "game still looks empty"): true = on the island in clear weather a warmer, slightly more saturated colour
     -- grade, gentle bloom on highlights, soft sun rays and slow floating pollen / motes per World V3 zone (client/WarmLight.client.luau,
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.

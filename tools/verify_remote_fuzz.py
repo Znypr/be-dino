@@ -67,7 +67,7 @@ OTHER_ENTRY_POINTS = ["ProcessReceipt", "ShowOffSpot"]
 REVIEWED_SITES = {
     ("AdminGifts.luau", "invoke"): 1, ("AdminService.luau", "invoke"): 1, ("DemoTriggerService.luau", "invoke"): 1,
     ("FusionService.luau", "invoke"): 1, ("GiftService.luau", "invoke"): 1, ("HubTravelService.luau", "invoke"): 1,
-    ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1, ("CodeService.luau", "invoke"): 1,
+    ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1, ("CodeService.luau", "invoke"): 1, ("IndexZoneService.luau", "invoke"): 1,
     ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 1, ("CollectionService.luau", "event"): 2,
     ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("FunnelService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
     ("MutationService.luau", "event"): 1, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
@@ -209,7 +209,7 @@ def strip_comments(text: str) -> str:
 
 
 # Every profile write (a `store:UpdateAsync(` in ProfileRepository) is classified. A new write must be put in one set on purpose:
-ROUTINE_WRITES_WITH_ADMIT = {"fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "objectiveFlush", "objectiveClaim", "applySkin", "redeemToken"}
+ROUTINE_WRITES_WITH_ADMIT = {"fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "objectiveFlush", "objectiveClaim", "applySkin", "redeemToken", "claimIndexZone"}
 ADMIT_AT_CALLER = {"writeRevealSkip", "writeSettings"}  # setRevealSkip / setSettings / the coalescing flush call admit() first
 PRIORITY_WRITES = {"load", "commitRunSettlement", "purchase", "renew", "release", "applyGifts"}  # never starved by a flooding client
 FLAG_GATED_WRITES = {"grantCollectionTestSpecies", "grantChestTest", "setMutationTestCopies", "demoGrantEggs", "demoEquip", "demoAddCrystals"}
