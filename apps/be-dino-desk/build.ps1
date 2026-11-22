@@ -11,7 +11,11 @@ Push-Location (Join-Path $root 'ui')
 try { & npm run build; if ($LASTEXITCODE -ne 0) { throw 'UI build failed.' } } finally { Pop-Location }
 
 if (-not $SkipSmoke) {
-    $p = Start-Process -FilePath $electron -ArgumentList '.', '--smoke' -WorkingDirectory $root -Wait -PassThru -NoNewWindow
+    # the smoke tests the checkout being built (its tools/desk_catalog.py and docs/menu-specs), not the repo the installed app shows
+    $oldRepo = $env:BE_DINO_REPO
+    $env:BE_DINO_REPO = (Resolve-Path (Join-Path $root '..\..')).Path
+    try { $p = Start-Process -FilePath $electron -ArgumentList '.', '--smoke' -WorkingDirectory $root -Wait -PassThru -NoNewWindow }
+    finally { $env:BE_DINO_REPO = $oldRepo }
     if ($p.ExitCode -ne 0) { throw "Smoke test failed (exit $($p.ExitCode))." }
     Write-Output 'Smoke test passed.'
 }

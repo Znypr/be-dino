@@ -1,5 +1,6 @@
 // Be Dino Desk (docs/247): tabs of groups of pictures; Like / Dislike / Upgrade + a note per item, a note per group.
 // Every change saves the whole feedback file (debounced) through main.js -> docs/feedback/asset-desk.json.
+// The last tab, Menus (BD-1301, views/Menus.tsx), compares each menu proposal with its build per element; notes -> menu-feedback.json.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FolderOpen, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, Bone } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { desk, now, query, type Catalog, type Feedback, type Group, type Item, type Verdict } from './desk';
 import Specimens, { SPECIMENS } from './views/Specimens';
+import Menus from './views/Menus';
 import { runSmoke } from './smoke';
 
 export type Filter = 'all' | 'unrated' | Verdict;
@@ -106,7 +108,9 @@ export default function App() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (cat && query.get('smoke')) runSmoke(cat, { setTab, setFilter, setOpen, setItem }); }, [cat]);
 
-  const groups = cat?.tabs[tab]?.groups || [];
+  const menusTab = cat?.menus ? cat.tabs.length : -1;
+  const onMenus = tab === menusTab;
+  const groups = onMenus ? [] : cat?.tabs[tab]?.groups || [];
   const pass = useCallback((it: Item) => {
     const v = fb.items[it.id]?.verdict;
     return filter === 'all' || (filter === 'unrated' ? !v : v === filter);
@@ -138,7 +142,7 @@ export default function App() {
       <header className="flex items-center gap-3 border-b px-2">
         <span className="flex h-7 shrink-0 items-center gap-2 px-2 text-sm font-semibold"><Bone className="size-4 text-muted-foreground" />Be Dino Desk</span>
         <nav className="flex h-full" aria-label="Tabs">
-          {(cat?.tabs || []).map((t, i) => (
+          {[...(cat?.tabs || []), ...(cat?.menus ? [{ name: 'Menus' }] : [])].map((t, i) => (
             <button key={t.name} onClick={() => { setTab(i); scroller.current?.scrollTo({ top: 0 }); }}
               className={cn('relative flex h-full items-center px-3 text-sm text-muted-foreground hover:text-foreground',
                 i === tab && 'text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-foreground')}>
@@ -146,7 +150,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className={cn('ml-auto flex items-center gap-2', onMenus && 'hidden')}>
           <ToggleGroup type="single" size="sm" variant="outline" value={filter} onValueChange={(v) => v && setFilter(v as Filter)}>
             {(['all', 'unrated', 'like', 'dislike', 'upgrade'] as Filter[]).map((f) => (
               <ToggleGroupItem key={f} value={f} className="px-2 text-xs capitalize">{f}</ToggleGroupItem>
@@ -162,6 +166,7 @@ export default function App() {
         </div>
       </header>
 
+      {onMenus && cat?.menus ? <Menus menus={cat.menus} /> : (
       <div className="grid min-h-0 grid-cols-[200px_1fr]">
         <aside className="min-h-0 overflow-y-auto border-r py-2">
           {groups.map((g) => {
@@ -197,8 +202,23 @@ export default function App() {
           ))}
         </main>
       </div>
+      )}
 
       <footer className="flex items-center justify-between gap-3 border-t px-3 text-[11px] text-muted-foreground">
+        {onMenus ? (
+          <>
+            <span className="flex items-center gap-3">
+              <span>click a box: element · elsewhere or <Kbd className="h-4 border bg-transparent px-1 text-[10px]">Shift</Kbd>+click: pin</span>
+              <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">1</Kbd>-<Kbd className="h-4 border bg-transparent px-1 text-[10px]">9</Kbd> tags</span>
+              <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">Enter</Kbd> save</span>
+              <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">Esc</Kbd> close</span>
+              <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">B</Kbd> blink</span>
+              <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">P</Kbd> pin mode</span>
+              <span>wheel zoom · drag pan · <Kbd className="h-4 border bg-transparent px-1 text-[10px]">F</Kbd> fit</span>
+            </span>
+            <span>notes save to docs/feedback/menu-feedback.json</span>
+          </>
+        ) : (<>
         <span className="flex items-center gap-3">
           <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">1</Kbd> like</span>
           <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">2</Kbd> dislike</span>
@@ -206,6 +226,7 @@ export default function App() {
           <span><Kbd className="h-4 border bg-transparent px-1 text-[10px]">Left</Kbd><Kbd className="ml-0.5 h-4 border bg-transparent px-1 text-[10px]">Right</Kbd> next picture</span>
         </span>
         <span>{counts.like} liked · {counts.dislike} disliked · {counts.upgrade} to upgrade · {state === 'saving' ? 'saving...' : 'saved to docs/feedback/asset-desk.json'}</span>
+        </>)}
       </footer>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>

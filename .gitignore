@@ -13,6 +13,8 @@ build/*-all-on-no-combat.manifest.json
 
 # tools/release_playtest.py (docs/148): release manifests, dry-run output and verifier logs, local only.
 build/release/
+# tools/menu_spec_check.py reports and crops (BD-1300/1301), local only; step evidence goes to docs/evidence.
+build/menu-check/
 
 # Current generated build (BD-419): produced by tools/build.py and the CI artifact, never committed.
 # Older Build016-019 files stay tracked as history; new ones are ignored.
