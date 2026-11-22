@@ -247,16 +247,16 @@ def potion_mock(L, runner, w, h, inset):
         studK = cw / d['w']
         studded(canvas, d, x, y, cw, ch, studK * 0.7, studK)
         e = lay['edge']
+        name = name.split()[0]  # the card shows the first word (BD-1298)
         words(canvas, name, x + 4, y + e, cw - 8, lay['nameH'], max(19, min(lay['cardTitle'], int((cw - 12) / (len(name) * 0.56)))))  # KitCard fits the name
         words(canvas, rarity, x + 4, y + e + lay['nameH'] - 2, cw - 8, lay['rarityH'], lay['rarityText'])
         by = ch - e - lay['button']
         sy = by - lay['innerGap'] - lay['lineH']
-        bottom = sy - 2 - lay['artGap']  # BD-1298: "Lasts 5 min" sits between the bottle and the strip
+        bottom = sy - 2  # BD-1298: the bottle between the rarity word and the strip
         art = min(lay['art'], bottom - lay['artTop'], cw - 4)
         picture(canvas, ITEMS / f'potion-{file}-512.png', x + (cw - art) // 2, y + lay['artTop'] + (bottom - lay['artTop'] - art) // 2, art, art)
-        bg, ls = lay['badge'], lay['lasts']
-        words(canvas, '3 left', x + bg['x'], y + bg['y'], bg['w'], bg['h'], bg['size'], align='right')
-        words(canvas, lasts, x + ls['x'], y + ls['y'], ls['w'], ls['h'], ls['size'])
+        bg = lay['badge']
+        words(canvas, 'x3', x + bg['x'], y + bg['y'], bg['w'], bg['h'], bg['size'], align='right')
         strip(canvas, L, x + lay['stripInset'], y + sy, cw - 2 * lay['stripInset'], lay['lineH'], kind, lay['lineText'])
         button(canvas, L, x + lay['buttonInset'], y + by, cw - 2 * lay['buttonInset'], lay['button'], price=price, text=lay['buttonText'])
     t, g = lay['timer'], lay['page']  # BD-1298: the restock words and the page arrow in the header

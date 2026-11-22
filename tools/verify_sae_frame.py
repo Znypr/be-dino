@@ -278,8 +278,8 @@ print("sae menus passed")
 '''
 
 # BD-1298: the Potion Shop follows the owner's proposed picture (docs/evidence/2026-11-23-potion-proposal/proposal.jpg; ChatGPT's ranked
-# differences): a 1.40 : 1 window 71.5 % H, three tall cards ~30 % W x 70-73 % H, 2-3 % apart, the bottle 35-40 % of the card, the name
-# 10-12 %, the rarity word 5-7 %, the timer inside the header at ~63 %, the X and the title ~15 % bigger, no row under the cards.
+# differences): a 1.40 : 1 window 71.5 % H, three tall cards ~30 % W x 70-73 % H, 2-3 % apart, the bottle 45-48 % of the card (lead review), the
+# name 10-12 %, the rarity word 55 % of the name (19 px floor), the timer inside the header at ~63 %, the X and the title ~15 % bigger, no row under the cards.
 LUAU_POTION = r'''
 local fails = {}
 local function check(ok, what) if not ok then table.insert(fails, what) end end
@@ -288,7 +288,7 @@ local P = M.potionLayout(1280, 720, 0)
 local w = P.window
 check(near(w.w / w.h, 1.36, 1.44) and near(w.h / 720, .70, .73), "Potion Shop window 1.40 : 1, 71.5 % H (the picture)")
 check(math.abs(w.x + w.w / 2 - 640) <= 1 and near(w.y / 720, .15, .18), "Potion Shop centred, top at 15-18 %")
-check(near(P.close, 62, 66) and near(P.titleSize, 42, 46) and P.close + 8 <= P.headerH, "the X ~64 px and the title ~44 px (15 % over 56 / 38), the X inside the header")
+check(near(P.close, 78, 86) and near(P.titleSize, 44, 48) and P.close + 8 <= P.headerH, "the picture's X (~82 px) and title (~46 px), the X inside the header")
 check(near(P.headerH / w.h, .16, .19), "header 16-19 % of the window (the picture)")
 check(#P.cards == 3 and M.Potion.perPage == 3, "three potions per page")
 for _, c in P.cards do check(near(c.w / w.w, .28, .32) and near(c.h / w.h, .70, .74), "tall cards ~30 % of the window width, 70-74 % of its height") end
@@ -296,8 +296,8 @@ local gap = P.cards[2].x - P.cards[1].x - P.cards[1].w
 check(near(gap / w.w, .02, .03), "cards 2-3 % of the window apart")
 check(math.abs(P.cards[1].x - (w.w - P.cards[3].x - P.cards[3].w)) <= 1, "the card row centred")
 local c = P.cards[1]
-check(near(P.art / c.h, .35, .40), "the bottle 35-40 % of the card")
-check(near(P.cardTitle / c.h, .10, .12) and near(P.rarityText / c.h, .05, .07), "the name 10-12 % of the card, the rarity word 5-7 %")
+check(near(P.art / c.h, .48, .52), "the bottle ~50 % of the card (owner 2026-11-23: the picture's card)")
+check(near(P.cardTitle / c.h, .10, .12) and P.rarityText == math.max(19, math.floor(P.cardTitle * 0.55 + 0.5)), "the name 10-12 % of the card, the rarity word 55 % of it (19 px floor)")
 check(c.y + c.h + 6 <= w.h and w.h - c.y - c.h <= 30, "nothing under the cards (no restock row, no Yours strip)")
 check(P.restock == nil and P.more == nil and P.band == nil, "no restock row, page row or Yours strip in the layout")
 local hw = w.w - 2 * P.headerInset
@@ -306,19 +306,19 @@ check(near(tc / hw, .58, .66), "the restock timer inside the header at ~63 % of 
 check(P.timer.size >= 19 and P.timer.y + P.timer.h <= P.headerInset + P.headerH + 4, "the timer text 19+ px, in the header")
 check(M.TimerColour[1] >= 240 and M.TimerColour[2] >= 220 and M.TimerColour[3] < 200, "the timer yellow-white")
 check(P.stripeAt >= .45 and P.stripeAt <= .55, "the header stripes from about half the header (the picture)")
-check(P.badge.x + P.badge.w <= c.w - 4 and P.badge.y >= P.artTop - 4 and P.badge.y < P.artTop + P.art, "the stock badge top right, under the rarity word")
-check(P.lasts.y + P.lasts.h <= c.h - P.edge - P.button - P.innerGap - P.lineH and P.lasts.y >= P.artTop + P.art, "Lasts 5 min between the bottle and the strip")
-check(P.artGap == P.innerGap + P.lasts.h, "KitCard leaves the Lasts line free (artGap)")
+check(P.badge.x + P.badge.w <= c.w - 4 and P.badge.x >= c.w * 0.6 and P.badge.y == P.artTop and near(P.badge.size, 19, 22), "the small x3 count top right under the rarity word (the picture)")
+check(P.lasts == nil and P.artTop + P.art + 2 + P.lineH + P.innerGap + P.button + P.edge <= c.h, "no Lasts line on the card; the bottle between the rarity word and the strip")
+check(P.artGap == nil and M.shortName("Swift Sip") == "Swift" and M.shortName("Titan") == "Titan", "short names: the first word (the picture)")
 check(M.PotionTitle == "Potions" and M.YoursTitle == "My Potions" and M.DrinkWord == "Drink!", "title Potions; the owned page My Potions with Drink!")
 check(M.PotionRail[1] == "featured" and M.PotionRail[2] == "potions" and M.PotionRail[3] == "trails" and M.PotionRail[4] == "auras" and M.PotionRail[5] == "eggs", "rail Featured, Potions, Trails, Auras, Eggs (the picture)")
 check(near((P.rail.x - w.x - w.w) / 1280, .009, .016) and near(P.rail.icon / 720, .07, .08), "rail 1-1.5 % W right of the window, icons 7-8 % H")
 -- kid words: no numbers, "3 left" not "x3", Legendary growth "Grow super fast!"
 check(M.kindWord("growth") == "Grow faster!" and M.kindWord("speed") == "Run faster!" and M.kindWord("growth", "Legendary") == "Grow super fast!", "Grow faster! / Run faster! / Grow super fast!")
 for kind, word in M.SuperWords do check(not string.find(word, "[%d%%]"), "super kid line without numbers: " .. kind) end
-check(M.left(3) == "3 left" and M.have(2) == "Have 2" and M.lasts(300) == "Lasts 5 min", "3 left, Have 2, Lasts 5 min")
+check(M.count(3) == "x3" and M.lasts(300) == "Lasts 5 min", "x3 (a count), Lasts 5 min")
 -- the Studio canvas: the bottle still big
 local S = M.potionLayout(1274, 423, 58)
-check(S.art >= 85 and near(S.art / S.cards[1].h, .33, .40), "Studio canvas: the bottle 85+ px, 33-40 % of the card")
+check(S.art >= 125 and near(S.art / S.cards[1].h, .45, .52), "Studio canvas: the bottle 125+ px, 45-52 % of the card")
 -- every size: floors, everything fits, inside the window and the screen
 for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36}, {1274, 423, 58}, {844, 390, 0}, {812, 375, 0}, {667, 375, 0}, {932, 430, 0}, {1180, 820, 36}, {740, 360, 0}} do
     local sw, sh, inset = size[1], size[2], size[3]
@@ -328,14 +328,14 @@ for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36
     check(win.x >= 0 and win.y >= 0 and win.x + win.w <= sw and win.y + win.h <= sh, tag .. ": window on screen")
     check(k.w >= 120, tag .. ": potion card wide enough for its button")
     check(p.art >= 60, tag .. ": the bottle 60+ px")
-    check(p.artTop + p.art + p.artGap + p.innerGap + p.lineH + p.innerGap + p.button + p.edge <= k.h, tag .. ": potion card parts fit")
-    for _, t in {p.cardTitle, p.rarityText, p.lineText, p.buttonText, p.timer.size, p.lasts.size, p.badge.size, p.titleSize} do check(t >= 19, tag .. ": potion text >= 19 px") end
+    check(p.artTop + p.art + 2 + p.lineH + p.innerGap + p.button + p.edge <= k.h, tag .. ": potion card parts fit")
+    for _, t in {p.cardTitle, p.rarityText, p.lineText, p.buttonText, p.timer.size, p.badge.size, p.titleSize} do check(t >= 19, tag .. ": potion text >= 19 px") end
     check(p.button >= 44 and p.page.w >= 44 and p.page.h >= 44 and p.close >= 48, tag .. ": buy button, page arrow 44+ px, X 48+")
     local closeX = win.w - p.headerInset - math.floor((p.headerH - p.close) / 2) - p.close
     check(p.page.x + p.page.w <= closeX and p.page.y >= p.headerInset and p.page.y + p.page.h <= p.headerInset + p.headerH, tag .. ": the page arrow in the header, left of the X")
     check(p.timer.x + p.timer.w <= p.page.x, tag .. ": the timer clear of the page arrow")
     check(p.timer.x >= p.headerInset + math.floor(p.headerH * 0.2) + M.textWidth(M.YoursTitle, p.titleSize), tag .. ": the timer clear of the title")
-    check(p.badge.w >= M.textWidth("3 left", p.badge.size), tag .. ": the badge fits 3 left")
+    check(p.badge.w >= M.textWidth("x3", p.badge.size), tag .. ": the badge fits x3")
     for _, s in p.rail.slots do check(s.x >= win.x + win.w and s.x + s.w <= sw and s.y >= 0 and s.y + s.h <= sh, tag .. ": rail right of the window, on screen") end
 end
 if #fails > 0 then error("potion shop FAILED:\n" .. table.concat(fails, "\n")) end
@@ -371,7 +371,7 @@ def scan2(src):
     need('Menu.lasts(item.duration)' in potion and 'Menu.kindWord(item.kind, item.rarity)' in potion and 'multiplier' not in potion, 'kid words: what it does and how long, never the multiplier')
     need('if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end' in potion and 'TimerWords.restockIn(' in potion, 'New in 3 min counts down; a new window redraws')
     # BD-1298: the proposed picture
-    need('badge = if left > 0 then Menu.left(left) else nil' in potion and 'Menu.count(' not in potion, 'the stock badge says "3 left" (never "x3")')
+    need('badge = if left > 0 then Menu.count(left) else nil' in potion and potion.count('name = Menu.shortName(item.name)') == 2 and 'Lasts_' not in potion, 'the card: short name, the x3 count, no Lasts line (the picture)')
     need('live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y, t.w, t.h, t.size, 36, Color3.fromRGB(c[1], c[2], c[3]))' in potion,
          'the restock timer in the header, yellow-white')
     need('word = Menu.DrinkWord, grey = false, onPick = function() d.onUse(item) end' in potion and 'state.page = if state.page < pages then state.page + 1 else 1' in potion
@@ -407,7 +407,7 @@ MUTANTS = {
     'the Index hand-over ignores the flag': ('screens', 'if Config.MenusSaeFrameEnabled==true and require(script.Parent.DinoIndexKit)', 'if require(script.Parent.DinoIndexKit)'),
     'a buy tap buys at once': ('shops', 'onBuy=function(item) potionChoice.id=item.id open("potionConfirm") end', 'onBuy=function(item) transact("buyPotion",item.id,false) end'),
     'the card shows the multiplier': ('potion', 'Menu.kindWord(item.kind, item.rarity)', 'tostring(item.multiplier)'),
-    'the stock badge says x3': ('potion', 'badge = if left > 0 then Menu.left(left) else nil', 'badge = if left > 0 then Menu.count(left) else nil'),
+    'the full catalog name': ('potion', 'key = item.id, rarity = item.rarity, name = Menu.shortName(item.name),', 'key = item.id, rarity = item.rarity, name = item.name,'),
     'the timer leaves the header': ('potion', 'live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y,', 'live.restock = Art.words(window, "Restock", restockWords(d.window), 8, w.h - 30,'),
     'no way to drink': ('potion', 'local pages = shopPages + ownPages', 'local pages = shopPages'),
     'the rail back in the old order': ('potion', 'tabs = Menu.PotionRail, words = Menu.PotionRailWords,', 'tabs = FrameRules.RailTabs, words = FrameRules.RailWords,'),
@@ -423,17 +423,19 @@ MUTANTS = {
 }
 LUAU_MUTANTS = {
     'the potion window back at 1.85 : 1': ('M.Potion = {h = 0.715, aspect = 1.40,', 'M.Potion = {h = 0.715, aspect = 1.85,'),
-    'the bottle at 25 % of the card': ('bottle = 0.38,', 'bottle = 0.25,'),
+    'the bottle at 25 % of the card': ('bottle = 0.50,', 'bottle = 0.25,'),
+    'the count in the middle': ('local badge = {x = cardW - c.edge - 4 - badgeW,', 'local badge = {x = math.floor((cardW - badgeW) / 2),'),
+    'the rarity word as big as the name': ('local rarityText = math.clamp(round(cardTitle * 0.55), M.MinText, 32)', 'local rarityText = math.clamp(round(cardTitle * 0.9), M.MinText, 32)'),
     'the buy button under 44 px': ('local button = if small then M.MinTap else math.max(M.MinTap, round(cH * P.button))', 'local button = if small then 36 else round(cH * 0.09)'),
     'the timer back at the left': ('timerAt = 0.63,', 'timerAt = 0.25,'),
-    'the X at the shared kit size': ('local close = math.max(round(M.MinClose * 1.15), round(h * 0.089))', 'local close = math.max(M.MinClose, round(h * 0.078))'),
+    'the X at the shared kit size': ('local close = math.max(round(M.MinClose * 1.15), round(h * P.close))', 'local close = math.max(M.MinClose, round(h * 0.078))'),
     'the page arrow over the X': ('local page = {x = closeX - math.max(6, round(close * 0.15)) - pageS,', 'local page = {x = closeX - 10,'),
-    'the badge says x3': ('function M.left(n: number): string return tostring(math.max(0, math.floor(n))) .. " left" end', 'function M.left(n: number): string return "x" .. tostring(n) end'),
+    'the long name': ('function M.shortName(name: string): string return string.match(name, "^(%S+)") or name end', 'function M.shortName(name: string): string return name end'),
     'Legendary growth with a number': ('growth = "Grow super fast!"', 'growth = "x2 Growth"'),
     'kid line with a number': ('growth = "Grow faster!"', 'growth = "+40% growth"'),
     'the Index panel at 40 %': ('panel = 0.28,', 'panel = 0.40,'),
     'the rail inside the window': ('local x = win.x + win.w + math.max(6, round(w * 0.0125))', 'local x = win.x + win.w - 40'),
-    'text under 19 px on a phone': ('local rarityText = if small then M.MinText else', 'local rarityText = if small then 14 else'),
+    'text under 19 px on a phone': ('local rarityText = math.clamp(round(cardTitle * 0.55), M.MinText, 32)', 'local rarityText = math.clamp(round(cardTitle * 0.55), 14, 32)'),
 }
 
 

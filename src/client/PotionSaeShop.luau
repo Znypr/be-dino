@@ -1,11 +1,11 @@
 --!strict
 -- BD-1296 (docs/246 slice 2): with Config.MenusSaeFrameEnabled the POTION SHOP is the shop menu kit window (client/KitWindow, slice 1's
 -- Crystal Shop window). BD-1298: laid out as the owner's PROPOSED PICTURE (docs/evidence/2026-11-23-potion-proposal/proposal.jpg): the
--- green header "Potions" with the red X, the restock words "New in 2 min" INSIDE the header (yellow-white) and a small grey page arrow left of
--- the X; THREE tall kit rarity cards (the big name, the rarity word, "3 left" top right, the bound potion picture big in the middle, "Lasts
--- 5 min" small, a kid line "Grow faster!" on the dark strip, the green price button with the orange crystal; "Sold out" grey). Nothing under
--- the cards. The arrow pages the shop, then "My Potions" (the potions the player owns, "Have 2", a green "Drink!" button: the only place
--- to drink one), then the shop again. The shop tabs sit outside the window on the right in the picture's order (Potions selected).
+-- green header "Potions" with the red X, the yellow restock words "New in 2 min" INSIDE the header and a small grey page arrow left of the
+-- X; THREE tall kit rarity cards with the picture's words only (the short name "Swift", the rarity word, the "x3" count top right, the
+-- bound potion picture half the card, a kid line "Grow faster!" on the dark strip, the green price button with the orange crystal; "Sold
+-- out" grey). Nothing under the cards. The arrow pages the shop, then "My Potions" (the potions the player owns, "x2", "Lasts 5 min" on
+-- the strip, a green "Drink!" button: the only place to drink one), then the shop again. The shop tabs sit outside the window on the right in the picture's order (Potions selected).
 -- Numbers: Shared/SaeMenuRules (potionLayout); art: Shared/ShopKit2 through the kit pieces. Client presentation only: no remote, no price
 -- and no stock rule here; a buy tap opens the purchase confirm (ShopScreens), a drink tap goes through ShopScreens' use path, the server
 -- decides both.
@@ -70,11 +70,11 @@ function M.build(body: GuiObject, d: any): boolean
                 local left = ProgressionRules.shopRemaining(p, d.window, item.id)
                 local function buy() if left > 0 then d.onBuy(item) end end
                 table.insert(cards, {
-                    key = item.id, rarity = item.rarity, name = item.name, rarityWord = item.rarity, picture = icon(item),
+                    key = item.id, rarity = item.rarity, name = Menu.shortName(item.name), rarityWord = item.rarity, picture = icon(item),
                     effect = Menu.kindWord(item.kind, item.rarity), price = if left > 0 then item.price else nil,
                     word = if left > 0 then nil else Menu.SoldOut, grey = left <= 0, gem = gem, onPick = buy,
                 })
-                table.insert(extras, {badge = if left > 0 then Menu.left(left) else nil, lasts = Menu.lasts(item.duration)})
+                table.insert(extras, {badge = if left > 0 then Menu.count(left) else nil})
             end
         end
     else
@@ -82,10 +82,10 @@ function M.build(body: GuiObject, d: any): boolean
         for i = first, math.min(last, #owned) do
             local item, n = owned[i].item, owned[i].n
             table.insert(cards, {
-                key = item.id, rarity = item.rarity, name = item.name, rarityWord = item.rarity, picture = icon(item),
-                effect = Menu.kindWord(item.kind, item.rarity), word = Menu.DrinkWord, grey = false, onPick = function() d.onUse(item) end,
+                key = item.id, rarity = item.rarity, name = Menu.shortName(item.name), rarityWord = item.rarity, picture = icon(item),
+                effect = Menu.lasts(item.duration), word = Menu.DrinkWord, grey = false, onPick = function() d.onUse(item) end,
             })
-            table.insert(extras, {badge = Menu.have(n), lasts = Menu.lasts(item.duration)})
+            table.insert(extras, {badge = Menu.count(n)})
         end
     end
     local live: {restock: TextLabel?} = {restock = nil}
@@ -108,16 +108,15 @@ function M.build(body: GuiObject, d: any): boolean
                 state.page = if state.page < pages then state.page + 1 else 1
                 d.rerender()
             end})
-            -- on each card: the stock badge top right ("3 left" / "Have 2") and "Lasts 5 min" over the strip
+            -- on each card: the small count top right ("x3" in stock / owned), as in the picture
             for i, extra in extras do
                 local r = lay.cards[i]
                 if not r then break end
-                local b, l = lay.badge, lay.lasts
+                local b = lay.badge
                 if extra.badge then
                     local badge = Art.words(window, "Badge_" .. i, extra.badge, r.x + b.x, r.y + b.y, b.w, b.h, b.size, 38)
                     badge.TextXAlignment = Enum.TextXAlignment.Right
                 end
-                Art.words(window, "Lasts_" .. i, extra.lasts, r.x + l.x, r.y + l.y, l.w, l.h, l.size, 38)
             end
             if mine and #cards == 0 then
                 local r1, r3 = lay.cards[1], lay.cards[3]
