@@ -263,6 +263,12 @@ return table.freeze({
     -- Client look only: no save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest
     -- profile (docs/157). Free, no Robux.
     MenusSaeFrameEnabled = false,
+    -- BD-1286 (docs/245 "Juice to add", slice 1): true = (1) when the dino eats, the SIZE plate pops and a "+N" floats up from it, (2) when crystals
+    -- are earned, 3-6 small crystals fly along a curve from the dino's place on the screen to the crystal counter, which pops as they land
+    -- (client/JuicePass, Shared/JuiceRules; needs PhoneHudZonesEnabled). Reduce Motion: no flying, no pop, the number only changes with a tiny fade.
+    -- Client presentation only: no save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the
+    -- playtest profile (docs/157). Free, no Robux.
+    JuicePassEnabled = false,
     -- BD-1247 (owner 2026-11-16 "game still looks empty"): true = on the island in clear weather a warmer, slightly more saturated colour
     -- grade, gentle bloom on highlights, soft sun rays and slow floating pollen / motes per World V3 zone (client/WarmLight.client.luau,
     -- Shared/WarmLight). It fades out in other weather, in the cave and with Reduce Motion (motes only). Look only. false = exactly as before.
