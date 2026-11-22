@@ -1,0 +1,17 @@
+{
+  "name": "be-dino-desk",
+  "productName": "Be Dino Desk",
+  "version": "1.0.0",
+  "description": "Be Dino! Desk: browse what is in the game and give per-item feedback (docs/247, BD-1292)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "build": "powershell -ExecutionPolicy Bypass -File build.ps1"
+  },
+  "devDependencies": {
+    "electron": "44.9.0",
+    "@electron/packager": "^20.3.0"
+  }
+}
