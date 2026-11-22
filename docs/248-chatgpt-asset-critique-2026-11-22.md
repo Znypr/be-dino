@@ -125,6 +125,8 @@ Its suggested order:
 
 ## Lead notes (clashes and what happens next)
 
+- **Correction (same day):** the dark patches on Brachiosaurus and Dimorphodon were a capture artifact, not paint. The magenta background part-keyed saturated purple and turned it brown; the BD-1291 session found it. Re-shot on a green background, both are clean, and the desk shows the clean pictures. So item 7 (Brachiosaurus repaint) and the smudge in item 2 are void. Dimorphodon's head and wing notes still stand. Purple and pink subjects are now captured on green.
+
 - **Clash:** the owner asked on 2026-11-22 for rounder buttons and cards, and the hatch mock now uses the new rounded hatch buttons and cards (`btn-green`, `btn-purple`, `card-blue`, `card-grey`). ChatGPT says to drop them for kit 2. The owner decides by rating both in the desk (Text and buttons > Buttons; UI kit tab). Until then the hatch mock keeps the rounded ones.
 - The creature findings went to the dino upgrade session (BD-1291). Its owner-approved cut already covers Pachycephalosaurus and the 3 paint fixes; Dimorphodon, Foxosaurus, Brachiosaurus and Eaglesaurus are its extra input.
 - Queued as rows:
