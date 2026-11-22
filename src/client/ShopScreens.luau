@@ -118,7 +118,8 @@ function Shop.render(name: string)
         if ShopTiles.landing then
             ShopTiles.build({label=label,box=box},body,{tabs=shopTabs,info=ShopTiles.info(p,ProgressionConfig.RandomEggPrice,num("Crystals"),randomBlocked),
                 onPick=function(tab) Sfx.play("ui_click") ShopTiles.landing=false cosmeticTab=tab open("auras") end,close=closeModal,
-                openPotions=function() Sfx.play("ui_click") ShopTiles.landing=false if require(script.Parent.HubTravelClient).press("potions") then return end open("potions") end})
+                openPotions=function() Sfx.play("ui_click") ShopTiles.landing=false if require(script.Parent.HubTravelClient).press("potions") then return end open("potions") end,
+                progress={auras=ProgressionConfig.Auras,ownedAuras=p.auras,trails=ProgressionConfig.Trails,ownedTrails=p.trails,level=num("AccountLevel"),eggPrice=ProgressionConfig.RandomEggPrice,eggBlocked=randomBlocked}}) -- BD-1287 v3: the featured cards
             return
         end
         local bodyW=require(Shared.ToyboxShop).usableWidth(require(script.Parent.ModalCompact).bodyWidth(),require(script.Parent.ModalCompact).model().mode=="compact")

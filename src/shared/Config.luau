@@ -258,8 +258,8 @@ return table.freeze({
     -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     MenusTopLookEnabled = false,
     -- BD-1287 (owner 2026-11-21 "competitive with current famous roblox experiences", docs/246 slice 1): true = the Crystal Shop landing page
-    -- shows in a compact Steal-an-Egg window (58 % x 67 % of the screen, green "Shop" header, red X, crystal pill, three bright cards with a
-    -- green OPEN) with the shop categories on a tile rail outside it, and the world stays visible around it. Every other menu is unchanged.
+    -- is the owner-approved art-kit shop window (kit frame, studs body, green striped header, "-- FEATURED --" over three ShopKitCard cards,
+    -- the tabs as icon + word outside on the right); the world is blurred and the HUD hidden while it is open. Every other menu is unchanged.
     -- Client look only: no save, economy or reward change. false = exactly as before. Pinned off in the default profile, ON in the playtest
     -- profile (docs/157). Free, no Robux.
     MenusSaeFrameEnabled = false,
