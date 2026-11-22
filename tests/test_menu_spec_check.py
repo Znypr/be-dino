@@ -78,5 +78,87 @@ class MenuSpecCheck(unittest.TestCase):
         self.assertTrue(any("title: font" in m for m in misses), misses)
 
 
+def notes_file(d, elements=None, pins=None):
+    """A docs/feedback/menu-feedback.json as the Be Dino Desk writes it (BD-1301)."""
+    p = Path(d) / "menu-feedback.json"
+    p.write_text(json.dumps({"screens": {"potion-shop": {"elements": elements or {}, "pins": pins or []}}}), encoding="utf-8")
+    return p
+
+
+def note(tags, text, severity="must", status="open", should=""):
+    return {"tags": tags, "note": text, "severity": severity, "should": should, "at": "2026-11-23T10:00:00",
+            "check": "2026-11-23T09:00:00", "status": status}
+
+
+class OwnerNotes(unittest.TestCase):
+    """BD-1301: owner notes from the desk are listed per element; an open must-fix note never passes."""
+
+    def run_check(self, fb, owner_flag=False):
+        with tempfile.TemporaryDirectory() as d:
+            gp = Path(d) / "geom.json"
+            gp.write_text(json.dumps(geom_from_proposal()), encoding="utf-8")
+            code = msc.compare(SPEC, gp, ROOT / "docs" / "menu-specs" / "potion-shop" / "proposal.jpg", Path(d) / "out", None, False,
+                               feedback=fb, owner_flag=owner_flag)
+            report = json.loads((Path(d) / "out" / "report.json").read_text(encoding="utf-8"))
+            page = (Path(d) / "out" / "report.html").read_text(encoding="utf-8")
+        return code, report, page
+
+    def test_must_fix_note_fails_a_passing_element(self):
+        with tempfile.TemporaryDirectory() as d:
+            fb = notes_file(d, {"title": [note(["Outline"], "outline too thin, like proposal", should="3 px dark")]})
+            code, report, page = self.run_check(fb)
+        self.assertEqual(code, 1)
+        row = next(r for r in report["rows"] if r["id"] == "title")
+        self.assertEqual(row["status"], "miss")
+        self.assertEqual(row["owner"], ["owner (must fix): Outline - 'outline too thin, like proposal' (should be: 3 px dark)"])
+        self.assertIn("title: owner (must fix): Outline - 'outline too thin, like proposal' (should be: 3 px dark)", report["misses"])
+        self.assertIn("outline too thin, like proposal", page)
+
+    def test_nice_to_have_listed_but_only_counted_with_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            fb = notes_file(d, {"card2.price": [note(["Text size"], "a bit bigger", severity="nice")]},
+                            pins=[dict(note(["Missing"], "a sparkle here", severity="nice"), x=40.0, y=12.5, side="proposal")])
+            code, report, _ = self.run_check(fb)
+            code_flag, report_flag, _ = self.run_check(fb, owner_flag=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["misses"], [])
+        row = next(r for r in report["rows"] if r["id"] == "card2.price")
+        self.assertEqual(row["status"], "pass")
+        self.assertEqual(row["owner"], ["owner (nice to have): Text size - 'a bit bigger'"])
+        self.assertEqual(len(report["owner_pins"]), 1)
+        self.assertEqual(code_flag, 1)
+        self.assertIn("card2.price: owner (nice to have): Text size - 'a bit bigger'", report_flag["misses"])
+        self.assertTrue(any(m.startswith("pin 1 (proposal 40 %, 12 % of window): owner (nice to have): Missing") for m in report_flag["misses"]),
+                        report_flag["misses"])
+
+    def test_done_notes_and_other_screens_are_ignored(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "menu-feedback.json"
+            p.write_text(json.dumps({"screens": {
+                "potion-shop": {"elements": {"close": [note(["Colour"], "fixed already", status="done")]}, "pins": []},
+                "dino-index": {"elements": {"close": [note(["Colour"], "other screen")]}, "pins": []}}}), encoding="utf-8")
+            code, report, _ = self.run_check(p)
+        self.assertEqual(code, 0)
+        self.assertFalse(any(r.get("owner") for r in report["rows"]))
+
+    def test_missing_or_broken_file_means_no_notes(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "menu-feedback.json"
+            bad.write_text("{not json", encoding="utf-8")
+            self.assertEqual(msc.load_owner_notes(bad, "potion-shop"), ({}, []))
+            self.assertEqual(msc.load_owner_notes(Path(d) / "none.json", "potion-shop"), ({}, []))
+
+    def test_report_has_what_the_desk_draws(self):
+        code, report, _ = self.run_check(None)
+        self.assertEqual(report["screen"], "potion-shop")
+        self.assertEqual(report["proposal"], "docs/menu-specs/potion-shop/proposal.jpg")
+        self.assertEqual(report["shot"], "docs/menu-specs/potion-shop/proposal.jpg")
+        self.assertTrue(report["at"].startswith("20"))
+        win = next(r for r in report["rows"] if r["id"] == "window")
+        self.assertEqual(win["status"], "pass")
+        for a, b in zip(win["pct_ref"], win["pct_game"]):
+            self.assertAlmostEqual(a, b, places=3)
+
+
 if __name__ == "__main__":
     unittest.main()

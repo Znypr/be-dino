@@ -18,6 +18,11 @@ and lists every miss over the tolerance, step by step (--step), with side-by-sid
     python tools/menu_spec_check.py docs/menu-specs/potion-shop/spec.json --geom geom.json --shot studio.jpg --out build/menu-check/potion
     python tools/menu_spec_check.py SPEC --geom GEOM --shot SHOT --step 2          # only step 2's elements
     python tools/menu_spec_check.py SPEC --self-test                              # proposal vs itself: every value must match
+    python tools/menu_spec_check.py SPEC --geom GEOM --shot SHOT --owner-notes    # every open owner note counts as a miss
+
+Owner notes (BD-1301): the Be Dino Desk "Menus" tab saves the owner's per-element notes and free pins to
+docs/feedback/menu-feedback.json. Every report lists the open notes per element ("owner (must fix): Outline - 'too thin'");
+an element with an open MUST-FIX note never passes; --owner-notes also turns nice-to-have notes and pins into misses.
 
 geom.json (from the Luau dump): {"capture": [w, h] (optional), "viewport": [w, h], "inset": [x, y], "ignoreInset": bool,
 "elements": {"window": {"rect": [x, y, w, h], ...gui props}, "card1": {...}, "card1.name": {...}}}
@@ -31,6 +36,8 @@ import html
 import json
 import re
 import sys
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +46,51 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 CARDS = ("card1", "card2", "card3")
 REF_WINDOW_H = 500  # px of window height used to express thickness in "px at a 720p phone" terms
+FEEDBACK = ROOT / "docs" / "feedback" / "menu-feedback.json"
+
+
+# ---------- owner notes (Be Dino Desk, docs/247) ----------
+
+def load_owner_notes(path, screen: str):
+    """Open owner notes for one screen: ({spec id: [note, ...]}, [pin, ...]). A missing or broken file = no notes."""
+    if not path or not Path(path).is_file():
+        return {}, []
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}, []
+    scr = (data.get("screens") or {}).get(screen) or {}
+
+    def is_open(n):
+        return isinstance(n, dict) and n.get("status", "open") == "open"
+    elems = {k: [n for n in v if is_open(n)] for k, v in (scr.get("elements") or {}).items() if isinstance(v, list)}
+    return {k: v for k, v in elems.items() if v}, [n for n in (scr.get("pins") or []) if is_open(n)]
+
+
+def is_must(note: dict) -> bool:
+    return note.get("severity", "must") != "nice"
+
+
+def note_line(note: dict) -> str:
+    """owner (must fix): Outline, Colour - 'outline too thin, like proposal' (should be: 3 px dark)"""
+    s = f"owner ({'must fix' if is_must(note) else 'nice to have'}): " + (", ".join(note.get("tags") or []) or "Note")
+    if note.get("note"):
+        s += f" - '{note['note']}'"
+    if note.get("should"):
+        s += f" (should be: {note['should']})"
+    return s
+
+
+def pin_line(i: int, pin: dict) -> str:
+    return (f"pin {i} ({pin.get('side', 'build')} {float(pin.get('x', 0)):.0f} %, {float(pin.get('y', 0)):.0f} % of window): "
+            + note_line(pin))
+
+
+def repo_rel(p) -> str | None:
+    try:
+        return Path(p).resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return None
 
 
 # ---------- geometry ----------
@@ -219,8 +271,11 @@ def measure_all(img: np.ndarray, box, e: dict, win_h_px: float, frame):
 
 # ---------- compare ----------
 
-def compare(spec_path: Path, geom_path: Path | None, shot_path: Path | None, out: Path, step: int | None, self_test: bool):
+def compare(spec_path: Path, geom_path: Path | None, shot_path: Path | None, out: Path, step: int | None, self_test: bool,
+            feedback: Path | None = None, owner_flag: bool = False):
+    """feedback = docs/feedback/menu-feedback.json (None = ignore owner notes); owner_flag = every open note is a miss."""
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    owner, pins = load_owner_notes(feedback, spec["screen"])
     elems = expand(spec)
     tol = float(spec.get("tolerance_pct", 1.5))
     prop_img = np.asarray(Image.open(ROOT / spec["proposal"] if not Path(spec["proposal"]).is_absolute() else spec["proposal"]).convert("RGB"))
@@ -250,17 +305,38 @@ def compare(spec_path: Path, geom_path: Path | None, shot_path: Path | None, out
 
     rows, misses = [], []
     out.mkdir(parents=True, exist_ok=True)
+    PH, PW = prop_img.shape[:2]
+    GH, GW = game_img.shape[:2]
+
+    def pct(b, W, H):
+        return [b[0] / W * 100, b[1] / H * 100, b[2] / W * 100, b[3] / H * 100]
+
+    def finish(row, k, start):
+        """Owner notes on this element, then the row's own misses and its status (pass / miss / missing)."""
+        notes = owner.get(k, [])
+        if notes:
+            row["owner"] = [note_line(n) for n in notes]
+            row["owner_notes"] = notes
+            for n in notes:
+                if is_must(n) or owner_flag:
+                    misses.append(f"{k}: {note_line(n)}")
+        row["misses"] = misses[start:]
+        row["status"] = "missing" if row.get("missing") else ("miss" if row["misses"] else "pass")
+        rows.append(row)
+
     for k in keys:
         e = elems[k]
+        start = len(misses)
         pbox = abs_box(elems, k, wpx)
         pframe = abs_box(elems, e["parent"], wpx) if e.get("parent") else wpx
-        row = {"id": k, "kind": e.get("kind", "box")}
+        row = {"id": k, "kind": e.get("kind", "box"), "pct_ref": pct(pbox, PW, PH)}
         if k not in gboxes:
             row["missing"] = True
             misses.append(f"{k}: MISSING in the build (no SpecId)")
-            rows.append(row)
+            finish(row, k, start)
             continue
         gbox = gboxes[k]
+        row["pct_game"] = pct(gbox, GW, GH)
         gframe = gboxes.get(e["parent"]) if e.get("parent") else gwin
         pb, gb = rel_box(pbox, pframe), rel_box(gbox, gframe)
         row["box_ref"], row["box_game"] = pb, gb
@@ -325,14 +401,36 @@ def compare(spec_path: Path, geom_path: Path | None, shot_path: Path | None, out
             pair.paste(pc, (0, 0))
             pair.paste(gc, (pc.width + 8, 0))
             pair.save(out / f"{k}.png")
-        rows.append(row)
+        finish(row, k, start)
 
-    (out / "report.json").write_text(json.dumps({"misses": misses, "rows": rows}, indent=1), encoding="utf-8")
-    write_html(out, spec, rows, misses, step)
+    pin_lines = [pin_line(i + 1, p) for i, p in enumerate(pins)]
+    if owner_flag:
+        misses += pin_lines
+    # where the two pictures are, for the desk's compare view: repo-relative when inside the repo, else a copy next to the report
+    shot_rel = None
+    if self_test:
+        shot_rel = spec["proposal"]
+    elif shot_path:
+        shot_rel = repo_rel(shot_path)
+        if shot_rel is None:
+            copy = out / ("shot" + Path(shot_path).suffix.lower())
+            shutil.copyfile(shot_path, copy)
+            shot_rel = repo_rel(copy) or str(copy)
+    report = {"screen": spec["screen"], "spec": repo_rel(spec_path) or str(spec_path), "step": step,
+              "at": datetime.now().isoformat(timespec="seconds"), "self_test": self_test,
+              "proposal": spec["proposal"], "proposal_size": [PW, PH], "shot": shot_rel, "shot_size": [GW, GH],
+              "misses": misses, "owner_pins": [dict(p, line=ln) for p, ln in zip(pins, pin_lines)], "rows": rows}
+    (out / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+    write_html(out, spec, rows, misses, step, pin_lines)
     label = f"step {step} ({steps[step - 1]['name']})" if step else "all elements"
     print(f"{spec['screen']} {label}: {len(keys)} elements, {len(misses)} misses (tolerance {tol} %)")
     for m in misses:
         print("  - " + m)
+    nice = [f"{r['id']}: {ln}" for r in rows for n, ln in zip(r.get("owner_notes", []), r.get("owner", [])) if not is_must(n)]
+    if (nice or pin_lines) and not owner_flag:
+        print(f"owner notes not counted as misses ({len(nice)} nice to have, {len(pin_lines)} pins; --owner-notes counts them):")
+        for m in nice + pin_lines:
+            print("  . " + m)
     print("report:", out / "report.html")
     return 0 if not misses else 1
 
@@ -349,11 +447,15 @@ def fmt(v):
     return html.escape(str(v))
 
 
-def write_html(out: Path, spec, rows, misses, step):
+def write_html(out: Path, spec, rows, misses, step, pin_lines=()):
     parts = [f"<h1>{html.escape(spec['screen'])}: proposal vs build{' step ' + str(step) if step else ''}</h1>",
              f"<p>{len(misses)} misses</p><ul>" + "".join(f"<li>{html.escape(m)}</li>" for m in misses) + "</ul>"]
+    if pin_lines:
+        parts.append("<h2>Owner pins</h2><ul>" + "".join(f"<li>{html.escape(m)}</li>" for m in pin_lines) + "</ul>")
     for r in rows:
         parts.append(f"<h3>{html.escape(r['id'])}</h3>")
+        if r.get("owner"):
+            parts.append("<ul style='color:#b00'>" + "".join(f"<li>{html.escape(m)}</li>" for m in r["owner"]) + "</ul>")
         if r.get("missing"):
             parts.append("<p><b>missing in the build</b></p>")
             continue
@@ -382,6 +484,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--step", type=int)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--owner-notes", action="store_true", help="every open owner note (and pin) from the Be Dino Desk counts as a miss")
+    ap.add_argument("--feedback", type=Path, default=FEEDBACK, help="owner notes file (default docs/feedback/menu-feedback.json)")
     a = ap.parse_args(argv)
     if not a.spec.exists():
         print("no spec", a.spec, file=sys.stderr)
@@ -390,7 +494,8 @@ def main(argv=None) -> int:
         print("need --geom and --shot (or --self-test)", file=sys.stderr)
         return 2
     out = a.out or ROOT / "build" / "menu-check" / json.loads(a.spec.read_text(encoding="utf-8"))["screen"]
-    return compare(a.spec, a.geom, a.shot, out, a.step, a.self_test)
+    return compare(a.spec, a.geom, a.shot, out, a.step, a.self_test,
+                   feedback=None if a.self_test else a.feedback, owner_flag=a.owner_notes)
 
 
 if __name__ == "__main__":

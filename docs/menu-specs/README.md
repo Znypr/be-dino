@@ -19,5 +19,9 @@ Per step:
 4. 0 misses (tolerance in the spec, default 1.5 % of the window) = next step. Misses = fix the numbers it names, repeat.
 5. After the last step: the whole-screen pair and the report go to the owner.
 
+Owner notes (BD-1301): the owner clicks elements or drops pins in the Be Dino Desk "Menus" tab (docs/247); they land in `docs/feedback/menu-feedback.json`.
+- Before each step: read `menu-feedback.json` for this screen and run the check with `--owner-notes`; every open note is then a miss, and an open must-fix note never passes even without the flag.
+- When a note is fixed: set its `status` to `"done"` and add `"commit": "<sha>"`; never delete or rewrite an owner note (the owner reopens it in the desk if it is not fixed).
+
 Owner rules beat the picture and are written into the spec's words: kid words, no multipliers ("Grow faster!", never "x1.4"); a count like "x3" is allowed.
 `python tools/menu_spec_check.py SPEC --self-test` checks a spec against its own proposal (must be 0 misses).
