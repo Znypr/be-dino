@@ -22,7 +22,8 @@ return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
     -- BD-1291 CANDIDATE, NOT live (the lead switches it only after a Studio check of TextureID, gene recolour and gait): Compy V2, Blender
     -- rebuild of the owner-approved sheet (tools/blender/build_compy_v2.py), 7 parts, 3.0 studs tall at scale 1 so scale 2.2 keeps 6.6:
-    -- to switch, set the compy line above to assetId 100016392044055, version "v2" (scale 2.2, tier 1, class Ground unchanged).
+    -- to switch, set the compy line above to assetId 113931173586605, version "v2" (scale 2.2, tier 1, class Ground unchanged).
+    -- (113931173586605 = round 2 after the lead review: wedge head, pear body, drumstick legs; 100016392044055 = round 1, superseded.)
     triceratops = {assetId = 107596736973492, version = "v3", scale = 2.86, tier = 3, class = "Ground"},
     tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},

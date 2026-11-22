@@ -110,28 +110,6 @@ class Part:
         return faces
 
 
-def octo(w, h, tw=0.55, ct=0.4, bw=0.6, cb=0.35):
-    """Chamfered box section (8 points, 2D (a, b)) half-width w, half-height h; tw/bw = top/bottom flat share, ct/cb = chamfer share."""
-    return [(w * tw, h), (w, h * (1 - ct)), (w, -h * (1 - cb)), (w * bw, -h), (-w * bw, -h), (-w, -h * (1 - cb)), (-w, h * (1 - ct)), (-w * tw, h)]
-
-
-def ring_y(y, cx, cz, w, h, **kw):
-    """Section in the XZ plane at depth y (loft along +Y)."""
-    return [V((cx + a, y, cz + b)) for a, b in octo(w, h, **kw)]
-
-
-def ring_z(z, cx, cy, w, d, **kw):
-    """Section in the XY plane at height z (loft along +Z); 'top' of the octagon = +Y (front)."""
-    return [V((cx + a, cy + b, z)) for a, b in octo(w, d, **kw)][::-1]
-
-
-def ring_axis(c, axis, up, w, h, segs=8, **kw):
-    axis = axis.normalized()
-    side = up.cross(axis).normalized()
-    upv = axis.cross(side).normalized()
-    return [c + side * a + upv * b for a, b in octo(w, h, **kw)]
-
-
 def disc(c, axis, r, segs, roll=0.0):
     axis = axis.normalized()
     ref = V((0, 0, 1)) if abs(axis.z) < 0.9 else V((1, 0, 0))
@@ -140,126 +118,163 @@ def disc(c, axis, r, segs, roll=0.0):
     return [c + (u * math.cos(roll + 2 * math.pi * i / segs) + v * math.sin(roll + 2 * math.pi * i / segs)) * r for i in range(segs)]
 
 
-def spike(p, centre, y0, y1, z, h, wx=0.07, tag=0):
-    """Small back spike: triangle base on the top line between y0 and y1 (y0 > y1, tail runs to -Y), apex leaning back."""
-    base = [V((0, y0, z - 0.03)), V((wx, (y0 + y1) / 2, z - 0.03)), V((0, y1, z - 0.03)), V((-wx, (y0 + y1) / 2, z - 0.03))]
-    apex = V((0, y1 + (y0 - y1) * 0.15, z + h))
-    p.cone(base, apex, tag)
+X = V((1, 0, 0))
+# Round decagon: flat face centred on 'front' (v = +1), vertices at the sides (u = +-1). Smooth enough to read as a toy, still faceted.
+ROUND = [(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(0, 360, 36)]
+# Head section: flat top, wider at the cheeks than at the top, flat jaw (u = side, v = up)
+HEADSEC = [(0.42, 1.0), (0.80, 0.70), (1.0, 0.18), (0.95, -0.48), (0.62, -1.0), (-0.62, -1.0), (-0.95, -0.48), (-1.0, 0.18), (-0.80, 0.70), (-0.42, 1.0)]
+
+
+def frame(axis):
+    """Ring frame for a loft along `axis`: side = X, front = axis x X (= +Y for an upward axis, = +Z (up) for a backward axis)."""
+    a = axis.normalized()
+    front = a.cross(X).normalized()
+    side = front.cross(a).normalized()
+    return side, front
+
+
+def ring(c, axis, w, d, shape=ROUND, dx=0.0):
+    side, front = frame(axis)
+    return [c + side * (u * w + dx) + front * (v * d) for u, v in shape]
+
+
+def spike_at(p, base, out, back, h, wb=0.055):
+    """Small back spike on the surface point `base`: square-ish base across X, apex out along `out`, leaning toward `back`."""
+    out = out.normalized()
+    along = (back - out * back.dot(out)).normalized()
+    pts = [base - out * 0.04 + along * wb, base - out * 0.04 + X * wb, base - out * 0.04 - along * wb, base - out * 0.04 - X * wb]
+    p.cone(pts, base + out * h + along * (h * 0.6))
 
 
 # ------------------------------------------------------------------ parts (model space, studs; faces +Y)
+LEAN_BODY = math.radians(12)
+LEAN_NECK = math.radians(20)
+EYE_R = 0.19
+
+
+def body_rings():
+    """(centre, axis, w, d) of the pear body: axis leans forward 12 degrees, belly widest low."""
+    ax = V((0, math.sin(LEAN_BODY), math.cos(LEAN_BODY)))
+    out = []
+    for t, w, d, fy in ((0.0, 0.26, 0.26, 0.0), (0.16, 0.42, 0.44, 0.03), (0.42, 0.45, 0.47, 0.04), (0.68, 0.38, 0.39, 0.02), (0.92, 0.27, 0.28, 0.0)):
+        c = V((0, -0.24, 0.66)) + ax * t + V((0, fy, 0))
+        out.append((c, ax, w, d))
+    return out
+
+
+def neck_rings():
+    ax = V((0, math.sin(LEAN_NECK), math.cos(LEAN_NECK)))
+    base = V((0, -0.02, 1.38))
+    return [(base + ax * t, ax, w, d) for t, w, d in ((0.0, 0.29, 0.29), (0.34, 0.26, 0.26), (0.72, 0.26, 0.255))]
+
+
+def back_point(spec, k=1.0):
+    c, ax, w, d = spec
+    _, front = frame(ax)
+    return c - front * d * k, -front
 
 
 def build_body():
     p = Part("Body")
-    kw = dict(tw=0.5, ct=0.45, bw=0.55, cb=0.45)
-    torso = [
-        ring_y(-0.86, 0, 1.24, 0.26, 0.30, **kw),
-        ring_y(-0.56, 0, 1.17, 0.39, 0.42, **kw),
-        ring_y(-0.18, 0, 1.11, 0.44, 0.46, **kw),
-        ring_y(0.22, 0, 1.13, 0.41, 0.44, **kw),
-        ring_y(0.50, 0, 1.22, 0.31, 0.34, **kw),
-    ]
-    p.shell(torso)
-    neck = [
-        ring_z(1.20, 0, 0.20, 0.33, 0.30, tw=0.62, ct=0.4, bw=0.5, cb=0.45),
-        ring_z(1.62, 0, 0.30, 0.26, 0.22, tw=0.62, ct=0.4, bw=0.5, cb=0.45),
-        ring_z(2.08, 0, 0.30, 0.25, 0.22, tw=0.62, ct=0.4, bw=0.5, cb=0.45),
-    ]
-    p.shell(neck)
-    for y0, h, z in ((-0.22, 0.07, 1.57), (-0.46, 0.07, 1.57)):
-        spike(p, None, y0, y0 - 0.18, z, h)
+    br = body_rings()
+    p.shell([ring(c, a, w, d) for c, a, w, d in br])
+    nr = neck_rings()
+    p.shell([ring(c, a, w, d) for c, a, w, d in nr])
+    # back spikes: down the back of the neck and the body (the tail continues the row)
+    for spec_a, spec_b, f, h in ((nr[1], nr[2], 0.1, 0.07), (nr[0], nr[1], 0.3, 0.075), (br[4], br[3], 0.25, 0.08), (br[3], br[2], 0.5, 0.08)):
+        pa, na = back_point(spec_a)
+        pb, nb = back_point(spec_b)
+        q = pa.lerp(pb, f)
+        n = (na.lerp(nb, f) + V((0, 0, 0.5))).normalized()
+        spike_at(p, q, n, V((0, -1, -0.6)), h)
     return p
 
 
 def build_head():
     p = Part("Head")
-    kw = dict(tw=0.45, ct=0.55, bw=0.55, cb=0.42)
-    rings = [
-        ring_y(-0.19, 0, 2.47, 0.26, 0.22, **kw),
-        ring_y(-0.03, 0, 2.47, 0.48, 0.46, **kw),
-        ring_y(0.24, 0, 2.43, 0.59, 0.575, **kw),
-        ring_y(0.70, 0, 2.43, 0.58, 0.54, **kw),
-        ring_y(1.12, 0, 2.36, 0.46, 0.42, **kw),
-        ring_y(1.45, 0, 2.33, 0.37, 0.32, **kw),
-    ]
+    # side profile (y, top, bottom, half-width): tall round cranium, wedge snout (tip about 65 % of the cranium height), flat jaw rising to the throat
+    prof = [(-0.22, 2.64, 2.34, 0.22), (-0.13, 2.80, 2.14, 0.40), (0.02, 2.95, 1.99, 0.52), (0.22, 3.00, 1.90, 0.57), (0.52, 2.98, 1.86, 0.58),
+            (0.86, 2.86, 1.87, 0.51), (1.14, 2.73, 1.90, 0.43), (1.33, 2.65, 1.93, 0.36)]
+    rings = []
+    for y, top, bot, w in prof:
+        mid, h = (top + bot) / 2, (top - bot) / 2
+        rings.append([V((u * w, y, mid + v * h)) for u, v in HEADSEC])
     p.shell(rings)
-    # eyes: domes on the flat side faces, facing out and a little forward
+    # eyes sit IN the upper side plane (protrude about 0.09 = 24 % of the 0.38 diameter), looking out and a little forward
     for s in (1, -1):
-        c = V((s * 0.575, 0.68, 2.53))
-        ax = V((s * 1.0, 0.42, 0.08)).normalized()
+        c = V((s * 0.50, 0.62, 2.56))
+        ax = V((s * 0.88, 0.42, 0.20)).normalized()
         r = EYE_R
-        rings = [disc(c - ax * 0.04, ax, r, 12), disc(c + ax * 0.05, ax, r * 0.85, 12), disc(c + ax * 0.10, ax, r * 0.5, 12)]
-        p.shell(rings, cap0=True, tag=1, apex=c + ax * 0.12)
-        # highlight: up and toward the front of the eye
-        up = V((0, 0, 1))
-        side = ax.cross(up).normalized()
-        upv = side.cross(ax).normalized() * -1 if side.cross(ax).z < 0 else side.cross(ax).normalized()
-        fwd = V((0, 1, 0)) - ax * ax.y
-        fwd.normalize()
-        hc = c + ax * 0.095 + upv * (r * 0.4) + fwd * (r * 0.28)
-        hr = disc(hc, ax, EYE_R * 0.26, 6)
-        p.cone(hr, hc + ax * 0.035, tag=2)
-    # nostrils: small dark hexagons just in front of the snout cap
+        er = [disc(c - ax * 0.05, ax, r, 12), disc(c + ax * 0.045, ax, r * 0.88, 12), disc(c + ax * 0.08, ax, r * 0.52, 12)]
+        p.shell(er, cap0=True, tag=1, apex=c + ax * 0.093)
+        upv = (V((0, 0, 1)) - ax * ax.z).normalized()
+        fwd = (V((0, 1, 0)) - ax * ax.y).normalized()
+        hc = c + ax * 0.08 + upv * (r * 0.38) + fwd * (r * 0.22)
+        p.cone(disc(hc, ax, r * 0.27, 6), hc + ax * 0.03, tag=2)
+    # nostrils: dots on the snout's top-front
     for s in (1, -1):
-        c = V((s * 0.14, 1.452, 2.30))
-        ring = disc(c, V((0, 1, 0)), 0.035, 6)
-        p.shell([ring, [q + V((0, 0.006, 0)) for q in ring]], tag=4)
+        c = V((s * 0.12, 1.335, 2.55))
+        nax = V((0, 1, 0.35)).normalized()
+        rr = disc(c, nax, 0.034, 6)
+        p.shell([rr, [q + nax * 0.008 for q in rr]], tag=4)
     return p
 
 
 def build_tail():
     p = Part("Tail")
-    rings = [
-        ring_y(-0.50, 0, 1.22, 0.31, 0.38, tw=0.5, ct=0.45, bw=0.55, cb=0.45),
-        ring_y(-0.92, 0, 1.19, 0.21, 0.25, tw=0.5, ct=0.45, bw=0.55, cb=0.45),
-        ring_y(-1.30, 0, 1.31, 0.11, 0.13, tw=0.5, ct=0.45, bw=0.55, cb=0.45),
-    ]
-    p.shell(rings, cap0=True, apex=V((0, -1.68, 1.45)))
-    for y0, h, z in ((-0.70, 0.07, 1.52), (-0.94, 0.06, 1.45), (-1.16, 0.05, 1.42)):
-        spike(p, None, y0, y0 - 0.17, z, h, wx=0.06)
+    # spine with a slight upward curve; base about the thigh width
+    spine = [V((0, -0.40, 1.00)), V((0, -0.72, 1.02)), V((0, -1.04, 1.10)), V((0, -1.34, 1.23))]
+    sizes = [(0.27, 0.28), (0.21, 0.22), (0.14, 0.145), (0.075, 0.08)]
+    specs = []
+    for i, (c, (w, d)) in enumerate(zip(spine, sizes)):
+        nxt = spine[min(i + 1, len(spine) - 1)]
+        prv = spine[max(i - 1, 0)]
+        ax = (nxt - prv).normalized()
+        specs.append((c, ax, w, d))
+    # axis runs to -Y, so frame 'front' = up; ROUND's flat face is on top
+    p.shell([ring(c, a, w, d) for c, a, w, d in specs], cap0=True, apex=V((0, -1.68, 1.44)))
+    for i, (f, h) in enumerate(((0.2, 0.075), (0.7, 0.07), (0.25, 0.06), (0.7, 0.05), (0.3, 0.04))):
+        k = min(i // 2, 2)
+        a, b = specs[k], specs[k + 1]
+        pa = a[0] + frame(a[1])[1] * a[3]
+        pb = b[0] + frame(b[1])[1] * b[3]
+        q = pa.lerp(pb, f)
+        n = frame(a[1])[1].lerp(frame(b[1])[1], f)
+        spike_at(p, q, n, V((0, -1, 0)), h)
     return p
 
 
 def build_leg(s):
     p = Part("LegR" if s > 0 else "LegL")
-    x = s * 0.40
-    thigh = [
-        ring_z(0.46, x, -0.33, 0.17, 0.20, **LEGKW),
-        ring_z(0.60, x, -0.38, 0.24, 0.32, **LEGKW),
-        ring_z(0.86, x, -0.43, 0.27, 0.37, **LEGKW),
-        ring_z(1.08, x, -0.43, 0.24, 0.32, **LEGKW),
-        ring_z(1.22, x, -0.42, 0.16, 0.20, **LEGKW),
-    ]
-    p.shell(thigh)
-    shin = [ring_z(0.12, x + s * 0.03, -0.24, 0.18, 0.21, **LEGKW), ring_z(0.56, x, -0.31, 0.16, 0.19, **LEGKW)]
-    p.shell(shin)
-    foot = [
-        ring_y(-0.46, x + s * 0.04, 0.10, 0.19, 0.10, ct=0.5),
-        ring_y(-0.05, x + s * 0.04, 0.10, 0.23, 0.10, ct=0.5),
-        ring_y(0.13, x + s * 0.04, 0.08, 0.22, 0.08, ct=0.5),
-    ]
-    p.shell(foot)
-    for dx in (-0.14, 0.0, 0.14):
-        cx = x + s * 0.04 + dx
-        base = [V((cx - 0.055, 0.11, 0.0)), V((cx + 0.055, 0.11, 0.0)), V((cx + 0.05, 0.11, 0.11)), V((cx - 0.05, 0.11, 0.11))]
-        p.shell([base, [q + V((0, 0.06, 0)) for q in base]], cap0=True, tag=3, apex=V((cx, 0.26, 0.03)))
+    x = s * 0.39
+    up = V((0, 0, 1))
+    # drumstick thigh: rounded out to the side (dx) and back (cy)
+    thigh = [(1.20, 0.17, 0.19, -0.38, 0.00), (1.06, 0.27, 0.31, -0.42, 0.02), (0.84, 0.29, 0.34, -0.45, 0.04),
+             (0.62, 0.22, 0.25, -0.40, 0.03), (0.48, 0.15, 0.16, -0.34, 0.01)]
+    p.shell([ring(V((x, cy, z)), up, w, d, dx=s * dx) for z, w, d, cy, dx in thigh])
+    # short narrower shin, slightly back-slanted down to the ankle
+    p.shell([ring(V((x + s * 0.01, -0.33, 0.52)), up, 0.15, 0.15), ring(V((x + s * 0.02, -0.26, 0.13)), up, 0.15, 0.16)])
+    # foot with three dark claws pointing forward
+    fwd = V((0, 1, 0))
+    fx = x + s * 0.03
+    foot = [(-0.42, 0.17, 0.09), (-0.10, 0.21, 0.10), (0.10, 0.21, 0.085)]
+    p.shell([ring(V((fx, y, 0.095)), fwd, w, h) for y, w, h in foot])
+    for dx in (-0.13, 0.0, 0.13):
+        c = V((fx + dx, 0.12, 0.06))
+        base = ring(c, fwd, 0.07, 0.065, shape=ROUND[::2])
+        p.shell([base, [q + fwd * 0.05 for q in base]], cap0=True, tag=3, apex=c + V((0, 0.17, -0.04)))
     return p
 
 
 def build_arm(s):
     p = Part("ArmR" if s > 0 else "ArmL")
-    x = s * 0.42
-    up = [ring_axis(V((x, 0.16, 1.36)), V((0, 0.45, -1)), V((1, 0, 0)), 0.11, 0.12), ring_axis(V((x, 0.30, 1.02)), V((0, 0.45, -1)), V((1, 0, 0)), 0.11, 0.11)]
-    # loft along the arm (rings were built facing along the axis, so they line up)
-    p.shell(up)
-    hand = [ring_axis(V((x, 0.24, 1.01)), V((0, 1, -0.15)), V((0, 0, 1)), 0.12, 0.10), ring_axis(V((x, 0.50, 0.97)), V((0, 1, -0.15)), V((0, 0, 1)), 0.12, 0.09)]
-    p.shell(hand)
+    x = s * 0.34
+    sh, el, wr, hd = V((x, 0.20, 1.36)), V((x + s * 0.03, 0.24, 1.16)), V((x + s * 0.02, 0.42, 1.09)), V((x + s * 0.01, 0.52, 0.99))
+    # stubby upper arm down to the elbow, forearm forward, hand forward and down
+    p.shell([ring(sh, el - sh, 0.115, 0.115), ring(el, el - sh, 0.105, 0.105)])
+    p.shell([ring(el - (wr - el).normalized() * 0.07, wr - el, 0.10, 0.10), ring(wr, wr - el, 0.095, 0.095)])
+    p.shell([ring(wr - (hd - wr).normalized() * 0.04, hd - wr, 0.11, 0.085), ring(hd, hd - wr, 0.09, 0.07)])
     return p
-
-
-EYE_R = 0.19
-LEGKW = dict(tw=0.5, ct=0.45, bw=0.5, cb=0.45)
 
 
 def pivot_for(name, lo, hi):
@@ -275,16 +290,11 @@ def pivot_for(name, lo, hi):
 
 
 def colour_for(name, c, n, tag):
+    """Lime everywhere except: the cream band from the throat down the front of the neck and the belly (faces looking forward,
+    3 of the 10 ring faces = about 25 % of the depth in the side view). Back, tail and underside stay lime."""
     if tag in TAG_COL:
         return TAG_COL[tag]
-    if name == "Body":
-        if c.z > 1.15 and abs(c.x) < 0.26 and n.y > 0.3:   # neck front strip (front + front chamfers: visible from the side too)
-            return CREAM
-        if c.z <= 1.15 + 0.4 and n.y > 0.2 and abs(c.x) < 0.34:   # chest front
-            return CREAM
-        if n.z < -0.6 and c.y > -0.5:                     # belly underside
-            return CREAM
-    if name == "Tail" and n.z < -0.6:
+    if name == "Body" and n.y > 0.5 and abs(c.x) < 0.36 and c.z > 0.72:
         return CREAM
     return LIME
 
@@ -357,7 +367,10 @@ def uv_and_bake(ob):
     for n in (vc, em):
         nt.nodes.remove(n)
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.inputs["Roughness"].default_value = 0.8
+    bsdf.inputs["Roughness"].default_value = 1.0
+    for key in ("Specular IOR Level", "Specular"):
+        if key in bsdf.inputs:
+            bsdf.inputs[key].default_value = 0.0
     nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     img.pack()
@@ -373,17 +386,20 @@ def setup_render():
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
-    sc.cycles.samples = 24
+    sc.cycles.samples = 48
     sc.cycles.use_denoising = False
     sc.view_settings.view_transform = "Standard"
+    sc.view_settings.look = "None"
+    sc.view_settings.exposure = 0.0
+    sc.view_settings.gamma = 1.0
     if sc.world is None:
         sc.world = bpy.data.worlds.new("World")
     sc.world.use_nodes = True
     bg = next(n for n in sc.world.node_tree.nodes if n.type == "BACKGROUND")
     bg.inputs["Color"].default_value = (1, 1, 1, 1)
-    bg.inputs["Strength"].default_value = 0.30
+    bg.inputs["Strength"].default_value = 0.45
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
-    sun.data.energy = 2.5
+    sun.data.energy = 2.2
     sun.data.angle = math.radians(20)
     sun.rotation_euler = (math.radians(-45), 0, math.radians(-30))  # comes from the front, right, above
     sc.collection.objects.link(sun)

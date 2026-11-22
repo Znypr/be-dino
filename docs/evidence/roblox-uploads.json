@@ -1570,5 +1570,15 @@
     "sha256": "755f55de6b3ac2481e42b9ad1b9a9369f11d8899868eebbd34f8b756661601ed",
     "moderation": "Approved",
     "uploaded": "2026-11-22T16:15:22Z"
+  },
+  {
+    "assetId": "113931173586605",
+    "assetType": "Model",
+    "displayName": "Compy V2b textured parts",
+    "file": "Compy_V2.fbx",
+    "bytes": 125324,
+    "sha256": "bd1522006ef9665a592df06de0db47065311f5601e930044d51112be70606817",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T16:22:40Z"
   }
 ]
