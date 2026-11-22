@@ -6,7 +6,7 @@
 local Recolor = {}
 -- Average body-texture colour per species (0..1), measured from the generated body textures of the published models.
 Recolor.Base = {
-    compy = {0.47, 0.86, 0.13}, -- V3 (BD-1291): flat lime #79DC21 body texture
+    compy = {0.37, 0.58, 0.32},
     raptor = {0.80, 0.49, 0.36},
     triceratops = {0.59, 0.30, 0.13},
 }

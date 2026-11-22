@@ -9,8 +9,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 # BD-225/BD-232: every shipped species (Config.SpeciesOrder) is mapped; ids are the real published ids (generate_mesh, compy V3 from Blender).
 EXPECTED_IDS = {
-    "compy": "122878777932897",  # BD-1291 V3 soft, facing fixed (owner pick D); earlier uploads faced backwards
-    "raptor": "83260397513385", "triceratops": "107596736973492", "tyrannosaurus": "70893952304488",
+    "compy": "94548957808227", "raptor": "83260397513385", "triceratops": "107596736973492", "tyrannosaurus": "70893952304488",
     "stegosaurus": "92335618053209", "brachiosaurus": "104593280278631", "ankylosaurus": "125812700099310",
     "archaeopteryx": "108659121473793", "baryonyx": "131708938808155", "dimorphodon": "117242533934118",
     "elasmosaurus": "76344726254379", "gallimimus": "99873366835296", "ichthyosaurus": "133825037148251",
