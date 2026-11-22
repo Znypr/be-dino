@@ -164,20 +164,29 @@ def measure_text(c: np.ndarray, win_h_px: float, color_hint=None):
     if letters.sum() < 15:
         return None
     ys = np.where(letters.any(axis=1))[0]
-    # stroke thickness: grow the letter mask one px at a time while the new ring is mostly dark
+    # stroke thickness: grow the letter mask one px at a time. The first ring or two is anti-aliased grey between the letter fill and
+    # the dark outline, so a ring counts as outline when its MEAN brightness is low (< 110) rather than requiring black pixels; the
+    # anti-aliased first ring is allowed to be lighter (< 170). Stops at the first ring that is clearly not outline.
+    # the outline must also be clearly darker than the element's own background (a dark panel behind the word is not outline)
+    others = L[~letters & (L > 40)]  # neither letter fill nor the darkest outline core: mostly the background
+    bg = float(np.median(others)) if others.size else 255.0
+    limit = min(110.0, bg - 35.0)
     grown, stroke = letters.copy(), 0
-    for _ in range(12):
+    for i in range(14):
         nxt = grown.copy()
         nxt[1:, :] |= grown[:-1, :]
         nxt[:-1, :] |= grown[1:, :]
         nxt[:, 1:] |= grown[:, :-1]
         nxt[:, :-1] |= grown[:, 1:]
         ring = nxt & ~grown
-        if ring.sum() == 0 or (dark & ring).sum() / ring.sum() < 0.55:
+        if ring.sum() == 0:
+            break
+        mean = float(L[ring].mean())
+        if mean >= (max(limit, 60.0) + 60.0 if i == 0 else limit):
             break
         stroke += 1
         grown = nxt
-    ring_px = grown & ~letters
+    ring_px = grown & ~letters & dark
     stroke_col = [float(v) for v in np.median(a[ring_px], axis=0)] if ring_px.sum() else None
     return {
         "cap_pct_h": (ys.max() - ys.min() + 1) / win_h_px * 100,
