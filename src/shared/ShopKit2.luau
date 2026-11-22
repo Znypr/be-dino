@@ -34,6 +34,14 @@ K.Studded = studded
 K.HeaderColours = {"green", "purple"}
 K.Header = {w = 313, h = 85, leftCap = 42, tile = {x = 42, w = 25}, stripes = {x = 67, w = 225, first = 87}, rightCap = {x = 292, w = 21}}
 K.StripeAt = 0.38 -- the first shine stripe starts at 38 % of the header width (the approved Aura Shop header)
+-- BD-1296 (docs/246 slice 2): a header colour with no kit 2 strip yet (the Dino Index is cyan) is the kit 2 CARD piece of that colour
+-- studded at the header size (the Rare card is the cyan one: same black outline and L studs, no shine stripes). A "header-cyan.png" strip
+-- bound later as shopkit2_header_cyan would need only "cyan" in HeaderColours.
+K.HeaderCards = {cyan = "rare"}
+function K.headerCardSlot(colour: string): string?
+    local rarity = K.HeaderCards[colour]
+    return if rarity and not table.find(K.HeaderColours, colour) then "shopkit2_card_" .. rarity else nil
+end
 K.Close = {w = 111, h = 110} -- the red X, drawn whole (Fit)
 -- the window body: the dark effect strip art is the approved window body (dark blue-grey, faint L studs, black outline), so the window is
 -- that picture studded at the window size: the outline at BodyCap of its own size, the studs at BodyStuds x (winH / 517, the approved height)

@@ -36,6 +36,8 @@ local function tabIcon(tab: string): string?
     return Art.tabIconId(Slots.Images, tab) or Art.tileId(Slots.Images, tab)
 end
 
+M.tabIcon = tabIcon -- BD-1296: the Potion Shop wears the same rail
+
 -- body: the Bootstrap panel body; spec: ShopTiles.build's {tabs, info, progress, onPick(tab), close(), openPotions(), selected?}. Returns false
 -- when the kit window cannot open (the caller then draws the old landing tiles).
 function M.build(body: GuiObject, spec: any): boolean

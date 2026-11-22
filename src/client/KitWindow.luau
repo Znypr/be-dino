@@ -4,8 +4,9 @@
 -- (the kit 2 effect strip art at window size; the Toybox frame + stud tile while it is not bound), the kit 2 header strip in the page colour (studs, three shine stripes, drawn in pieces at its own height so the
 -- stripes and studs stay crisp) with the title in big white outlined words at the left and the kit 2 red X at the right, the kit cards
 -- (client/KitCard) and the tabs outside the window (client/KitRail). While a kit 2 piece is not bound it keeps the Toybox look.
--- Screens pass only data: KitWindow.open(body, spec) with spec = {title, colour ("green" | "purple"), cards = {KitCard.Spec}, rail =
--- KitRail.Spec, onClose, layout(w, h, cards, inset) -> SaeFrameRules.Layout}. Returns false when the shared window is not attached yet or
+-- Screens pass only data: KitWindow.open(body, spec) with spec = {title, colour ("green" | "purple" | "cyan"), cards = {KitCard.Spec}, rail =
+-- KitRail.Spec, onClose, layout(w, h, cards, inset) -> SaeFrameRules.Layout, content(window, lay, holder)?}; BD-1296: content draws a
+-- screen's own parts, and open() sets spec.refresh (redraw the window in place). Returns false when the shared window is not attached yet or
 -- the kit 1 frame is not bound (the caller then draws its old page).
 -- The lifecycle (on the shared modal): the window is a sibling of the Bootstrap panel inside ModalScrim; while it shows, the panel and the HUD
 -- are hidden, the cover is 6 % and the menus' blur is 14 px. A tiny marker in the panel body ties it to the screen: the next open() clears
@@ -55,6 +56,7 @@ end
 
 -- The kit 2 header strip in pieces (Shared/ShopKit2.headerPieces): caps and stripes at the strip's height scale, the stud column tiled.
 local function header2(parent: Instance, colour: string, w: number, h: number): boolean
+    if not table.find(Kit2.HeaderColours, colour) then return false end -- BD-1296: a colour with no kit 2 strip is never drawn green
     local id = Kit2.image(Slots.Images, Kit2.headerSlot(colour))
     if not id then return false end
     local k = h / Kit2.Header.h
@@ -64,6 +66,16 @@ local function header2(parent: Instance, colour: string, w: number, h: number): 
         else Art.picture(parent, "Strip" .. i, id, p.x, 0, p.w, h, 33, crop).ScaleType = Enum.ScaleType.Stretch end
     end
     return true
+end
+
+-- BD-1296: a header colour with no kit 2 strip (the cyan Dino Index): the kit 2 card piece of that colour studded at the header size,
+-- two rows of studs (Shared/ShopKit2.headerCardSlot).
+local function headerCard(parent: Instance, colour: string, w: number, h: number): boolean
+    local slot = Kit2.headerCardSlot(colour)
+    local d = if slot then Kit2.Studded[slot] else nil
+    if not slot or not d then return false end
+    local studK = (h / 2) / d.crop.h
+    return Art.studded(parent, "Strip", slot, 0, 0, w, h, 33, studK * 0.9, studK) ~= nil
 end
 
 -- The Toybox header strip (fallback): the kit 1 header 9-sliced, its shine stripes laid across the stretched middle as crops.
@@ -111,7 +123,7 @@ local function draw(shade: GuiObject, gui: GuiBase2d, spec: any): Frame
     local header = Art.box(window, "KitHeader", hi, hi, headerW, lay.headerH, 33)
     local xInset = math.floor((lay.headerH - lay.close) / 2)
     local closeX = headerW - xInset - lay.close
-    if not header2(header, spec.colour, headerW, lay.headerH) then header1(header, spec.colour, headerW, lay.headerH, closeX + math.floor(lay.close / 2)) end
+    if not header2(header, spec.colour, headerW, lay.headerH) and not headerCard(header, spec.colour, headerW, lay.headerH) then header1(header, spec.colour, headerW, lay.headerH, closeX + math.floor(lay.close / 2)) end
     local title = Art.words(header, "Title", spec.title, math.floor(lay.headerH * 0.2), -math.floor(lay.headerH * 0.04), headerW * 0.6, lay.headerH, lay.titleSize, 35)
     title.TextXAlignment = Enum.TextXAlignment.Left
     local closeId = Kit2.image(Slots.Images, Kit2.CloseSlot)
@@ -124,6 +136,8 @@ local function draw(shade: GuiObject, gui: GuiBase2d, spec: any): Frame
         if not r then break end
         KitCard.draw(window, r, card, lay)
     end
+    -- BD-1296: a screen's own parts inside the window (the Potion Shop's restock line and owned potions, the Dino Index grid and panel)
+    if spec.content then spec.content(window, lay, holder) end
     if spec.rail then KitRail.draw(holder, lay.rail, spec.rail) end
     return holder
 end
@@ -143,6 +157,7 @@ function W.open(body: GuiObject, spec: any): boolean
         holder = draw(shade, gui, spec)
     end
     panel.Visible = false
+    spec.refresh = redraw -- BD-1296: a screen redraws its window after a tap (a page, a selected dino) without reopening the menu
     redraw()
     local conns: {RBXScriptConnection} = {}
     table.insert(conns, gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(redraw))
