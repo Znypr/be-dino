@@ -2,10 +2,12 @@
 """Same-height crop pairs: Compy V2 Blender render (left) vs the approved ChatGPT sheet view (right) (BD-1291 step 3 self-gate).
 
   python tools/compy_v2_crop_pairs.py
+  python tools/compy_v2_crop_pairs.py --evid docs/evidence/2026-11-22-compy-v3 --label "Blender V3 render"   # V3 (Hunyuan route)
 Reads docs/evidence/2026-11-22-compy-v2/render-<view>.png (tools/blender/build_compy_v2.py) and the sheet
 docs/evidence/2026-11-22-dino-ranking/compy-sheet-v1.jpg; writes pair-<view>.png and pairs-all.png into the evidence folder and
 prints per-view numbers (silhouette width/height ratio, lime/cream/dark share of the silhouette) for both sides.
 """
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +41,12 @@ def shares(im, mask):
 
 
 def main():
+    global EVID
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--evid", default=str(EVID), help="folder with render-<view>.png; the pairs are written there")
+    ap.add_argument("--label", default="Blender V2 render")
+    args = ap.parse_args()
+    EVID = Path(args.evid) if Path(args.evid).is_absolute() else ROOT / args.evid
     sheet = Image.open(SHEET).convert("RGB")
     tiles = []
     for view, box in PANELS.items():
@@ -61,7 +69,7 @@ def main():
         out.paste(left, (pad, pad + 18))
         out.paste(right, (left.width + pad * 2, pad + 18))
         d = ImageDraw.Draw(out)
-        d.text((pad, 4), "Blender V2 render", fill=(0, 0, 0))
+        d.text((pad, 4), args.label, fill=(0, 0, 0))
         d.text((left.width + pad * 2, 4), "approved sheet", fill=(0, 0, 0))
         # height guides at 25/50/75 %
         for f in (0.25, 0.5, 0.75):

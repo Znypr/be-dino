@@ -1580,5 +1580,15 @@
     "sha256": "bd1522006ef9665a592df06de0db47065311f5601e930044d51112be70606817",
     "moderation": "Approved",
     "uploaded": "2026-11-22T16:22:40Z"
+  },
+  {
+    "assetId": "75361856704264",
+    "assetType": "Model",
+    "displayName": "Compy V3 textured parts",
+    "file": "Compy_V3.fbx",
+    "bytes": 182860,
+    "sha256": "fe0ff39f476d835969417681464e62987da06fdf0a3682f7dcb9d5a7b801f6c6",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T17:16:46Z"
   }
 ]
