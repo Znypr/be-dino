@@ -64,7 +64,8 @@ stubs.HudSettings = nil
 -- the switch-on rehearsal of docs/152 has both on). The real module needs the hub world, so this stands in for it; section 3b runs both answers.
 local fastTravelOwned = false
 stubs.HubTravelClient = {ownsFastTravel = function() return fastTravelOwned end}
-local clientNames = {MenusCohesion = true, SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopToyboxPage = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
+stubs.PotionSaeShop = {build = function() return false end} -- BD-1296: the kit Potion Shop (MenusSaeFrameEnabled, all-on rehearsal) is visual; tools/verify_sae_frame.py proves its rects and floors, so this mock measures the old page
+local clientNames = {PotionSaeShop = true, MenusCohesion = true, SettingsMenu = true, ClassRow = true, RailRun = true, ShopScreens = true, ShopTiles = true, ShopCards = true, ShopToyboxCard = true, ShopToyboxPage = true, ShopCard = true, ModalCompact = true, ModalClose = true, Toasts = true, PrivateState = true, HubTravelClient = true, GiftSettings = true}
 Services.Players = {LocalPlayer = inst("Folder", "LocalPlayer")}
 Services.MarketplaceService = {}
 Services.UserInputService = {InputBegan = inputBegan, TouchEnabled = false}
