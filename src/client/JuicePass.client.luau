@@ -76,7 +76,7 @@ local function floatWord(text: string)
     local moving = motion()
     local seconds = if moving then Rules.FloatSeconds else Rules.FadeSeconds * 2
     if moving then
-        TweenService:Create(label, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = label.Position + UDim2.fromOffset(0, size * Rules.FloatRise)}):Play()
+        TweenService:Create(label, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = label.Position - UDim2.fromOffset(0, size * Rules.FloatRise)}):Play()
     end
     local fade = TweenInfo.new(seconds * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, seconds * 0.5)
     TweenService:Create(label, fade, {TextTransparency = 1}):Play()
