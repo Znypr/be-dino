@@ -19,7 +19,7 @@ class RelayTests(unittest.TestCase):
         self.assertIsNone(relay.safe_name("noext"))
 
     def test_snippet_mentions_name(self):
-        self.assertIn('"x.png"', relay.SNIPPET % '"x.png"')
+        self.assertIn('"x.png"', relay.SNIPPET % (8767, '"x.png"'))
 
     def test_post_saves_file_and_get_serves_page(self):
         with tempfile.TemporaryDirectory() as tmp:

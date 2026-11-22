@@ -11,8 +11,10 @@ and the page posts it to its own origin, which is allowed.
 
 Order that works (Claude in Chrome):
   1. start this tool (background);
-  2. open a new tab and navigate it to http://127.0.0.1:8767/  (the page names itself 'beDinoRelay');
-  3. in the ChatGPT tab run the --snippet JavaScript (javascript_tool). It reports {"saved": NAME, "status": 200}.
+  2. in the ChatGPT tab run the --snippet JavaScript (javascript_tool). It opens the relay page itself
+     (a relay tab opened by the extension is in another browsing group, so window.open('', name) can't find it:
+     it made an empty about:blank tab and timed out, 2026-11-22). It reports {"saved": NAME, "status": 200};
+  3. close the relay tab it opened.
 Files land in build/received/NAME. Exit code 0 when all pictures arrived, 1 on timeout.
 """
 from __future__ import annotations
@@ -43,7 +45,8 @@ window.addEventListener('message', async (e) => {
 
 SNIPPET = """const imgs = [...document.querySelectorAll('img[alt^="Generated image"]')];
 const blob = await (await fetch(imgs[imgs.length - 1].src)).blob();
-const w = window.open('', 'beDinoRelay');
+const w = window.open('http://127.0.0.1:%d/', 'beDinoRelay');
+await new Promise(r => setTimeout(r, 3000));
 w.postMessage({name: %s, blob}, '*');
 const saved = await new Promise(r => { const h = e => { if (e.data && e.data.saved) { window.removeEventListener('message', h); r(e.data) } };
   window.addEventListener('message', h); setTimeout(() => r('timeout'), 15000) });
@@ -97,7 +100,7 @@ def main(argv=None) -> int:
         if not safe_name(a.snippet):
             print("NAME must look like picture-name.png")
             return 2
-        print(SNIPPET % json.dumps(a.snippet))
+        print(SNIPPET % (a.port, json.dumps(a.snippet)))
         return 0
     state = {"left": max(1, a.count), "ok": False}
     srv = HTTPServer(("127.0.0.1", a.port), make_handler(state, OUT))
