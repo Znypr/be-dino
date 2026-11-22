@@ -1,18 +1,19 @@
 --!strict
 -- BD-1296 (docs/246 slice 2): with Config.MenusSaeFrameEnabled the POTION SHOP is the shop menu kit window (client/KitWindow, slice 1's
--- Crystal Shop window): the green header "Potion Shop" with the red X, THREE potions per page as kit rarity cards (the name, "Lasts 5 min",
--- the bound potion picture, a kid line "Grow faster!" on the dark strip, the green price button with the orange crystal; "Sold out" grey),
--- "New in 2 min" as one 22 px line with the grey More / Back page button beside it, and the "Yours" strip with the potions the player
--- owns (tap one to drink it). The shop tabs sit outside the window on the right (Potions selected). Numbers: Shared/SaeMenuRules
--- (potionLayout); art: Shared/ShopKit2 through the kit pieces. Client presentation only: no remote, no price and no stock rule here; a buy
--- tap opens the purchase confirm (ShopScreens), a use tap goes through ShopScreens' use path, the server decides both.
+-- Crystal Shop window). BD-1298: laid out as the owner's PROPOSED PICTURE (docs/evidence/2026-11-23-potion-proposal/proposal.jpg): the
+-- green header "Potions" with the red X, the restock words "New in 2 min" INSIDE the header (yellow-white) and a small grey page arrow left of
+-- the X; THREE tall kit rarity cards (the big name, the rarity word, "3 left" top right, the bound potion picture big in the middle, "Lasts
+-- 5 min" small, a kid line "Grow faster!" on the dark strip, the green price button with the orange crystal; "Sold out" grey). Nothing under
+-- the cards. The arrow pages the shop, then "My Potions" (the potions the player owns, "Have 2", a green "Drink!" button: the only place
+-- to drink one), then the shop again. The shop tabs sit outside the window on the right in the picture's order (Potions selected).
+-- Numbers: Shared/SaeMenuRules (potionLayout); art: Shared/ShopKit2 through the kit pieces. Client presentation only: no remote, no price
+-- and no stock rule here; a buy tap opens the purchase confirm (ShopScreens), a drink tap goes through ShopScreens' use path, the server
+-- decides both.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Slots = require(Shared.AssetSlots)
 local Kit = require(Shared.ToyboxKit)
-local Kit2 = require(Shared.ShopKit2)
 local ShopArt = require(Shared.ShopArt)
 local Menu = require(Shared.SaeMenuRules)
-local FrameRules = require(Shared.SaeFrameRules)
 local ProgressionConfig = require(Shared.ProgressionConfig)
 local ProgressionRules = require(Shared.ProgressionRules)
 local TimerWords = require(Shared.TimerWords)
@@ -38,83 +39,94 @@ local function setWords(label: TextLabel?, text: string)
     if drop and drop:IsA("TextLabel") then drop.Text = text end
 end
 
+local function restockWords(window: number): string
+    return TimerWords.restockIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(window) - workspace:GetServerTimeNow())))
+end
+
 -- body: the Bootstrap panel body. d = {p (progression), window (shop window number), onBuy(item), onUse(item), onTab(tab), close(),
--- restocked()}. Returns false when the kit window cannot open (the caller then draws the old page).
+-- rerender(), restocked()}. Returns false when the kit window cannot open (the caller then draws the old page).
 function M.build(body: GuiObject, d: any): boolean
     if state.window ~= d.window then state.window, state.page = d.window, 1 end
     local p = d.p
     local offers = ProgressionRules.shopOffers(d.window)
-    local first, last, pages = Menu.page(#offers, state.page, Menu.Potion.perPage)
+    local owned = {}
+    for _, item in ProgressionConfig.Potions do
+        local n = (p.potions or {})[item.id] or 0
+        if n > 0 then table.insert(owned, {item = item, n = n}) end
+    end
+    -- the pages: the shop pages first, then the player's own potions (at least one page, so drinking is always one arrow away)
+    local _, _, shopPages = Menu.page(#offers, 1, Menu.Potion.perPage)
+    local _, _, ownPages = Menu.page(#owned, 1, Menu.Potion.perPage)
+    local pages = shopPages + ownPages
     state.page = math.clamp(state.page, 1, pages)
+    local mine = state.page > shopPages
     local gem = ShopArt.validId(require(Shared.UIIconAssets).amber)
-    local cards = {}
-    for i = first, last do
-        local offer = offers[i]
-        local item = ProgressionRules.item(ProgressionConfig.Potions, offer.id)
-        if item then
-            local left = ProgressionRules.shopRemaining(p, d.window, item.id)
-            local function buy() if left > 0 then d.onBuy(item) end end
+    local cards, extras = {}, {}
+    if not mine then
+        local first, last = Menu.page(#offers, state.page, Menu.Potion.perPage)
+        for i = first, last do
+            local item = ProgressionRules.item(ProgressionConfig.Potions, offers[i].id)
+            if item then
+                local left = ProgressionRules.shopRemaining(p, d.window, item.id)
+                local function buy() if left > 0 then d.onBuy(item) end end
+                table.insert(cards, {
+                    key = item.id, rarity = item.rarity, name = item.name, rarityWord = item.rarity, picture = icon(item),
+                    effect = Menu.kindWord(item.kind, item.rarity), price = if left > 0 then item.price else nil,
+                    word = if left > 0 then nil else Menu.SoldOut, grey = left <= 0, gem = gem, onPick = buy,
+                })
+                table.insert(extras, {badge = if left > 0 then Menu.left(left) else nil, lasts = Menu.lasts(item.duration)})
+            end
+        end
+    else
+        local first, last = Menu.page(#owned, state.page - shopPages, Menu.Potion.perPage)
+        for i = first, math.min(last, #owned) do
+            local item, n = owned[i].item, owned[i].n
             table.insert(cards, {
-                key = item.id, rarity = item.rarity, name = item.name, rarityWord = Menu.lasts(item.duration),
-                picture = icon(item), effect = Menu.kindWord(item.kind),
-                price = if left > 0 then item.price else nil, word = if left > 0 then nil else Menu.SoldOut, grey = left <= 0,
-                gem = gem, onPick = buy,
+                key = item.id, rarity = item.rarity, name = item.name, rarityWord = item.rarity, picture = icon(item),
+                effect = Menu.kindWord(item.kind, item.rarity), word = Menu.DrinkWord, grey = false, onPick = function() d.onUse(item) end,
             })
+            table.insert(extras, {badge = Menu.have(n), lasts = Menu.lasts(item.duration)})
         end
     end
     local live: {restock: TextLabel?} = {restock = nil}
     local spec: any
     spec = {
-        title = Menu.PotionTitle, colour = Menu.PotionColour, cards = cards,
+        title = if mine then Menu.YoursTitle else Menu.PotionTitle, colour = Menu.PotionColour, cards = cards,
         layout = function(w: number, h: number, _: number, inset: number?) return Menu.potionLayout(w, h, inset) end,
         onClose = function() if d.close then d.close() end end,
         rail = {
-            tabs = FrameRules.RailTabs, words = FrameRules.RailWords, selected = "potions", icon = Landing.tabIcon,
+            tabs = Menu.PotionRail, words = Menu.PotionRailWords, selected = "potions", icon = Landing.tabIcon,
             onTab = function(tab: string) if tab ~= "potions" then d.onTab(tab) end end,
         },
         content = function(window: Frame, lay: any, _: Frame)
-            local r, m = lay.restock, lay.more
-            local line = Art.words(window, "Restock", TimerWords.potionsIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - workspace:GetServerTimeNow()))),
-                r.x, r.y, r.w, r.h, r.size, 36)
-            line.TextXAlignment = Enum.TextXAlignment.Left
-            live.restock = line
-            if pages > 1 then
-                KitButton.draw(window, "PageButton", m.x, m.y, m.w, m.h, 36, {word = if state.page < pages then Menu.MoreWord else Menu.BackWord,
-                    grey = true, textSize = lay.buttonText, onPress = function()
-                        state.page = if state.page < pages then state.page + 1 else 1
-                        d.rerender()
-                    end})
-            end
-            local b = lay.band
-            if not b then return end
-            local strip = Art.studded(window, "Yours", Kit2.StripSlot, b.x, b.y, b.w, b.h, 34, b.h / Kit2.Studded[Kit2.StripSlot].h, b.h / Kit2.Studded[Kit2.StripSlot].h)
-            if not strip then strip = Art.box(window, "Yours", b.x, b.y, b.w, b.h, 34) end
-            local x = 14
-            local label = Art.words(strip, "YoursWord", Menu.YoursWord, x, 0, 90, b.h, b.text, 36)
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            x += FrameRules.textWidth(Menu.YoursWord, b.text) + 16
-            local any = false
-            for _, item in ProgressionConfig.Potions do
-                local n = (p.potions or {})[item.id] or 0
-                local id = icon(item)
-                local countW = FrameRules.textWidth(Menu.count(n), b.text) + 8
-                if n > 0 and id and x + b.icon + countW <= b.w - 8 then
-                    any = true
-                    Art.picture(strip, "Own_" .. item.id, id, x, math.floor((b.h - b.icon) / 2), b.icon, b.icon, 36)
-                    local count = Art.words(strip, "OwnCount_" .. item.id, Menu.count(n), x + b.icon - 6, 0, countW, b.h, b.text, 37)
-                    count.TextXAlignment = Enum.TextXAlignment.Left
-                    Art.tap(strip, "Use_" .. item.id, x, 0, b.icon + countW - 6, b.h, 38, function() d.onUse(item) end)
-                    x += b.icon + countW + 4
+            -- in the header: the restock words at 63 % (yellow-white), the page arrow left of the X
+            local t = lay.timer
+            local c = Menu.TimerColour
+            live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y, t.w, t.h, t.size, 36, Color3.fromRGB(c[1], c[2], c[3]))
+            local g = lay.page
+            KitButton.draw(window, "PageButton", g.x, g.y, g.w, g.h, 36, {word = Menu.PageWord, grey = true, textSize = g.text, onPress = function()
+                state.page = if state.page < pages then state.page + 1 else 1
+                d.rerender()
+            end})
+            -- on each card: the stock badge top right ("3 left" / "Have 2") and "Lasts 5 min" over the strip
+            for i, extra in extras do
+                local r = lay.cards[i]
+                if not r then break end
+                local b, l = lay.badge, lay.lasts
+                if extra.badge then
+                    local badge = Art.words(window, "Badge_" .. i, extra.badge, r.x + b.x, r.y + b.y, b.w, b.h, b.size, 38)
+                    badge.TextXAlignment = Enum.TextXAlignment.Right
                 end
+                Art.words(window, "Lasts_" .. i, extra.lasts, r.x + l.x, r.y + l.y, l.w, l.h, l.size, 38)
             end
-            if not any then
-                local none = Art.words(strip, "NoneWord", Menu.NoneWord, x, 0, b.w - x - 8, b.h, FrameRules.fitSize(Menu.NoneWord, b.w - x - 12, b.text), 36)
-                none.TextXAlignment = Enum.TextXAlignment.Left
+            if mine and #cards == 0 then
+                local r1, r3 = lay.cards[1], lay.cards[3]
+                Art.words(window, "NoneWord", Menu.NoneWord, r1.x, r1.y, r3.x + r3.w - r1.x, r1.h, lay.cardTitle, 38)
             end
         end,
     }
     if not KitWindow.open(body, spec) then return false end
-    -- the restock line counts down; a new shop window redraws the page (the caller re-renders the screen)
+    -- the restock words count down; a new shop window redraws the page (the caller re-renders the screen)
     local mark = body:FindFirstChild("KitWindowMark")
     task.spawn(function()
         while mark and mark.Parent do
@@ -122,7 +134,7 @@ function M.build(body: GuiObject, d: any): boolean
             if not mark.Parent then return end
             local now = workspace:GetServerTimeNow()
             if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end
-            setWords(live.restock, TimerWords.potionsIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - now))))
+            setWords(live.restock, restockWords(d.window))
         end
     end)
     return true

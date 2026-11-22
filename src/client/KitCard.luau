@@ -53,7 +53,7 @@ function Card.draw(parent: Instance, r: Rules.Rect, spec: Spec, lay: Rules.Layou
     if spec.rarityWord then Art.words(card, "Rarity", spec.rarityWord, 4, edge + lay.nameH - 2, r.w - 8, lay.rarityH, lay.rarityText, 38) end
     local buttonY = r.h - edge - lay.button
     local stripY = buttonY - lay.innerGap - lay.lineH
-    local artBottom = if lay.line then stripY - 2 else buttonY - 2
+    local artBottom = (if lay.line then stripY - 2 else buttonY - 2) - ((lay :: any).artGap or 0) -- BD-1298: room for a screen line over the strip
     local art = math.min(lay.art, artBottom - lay.artTop, r.w - 4)
     if spec.picture and art > 0 then
         Art.picture(card, "Picture", spec.picture, math.floor((r.w - art) / 2), lay.artTop + math.floor((artBottom - lay.artTop - art) / 2), art, art, 36, spec.pictureCrop)
