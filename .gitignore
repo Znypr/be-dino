@@ -51,3 +51,9 @@ Screenshot 20*.png
 build/*-test.rbxlx
 build/*-test.manifest.json
 build/ref-compare/
+
+# Be Dino Desk (docs/247): dependencies and build output
+apps/be-dino-desk/node_modules/
+apps/be-dino-desk/ui/node_modules/
+apps/be-dino-desk/dist/
+apps/be-dino-desk/release/
