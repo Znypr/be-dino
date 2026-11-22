@@ -57,6 +57,8 @@ function Tabs.found()
 end
 
 function Tabs.lastTab(): string return lastTab end
+-- BD-1296: the kit Dino Index's outside rail picks the tab (then opens the collection again)
+function Tabs.choose(tab: string) lastTab = Index.validTab(tab) end
 
 -- ---------------------------------------------------------------- the dot on the Dinos button
 local function refreshDot()

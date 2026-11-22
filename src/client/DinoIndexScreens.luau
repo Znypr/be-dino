@@ -23,7 +23,7 @@ Screens.names = {collection = true, detail = true}
 
 -- Bootstrap's screen helpers, set by attach.
 local body: any, heading: any, header: any, label: any, box: any, button: any
-local open: any, notify: any, viewportScale: any, num: any, str: any, decoded: any, openFusion: any, equip: any
+local open: any, closeModal: any, notify: any, viewportScale: any, num: any, str: any, decoded: any, openFusion: any, equip: any
 local copies: any, bestMutation: any, eventMutation: any, ownedTraits: any, hero: any, speciesIndex: any, motionNow: any
 local motion = true -- read from Bootstrap at the start of every render (Calm motion can change between two openings)
 
@@ -47,6 +47,7 @@ end
 function Screens.attach(d: any)
     body, heading, header, label, box, button = d.body, d.heading, d.header, d.label, d.box, d.button
     open, notify, viewportScale, num, str, decoded = d.open, d.notify, d.viewportScale, d.num, d.str, d.decoded
+    closeModal = d.close -- BD-1296: the kit Dino Index window has its own X
     openFusion, equip = d.openFusion, d.equip
     if (Config :: any).DupProgressEnabled==true then pcall(function() require(script.Parent.DupProgressClient).start() end) end -- BD-1170 (docs/227): reads the copy list for "3 of 6 for Gold!"; flag off = the module is never even required
     copies, bestMutation, eventMutation, ownedTraits, hero, speciesIndex, motionNow = d.copies, d.bestMutation, d.eventMutation, d.ownedTraits, d.hero, d.speciesIndex, d.motion
@@ -56,6 +57,11 @@ function Screens.render(name: string)
     motion = motionNow()
     if name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
+        -- BD-1296 (docs/246 slice 2): with Config.MenusSaeFrameEnabled the Dinos page is the kit window (DinoIndexKit); flag off = this line does nothing
+        if Config.MenusSaeFrameEnabled==true and require(script.Parent.DinoIndexKit).build(body,{hero=hero,copies=copies,bestMutation=bestMutation,
+            eventMutation=eventMutation,ownedTraits=ownedTraits,speciesIndex=speciesIndex,notify=notify,open=open,openFusion=openFusion,
+            selected=function() return selected end,select=function(id) selected=id end,openDetail=function() open("detail") end,
+            close=closeModal}) then return end
         if require(script.Parent.IndexTabs).mount(open) then return end
         if Theme.Toybox then -- BD-1194 (docs/232): the list on the Toybox layout rules (src/client/DinoIndexList); flag off = the list below, unchanged
             local compact=require(script.Parent.ModalCompact)

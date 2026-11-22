@@ -12,6 +12,11 @@ inside, slice and stud crop measured against the real PNGs, the header pieces co
 38 %. Source guards: the flag ships false, is pinned off in the default profile, ON in the playtest profile, the rehearsal list and the
 playtest manifest; ShopTiles hands the landing over only with the flag on; Bootstrap only passes its close; the landing passes only data;
 the kit uses uploaded pictures only (no colour fills, no ids in code) and each kit 2 piece falls back to the Toybox piece; no Robux path.
+BD-1296 (docs/246 slice 2): the Potion Shop (client/PotionSaeShop) and the Dino Index Dinos page (client/DinoIndexKit) on the same kit,
+numbers in Shared/SaeMenuRules (run here at 720 p against the docs/246 targets and at every size against the floors), the same flag:
+ShopScreens and DinoIndexScreens hand over only with the flag on (flag off = the old pages: the hand-over line does nothing), kid words
+(no "%", no multiplier), kit pictures only, no remote and no Robux path in the screens; MUTANTS put each defect back and the checks must
+fail (--no-mutants skips them).
 Usage: python tools/verify_sae_frame.py --runner luau.exe"""
 from pathlib import Path
 import argparse
@@ -204,12 +209,224 @@ def scan():
     assert not (ROOT / 'src/client/ShopKitCard.luau').exists(), 'one card: KitCard (ShopKitCard is gone)'
 
 
+# ---- BD-1296 slice 2 ------------------------------------------------------------------------------------------------------------------
+SLICE2 = {'rules': 'src/shared/SaeMenuRules.luau', 'potion': 'src/client/PotionSaeShop.luau', 'index': 'src/client/DinoIndexKit.luau',
+          'shops': 'src/client/ShopScreens.luau', 'screens': 'src/client/DinoIndexScreens.luau', 'window': 'src/client/KitWindow.luau',
+          'kit2': 'src/shared/ShopKit2.luau', 'tabs': 'src/client/IndexTabs.luau', 'boot': 'src/client/Bootstrap.client.luau',
+          'rail': 'src/client/KitRail.luau', 'timer': 'src/shared/TimerWords.luau', 'preview': 'src/shared/DinosaurPreview.luau'}
+
+LUAU2 = r'''
+local fails = {}
+local function check(ok, what) if not ok then table.insert(fails, what) end end
+local function near(v, lo, hi) return v >= lo and v <= hi end
+-- 720 p: the docs/246 targets
+local P = M.potionLayout(1280, 720, 0)
+local w = P.window
+check(near(w.w / 1280, .57, .59) and near(w.h / 720, .66, .68), "Potion Shop window 58 x 67 %")
+check(math.abs(w.x + w.w / 2 - 640) <= 1 and near(w.y / 720, .205, .225), "Potion Shop centred, top at 21-22 %")
+check(near(P.headerH / 720, .095, .105) and near(P.close, 52, 58) and near(P.titleSize, 36, 40), "header 9.5-10 % H, X 52-58 px, title 36-40 px")
+check(#P.cards == 3 and M.Potion.perPage == 3, "three potions per page")
+for _, c in P.cards do check(near(c.h / 720, .28, .32), "potion cards 28-32 % H") end
+check(near(P.art / 720, .12, .14), "the bottle 12-14 % H")
+local S = M.potionLayout(1274, 423, 58)
+check(S.art >= 80, "Studio canvas: the bottle box 80+ px (lead polish: bottles 45-60 % bigger)")
+check(near(P.button / 720, .06, .07) and near(P.buttonText, 25, 28), "the buy button 6.5 % H, price 25-28 px")
+check(near(P.cardTitle, 23, 26) and near(P.rarityText, 19, 22) and near(P.lineText, 19, 22), "name 23-26 px, body 19-22 px")
+check(P.restock.size == 22 and P.restock.h >= 22, "New in 3 min: one 22 px line")
+check(near(P.cards[2].x - P.cards[1].x - P.cards[1].w, 12, 15), "cards 12-15 px apart")
+check(P.artTop + P.art + P.innerGap + P.lineH + P.innerGap + P.button + P.edge <= P.cards[1].h, "potion card parts fit (the bottle at full size)")
+check(P.band ~= nil, "the owned potions strip shows at 720 p")
+local I = M.indexLayout(1280, 720, 0)
+w = I.window
+check(near(w.w / 1280, .49, .51) and near(w.h / 720, .62, .64), "Dino Index window 50 x 63 %")
+check(#I.cards == 8 and I.cards[5].y > I.cards[1].y and I.cards[4].x > I.cards[3].x and I.cards[5].x == I.cards[1].x, "four columns x two rows")
+for _, c in I.cards do check(near(c.h / 720, .14, .16), "index cards 14-16 % H") end
+check(near(I.cardRender / 720, .09, .11), "the dino render 9-11 % H")
+check(near(I.panel.w / w.w, .26, .30), "the selected-dino panel about 28 % of the window width")
+check(near(I.bar.h, 24, 28), "the progress bar 24-28 px at 720 p (lead polish 2026-11-23; docs/246 said 5 % H)")
+check(M.LookWord == "View" and M.NotFoundWord == "Not found yet!" and M.NoneWord == "No potions yet!" and string.find(M.MoreWord, "Next", 1, true) ~= nil, "polish words: View, Not found yet!, No potions yet!, Next")
+check(M.CardZoom >= .25 and M.PanelZoom >= .25 and M.SilhouetteZoom >= .2, "the dino previews fill their cards (zoomed preview boxes)")
+check(I.panelParts.badge >= 19 + 6 and I.panelParts.renderTop >= I.panelParts.edge + I.panelParts.nameText + I.panelParts.badge, "the rarity badge under the name, above the dino")
+check(near(P.band.h, 48, 52), "the owned strip 48-52 px at 720 p")
+check(near(I.bar.minFill, 10, 12), "a found dino shows at least 10-12 px of fill at 720 p (lead polish round 2)")
+check(M.PanelZoom >= .4 and M.SilhouetteZoom >= .28, "lead polish round 2: the panel dino and the silhouettes bigger")
+check(near(I.headerH / 720, .095, .105) and near(I.titleSize, 36, 40), "Index header 9.5-10 % H, title 36-40 px")
+check(M.IndexTitle == "Dino Index" and M.IndexColour == "cyan" and M.IndexRail[1] == "dinos" and M.IndexRail[2] == "patterns" and M.IndexRail[3] == "colours", "one cyan title; Dinos / Patterns / Colours on the rail")
+for _, L in {P, I} do
+    local r = L.rail
+    check(near((r.x - L.window.x - L.window.w) / 1280, .009, .016) and near(r.icon / 720, .07, .08) and near(r.gap / 720, .008, .012), "rail 1-1.5 % W right of the window, icons 7-8 % H, 1 % apart")
+end
+-- kid words
+check(M.lasts(300) == "Lasts 5 min" and M.lasts(420) == "Lasts 7 min" and M.lasts(45) == "Lasts 45 s", "Lasts 7 min")
+for kind, word in M.KindWords do check(not string.find(word, "[%d%%]"), "kid line without numbers: " .. kind) end
+check(M.kindWord("growth") == "Grow faster!" and M.count(3) == "x3", "Grow faster!, x3")
+local f, l, n = M.page(6, 2, 3)
+check(f == 4 and l == 6 and n == 2, "page 2 of six offers = 4..6")
+f, l, n = M.page(6, 9, 3)
+check(f == 4 and n == 2, "a page past the end is the last page")
+-- every size: floors, inside the window and the screen
+for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36}, {1274, 423, 58}, {844, 390, 0}, {812, 375, 0}, {667, 375, 0}, {932, 430, 0}, {1180, 820, 36}, {740, 360, 0}} do
+    local sw, sh, inset = size[1], size[2], size[3]
+    local tag = sw .. "x" .. sh
+    for _, L in {M.potionLayout(sw, sh, inset), M.indexLayout(sw, sh, inset)} do
+        local win = L.window
+        check(win.x >= 0 and win.y >= 0 and win.x + win.w <= sw and win.y + win.h <= sh, tag .. ": window on screen")
+        check(L.close >= 48 and L.close <= L.headerH and L.titleSize >= 19, tag .. ": X >= 48 px inside the header")
+        check(L.rail.icon >= 44 and L.rail.labelSize >= 19, tag .. ": rail icons >= 44 px, words >= 19 px")
+        for _, s in L.rail.slots do check(s.x >= win.x + win.w and s.x + s.w <= sw and s.y >= 0 and s.y + s.h <= sh, tag .. ": rail right of the window, on screen") end
+        for _, c in L.cards do
+            check(c.x >= 4 and c.y >= L.headerInset + L.headerH and c.x + c.w <= win.w - 4 and c.y + c.h <= win.h - 4, tag .. ": card inside the window")
+            check(c.w >= 44 and c.h >= 44, tag .. ": card is a tap target")
+        end
+    end
+    local p = M.potionLayout(sw, sh, inset)
+    local c = p.cards[1]
+    check(c.w >= 120, tag .. ": potion card wide enough for its button")
+    check(p.artTop + 40 + p.innerGap + p.lineH + p.innerGap + p.button + p.edge <= c.h, tag .. ": potion card parts fit (bottle 40+ px)")
+    for _, t in {p.cardTitle, p.rarityText, p.lineText, p.buttonText, p.restock.size} do check(t >= 19, tag .. ": potion text >= 19 px") end
+    check(p.button >= 44 and p.more.h >= 44 and p.more.w >= 44, tag .. ": buy and page buttons >= 44 px")
+    check(p.more.y >= c.y + c.h and p.more.x + p.more.w <= p.window.w - 4 and p.more.y + p.more.h <= p.window.h - 4, tag .. ": page button under the cards, inside")
+    check(p.restock.x + p.restock.w <= p.more.x, tag .. ": the restock line clear of the page button")
+    check(p.band ~= nil, tag .. ": the owned potions strip shows (the only place to drink one)")
+    if p.band then check(p.band.y >= p.more.y + p.more.h and p.band.y + p.band.h <= p.window.h - 4 and p.band.icon >= 44 and p.band.text >= 19, tag .. ": owned strip under the row, inside, icons 44+") end
+    local i = M.indexLayout(sw, sh, inset)
+    local pp = i.panelParts
+    check(i.panel.x >= i.cards[4].x + i.cards[4].w and i.panel.x + i.panel.w <= i.window.w - 4 and i.panel.y + i.panel.h <= i.window.h - 4, tag .. ": panel right of the grid, inside")
+    check(i.bar.y >= i.cards[8].y + i.cards[8].h and i.bar.x + i.bar.w <= i.prev.x and i.prev.x + i.prev.w <= i.next.x, tag .. ": bar under the grid, left of the page buttons")
+    check(i.prev.h >= 44 and i.prev.w >= 44 and i.bar.text >= 19 and i.countText >= 19, tag .. ": page buttons 44+, bar and count text 19+")
+    check(i.cardRender >= 40 and i.cardRender + i.countText <= i.cards[1].h, tag .. ": render 40+ px and its count fit the card")
+    check(pp.nameText >= 19 and pp.wordText >= 19 and pp.button >= 44 and pp.buttonText >= 19, tag .. ": panel text 19+, button 44+")
+    check(pp.renderTop + 40 + pp.gap + pp.line + pp.gap + pp.button + pp.edge <= i.panel.h, tag .. ": panel parts fit (render 40+ px)")
+end
+if #fails > 0 then error("sae menus FAILED:\n" .. table.concat(fails, "\n")) end
+print("sae menus passed")
+'''
+
+
+def scan2(src):
+    """Source guards of slice 2. src: {key: text} (a mutant changes one of them). Returns the failures."""
+    errors = []
+
+    def need(ok, what):
+        if not ok:
+            errors.append(what)
+    shops, screens, potion, index = src['shops'], src['screens'], src['potion'], src['index']
+    need(shops.count('MenusSaeFrameEnabled==') == 1 and 'if Config.MenusSaeFrameEnabled==true and require(script.Parent.PotionSaeShop).build(body,{' in shops,
+         'ShopScreens hands the Potion Shop to PotionSaeShop only with the flag on')
+    need(screens.count('MenusSaeFrameEnabled==') == 1 and 'if Config.MenusSaeFrameEnabled==true and require(script.Parent.DinoIndexKit).build(body,{' in screens,
+         'DinoIndexScreens hands the Dinos page to DinoIndexKit only with the flag on')
+    need('DinoIndexKit).build(' in screens and screens.index('DinoIndexKit).build(') < screens.index('IndexTabs).mount(open)'),
+         'the kit Index is tried before the old tab bar mounts')
+    kit_part = shops.split('PotionSaeShop).build(')[1].split('then return end')[0] if 'PotionSaeShop).build(' in shops else ''
+    need('onBuy=function(item) potionChoice.id=item.id open("potionConfirm") end' in kit_part, 'a buy tap opens the purchase confirm (the server decides)')
+    need('if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end' in kit_part,
+         'a use tap goes through the old use path (the replace confirm)')
+    need('openDetail=function() open("detail") end' in screens and 'close=closeModal}) then return end' in screens and 'closeModal = d.close' in screens,
+         'the Index opens the old dino page and closes with Bootstrap close')
+    need(',open=open,close=close,notify=notify,' in src['boot'], 'Bootstrap passes its close to the Index screens')
+    need('KitWindow.open(body, spec)' in potion and 'KitWindow.open(body, spec)' in index, 'both screens are the kit window')
+    need('Menu.potionLayout(w, h, inset)' in potion and 'Menu.indexLayout(w, h, inset, words)' in index, 'both screens take their rects from SaeMenuRules')
+    need('ProgressionRules.shopOffers(d.window)' in potion and 'ProgressionRules.shopRemaining(p, d.window, item.id)' in potion, 'the offers and stock come from the shared shop rules')
+    need('Kit.potionIconSlot(Slots.Images :: any, item.id, item.kind)' in potion, 'the bound potion pictures')
+    need('Menu.lasts(item.duration)' in potion and 'Menu.kindWord(item.kind)' in potion and 'multiplier' not in potion, 'kid words: what it does and how long, never the multiplier')
+    need('if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end' in potion and 'TimerWords.potionsIn(' in potion, 'New in 3 min counts down; a new window redraws')
+    need('IndexTabs.lastTab() ~= "dinos" then return false end' in index and 'IndexTabs.choose(tab) d.open("collection")' in index, 'Patterns / Colours keep their own pages (the rail picks the tab)')
+    need('d.hero(card, id, rx, ry, render, render, d.bestMutation(id))' in index and 'Preview.add(card, id, "silhouette", CHARCOAL)' in index and 'Color3.fromRGB(32, 33, 39)' in index, 'found dinos are the game preview in colour, the others a silhouette')
+    need('if found then rarityWord(d.speciesIndex(id)) else "Common"' in index, 'found dinos on their rarity card, not found on the grey card')
+    need('TimerWords.found(unlocked, total)' in index and 'i <= #Config.SpeciesOrder and info(id, false)' in index, 'the bar counts the normal dinos only (secrets apart)')
+    need('Config.PatternColourIndexEnabled == true then table.insert(out, tab)' in index, 'Patterns / Colours on the rail only while their pages exist')
+    for name in ('potion', 'index'):
+        text = src[name]
+        need('rbxassetid' not in text and 'BackgroundColor3' not in text and 'Marketplace' not in text and 'PromptProductPurchase' not in text,
+             f'{name}: kit pictures only, no colour fills, no ids, no Robux path')
+        need('FireServer' not in text and 'InvokeServer' not in text, f'{name}: no remote (the screen modules only call back)')
+    need('if not table.find(Kit2.HeaderColours, colour) then return false end' in src['window'] and 'headerCard(header, spec.colour, headerW, lay.headerH)' in src['window'],
+         'KitWindow: a colour with no kit 2 strip is the kit 2 card piece, never the green strip')
+    need('if spec.content then spec.content(window, lay, holder) end' in src['window'] and 'spec.refresh = redraw' in src['window'], 'KitWindow draws a screen part and redraws in place')
+    need('Art.studded(holder, "KitTabTile_" .. tab, Kit2.buttonSlot(false),' in src['rail'] and '        if selected then\n            -- BD-1296' in src['rail'], 'KitRail: the active tab sits on the lime kit tile (every kit screen)')
+    need('function W.potionsIn(secondsLeft: number): string' in src['timer'] and 'return "New in " .. UIFormat.duration(secondsLeft)' in src['timer'], 'New potions in 2 min is its own function; the Toybox page keeps restockIn')
+    need('if shade and gold=="silhouette" then viewport:SetAttribute("SilhouetteShade",shade) end' in src['preview'], 'the charcoal silhouette is opt-in (the old Index keeps black)')
+    need('local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0' in index and 'if unlocked > 0 then fill = math.max(fill, B.minFill) end' in index
+         and 'piece.ImageColor3 = TRACK' in index, 'the progress fill is exact with a visible minimum, on a darker track')
+    need('K.HeaderCards = {cyan = "rare"}' in src['kit2'], 'the cyan header is the kit 2 Rare card piece')
+    need('function Tabs.choose(tab: string) lastTab = Index.validTab(tab) end' in src['tabs'], 'IndexTabs.choose keeps the tab valid')
+    need('M.Potion = {w = 0.58, h = 0.67,' in src['rules'] and 'M.Index = {w = 0.50, h = 0.63,' in src['rules'], 'docs/246 window sizes')
+    return errors
+
+
+MUTANTS = {
+    'the Potion Shop hand-over ignores the flag': ('shops', 'if Config.MenusSaeFrameEnabled==true and require(script.Parent.PotionSaeShop)', 'if require(script.Parent.PotionSaeShop)'),
+    'the Index hand-over ignores the flag': ('screens', 'if Config.MenusSaeFrameEnabled==true and require(script.Parent.DinoIndexKit)', 'if require(script.Parent.DinoIndexKit)'),
+    'a buy tap buys at once': ('shops', 'onBuy=function(item) potionChoice.id=item.id open("potionConfirm") end', 'onBuy=function(item) transact("buyPotion",item.id,false) end'),
+    'the card shows the multiplier': ('potion', 'Menu.kindWord(item.kind)', 'tostring(item.multiplier)'),
+    'the timer never restocks': ('potion', 'if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end', 'if false then return end'),
+    'the kit Index hides the Patterns page': ('index', 'IndexTabs.lastTab() ~= "dinos" then return false end', 'false then return false end'),
+    'not found dinos in colour': ('index', 'if found then rarityWord(d.speciesIndex(id)) else "Common"', 'rarityWord(d.speciesIndex(id))'),
+    'the cyan Index header turns green': ('window', 'if not table.find(Kit2.HeaderColours, colour) then return false end', ''),
+    'a colour fill in the potion screen': ('potion', 'local M = {}', 'local M = {}\nlocal _x = Instance.new("Frame") _x.BackgroundColor3 = Color3.new(1, 0, 0)'),
+    'the active rail tab loses its tile': ('rail', '        if selected then\n            -- BD-1296', '        if false then\n            -- BD-1296'),
+    'the progress fill rounds up to a square': ('index', 'local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0', 'local fill = math.max(B.h, math.floor(B.w * unlocked / total + 0.5))'),
+    'one found dino shows no fill': ('index', 'if unlocked > 0 then fill = math.max(fill, B.minFill) end', ''),
+    'the Index window at shop size': ('rules', 'M.Index = {w = 0.50, h = 0.63,', 'M.Index = {w = 0.58, h = 0.67,'),
+}
+LUAU_MUTANTS = {
+    'potion cards grow to 40 %': ('M.Potion = {w = 0.58, h = 0.67, card = 0.32,', 'M.Potion = {w = 0.58, h = 0.67, card = 0.40,'),
+    'the bottle at 9 %': ('bottle = 0.13,', 'bottle = 0.09,'),
+    'the buy button under 44 px on phones': ('local button = math.max(M.MinTap, round(h * P.button))', 'local button = round(h * P.button)'),
+    'kid line with a number': ('growth = "Grow faster!"', 'growth = "+40% growth"'),
+    'the Index panel at 40 %': ('panel = 0.28,', 'panel = 0.40,'),
+    'the rail inside the window': ('local x = win.x + win.w + math.max(6, round(w * 0.0125))', 'local x = win.x + win.w - 40'),
+    'text under 19 px on a phone': ('local rarityText = math.clamp(round(h * 0.028), M.MinText, 22)', 'local rarityText = math.clamp(round(h * 0.028), 14, 22)'),
+}
+
+
+def run_luau2(runner, rules_text):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'sae_menus.luau'
+        path.write_text('local M=(function()\n' + rules_text.replace('export type', 'type') + '\nend)()\n' + LUAU2, encoding='utf-8')
+        result = subprocess.run([runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+        return result.returncode == 0 and 'sae menus passed' in result.stdout, result.stdout + result.stderr
+
+
+def slice2(runner, mutants=True):
+    src = {k: read(v) for k, v in SLICE2.items()}
+    errors = scan2(src)
+    ok, out = run_luau2(runner, src['rules'])
+    if not ok:
+        errors.append('SaeMenuRules: ' + out.strip())
+    if errors:
+        print('sae menus FAILED:\n' + '\n'.join(errors))
+        return False
+    print('sae menus passed (source + numbers)')
+    if not mutants:
+        return True
+    survived = []
+    for name, (key, old, new) in MUTANTS.items():
+        assert old in src[key], f'mutant {name!r}: the text is not in {SLICE2[key]}'
+        bad = dict(src)
+        bad[key] = src[key].replace(old, new, 1)
+        if not scan2(bad) and run_luau2(runner, bad['rules'])[0]:
+            survived.append(name)
+    for name, (old, new) in LUAU_MUTANTS.items():
+        assert old in src['rules'], f'mutant {name!r}: the text is not in SaeMenuRules'
+        if run_luau2(runner, src['rules'].replace(old, new, 1))[0]:
+            survived.append(name)
+    if survived:
+        print('sae menus: MUTANTS SURVIVED (the checks did not catch them):\n' + '\n'.join(survived))
+        return False
+    print(f'sae menus: {len(MUTANTS) + len(LUAU_MUTANTS)} mutants caught')
+    return True
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
+    parser.add_argument('--no-mutants', action='store_true')
     args = parser.parse_args()
     scan()
     measure()
+    if not slice2(args.runner, not args.no_mutants):
+        sys.exit(1)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'sae_frame.luau'
         def module(rel):

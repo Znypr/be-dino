@@ -444,6 +444,26 @@ function Shop.render(name: string)
         -- BD-051: server-clock rotation. Offers/stock come from the shared deterministic rules; the server re-checks every purchase.
         local window=ProgressionRules.shopWindow(workspace:GetServerTimeNow())
         potionChoice.window=window
+        -- BD-1296 (docs/246 slice 2): with Config.MenusSaeFrameEnabled the shop is the kit window (PotionSaeShop); flag off = this line does nothing
+        if Config.MenusSaeFrameEnabled==true and require(script.Parent.PotionSaeShop).build(body,{p=p,window=window,close=closeModal,
+            onBuy=function(item) potionChoice.id=item.id open("potionConfirm") end,
+            onUse=function(item)
+                potionChoice.id=item.id
+                local buff=p.buffs[item.kind]
+                if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
+            end,
+            onTab=function(tab) -- the shop tabs on the rail: Featured = the Crystal Shop landing, the others its pages
+                Sfx.play("ui_click")
+                local ShopTiles=require(script.Parent.ShopTiles)
+                if tab=="featured" then ShopTiles.enter(require(Shared.FtueP1).shopTabs(num("AccountLevel"))) else ShopTiles.landing=false cosmeticTab=tab end
+                open("auras")
+            end,
+            rerender=function() Sfx.play("ui_click") body:ClearAllChildren() render("potions") end,
+            restocked=function()
+                if isActive()~="potions" then return end
+                notify("Potion shop restocked",C.blue,{key="potion_restock",icon="potion_speed_Common"}) Sfx.play("shop_refresh")
+                body:ClearAllChildren() render("potions")
+            end}) then return end
         -- BD-1205 (docs/236): with Config.ToyboxUIEnabled the Potion Shop is drawn by PotionToyboxPage (cream cards that fill the body, green crystal buy buttons,
         -- the owned potions on a cream panel); flag off = every line below runs as before.
         local PotionToybox=if Theme.Toybox then require(script.Parent.PotionToyboxPage) else nil

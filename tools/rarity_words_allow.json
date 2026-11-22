@@ -36,6 +36,10 @@
     "src/client/EggsPanels.luau": {
       "count": 2,
       "reason": "BD-1195 Toybox Eggs stage: the rarity pill is FILLED with the tier colour, the word sits on it in white, same as EggsScreen; the second hit is the ctx field list (rarityNames) in the header comment, nothing shown."
+    },
+    "src/client/DinoIndexKit.luau": {
+      "count": 1,
+      "reason": "BD-1296 kit Dino Index panel: the word sits on the kit 2 rarity CARD of that tier (the card art carries the tier colour), in white kit words like the slice 1 shop cards."
     }
   }
 }
