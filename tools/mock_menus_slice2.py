@@ -123,7 +123,7 @@ def picture(canvas, path, x, y, w, h, crop=None, silhouette=False):
     pic = pic.resize((max(1, round(pic.width * k)), max(1, round(pic.height * k))), Image.LANCZOS)
     if silhouette:
         a = pic.getchannel('A')
-        pic = Image.new('RGBA', pic.size, (28, 32, 44, 255))
+        pic = Image.new('RGBA', pic.size, (32, 33, 39, 255))  # charcoal #202127
         pic.putalpha(a.point(lambda v: int(v * 0.85)))
     canvas.alpha_composite(pic, (x + (w - pic.width) // 2, y + (h - pic.height) // 2))
 
@@ -202,10 +202,16 @@ def rail(canvas, lay, tabs, selected, icons, inset):
     r = lay['rail']
     for i, (tab, word) in enumerate(tabs):
         s = r['slots'][i]
-        size = r['selectedIcon'] if tab == selected else r['icon']
+        size = round(r['icon'] * 0.95) if tab == selected else r['icon']
         cx = s['x'] + s['w'] // 2
+        tile = round(r['icon'] * 1.15)
+        iy = s['y'] + inset + r['icon'] - size - ((tile - size) // 2 if tab == selected else 0)
+        if tab == selected:  # client/KitRail: the lime kit tile behind the active icon
+            d = LAYOUT['studded']['shopkit2_button_green']
+            k = tile / d['h']
+            studded(canvas, d, cx - tile // 2, iy + (size - tile) // 2, tile, tile, k * 0.9, k * 0.6)
         if icons.get(tab):
-            picture(canvas, icons[tab], cx - size // 2, s['y'] + inset + r['icon'] - size, size, size)
+            picture(canvas, icons[tab], cx - size // 2, iy, size, size)
         words(canvas, word, s['x'] - 6, s['y'] + inset + r['icon'], s['w'] + 12, r['labelSize'] + 2, r['labelSize'])
 
 
@@ -219,6 +225,7 @@ def backdrop(w, h):
     return bg
 
 
+LAYOUT = {}
 SHOP_ICONS = {'featured': ICONS / 'shop-tab-crystals-v1.png', 'auras': ICONS / 'shop-tab-auras-v2.png', 'trails': ICONS / 'shop-tab-trails-v2.png',
               'eggs': ICONS / 'shop-tile-eggs-v2.png', 'potions': ITEMS / 'potion-swift-sip-512.png'}
 INDEX_ICONS = {'dinos': ICONS / 'dinos.png', 'patterns': ICONS / 'index-tab-patterns-v1.png', 'colours': ICONS / 'index-tab-colours-v1.png',
@@ -226,7 +233,7 @@ INDEX_ICONS = {'dinos': ICONS / 'dinos.png', 'patterns': ICONS / 'index-tab-patt
 # sample data: three offers of one page (Common, Uncommon, Rare) and two owned potions
 POTIONS = [('Swift Sip', 'Common', 'swift-sip', 'Run faster!', 'Lasts 5 min', 20), ('Hearty Brew', 'Uncommon', 'hearty-brew', 'Grow faster!', 'Lasts 7 min', 71),
            ('Prime Feast', 'Rare', 'prime-feast', 'Grow faster!', 'Lasts 10 min', 200)]
-OWNED = [('growth-sip', 2), ('lucky-sip', 1)]
+OWNED = []  # the Studio test player owns none: the strip says "No potions yet!"
 
 
 def potion_mock(L, runner, w, h, inset):
@@ -249,13 +256,15 @@ def potion_mock(L, runner, w, h, inset):
         strip(canvas, L, x + lay['stripInset'], y + sy, cw - 2 * lay['stripInset'], lay['lineH'], kind, lay['lineText'])
         button(canvas, L, x + lay['buttonInset'], y + by, cw - 2 * lay['buttonInset'], lay['button'], price=price, text=lay['buttonText'])
     rs, mo = lay['restock'], lay['more']
-    words(canvas, 'New in 2 min', x0 + rs['x'], y0 + rs['y'], rs['w'], rs['h'], rs['size'], align='left')
-    button(canvas, L, x0 + mo['x'], y0 + mo['y'], mo['w'], mo['h'], word='More', grey=True, text=lay['buttonText'])
+    words(canvas, 'New potions in 2 min', x0 + rs['x'], y0 + rs['y'], rs['w'], rs['h'], rs['size'], align='left')
+    button(canvas, L, x0 + mo['x'], y0 + mo['y'], mo['w'], mo['h'], word='Next >', grey=True, text=lay['buttonText'])
     b = lay.get('band')
     if b:
         strip(canvas, L, x0 + b['x'], y0 + b['y'], b['w'], b['h'], '', b['text'])
         words(canvas, 'Yours', x0 + b['x'] + 14, y0 + b['y'], 90, b['h'], b['text'], align='left')
         ix = x0 + b['x'] + 14 + 90
+        if not OWNED:
+            words(canvas, 'No potions yet!', ix, y0 + b['y'], b['w'] - ix + x0, b['h'], b['text'], align='left')
         for file, n in OWNED:
             picture(canvas, ITEMS / f'potion-{file}-512.png', ix, y0 + b['y'] + (b['h'] - b['icon']) // 2, b['icon'], b['icon'])
             words(canvas, f'x{n}', ix + b['icon'] - 6, y0 + b['y'], 50, b['h'], b['text'], align='left')
@@ -285,28 +294,33 @@ def index_mock(L, runner, w, h, inset, dinos):
         studK = cw / d['w']
         studded(canvas, d, x, y, cw, ch, studK * 0.9, studK)
         if sid == selected:
-            ImageDraw.Draw(canvas).rounded_rectangle((x - 1, y - 1, x + cw, y + ch), radius=8, outline=(255, 255, 255, 255), width=3)
+            ImageDraw.Draw(canvas).rounded_rectangle((x - 2, y - 2, x + cw + 1, y + ch + 1), radius=8, outline=(92, 214, 245, 255), width=4)
         rend = lay['cardRender']
         ry = max(4, (ch - (rend + lay['countText'] + 2)) // 2)
-        picture(canvas, Path(dinos) / (DINO_FILES.get(sid, sid) + '.png'), x + (cw - rend) // 2, y + ry, rend, rend, silhouette=n == 0)
+        big = round(rend * (1.4 if n > 0 else 1.3))  # the game zooms its preview boxes; the cutouts have no margin, so a smaller factor
+        picture(canvas, Path(dinos) / (DINO_FILES.get(sid, sid) + '.png'), x + (cw - big) // 2, y + ry + (rend - big) // 2, big, big, silhouette=n == 0)
         words(canvas, f'x{n}' if n > 0 else '?', x, y + ry + rend - 2, cw, lay['countText'] + 4, lay['countText'])
     p, pp = lay['panel'], lay['panelParts']
     px, py = x0 + p['x'], y0 + p['y']
-    d = L['studded']['shopkit2_card_rare']
+    d = L['studded']['shopkit2_card_common']  # the light panel, the rarity as a badge
     studK = p['w'] / d['w']
     studded(canvas, d, px, py, p['w'], p['h'], studK * 0.7, studK)
     words(canvas, 'Triceratops', px + 4, py + pp['edge'], p['w'] - 8, pp['nameText'] + 2, min(pp['nameText'], max(19, int((p['w'] - 12) / (11 * 0.56)))))
-    words(canvas, 'Rare', px + 4, py + pp['edge'] + pp['nameText'] + 2, p['w'] - 8, pp['wordText'] + 2, pp['wordText'])
+    bw = min(p['w'] - 2 * pp['inset'], int(len('Rare') * 0.56 * pp['wordText']) + 24)
+    bx0, by0 = px + (p['w'] - bw) // 2, py + pp['edge'] + pp['nameText'] + 2
+    db = L['studded']['shopkit2_card_rare']
+    studded(canvas, db, bx0, by0, bw, pp['badge'], bw / db['w'] * 0.5, bw / db['w'])
+    words(canvas, 'Rare', bx0, by0 - 1, bw, pp['badge'], pp['wordText'])
     by = p['h'] - pp['edge'] - pp['button']
     sy = by - pp['gap'] - pp['line']
     rend = min(pp['render'], sy - pp['gap'] - pp['renderTop'])
-    picture(canvas, Path(dinos) / 'triceratops.png', px + (p['w'] - rend) // 2, py + pp['renderTop'] + (sy - pp['gap'] - pp['renderTop'] - rend) // 2, rend, rend)
+    picture(canvas, Path(dinos) / 'triceratops.png', px + (p['w'] - rend) // 2, py + pp['renderTop'] + (sy - pp['gap'] - pp['renderTop'] - rend) // 2, rend, rend)  # fills its box like the zoomed preview
     strip(canvas, L, px + pp['inset'], py + sy, p['w'] - 2 * pp['inset'], pp['line'], 'You have 1', pp['wordText'])
-    button(canvas, L, px + pp['inset'], py + by, p['w'] - 2 * pp['inset'], pp['button'], word='Look', text=pp['buttonText'])
+    button(canvas, L, px + pp['inset'], py + by, p['w'] - 2 * pp['inset'], pp['button'], word='View', text=pp['buttonText'])
     bar = lay['bar']
     bx, byy = x0 + bar['x'], y0 + bar['y']
     strip(canvas, L, bx, byy, bar['w'], bar['h'], '', bar['text'])
-    fill = max(bar['h'], round(bar['w'] * 5 / 22))
+    fill = round(bar['w'] * 5 / 22)  # exact
     dg = L['studded']['shopkit2_button_green']
     k = bar['h'] / dg['h']
     studded(canvas, dg, bx, byy, fill, bar['h'], k, k)
@@ -329,6 +343,7 @@ def main():
     a = ap.parse_args()
     w, h = (int(v) for v in a.size.split('x'))
     L = layouts(a.runner, w, h, a.inset)
+    LAYOUT.update(L)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     potion_mock(L, a.runner, w, h, a.inset).convert('RGB').save(out / f'mock-potion-shop{a.suffix}.png')

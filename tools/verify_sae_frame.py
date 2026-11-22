@@ -212,7 +212,8 @@ def scan():
 # ---- BD-1296 slice 2 ------------------------------------------------------------------------------------------------------------------
 SLICE2 = {'rules': 'src/shared/SaeMenuRules.luau', 'potion': 'src/client/PotionSaeShop.luau', 'index': 'src/client/DinoIndexKit.luau',
           'shops': 'src/client/ShopScreens.luau', 'screens': 'src/client/DinoIndexScreens.luau', 'window': 'src/client/KitWindow.luau',
-          'kit2': 'src/shared/ShopKit2.luau', 'tabs': 'src/client/IndexTabs.luau', 'boot': 'src/client/Bootstrap.client.luau'}
+          'kit2': 'src/shared/ShopKit2.luau', 'tabs': 'src/client/IndexTabs.luau', 'boot': 'src/client/Bootstrap.client.luau',
+          'rail': 'src/client/KitRail.luau', 'timer': 'src/shared/TimerWords.luau', 'preview': 'src/shared/DinosaurPreview.luau'}
 
 LUAU2 = r'''
 local fails = {}
@@ -227,6 +228,8 @@ check(near(P.headerH / 720, .095, .105) and near(P.close, 52, 58) and near(P.tit
 check(#P.cards == 3 and M.Potion.perPage == 3, "three potions per page")
 for _, c in P.cards do check(near(c.h / 720, .28, .32), "potion cards 28-32 % H") end
 check(near(P.art / 720, .12, .14), "the bottle 12-14 % H")
+local S = M.potionLayout(1274, 423, 58)
+check(S.art >= 80, "Studio canvas: the bottle box 80+ px (lead polish: bottles 45-60 % bigger)")
 check(near(P.button / 720, .06, .07) and near(P.buttonText, 25, 28), "the buy button 6.5 % H, price 25-28 px")
 check(near(P.cardTitle, 23, 26) and near(P.rarityText, 19, 22) and near(P.lineText, 19, 22), "name 23-26 px, body 19-22 px")
 check(P.restock.size == 22 and P.restock.h >= 22, "New in 3 min: one 22 px line")
@@ -240,7 +243,11 @@ check(#I.cards == 8 and I.cards[5].y > I.cards[1].y and I.cards[4].x > I.cards[3
 for _, c in I.cards do check(near(c.h / 720, .14, .16), "index cards 14-16 % H") end
 check(near(I.cardRender / 720, .09, .11), "the dino render 9-11 % H")
 check(near(I.panel.w / w.w, .26, .30), "the selected-dino panel about 28 % of the window width")
-check(near(I.bar.h / 720, .045, .055), "the progress bar 5 % H")
+check(near(I.bar.h, 24, 28), "the progress bar 24-28 px at 720 p (lead polish 2026-11-23; docs/246 said 5 % H)")
+check(M.LookWord == "View" and M.NotFoundWord == "Not found yet!" and M.NoneWord == "No potions yet!" and string.find(M.MoreWord, "Next", 1, true) ~= nil, "polish words: View, Not found yet!, No potions yet!, Next")
+check(M.CardZoom >= .25 and M.PanelZoom >= .25 and M.SilhouetteZoom >= .2, "the dino previews fill their cards (zoomed preview boxes)")
+check(I.panelParts.badge >= 19 + 6 and I.panelParts.renderTop >= I.panelParts.edge + I.panelParts.nameText + I.panelParts.badge, "the rarity badge under the name, above the dino")
+check(near(P.band.h, 48, 52), "the owned strip 48-52 px at 720 p")
 check(near(I.headerH / 720, .095, .105) and near(I.titleSize, 36, 40), "Index header 9.5-10 % H, title 36-40 px")
 check(M.IndexTitle == "Dino Index" and M.IndexColour == "cyan" and M.IndexRail[1] == "dinos" and M.IndexRail[2] == "patterns" and M.IndexRail[3] == "colours", "one cyan title; Dinos / Patterns / Colours on the rail")
 for _, L in {P, I} do
@@ -320,9 +327,9 @@ def scan2(src):
     need('ProgressionRules.shopOffers(d.window)' in potion and 'ProgressionRules.shopRemaining(p, d.window, item.id)' in potion, 'the offers and stock come from the shared shop rules')
     need('Kit.potionIconSlot(Slots.Images :: any, item.id, item.kind)' in potion, 'the bound potion pictures')
     need('Menu.lasts(item.duration)' in potion and 'Menu.kindWord(item.kind)' in potion and 'multiplier' not in potion, 'kid words: what it does and how long, never the multiplier')
-    need('if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end' in potion and 'TimerWords.restockIn(' in potion, 'New in 3 min counts down; a new window redraws')
+    need('if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end' in potion and 'TimerWords.potionsIn(' in potion, 'New in 3 min counts down; a new window redraws')
     need('IndexTabs.lastTab() ~= "dinos" then return false end' in index and 'IndexTabs.choose(tab) d.open("collection")' in index, 'Patterns / Colours keep their own pages (the rail picks the tab)')
-    need('d.hero(card, id, rx, ry, render, render, d.bestMutation(id))' in index and 'Preview.add(card, id, "silhouette")' in index, 'found dinos are the game preview in colour, the others a silhouette')
+    need('d.hero(card, id, rx, ry, render, render, d.bestMutation(id))' in index and 'Preview.add(card, id, "silhouette", CHARCOAL)' in index and 'Color3.fromRGB(32, 33, 39)' in index, 'found dinos are the game preview in colour, the others a silhouette')
     need('if found then rarityWord(d.speciesIndex(id)) else "Common"' in index, 'found dinos on their rarity card, not found on the grey card')
     need('TimerWords.found(unlocked, total)' in index and 'i <= #Config.SpeciesOrder and info(id, false)' in index, 'the bar counts the normal dinos only (secrets apart)')
     need('Config.PatternColourIndexEnabled == true then table.insert(out, tab)' in index, 'Patterns / Colours on the rail only while their pages exist')
@@ -334,6 +341,10 @@ def scan2(src):
     need('if not table.find(Kit2.HeaderColours, colour) then return false end' in src['window'] and 'headerCard(header, spec.colour, headerW, lay.headerH)' in src['window'],
          'KitWindow: a colour with no kit 2 strip is the kit 2 card piece, never the green strip')
     need('if spec.content then spec.content(window, lay, holder) end' in src['window'] and 'spec.refresh = redraw' in src['window'], 'KitWindow draws a screen part and redraws in place')
+    need('Art.studded(holder, "KitTabTile_" .. tab, Kit2.buttonSlot(false),' in src['rail'] and '        if selected then\n            -- BD-1296' in src['rail'], 'KitRail: the active tab sits on the lime kit tile (every kit screen)')
+    need('function W.potionsIn(secondsLeft: number): string' in src['timer'] and 'return "New in " .. UIFormat.duration(secondsLeft)' in src['timer'], 'New potions in 2 min is its own function; the Toybox page keeps restockIn')
+    need('if shade and gold=="silhouette" then viewport:SetAttribute("SilhouetteShade",shade) end' in src['preview'], 'the charcoal silhouette is opt-in (the old Index keeps black)')
+    need('local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0' in index, 'the progress fill is exact (1/22 = 4.5 %)')
     need('K.HeaderCards = {cyan = "rare"}' in src['kit2'], 'the cyan header is the kit 2 Rare card piece')
     need('function Tabs.choose(tab: string) lastTab = Index.validTab(tab) end' in src['tabs'], 'IndexTabs.choose keeps the tab valid')
     need('M.Potion = {w = 0.58, h = 0.67,' in src['rules'] and 'M.Index = {w = 0.50, h = 0.63,' in src['rules'], 'docs/246 window sizes')
@@ -350,6 +361,8 @@ MUTANTS = {
     'not found dinos in colour': ('index', 'if found then rarityWord(d.speciesIndex(id)) else "Common"', 'rarityWord(d.speciesIndex(id))'),
     'the cyan Index header turns green': ('window', 'if not table.find(Kit2.HeaderColours, colour) then return false end', ''),
     'a colour fill in the potion screen': ('potion', 'local M = {}', 'local M = {}\nlocal _x = Instance.new("Frame") _x.BackgroundColor3 = Color3.new(1, 0, 0)'),
+    'the active rail tab loses its tile': ('rail', '        if selected then\n            -- BD-1296', '        if false then\n            -- BD-1296'),
+    'the progress fill rounds up to a square': ('index', 'local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0', 'local fill = math.max(B.h, math.floor(B.w * unlocked / total + 0.5))'),
     'the Index window at shop size': ('rules', 'M.Index = {w = 0.50, h = 0.63,', 'M.Index = {w = 0.58, h = 0.67,'),
 }
 LUAU_MUTANTS = {

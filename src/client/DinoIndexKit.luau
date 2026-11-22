@@ -26,6 +26,8 @@ local IndexTabs = require(script.Parent.IndexTabs)
 local M = {}
 
 local state = {page = 1}
+local CHARCOAL = Color3.fromRGB(32, 33, 39) -- lead polish 2026-11-23: silhouettes charcoal #202127, not pure black
+local SELECTED = Color3.fromRGB(92, 214, 245) -- the selected card edge: the Index cyan #5CD6F5
 
 local function rarityWord(index: number): string
     return Config.SpeciesRarityNames[index] or "Common"
@@ -100,19 +102,21 @@ function M.build(body: GuiObject, d: any): boolean
                 local found, count, look = info(id, secret)
                 local on = id == selected
                 local x, y, w, h = r.x, r.y, r.w, r.h
-                if on then x, y, w, h = x - 3, y - 3, w + 6, h + 6 end -- the selected card pops a little, with a white edge
+                if on then x, y, w, h = x - 3, y - 3, w + 6, h + 6 end -- the selected card pops a little, with a 4 px cyan edge (the header colour)
                 local card = Art.box(window, "IndexCard_" .. id, x, y, w, h, if on then 36 else 34)
                 face(card, if found then rarityWord(d.speciesIndex(id)) else "Common", w, h, card.ZIndex, 0.9)
                 if on then
                     local edge = Instance.new("UIStroke")
-                    edge.Color, edge.Thickness, edge.Parent = Color3.new(1, 1, 1), 3, card
+                    edge.Color, edge.Thickness, edge.Parent = SELECTED, 4, card
                     local round = Instance.new("UICorner") round.CornerRadius, round.Parent = UDim.new(0, 8), card
                 end
                 local render = lay.cardRender
                 local ry = math.max(4, math.floor((h - (render + lay.countText + 2)) / 2))
                 local rx = math.floor((w - render) / 2)
-                -- the preview camera leaves a margin round the model: its box is a little bigger than the render rect (same centre)
-                local zoom = math.floor(render * 0.08)
+                local countY = ry + render - 2
+                -- the preview camera leaves a wide margin round the model: its box is bigger than the render rect (same centre), so the dino
+                -- itself fills the card (lead polish 2026-11-23: renders 35-50 % bigger, silhouettes 25-35 % bigger)
+                local zoom = math.floor(render * (if found then Menu.CardZoom else Menu.SilhouetteZoom))
                 rx, ry, render = rx - zoom, ry - zoom, render + 2 * zoom
                 if found then
                     local view = d.hero(card, id, rx, ry, render, render, d.bestMutation(id))
@@ -120,10 +124,10 @@ function M.build(body: GuiObject, d: any): boolean
                 elseif secret and not look.silhouette then
                     Art.words(card, "Mark", "?", rx, ry, render, render, 40, card.ZIndex + 2)
                 else
-                    local view = Preview.add(card, id, "silhouette")
+                    local view = Preview.add(card, id, "silhouette", CHARCOAL)
                     view.Position, view.Size, view.ZIndex = UDim2.fromOffset(rx, ry), UDim2.fromOffset(render, render), card.ZIndex + 2
                 end
-                Art.words(card, "Count", if found then Menu.count(count) else "?", 0, ry + render - zoom - 2, w, lay.countText + 4, lay.countText, card.ZIndex + 3)
+                Art.words(card, "Count", if found then Menu.count(count) else "?", 0, countY, w, lay.countText + 4, lay.countText, card.ZIndex + 3)
                 Art.tap(card, "Tap", 0, 0, w, h, card.ZIndex + 5, function()
                     if id == d.selected() and found then d.openDetail() return end
                     d.select(id)
@@ -137,22 +141,26 @@ function M.build(body: GuiObject, d: any): boolean
             local sFound, sCount, sLook = info(sid, sIndex > #Config.SpeciesOrder)
             local panel = Art.box(window, "IndexPanel", P.x, P.y, P.w, P.h, 34)
             local tier = rarityWord(d.speciesIndex(sid))
-            face(panel, if sFound then tier else "Common", P.w, P.h, 34, 0.7)
+            face(panel, "Common", P.w, P.h, 34, 0.7) -- the light panel (lead polish: lighter, the rarity as a badge under the name)
             local name = sLook.nameText or Config.SpeciesDisplayNames[sid] or Secret.name(sid)
             Art.words(panel, "Name", name, 4, pp.edge, P.w - 8, pp.nameText + 2, FrameRules.fitSize(name, P.w - 12, pp.nameText), 38)
-            Art.words(panel, "Rarity", sLook.rarityText or tier, 4, pp.edge + pp.nameText + 2, P.w - 8, pp.wordText + 2, pp.wordText, 38)
+            local word = sLook.rarityText or tier
+            local badgeW = math.min(P.w - 2 * pp.inset, FrameRules.textWidth(word, pp.wordText) + 24)
+            local badge = Art.box(panel, "RarityBadge", math.floor((P.w - badgeW) / 2), pp.edge + pp.nameText + 2, badgeW, pp.badge, 37)
+            face(badge, if sFound then tier else "Common", badgeW, pp.badge, 37, 0.5)
+            Art.words(badge, "Rarity", word, 0, -1, badgeW, pp.badge, pp.wordText, 38)
             local buttonY = P.h - pp.edge - pp.button
             local lineY = buttonY - pp.gap - pp.line
             local render = math.min(pp.render, lineY - pp.gap - pp.renderTop)
             local rx, ry = math.floor((P.w - render) / 2), pp.renderTop + math.floor((lineY - pp.gap - pp.renderTop - render) / 2)
-            local zoom = math.floor(render * 0.08)
+            local zoom = math.floor(render * (if sFound then Menu.PanelZoom else Menu.SilhouetteZoom))
             rx, ry, render = rx - zoom, ry - zoom, render + 2 * zoom
             if sFound then
                 d.hero(panel, sid, rx, ry, render, render, d.bestMutation(sid)).ZIndex = 36
             elseif sIndex > #Config.SpeciesOrder and not sLook.silhouette then
                 Art.words(panel, "Mark", "?", rx, ry, render, render, 56, 36)
             else
-                local view = Preview.add(panel, sid, "silhouette")
+                local view = Preview.add(panel, sid, "silhouette", CHARCOAL)
                 view.Position, view.Size, view.ZIndex = UDim2.fromOffset(rx, ry), UDim2.fromOffset(render, render), 36
             end
             local line = if sFound then "You have " .. tostring(sCount) else Menu.NotFoundWord
@@ -169,8 +177,8 @@ function M.build(body: GuiObject, d: any): boolean
             local bk = B.h / Kit2.Studded[Kit2.StripSlot].h
             local bar = Art.studded(window, "IndexBar", Kit2.StripSlot, B.x, B.y, B.w, B.h, 34, bk, bk) or Art.box(window, "IndexBar", B.x, B.y, B.w, B.h, 34)
             local total = #Config.SpeciesOrder
-            if unlocked > 0 and total > 0 then
-                local fill = math.max(B.h, math.floor(B.w * unlocked / total + 0.5))
+            local fill = if total > 0 then math.floor(B.w * unlocked / total + 0.5) else 0 -- exact (1/22 = 4.5 %)
+            if fill >= 4 then
                 local gk = B.h / Kit2.Studded[Kit2.buttonSlot(false)].h
                 Art.studded(bar, "Fill", Kit2.buttonSlot(false), 0, 0, math.min(B.w, fill), B.h, 35, gk, gk)
             end

@@ -40,6 +40,11 @@ function W.restockIn(secondsLeft: number): string
     return "New in " .. UIFormat.duration(secondsLeft)
 end
 
+-- BD-1296: the restock line of the kit Potion Shop (MenusSaeFrameEnabled): "New potions in 2 min" (restockIn stays for the Toybox page).
+function W.potionsIn(secondsLeft: number): string
+    return "New potions in " .. UIFormat.duration(secondsLeft)
+end
+
 -- The Index count on the big bar: "Found 1/22".
 function W.found(found: number, total: number): string
     return string.format("Found %d/%d", found, total)

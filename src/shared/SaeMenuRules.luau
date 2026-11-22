@@ -15,18 +15,22 @@ local M = {}
 
 M.MinText, M.MinTap, M.MinClose = 19, 44, 48
 M.Top = 0.215 -- the window top (21-22 % H)
-M.Potion = {w = 0.58, h = 0.67, card = 0.32, bottle = 0.13, button = 0.065, restockText = 22, perPage = 3}
-M.Index = {w = 0.50, h = 0.63, card = 0.16, render = 0.11, panel = 0.28, bar = 0.05, cols = 4, rows = 2}
+M.Potion = {w = 0.58, h = 0.67, card = 0.32, bottle = 0.13, minBottle = 84, button = 0.065, restockText = 22, perPage = 3, band = 0.07}
+-- bar: lead polish 2026-11-23 (ChatGPT round 1): 24-28 px at 720 p (docs/246 said 5 % H)
+M.Index = {w = 0.50, h = 0.63, card = 0.16, render = 0.11, panel = 0.28, bar = 0.036, cols = 4, rows = 2}
 M.PotionTitle, M.IndexTitle = "Potion Shop", "Dino Index"
 M.PotionColour, M.IndexColour = "green", "cyan" -- the shop green header; the Index cyan (docs/246)
 -- kid words: what a potion does (never "+40 %") and how long it lasts
 M.KindWords = {speed = "Run faster!", growth = "Grow faster!", loot = "More luck!"}
-M.SoldOut, M.MoreWord, M.BackWord = "Sold out", "More", "Back"
-M.YoursWord, M.NoneWord = "Yours", "Buy one, then tap it here!"
+-- lead polish 2026-11-23: the page button pages potions ("Next >", "< Back"), the empty strip says "No potions yet!"
+M.SoldOut, M.MoreWord, M.BackWord = "Sold out", "Next >", "< Back" -- kidtext-ok: the page arrow on the button (lead polish 2026-11-23: "Next" with an arrow)
+M.YoursWord, M.NoneWord = "Yours", "No potions yet!"
 -- the Index rail (outside the window) and the shop rail (slice 1's tabs, Potions selected)
 M.IndexRail = {"dinos", "patterns", "colours", "fusion"}
 M.IndexRailWords = {dinos = "Dinos", patterns = "Patterns", colours = "Colours", fusion = "Fusion"}
-M.LookWord, M.HatchWord, M.NotFoundWord = "Look", "Find it!", "Not found yet"
+M.LookWord, M.HatchWord, M.NotFoundWord = "View", "Find it!", "Not found yet!"
+-- the preview boxes are bigger than their render rect (the camera leaves a margin): found dinos, the panel dino, silhouettes (each side)
+M.CardZoom, M.PanelZoom, M.SilhouetteZoom = 0.30, 0.30, 0.24
 
 local function round(x: number): number return math.floor(x + 0.5) end
 -- Estimated width in px of a FredokaOne word (SaeFrameRules.textWidth: 0.56 em per character).
@@ -107,14 +111,16 @@ function M.potionLayout(w: number, guiH: number, inset: number?)
     local lineText = math.clamp(round(h * 0.028), M.MinText, 22)
     local lineH = math.max(lineText + 8, round(h * 0.042))
     local gap = math.max(3, round(h * 0.0055))
-    local art = math.max(40, round(h * P.bottle))
     local artTop = edge + nameH + round(rarityH * 0.4)
-    local needCard = artTop + art + gap + lineH + gap + button + edge
-    local cardH = math.max(round(h * P.card), needCard)
     local rowH = math.max(M.MinTap, button)
-    local bandH = math.max(M.MinTap + 8, round(h * 0.085))
+    local bandH = math.max(M.MinTap + 4, round(h * P.band))
     -- a provisional header for the needed height (the real one is from the final window height)
     local hi0, hh0 = header(h, round(h * P.h))
+    -- the bottle: 13 % H, at least minBottle px (a short screen: big enough to read), never more than the screen leaves (40 px floor)
+    local around = hi0 + hh0 + pad + artTop + gap + lineH + gap + button + edge + pad + rowH + math.max(6, round(pad * 0.6)) + (M.MinTap + 4) + pad
+    local art = math.clamp(math.max(round(h * P.bottle), P.minBottle), 40, math.max(40, guiH - 8 - around))
+    local needCard = artTop + art + gap + lineH + gap + button + edge
+    local cardH = math.max(round(h * P.card), needCard)
     local needH = hi0 + hh0 + pad + cardH + pad + rowH + math.max(6, round(pad * 0.6)) + (M.MinTap + 4) + pad -- room for the owned strip (the only place to drink a potion)
     local winRect = windowRect(w, guiH, h, top, P.w, P.h, 3 * 128 + 2 * 12 + 2 * 16, needH)
     local headerInset, headerH, close, titleSize = header(h, winRect.h)
@@ -160,7 +166,7 @@ function M.indexLayout(w: number, guiH: number, inset: number?, railWords: {stri
     local cardH = math.max(M.MinTap + 30, round(h * I.card))
     local render = math.max(40, math.min(cardH - 26, round(h * I.render)))
     local countText = M.MinText + 1
-    local bar = math.max(M.MinText + 12, round(h * I.bar))
+    local bar = math.max(M.MinText + 5, round(h * I.bar))
     local rowH = math.max(M.MinTap, bar)
     local hi0, hh0 = header(h, round(h * I.h))
     local needH = hi0 + hh0 + pad + I.rows * cardH + (I.rows - 1) * cardGap + pad + rowH + pad
@@ -196,13 +202,14 @@ function M.indexLayout(w: number, guiH: number, inset: number?, railWords: {stri
     local pButton = math.max(M.MinTap, round(h * 0.065))
     local pLine = math.max(wordText + 8, round(h * 0.042))
     local pGap = math.max(3, round(h * 0.0055))
-    local renderTop = pEdge + nameText + 2 + wordText + 2
+    local badge = wordText + 8 -- the rarity as a small badge (a kit rarity card piece) under the name
+    local renderTop = pEdge + nameText + 2 + badge + 4
     local pRender = math.max(40, math.min(panelW - 16, panel.h - renderTop - pGap - pLine - pGap - pButton - pEdge))
     return {
         window = win, headerInset = headerInset, headerH = headerH, close = close, titleSize = titleSize, pad = pad, cards = cards,
         cardRender = render, countText = countText, bar = barRect, prev = prev, next = nxt, panel = panel,
         panelParts = {edge = pEdge, nameText = nameText, wordText = wordText, button = pButton, buttonText = math.clamp(round(h * 0.037), 24, 28),
-            line = pLine, gap = pGap, renderTop = renderTop, render = pRender, inset = round(panelW * 0.06)},
+            line = pLine, gap = pGap, renderTop = renderTop, render = pRender, inset = round(panelW * 0.06), badge = badge},
         rail = rail(w, guiH, h, win, railWords or {"Dinos", "Patterns", "Colours", "Fusion"}),
     }
 end

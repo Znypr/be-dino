@@ -74,7 +74,7 @@ function M.build(body: GuiObject, d: any): boolean
         },
         content = function(window: Frame, lay: any, _: Frame)
             local r, m = lay.restock, lay.more
-            local line = Art.words(window, "Restock", TimerWords.restockIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - workspace:GetServerTimeNow()))),
+            local line = Art.words(window, "Restock", TimerWords.potionsIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - workspace:GetServerTimeNow()))),
                 r.x, r.y, r.w, r.h, r.size, 36)
             line.TextXAlignment = Enum.TextXAlignment.Left
             live.restock = line
@@ -122,7 +122,7 @@ function M.build(body: GuiObject, d: any): boolean
             if not mark.Parent then return end
             local now = workspace:GetServerTimeNow()
             if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end
-            setWords(live.restock, TimerWords.restockIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - now))))
+            setWords(live.restock, TimerWords.potionsIn(math.max(0, math.ceil(ProgressionRules.shopEndsAt(d.window) - now))))
         end
     end)
     return true

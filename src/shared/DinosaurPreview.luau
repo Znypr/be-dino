@@ -34,6 +34,7 @@ local function dinoImage(viewport: ViewportFrame,gold: (boolean | string))
     image.AnchorPoint,image.Position,image.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromScale(.8,.8)
     image.ScaleType,image.Image=Enum.ScaleType.Fit,Theme.ImageIds.dinos or ""
     image.ImageColor3=if gold=="silhouette" then Color3.new(0,0,0) else Color3.new(1,1,1)
+    if gold=="silhouette" and typeof(viewport:GetAttribute("SilhouetteShade"))=="Color3" then image.ImageColor3=viewport:GetAttribute("SilhouetteShade") end -- BD-1296
     image.ImageTransparency=viewport.ImageTransparency -- hidden/faded exactly like the 3D view (hatch build-up keeps it invisible)
     image.ZIndex,image.Parent=viewport.ZIndex+1,viewport
     local follow=viewport:GetPropertyChangedSignal("ImageTransparency"):Connect(function() image.ImageTransparency=viewport.ImageTransparency end)
@@ -55,9 +56,10 @@ function Preview.tierBlend(container:Instance,tier:string?)
         if item:IsA("BasePart") then item.Color=item.Color:Lerp(color,.3) end
     end
 end
-function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string)): ViewportFrame
+function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string),shade: Color3?): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
     viewport.Name,viewport.BackgroundTransparency="DinosaurPreview",1
+    if shade and gold=="silhouette" then viewport:SetAttribute("SilhouetteShade",shade) end -- BD-1296: the kit Dino Index's charcoal silhouette; nil = black as before
     viewport.Size=UDim2.new(1,0,0,140)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
@@ -105,6 +107,11 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if lowPoly and not fused and gold~="silhouette" and traits then model:SetAttribute("LPMutation",traits.mutationId) end -- BD-518: Part.Color cannot tint a baked texture; the bake reads this
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
+            local shade=viewport:GetAttribute("SilhouetteShade") -- BD-1296: a flat charcoal silhouette (ambient light only) when the caller asked for one
+            if typeof(shade)=="Color3" then
+                for _,part in model:GetDescendants() do if part:IsA("BasePart") then part.Color=shade end end
+                viewport.Ambient=Color3.new(1,1,1)
+            end
         elseif traits and traits.genes then Appearance.apply(model,traits.genes)
         elseif lowPoly and fused then LowPoly.applyTier(model,gold) end
         if fused and not lowPoly and traits and traits.genes then Preview.tierBlend(model,Preview.tierName(gold)) end
