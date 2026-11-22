@@ -17,6 +17,7 @@ Stage.Cream = Color3.fromRGB(255, 247, 227)
 Stage.Ink = Color3.fromRGB(46, 38, 30)
 Stage.Grey = Color3.fromRGB(196, 200, 208)
 Stage.Veil = .78 -- scrim transparency on the stage (the window used .42): the world stays visible under the rays
+Stage.VeilColor = Color3.new(0, 0, 0) -- BD-1288: the storyboard uses a warm white veil
 
 local function luminance(c: Color3): number return .299 * c.R + .587 * c.G + .114 * c.B end
 -- true for the dark navy / slate plates the old window style used (R1)
@@ -43,6 +44,18 @@ Stage.Ladder = {
 }
 local stageParts: any = nil
 local pending: any = nil
+-- BD-1288 slice 1 (Config.HatchStoryboardEnabled): Client/HatchStoryboard sets these hooks (HatchStoryboard.init); nil / false = as before.
+Stage.HideCrystals = false -- true: the crystal counter steps aside too (the storyboard stage hides the whole HUD)
+Stage.eggRect = nil :: ((any) -> any)? -- where the paint flipbook goes: {x, y, side} in shade px
+Stage.isNew = nil :: (() -> boolean)? -- one more reason for the NEW! sticker (a species not owned before the batch)
+Stage.revealExtras = nil :: ((any, any, {() -> ()}, (GuiObject, number) -> ()) -> ())? -- colour + pattern chips instead of the colour dots
+Stage.onEnds = nil :: ((any, GuiObject, {() -> ()}) -> ())? -- the last egg's PLAY AGAIN / HOME row was placed
+Stage.onRestore = nil :: (() -> ())? -- the stage closes
+Stage.NextScale = 1 -- size of the reveal's NEXT
+Stage.PlateScale = 1 -- size of the reveal's name plate and pedestal
+Stage.PlateText = 1 -- the name's share of its plate (BD-1288: 1.3x bigger words)
+Stage.bucketRect = nil :: ((Vector2, number) -> (Vector2, number))? -- where a 3D paint bucket goes (shade px)
+function Stage.parts(): any return stageParts end
 
 local function painted(o: Instance, stop: Instance): GuiObject?
     local node: Instance? = o
@@ -136,7 +149,7 @@ function Stage.apply(p: Parts)
     pcall(function() (backdrop :: any).ScreenInsets = Enum.ScreenInsets.None end)
     local veil = Instance.new("Frame")
     veil.Name, veil.Size, veil.BorderSizePixel = "Veil", UDim2.fromScale(1, 1), 0
-    veil.BackgroundColor3, veil.BackgroundTransparency = Color3.new(0, 0, 0), Stage.Veil
+    veil.BackgroundColor3, veil.BackgroundTransparency = Stage.VeilColor, Stage.Veil
     veil.Parent = backdrop
     backdrop.Parent = p.gui.Parent
     table.insert(restore, function() backdrop:Destroy() end)
@@ -180,7 +193,7 @@ function Stage.apply(p: Parts)
             for _, d in child:GetDescendants() do
                 if d:IsA("TextLabel") and string.find(d.Text, "Crystals", 1, true) then crystals = true break end
             end
-            if not crystals then
+            if not crystals or Stage.HideCrystals then
                 keep(child, "Visible", false)
                 -- the HUD refreshes some pieces every frame (the size bar): keep them hidden while the stage is up
                 table.insert(conns, child:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -287,6 +300,7 @@ function Stage.mirrorBuckets(s: any, keep: (Instance, string, any) -> (), conns:
             if show then
                 local c = group.AbsolutePosition + group.AbsoluteSize / 2 - s.shade.AbsolutePosition
                 local side = group.AbsoluteSize.X * Stage.BucketView.side
+                if Stage.bucketRect then c, side = Stage.bucketRect(c, side) end -- BD-1288: around the storyboard's big egg
                 v.frame.Position, v.frame.Size, v.frame.ImageTransparency = UDim2.fromOffset(c.X, c.Y), UDim2.fromOffset(side, side), group.GroupTransparency
                 -- the same tip as the picture: a turn about the camera's line of sight (screen clockwise = positive Rotation)
                 v.part.CFrame = CFrame.fromAxisAngle(v.axis, math.rad(group.Rotation)) * v.base
@@ -484,7 +498,7 @@ function Stage.reveal()
     -- the dino stands on a glowing pedestal in the rarity colour (behind the panel, so behind the dino)
     local grownC = Stage.growDino(s, rank)
     local vc = grownC or Vector2.new(screen.X / 2, screen.Y * Stage.Layout.dinoY)
-    local pw = math.min(screen.X * .2, 340 * fitY)
+    local pw = math.min(screen.X * .2, 340 * fitY) * Stage.PlateScale
     local pedestalY = screen.Y * Stage.Layout.pedestalY -- under the feet
     local pedestal = art("HatchStagePedestal", Stage.Art.pedestal, Vector2.new(pw, pw * 212 / 429), Vector2.new(vc.X, pedestalY), s.panel.ZIndex - 1,
         if rank <= 1 then Color3.fromRGB(150, 225, 255) else color:Lerp(Color3.new(1, 1, 1), .35))
@@ -504,13 +518,13 @@ function Stage.reveal()
     end
     if not info.failed then
         local name = plain(if info.nameLabel then info.nameLabel.Text else "")
-        local plateW = math.min(screen.X * .2, 300 * fitY)
+        local plateW = math.min(screen.X * .2, 300 * fitY) * Stage.PlateScale
         local plateH = plateW * 137 / 439
-        local plateC = Vector2.new(vc.X + 26, screen.Y * Stage.Layout.plateY)
+        local plateC = Vector2.new(vc.X + (if Stage.revealExtras then 0 else 26), screen.Y * Stage.Layout.plateY)
         local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.BackgroundTransparency, nameLabel.AnchorPoint = 1, Vector2.new(.5, .5)
-        nameLabel.Position, nameLabel.Size, nameLabel.ZIndex = UDim2.fromScale(.5, .47), UDim2.fromScale(.8, .62), plate.ZIndex + 1
+        nameLabel.Position, nameLabel.Size, nameLabel.ZIndex = UDim2.fromScale(.5, .47), UDim2.fromScale(math.min(.8 * Stage.PlateText, .76), .62 * Stage.PlateText) -- never wider than the plate's clear part: a long name shrinks instead of running under the NEW! sticker, plate.ZIndex + 1
         nameLabel.Font, nameLabel.TextScaled, nameLabel.Text, nameLabel.TextColor3 = Enum.Font.FredokaOne, true, name, Stage.Ink
         local ns = Instance.new("UIStroke")
         ns.Color, ns.Thickness = Color3.new(1, 1, 1), 2.5
@@ -519,7 +533,8 @@ function Stage.reveal()
         pop(plate, .12)
         -- the egg's colours as dots left of the plate (kid-minimal: no colour or pattern words)
         local dot = plateH * .62
-        for k, c in Stage.lastColors do
+        if Stage.revealExtras then pcall(Stage.revealExtras, s, {x = plateC.X, y = plateC.Y, w = plateW, h = plateH}, restore, pop) end -- BD-1288: chips instead
+        for k, c in (if Stage.revealExtras then {} else Stage.lastColors) do
             local d = Instance.new("Frame")
             d.Name, d.AnchorPoint, d.ZIndex = "ColourDot" .. k, Vector2.new(.5, .5), plate.ZIndex
             d.Size = UDim2.fromOffset(dot, dot)
@@ -529,6 +544,7 @@ function Stage.reveal()
             table.insert(restore, function() d:Destroy() end)
             pop(d, .18 + k * .05)
         end
+        if not newFind and Stage.isNew then newFind = Stage.isNew() end -- BD-1288: a species new to the player too
         if newFind then
             local sticker = art("HatchStageNew", Stage.Art.new, Vector2.new(plateH * 1.25, plateH * 1.17), Vector2.new(plateC.X + plateW / 2 + plateH * .25, plateC.Y - plateH * .25), plate.ZIndex + 2)
             sticker.Rotation = 12
@@ -566,6 +582,7 @@ function Stage.reveal()
                 end
             end
         end
+        if Stage.onEnds then pcall(Stage.onEnds, s, ends, restore) end -- BD-1288: the storyboard's NEXT -> BEST FIND! summary
     end
     if nextShown then return end
     local hint = s.body:FindFirstChild("TapHint", true) :: TextLabel?
@@ -576,8 +593,9 @@ function Stage.reveal()
         local ok, Skin = pcall(require, Shared:WaitForChild("ToyboxSkin"))
         local next = Instance.new("TextButton")
         next.Name, next.Text, next.AutoButtonColor = "HatchStageNext", "NEXT", false
-        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250 * fitY, 66 * fitY), UDim2.fromOffset(hc.X, hc.Y)
-        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, math.max(20, math.floor(34 * fitY)), Color3.new(1, 1, 1), s.panel.ZIndex + 32
+        local big = Stage.NextScale -- BD-1288: the storyboard's NEXT is bigger (1 = as before)
+        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250 * fitY * big, 66 * fitY * big), UDim2.fromOffset(hc.X, hc.Y)
+        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, math.max(20, math.floor(34 * fitY * big)), Color3.new(1, 1, 1), s.panel.ZIndex + 32
         next.Parent = s.shade
         next.Activated:Connect(function()
             -- the same tap as on the egg (HatchSequence's StageTap), never the backdrop's close
@@ -674,7 +692,10 @@ local function overlayFor(s: any): Frame
     local egg = s.panel:FindFirstChild("HatchEggV2", true) :: GuiObject?
     local base = s.shade.AbsolutePosition
     local cx, cy, side
-    if egg then
+    local hook = if Stage.eggRect then Stage.eggRect(s) else nil -- BD-1288: the storyboard's big egg
+    if hook then
+        cx, cy, side = hook.x, hook.y, hook.side
+    elseif egg then
         cx, cy = egg.AbsolutePosition.X + egg.AbsoluteSize.X / 2 - base.X, egg.AbsolutePosition.Y + egg.AbsoluteSize.Y / 2 - base.Y
         side = egg.AbsoluteSize.Y * 1.35
     else
@@ -874,7 +895,7 @@ function Stage.nextEgg()
     s.shade.BackgroundTransparency = 1
     for _, o in s.shade:GetChildren() do if o.Name == "HatchStageWord" or o.Name == "HatchStageWordDrop" then o:Destroy() end end
     s.sun.ImageColor3, s.sun.ImageTransparency = Color3.new(1, 1, 1), .45
-    s.veil.BackgroundColor3, s.veil.BackgroundTransparency = Color3.new(0, 0, 0), Stage.Veil
+    s.veil.BackgroundColor3, s.veil.BackgroundTransparency = Stage.VeilColor, Stage.Veil
     -- back from a Legendary / Mythic build-up: calm spin, the warm glow at its normal size
     for _, tween in s.buildTweens or {} do tween:Cancel() end
     s.builtUp, s.charge, s.spin.speed, s.buildTweens = false, 1, 6, nil
@@ -884,6 +905,7 @@ end
 
 -- Back to the window look (any screen opens, or the modal closes). Safe to call when nothing was applied.
 function Stage.restore()
+    if Stage.onRestore then pcall(Stage.onRestore) end
     local s = state
     state = nil
     stageParts, pending = nil, nil
