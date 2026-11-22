@@ -11,9 +11,13 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-if require(Shared:WaitForChild("Config")).HatchStageEnabled ~= true then return end
+local Config = require(Shared:WaitForChild("Config"))
+if Config.HatchStageEnabled ~= true then return end
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Stage = require(script.Parent:WaitForChild("HatchStage"))
+-- BD-1288 slice 1: the storyboard look on top of the stage (Config.HatchStoryboardEnabled; nil = the stage exactly as before)
+local Storyboard = if Config.HatchStoryboardEnabled == true then require(script.Parent:WaitForChild("HatchStoryboard")) else nil
+if Storyboard then Storyboard.init(Stage) end
 
 local player = Players.LocalPlayer
 -- BD-1212: have the 3D egg shards' meshes downloaded before the first burst (a view does not redraw when a mesh arrives late)
@@ -72,7 +76,10 @@ local mode = "" -- "", "hatch" or "summary"
 local WAITING = "An egg is hatching..."
 heading:GetPropertyChangedSignal("Text"):Connect(function()
     -- BD-1211: the next egg of a batch reuses the stage: clear the last reveal (ribbon, plate, NEXT) and the build-up
-    if mode == "hatch" and heading.Text == WAITING then Stage.nextEgg() end
+    if mode == "hatch" and heading.Text == WAITING then
+        Stage.nextEgg()
+        if Storyboard then pcall(Storyboard.nextEgg) end
+    end
     if mode == "hatch" and heading.Text ~= WAITING and heading.Text ~= "" then
         local l = lines()
         if #l >= 3 then
@@ -83,8 +90,10 @@ heading:GetPropertyChangedSignal("Text"):Connect(function()
                 if string.find(odds, "^%s*" .. word) then rank = i end
             end
             rank = rank or rarityOf(l[1].TextColor3)
-            Stage.prepare({rarity = rank, color = Theme.RarityColors[rank], failed = heading.Text == "Oops! Splat!",
-                nameLabel = l[1], oddsLabel = l[2], detailLabel = l[3]})
+            local info = {rarity = rank, color = Theme.RarityColors[rank], failed = heading.Text == "Oops! Splat!",
+                nameLabel = l[1], oddsLabel = l[2], detailLabel = l[3]}
+            Stage.prepare(info)
+            if Storyboard then pcall(Storyboard.reveal, info) end -- before the stage's reveal: it asks the storyboard for NEW! and the chips
             pcall(Stage.reveal)
         end
     end
@@ -96,6 +105,10 @@ RunService.Heartbeat:Connect(function()
             current, mode = fx, "hatch"
             local ok, err = pcall(Stage.apply, parts())
             if not ok then Stage.restore() warn("[Be Dino] hatch stage skipped: " .. tostring(err)) end
+            if ok and Storyboard then
+                local okSb, errSb = pcall(Storyboard.begin, parts())
+                if not okSb then warn("[Be Dino] hatch storyboard skipped: " .. tostring(errSb)) end
+            end
             -- BD-1212 paint beat: each bucket's colour chip turns visible at its impact, with the exact paint colour in its swatch
             local front = panel:FindFirstChild("HatchFxFront")
             local colors: {Color3} = {}
@@ -115,6 +128,14 @@ RunService.Heartbeat:Connect(function()
                         if not chip.Visible or current ~= fx then return end
                         local swatch = chip:FindFirstChild("Swatch") :: GuiObject?
                         colors[i] = if swatch then swatch.BackgroundColor3 else Color3.new(1, 1, 1)
+                        if Storyboard then
+                            -- BD-1288: the pail names the colour, the can names the pattern; the storyboard times its own build-up
+                            local plain = i == 2 and body:GetAttribute("HatchPatternName") == "" -- no pattern: the can pours a second coat, no spots
+                            pcall(Stage.playPaint, if i == 1 or plain then "pour" else "spots", if i == 1 or plain then {colors[1]} else {colors[1] or colors[2], colors[2]})
+                            pcall(if i == 1 then Storyboard.colour else Storyboard.pattern)
+                            chip.Visible = false -- the small chip gives way to the big plate (this handler then returns at once)
+                            return
+                        end
                         minimal(chip)
                         if i == 1 then
                             pcall(Stage.playPaint, "pour", {colors[1]})

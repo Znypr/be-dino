@@ -297,9 +297,9 @@ class BlenderExportOuterTests(unittest.TestCase):
 
     def test_faces_goes_into_the_blender_command(self):
         cmd = bx.blender_command("b", "a.blend", "o.fbx")
-        self.assertEqual(cmd[cmd.index("--faces") + 1], "+Y")
+        self.assertIn("--faces=+Y", cmd)
         cmd = bx.blender_command("b", "a.blend", "o.fbx", faces="-Y")
-        self.assertEqual(cmd[cmd.index("--faces") + 1], "-Y")
+        self.assertIn("--faces=-Y", cmd)  # "=": a bare "-Y" would read as an option (2026-11-22)
 
     def test_rest_pose_reset_clears_action_and_bones(self):
         class Bone:

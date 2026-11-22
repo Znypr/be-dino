@@ -20,6 +20,8 @@
 -- Therizinosaurus above the T-Rex).
 return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
+    -- BD-1291 candidate (owner 2026-11-22: dinos parked, NOT live): Compy V3 soft 122878777932897 (Hunyuan shape, facing fixed); a
+    -- hand-built v9 is in build/compy-artist (not committed). Switch only after the owner approves a model.
     triceratops = {assetId = 107596736973492, version = "v3", scale = 2.86, tier = 3, class = "Ground"},
     tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},
