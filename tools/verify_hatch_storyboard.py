@@ -342,7 +342,7 @@ def check_sources(overrides=None):
 
 
 MUTANTS = {
-    'the egg is small again': {RULES: [('R.EggShare = {min = .35, max = .45, want = .42}', 'R.EggShare = {min = .35, max = .45, want = .28}')]},
+    'the egg is small again': {RULES: [('R.EggShare = {min = .35, max = .45, want = .45}', 'R.EggShare = {min = .35, max = .45, want = .28}')]},
     'the colour name flashes by': {RULES: [('R.Paint = {leftStart = .35, rightStart = 1.25,', 'R.Paint = {leftStart = .35, rightStart = .9,')]},
     'the build-up drags': {RULES: [('R.BuildUp = .7', 'R.BuildUp = 1.4')]},
     'phone words under 19 px': {RULES: [('R.MinText = 19', 'R.MinText = 14')]},
