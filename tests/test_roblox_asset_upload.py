@@ -285,8 +285,13 @@ class BlenderExportOuterTests(unittest.TestCase):
     def test_inner_script_uses_cockatoo_settings(self):
         src = (ROOT / "tools" / "blender_export_roblox.py").read_text(encoding="utf-8")
         for needle in ("axis_forward=fbx_forward_axis(args.faces)", 'axis_up="Y"', "apply_unit_scale=True", "global_scale=0.01",
-                       'colors_type="SRGB"', "add_leaf_bones=False", "reset_to_rest_pose(armatures)"):
+                       "colors_type=fbx_colors_type(args.embed_textures)", "add_leaf_bones=False", "reset_to_rest_pose(armatures)"):
             self.assertIn(needle, src)
+
+    def test_embedded_textures_drop_vertex_colours(self):
+        # Roblox multiplies vertex colour x texture: a baked model must not carry both (Pachy V5 arrived too dark, 2026-11-22)
+        self.assertEqual(bx.fbx_colors_type(True), "NONE")
+        self.assertEqual(bx.fbx_colors_type(False), "SRGB")
 
     def test_forward_axis_turns_a_plus_y_creature_to_minus_z(self):
         # Measured in Studio 2026-10-18 (docs/169 section 6): FBX forward "-Z" made the +Y-facing cockatoo face +Z.

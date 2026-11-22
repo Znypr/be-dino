@@ -19,7 +19,10 @@ that worked for the cockatoo test model (docs/evidence/2026-10-18-cockatoo-blend
     which the parts-only export baked in.
   * every part its own mesh object; part origins are kept (they become the joint pivots); scale 1, rotation 0 (checked, and
     fixed with --apply-transforms when there is no armature).
-  * vertex colours exported as sRGB (the Roblox importer reads them when "use vertex colours" is on).
+  * vertex colours exported as sRGB (the Roblox importer reads them when "use vertex colours" is on), EXCEPT with --embed-textures:
+    Roblox multiplies vertex colour x texture, so a baked model that still carries the colours it was baked from shows every colour
+    squared (2026-11-22: Pachy V5 #6086D4 arrived royal blue, cream arrived tan; the Compy V3 candidates the same). With embedded
+    textures the FBX gets no vertex colours (fbx_colors_type).
   * normals only (no edge/face smoothing data), no extra leaf bones, bone axis Y/X, optional baked actions.
 A sidecar JSON (<out>.report.json) lists parts, triangles and size in studs.
 """
@@ -71,6 +74,12 @@ def fbx_forward_axis(facing):
         return FACING_TO_FBX_FORWARD[facing]
     except KeyError:
         raise ValueError("--faces must be +Y or -Y, got %r" % (facing,))
+
+
+def fbx_colors_type(embed_textures):
+    """FBX colors_type: no vertex colours when the textures are embedded (the texture already holds the colour; Roblox would
+    multiply both and darken it), sRGB vertex colours otherwise (models coloured by vertex colour only)."""
+    return "NONE" if embed_textures else "SRGB"
 
 
 def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None, faces="+Y", embed_textures=False):
@@ -275,11 +284,14 @@ def inner_main(argv):
         # global_scale 0.01: Blender writes metres as centimetres (x100) and Roblox reads FBX units as studs, so without it a
         # 4-unit cube arrived as 400 studs (measured 2026-10-18 with the acceptance cube, asset 98358657150463).
         apply_unit_scale=True, global_scale=0.01, axis_forward=fbx_forward_axis(args.faces), axis_up="Y",
-        colors_type="SRGB", mesh_smooth_type="OFF", add_leaf_bones=False, bake_anim=bool(args.anim and use_rig),
+        colors_type=fbx_colors_type(args.embed_textures), mesh_smooth_type="OFF", add_leaf_bones=False, bake_anim=bool(args.anim and use_rig),
     )
     if args.embed_textures:
         # the images must exist on disk or be packed; COPY + embed puts their bytes inside the FBX (one file for the upload)
         kw.update(path_mode="COPY", embed_textures=True)
+        dropped = sorted({a.name for ob in meshes for a in ob.data.color_attributes})
+        if dropped:
+            print("Vertex colours: not exported (%s); the embedded textures carry the colour" % ", ".join(dropped))
     if use_rig:
         kw.update(primary_bone_axis="Y", secondary_bone_axis="X", use_armature_deform_only=False)
     if args.anim and use_rig:

@@ -264,4 +264,109 @@ function M.indexLayout(w: number, guiH: number, inset: number?, railWords: {stri
     }
 end
 
+-- BD-1299 (owner 2026-11-23 "Rebuild both now", target docs/evidence/2026-11-23-index-proposal/proposal.jpg; Config.IndexZonesEnabled): the
+-- Dino Index split into zones, measured from the picture (window 522 x 273 on a 920 x 431 screen): the window 63 % H, about 1.91 x as wide as
+-- high; inside it the illustrated zone panel 17 % of the window width on the left, the 4 x 2 card grid 54 %, the right column 23 % (the
+-- selected dino on a charcoal panel, under it the rewards box), the zone bar ("4/8") under the grid, the blue "Found" footer under the zone
+-- panel and the grid; the zone buttons stacked OUTSIDE the window on the right (20 % H wide, 6.8 % H high), the Patterns / Colours / Fusion
+-- icons in a column right of them. The title 15-20 % bigger than the other kit windows.
+M.IndexZones = {h = 0.63, hShort = 0.74, aspect = 1.91, left = 0.169, right = 0.23, button = 0.068, buttonW = 0.20, footer = 0.11, bar = 0.075}
+M.ZoneRailWords = {patterns = "Patterns", colours = "Colours", fusion = "Fusion"}
+M.SecretMark = "???"
+
+function M.indexZonesLayout(w: number, guiH: number, inset: number?, icons: number?)
+    w, guiH = math.max(320, w), math.max(240, guiH)
+    local top = math.max(0, inset or 0)
+    local h = guiH + top
+    local Z = M.IndexZones
+    -- the rail first: it decides how wide the window may be
+    local zoneW = math.max(110, round(h * Z.buttonW))
+    local zoneH = math.max(M.MinTap, round(h * Z.button))
+    local zoneGap = math.max(6, round(h * 0.0186))
+    local zoneText = math.clamp(round(h * 0.034), M.MinText + 1, 26)
+    local nIcons = icons or 3
+    local icon = math.max(M.MinTap, round(h * 0.068))
+    local narrow = w < 760 -- a small phone: the icons without their words (the cards keep 44+ px)
+    local iconText = if narrow then 0 else M.MinText
+    local iconColW = if nIcons > 0 then (if narrow then icon else math.max(icon, M.textWidth("Patterns", iconText) + 4)) else 0
+    local railGap = math.max(6, round(w * 0.006))
+    local railW = zoneW + (if nIcons > 0 then railGap + iconColW else 0)
+    -- a short screen (a phone held sideways) gets a taller window share so the selected dino is still big enough to read
+    local winH = math.min(math.max(round(h * (if h < 600 then Z.hShort else Z.h)), 300), guiH - 8)
+    local winW = math.min(round(winH * Z.aspect), w - 16 - railGap - railW)
+    winW = math.max(winW, 420)
+    local groupW = winW + railGap + railW
+    local x = math.max(8, round((w - groupW) / 2))
+    local y = math.max(4, round(h * M.Top) - top - round(h * 0.01))
+    if y + winH > guiH - 4 then y = math.max(4, guiH - 4 - winH) end
+    local win = {x = x, y = y, w = winW, h = winH}
+    local headerInset, headerH, close = header(h, winH)
+    local titleSize = math.clamp(round(h * 0.063), 30, 46) -- the picture's title: about 18 % bigger than the kit windows' 0.053 H
+    local side = math.max(6, round(winW * 0.019))
+    local colGap = math.max(5, round(winW * 0.0115))
+    local y0 = headerInset + headerH + math.max(6, round(winH * 0.035))
+    local bottom = math.max(6, round(winH * 0.03))
+    local footerH = math.max(M.MinTap, round(winH * Z.footer))
+    local footerY = winH - bottom - footerH
+    local leftW = round(winW * Z.left)
+    local rightW = math.max(172, round(winW * Z.right)) -- "Rewards:" and "+250" on one line need about 172 px
+    local leftX = side
+    local gridX = leftX + leftW + colGap
+    local rightX = winW - side - rightW
+    local gridW = rightX - colGap - gridX
+    local barH = math.max(M.MinText + 7, round(winH * Z.bar))
+    local barGap = math.max(4, round(winH * 0.018))
+    local barY = footerY - math.max(6, round(winH * 0.035)) - barH
+    local cardGap = math.clamp(round(h * 0.011), 5, 10)
+    local cardW = math.floor((gridW - 3 * cardGap) / 4)
+    local gridH = barY - barGap - y0
+    local cardH = math.floor((gridH - cardGap) / 2)
+    local cards: {Rect} = {}
+    for r = 0, 1 do
+        for c = 0, 3 do
+            table.insert(cards, {x = gridX + c * (cardW + cardGap), y = y0 + r * (cardH + cardGap), w = cardW, h = cardH})
+        end
+    end
+    local nameText = math.clamp(round(h * 0.027), M.MinText, 22)
+    local pageW = M.MinTap
+    local column = footerY + footerH - y0
+    -- the rewards box: "Rewards:", the crystal row, the CLAIM button
+    local rText = math.clamp(round(h * 0.03), M.MinText, 22)
+    local rRow = math.max(M.MinTap - 8, round(h * 0.05))
+    local rButton = math.max(M.MinTap, round(h * 0.062))
+    local rPad = math.max(4, round(h * 0.008))
+    local oneLine = h < 600 -- a short screen: "Rewards:" and the crystal share one line
+    local rewardsH = rPad + (if oneLine then rRow else rText + 2 + rRow) + 4 + rButton + rPad
+    local panelH = column - colGap - rewardsH
+    local pText = math.clamp(round(h * 0.036), 22, 27)
+    local pWord = math.clamp(round(h * 0.027), M.MinText, 21)
+    local pButton = M.MinTap
+    local pButtonW = math.max(70, round(rightW * 0.42))
+    local pEdge = math.max(4, round(h * 0.008))
+    -- the View button sits in the top right corner of the picture, so the dino gets the height left over by the three lines under it
+    local pRender = math.max(40, panelH - (pEdge + pText + pWord + pWord + 4 + pEdge))
+    -- the rail: the zone buttons stacked from the header's bottom, the icons in a column right of them
+    local railX = win.x + winW + railGap
+    local railY = win.y + headerInset + math.floor(headerH * 0.5)
+    local zones: {Rect} = {}
+    for i = 1, 4 do table.insert(zones, {x = railX, y = railY + (i - 1) * (zoneH + zoneGap), w = zoneW, h = zoneH}) end
+    local iconSlots: {Rect} = {}
+    for i = 1, nIcons do
+        table.insert(iconSlots, {x = railX + zoneW + railGap, y = railY + (i - 1) * (icon + iconText + 2 + zoneGap), w = iconColW, h = math.max(M.MinTap, icon + iconText + 2)})
+    end
+    return {
+        window = win, headerInset = headerInset, headerH = headerH, close = close, titleSize = titleSize, cards = cards, cardName = nameText,
+        zonePanel = {x = leftX, y = y0, w = leftW, h = barY + barH - y0, text = math.clamp(round(h * 0.034), 21, 26)},
+        bar = {x = gridX, y = barY, w = gridW, h = barH, text = math.clamp(round(barH * 0.62), M.MinText, 24), minFill = math.max(8, round(h * 0.015))},
+        prev = {x = gridX, y = barY - math.floor((pageW - barH) / 2), w = pageW, h = pageW},
+        next = {x = gridX + gridW - pageW, y = barY - math.floor((pageW - barH) / 2), w = pageW, h = pageW},
+        footer = {x = leftX, y = footerY, w = gridX + gridW - leftX, h = footerH, text = math.clamp(round(footerH * 0.52), 22, 30), icon = round(footerH * 1.25)},
+        panel = {x = rightX, y = y0, w = rightW, h = panelH, edge = pEdge, nameText = pText, wordText = pWord, render = pRender, button = pButton, buttonW = pButtonW,
+            buttonText = math.clamp(round(h * 0.034), 22, 26), inset = round(rightW * 0.06)},
+        rewards = {x = rightX, y = y0 + panelH + colGap, w = rightW, h = rewardsH, oneLine = oneLine, pad = rPad, text = rText, row = rRow, button = rButton,
+            buttonText = math.clamp(round(h * 0.037), 24, 28), inset = round(rightW * 0.07)},
+        zones = zones, zoneText = zoneText, icons = iconSlots, icon = icon, iconText = iconText,
+    }
+end
+
 return M

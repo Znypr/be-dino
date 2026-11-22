@@ -273,6 +273,31 @@ for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36
     check(pp.nameText >= 19 and pp.wordText >= 19 and pp.button >= 44 and pp.buttonText >= 19, tag .. ": panel text 19+, button 44+")
     check(pp.renderTop + 40 + pp.gap + pp.line + pp.gap + pp.button + pp.edge <= i.panel.h, tag .. ": panel parts fit (render 40+ px)")
 end
+-- BD-1299 (Config.IndexZonesEnabled): the zones Index measured from the owner's proposed picture
+local Zl = M.indexZonesLayout(1280, 720, 0, 3)
+check(near(Zl.window.h / 720, .62, .64) and near(Zl.window.w / Zl.window.h, 1.85, 1.95), "zones Index window 63 % H, about 1.9 x as wide as high")
+check(near(Zl.titleSize / math.floor(720 * 0.053 + 0.5), 1.15, 1.21), "zones Index title 15-20 % bigger")
+check(near(Zl.zonePanel.w / Zl.window.w, .15, .19) and near(Zl.panel.w / Zl.window.w, .21, .25), "zone panel about 17 %, right column about 23 % of the window")
+for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36}, {1274, 423, 58}, {844, 390, 0}, {812, 375, 0}, {667, 375, 0}, {932, 430, 0}, {1180, 820, 36}, {740, 360, 0}} do
+    local sw, sh, inset = size[1], size[2], size[3]
+    local tag = "zones " .. sw .. "x" .. sh
+    local L = M.indexZonesLayout(sw, sh, inset, 3)
+    local win = L.window
+    check(win.x >= 0 and win.y >= 0 and win.x + win.w <= sw and win.y + win.h <= sh, tag .. ": window on screen")
+    check(L.close >= 48 and L.close <= L.headerH and L.titleSize >= 19, tag .. ": X >= 48 px inside the header")
+    local function inside(r, what) check(r.x >= 4 and r.y >= L.headerInset + L.headerH and r.x + r.w <= win.w - 4 and r.y + r.h <= win.h - 4, tag .. ": " .. what .. " inside the window") end
+    for _, c in L.cards do inside(c, "card") check(c.w >= 44 and c.h >= 44, tag .. ": card is a tap target") end
+    inside(L.zonePanel, "zone panel") inside(L.bar, "zone bar") inside(L.footer, "footer") inside(L.panel, "selected panel") inside(L.rewards, "rewards box")
+    check(L.cards[1].x >= L.zonePanel.x + L.zonePanel.w and L.panel.x >= L.cards[4].x + L.cards[4].w, tag .. ": zone panel | grid | right column")
+    check(L.bar.y >= L.cards[8].y + L.cards[8].h and L.footer.y >= L.bar.y + L.bar.h and L.rewards.y >= L.panel.y + L.panel.h, tag .. ": bar under the grid, footer under the bar, rewards under the panel")
+    for _, z in L.zones do check(z.x >= win.x + win.w and z.x + z.w <= sw and z.y >= 0 and z.y + z.h <= sh and z.h >= 44, tag .. ": zone button outside the window on the right, 44+ px, on screen") end
+    for _, s in L.icons do check(s.x >= L.zones[1].x + L.zones[1].w and s.x + s.w <= sw and s.y + s.h <= sh, tag .. ": icon right of the zone buttons, on screen") end
+    check(L.icon >= 44 and (L.iconText >= 19 or (L.iconText == 0 and sw < 760)) and L.zoneText >= 19 and L.cardName >= 19 and L.bar.text >= 19 and L.footer.text >= 19, tag .. ": icons 44+, words 19+")
+    check(L.panel.nameText >= 19 and L.panel.wordText >= 19 and L.panel.button >= 44 and L.panel.render >= 40, tag .. ": panel words 19+, View 44+, picture 40+")
+    check(L.rewards.text >= 19 and L.rewards.button >= 44 and L.rewards.buttonText >= 19, tag .. ": rewards words 19+, CLAIM 44+")
+    check(L.panel.edge + L.panel.render + L.panel.nameText + 2 * L.panel.wordText + 4 <= L.panel.h, tag .. ": panel parts fit")
+    check(L.rewards.pad + (if L.rewards.oneLine then L.rewards.row else L.rewards.text + 2 + L.rewards.row) + 4 + L.rewards.button <= L.rewards.h, tag .. ": rewards parts fit")
+end
 if #fails > 0 then error("sae menus FAILED:\n" .. table.concat(fails, "\n")) end
 print("sae menus passed")
 '''
@@ -460,6 +485,9 @@ LUAU_MUTANTS = {
     'the Index panel at 40 %': ('panel = 0.28,', 'panel = 0.40,'),
     'the rail inside the window': ('local x = win.x + win.w + math.max(6, round(w * 0.0125))', 'local x = win.x + win.w - 40'),
     'text under 19 px on a phone': ('local function text(capPct: number, fh: number): number return math.max(M.MinText,', 'local function text(capPct: number, fh: number): number return math.max(12,'),
+    'the zone buttons inside the window': ('local railX = win.x + winW + railGap', 'local railX = win.x + winW - 60'),
+    'the zones title not bigger': ('local titleSize = math.clamp(round(h * 0.063), 30, 46)', 'local titleSize = math.clamp(round(h * 0.053), 26, 40)'),
+    'the CLAIM button under 44 px': ('local rButton = math.max(M.MinTap, round(h * 0.062))', 'local rButton = round(h * 0.05)'),
 }
 
 

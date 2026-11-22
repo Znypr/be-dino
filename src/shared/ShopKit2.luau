@@ -31,7 +31,7 @@ K.Studded = studded
 -- The header strips 313x85 (green, purple): studs on the left, three shine stripes from x 87 to the right cap. Drawn in five pieces at the
 -- strip's height scale (no stretch): the left cap (x 0..42), a tile of one stud column (x 42..67, whole height so the outline runs on),
 -- the stripes (x 67..292) starting at StripeAt of the header width, the tile again, the right cap (x 292..313, under the X).
-K.HeaderColours = {"green", "purple"}
+K.HeaderColours = {"green", "purple", "cyan"} -- BD-1299: cyan (the Dino Index) has its own strip now, with the shine stripes
 K.Header = {w = 313, h = 85, leftCap = 42, tile = {x = 42, w = 25}, stripes = {x = 67, w = 225, first = 87}, rightCap = {x = 292, w = 21}}
 K.StripeAt = 0.38 -- the first shine stripe starts at 38 % of the header width (the approved Aura Shop header)
 -- BD-1296 (docs/246 slice 2): a header colour with no kit 2 strip yet (the Dino Index is cyan) is the kit 2 CARD piece of that colour
