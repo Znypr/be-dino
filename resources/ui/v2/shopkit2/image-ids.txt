@@ -14,3 +14,4 @@ shopkit2_close 87256955386705
 shopkit2_effect_strip 71327587862275
 shopkit2_header_green 135281684853956
 shopkit2_header_purple 112349325785296
+shopkit2_header_cyan 105626265964959
