@@ -66,8 +66,10 @@ local function floatWord(text: string)
     local x, y = center(plate)
     local size = math.clamp(math.floor(plate.AbsoluteSize.Y * 0.8), 24, 44)
     local label = Instance.new("TextLabel")
-    label.Name, label.BackgroundTransparency, label.AnchorPoint = "SizeFloat", 1, Vector2.new(0.5, 1)
-    label.Position, label.Size = UDim2.fromOffset(x, y + plate.AbsoluteSize.Y / 2 + size), UDim2.fromOffset(120, size)
+    -- starts just right of the SIZE plate and rises from there: below the plate it ran over the hint line (Studio 2026-11-23)
+    label.Name, label.BackgroundTransparency, label.AnchorPoint = "SizeFloat", 1, Vector2.new(0, 0.5)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Position, label.Size = UDim2.fromOffset(x + plate.AbsoluteSize.X / 2 + 8, y), UDim2.fromOffset(120, size)
     label.Font, label.Text, label.TextSize, label.TextColor3, label.ZIndex = Enum.Font.FredokaOne, text, size, Color3.new(1, 1, 1), 10
     local stroke = Instance.new("UIStroke")
     stroke.Color, stroke.Thickness, stroke.ApplyStrokeMode, stroke.Parent = INK, 3, Enum.ApplyStrokeMode.Contextual, label
