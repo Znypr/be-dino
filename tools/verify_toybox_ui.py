@@ -155,8 +155,8 @@ def static_checks(read):
         if rel.startswith('src/server'):
             for word in ('Toybox', 'toybox_'):
                 assert word not in text, 'no server change: %s in %s' % (word, rel)
-        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES + SCREENS_COHESION + MENUS_COHESION + ('src/client/HatchStage.luau',) and 'Toybox' in text:  # BD-1212: the hatch stage gives Skip the kit button
-            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout, HatchStage and the Crystal Shop files reach the skin: ' + rel)
+        elif rel not in (KIT, SKIN, THEME, COMPACT, FUSION, INDEX, CONFIG, SLOTS, STYLE, LAYOUT, PANELS, EGGSP, INDEXL, EGGS) + CRYSTAL_SHOP + POLISH_FILES + SCREENS_COHESION + MENUS_COHESION + ('src/client/HatchStage.luau', 'src/client/HatchStoryboard.luau') and 'Toybox' in text:  # BD-1212: the hatch stage gives Skip the kit button; BD-1288: the storyboard's TAP / NEXT, bar and cards are kit pictures
+            raise AssertionError('only UITheme, ModalCompact, FusionMenu, DinoIndexScreens, DinoIndexPanels, EggsPanels, DinoIndexList, EggsScreen, ToyboxLayout, HatchStage, HatchStoryboard and the Crystal Shop files reach the skin: ' + rel)
     slots = read(SLOTS)
     found = re.findall(r'^    (toybox_\w+) = "([^"]*)",$', slots, re.M)
     assert len(found) == 23 and len({name for name, _ in found}) == 23, 'AssetSlots has the 23 toybox slots (found %d)' % len(found)

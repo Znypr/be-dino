@@ -36,11 +36,11 @@ T.Paint = {leftStart = .35, rightStart = 1.1, window = .75, impact = .6, wash = 
 T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
 -- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
-function T.paintPlan(motion: boolean)
+function T.paintPlan(motion: boolean, paint: any?)
     if not motion then
         return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, patternAt = 0, patternEnd = 0, endsAt = 0}
     end
-    local p = T.Paint
+    local p = paint or T.Paint -- BD-1288: the storyboard pace (HatchStoryboardRules.Paint) when the state carries one
     local rightEnd = p.rightStart + p.window
     local patternAt = rightEnd + p.patternDelay
     return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
@@ -56,7 +56,9 @@ function T.anticipation(rarity: number?): number
 end
 -- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
 -- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
-function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?, fast: boolean?)
+-- BD-1288 slice 1: sb = HatchStoryboardRules (only with Config.HatchStoryboardEnabled): the full v1 show takes its paint plan and its
+-- build-up length (each name held about 0.9 s, a 0.7 s crack build-up). nil = every number exactly as before.
+function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?, fast: boolean?, sb: any?)
     if fast == true then -- BD-1164: no anticipation, no Legendary hold, no paint plan (v1 and v2 alike)
         local f = if not motion then T.FastReduced elseif failed then T.FastSplat else T.Fast
         return {build = f.build, burst = f.burst, settle = f.settle, revealAt = f.build, readyAt = f.build + f.burst + f.settle,
@@ -64,9 +66,10 @@ function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boo
     end
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) >= 5 then .5 else 0)
-    local build = (if v2 and motion then V2.Build else d.build) + (if motion and not failed then T.anticipation(rarity) else 0)
+    local story = sb ~= nil and motion and not v2
+    local build = (if v2 and motion then V2.Build elseif story then sb.plan().build else d.build) + (if motion and not failed then T.anticipation(rarity) else 0)
     return {build = build, burst = d.burst, settle = settle, revealAt = build, readyAt = build + d.burst + settle,
-        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion), fast = false, revealLag = if motion then T.RevealLag else 0}
+        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() elseif story then T.paintPlan(motion, sb.Paint) else T.paintPlan(motion), fast = false, revealLag = if motion then T.RevealLag else 0}
 end
 -- BD-1164: what happens when the reveal has settled. "wait" = not yet; "advance" = a fast egg moves on by itself; "hint" = the tap hint
 -- (or the end buttons) and the player decides, exactly as before. `lag` = seconds after the burst when the dinosaur really appeared.
@@ -91,20 +94,29 @@ end
 -- BD-397: switch a fresh state to the v2 beat sheet (before any step). Keeps the pending hold and every rule.
 function T.useV2(state, on: boolean)
     state.v2 = on == true
-    state.durs = T.durations(state.motion, nil, nil, state.v2)
+    state.durs = T.durations(state.motion, nil, nil, state.v2, nil, state.sb)
     return state
 end
 -- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
 -- BD-1164: fast = the short path (HatchPacing.plan); lead = seconds the egg first holds still and glows ("something special is coming",
 -- full motion only): the clock of the build-up does not move during the lead, only the idle wobble does.
 function T.supply(state, rarity: number?, failed: boolean?, fast: boolean?, lead: number?)
-    state.durs = T.durations(state.motion, rarity, failed, state.v2, fast)
+    state.durs = T.durations(state.motion, rarity, failed, state.v2, fast, state.sb)
     state.pending = false
+    if fast == true then state.gate = false end -- BD-1288: a fast egg never waits for the TAP
     local hold = if state.motion and fast ~= true and type(lead) == "number" and lead > 0 then lead else 0
     state.lead, state.leadTotal = hold, hold
     return state
 end
 -- Glow of the lead-in, 0..1: one soft swell up and down (0 when there is no lead or it is over).
+-- BD-1288 slice 1 (Config.HatchStoryboardEnabled): the state takes the storyboard pace and the egg WAITS for a TAP before the paint starts
+-- (gate). The wait holds the build-up clock at 0 (only the idle wobble moves); a tap, Skip the rest, a fast egg or sb.TapWaitMax seconds open it.
+function T.storyboard(state, sb: any, gate: boolean?)
+    state.sb = sb
+    state.durs = T.durations(state.motion, nil, nil, state.v2, nil, sb)
+    state.gate, state.gateWait = gate == true, 0
+    return state
+end
 function T.leadGlow(state): number
     if state.leadTotal <= 0 or state.lead <= 0 then return 0 end
     return math.sin(math.pi * math.clamp(1 - state.lead / state.leadTotal, 0, 1))
@@ -115,6 +127,12 @@ end
 function T.step(state, dt: number)
     if state.done then return state end
     dt = math.max(0, dt)
+    if state.gate then -- BD-1288: waiting for the TAP (the server answer may arrive meanwhile)
+        state.gateWait += dt
+        state.idle += dt
+        if state.gateWait >= ((state.sb and state.sb.TapWaitMax) or 0) then state.gate = false end
+        return state
+    end
     if state.pending then
         local room = math.max(0, T.holdAt(state) - state.t)
         state.t += math.min(dt, room)
@@ -134,7 +152,9 @@ end
 function T.visualT(state): number return state.t + state.idle end
 -- "advance" (next egg / done), "fastforward" (jump the build-up to the burst) or "ignore".
 function T.tapAction(state): string
-    if state.done or state.pending then return "ignore" end
+    if state.done then return "ignore" end
+    if state.gate then return "start" end -- BD-1288: the TAP that opens the egg
+    if state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "ready" then return "advance" end
     if phase == "build" and not state.fastForwarded and state.t >= state.durs.tapGate then return "fastforward" end
@@ -142,7 +162,9 @@ function T.tapAction(state): string
 end
 function T.tap(state): string
     local action = T.tapAction(state)
-    if action == "fastforward" then
+    if action == "start" then
+        state.gate = false
+    elseif action == "fastforward" then
         state.t, state.fastForwarded, state.lead = state.durs.build, true, 0
     elseif action == "advance" then
         state.done = true
@@ -151,6 +173,7 @@ function T.tap(state): string
 end
 -- Skip all: fast-forward a running build-up; an already revealed egg moves on at once.
 function T.skipAll(state): string
+    state.gate = false -- BD-1288: Skip the rest never waits for a TAP
     if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "build" then
