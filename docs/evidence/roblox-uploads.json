@@ -1560,5 +1560,65 @@
     "sha256": "59d3a7fba2bf724c2dad6eb32d25ca6565c132209fb12469950cc7ede7f24c05",
     "moderation": "Approved",
     "uploaded": "2026-11-17T21:50:29Z"
+  },
+  {
+    "assetId": "100016392044055",
+    "assetType": "Model",
+    "displayName": "Compy V2 textured parts",
+    "file": "Compy_V2.fbx",
+    "bytes": 113852,
+    "sha256": "755f55de6b3ac2481e42b9ad1b9a9369f11d8899868eebbd34f8b756661601ed",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T16:15:22Z"
+  },
+  {
+    "assetId": "113931173586605",
+    "assetType": "Model",
+    "displayName": "Compy V2b textured parts",
+    "file": "Compy_V2.fbx",
+    "bytes": 125324,
+    "sha256": "bd1522006ef9665a592df06de0db47065311f5601e930044d51112be70606817",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T16:22:40Z"
+  },
+  {
+    "assetId": "75361856704264",
+    "assetType": "Model",
+    "displayName": "Compy V3 textured parts",
+    "file": "Compy_V3.fbx",
+    "bytes": 182860,
+    "sha256": "fe0ff39f476d835969417681464e62987da06fdf0a3682f7dcb9d5a7b801f6c6",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T17:16:46Z"
+  },
+  {
+    "assetId": "109434792230390",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft textured parts",
+    "file": "Compy_V3_soft.fbx",
+    "bytes": 437212,
+    "sha256": "c8bca636017ef31f711820e3d96a5d0cfb430eb5cc65fe8f1d80a373bce65d7c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T18:06:13Z"
+  },
+  {
+    "assetId": "74014703632958",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft textured parts facing fixed",
+    "file": "Compy_V3_soft_fwd.fbx",
+    "bytes": 437356,
+    "sha256": "5fcc07422ce62fc3fc3f5ecf5dff71ea25dd4b03fe2bb0585e6851baa8688705",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T18:16:14Z"
+  },
+  {
+    "assetId": "122878777932897",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft textured parts facing fixed",
+    "file": "Compy_V3_soft_fwd.fbx",
+    "bytes": 437356,
+    "sha256": "fee51dc0df1541f9a46c09abea9af0e247852ca70cf5e0b388476ef9d6cb490f",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T18:17:05Z"
   }
 ]

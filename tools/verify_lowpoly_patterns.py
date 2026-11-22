@@ -162,12 +162,13 @@ for _, id in Tier.Order do
     assert(dr == 0.5 and dg == 0.3 and db == 0.2, id .. " shadow facets untouched")
     assert(select(1, Tier.lift(1, 1, 1, 1.6, e)) <= 1, "white stays white")
 end
-assert(Recolor.shade(0.9, 0.9, 0.9, base) == 1.6 and Recolor.shade(0.01, 0.01, 0.01, base) == 0.3, "shade clamp")
+local clampBase = {0.37, 0.58, 0.32} -- a fixed dark base: the clamp itself is tested, not a species (Compy V3 is bright lime since BD-1291)
+assert(Recolor.shade(0.9, 0.9, 0.9, clampBase) == 1.6 and Recolor.shade(0.01, 0.01, 0.01, clampBase) == 0.3, "shade clamp")
 assert(Tier.get("base") == nil and Tier.get(nil) == nil and Tier.get(false) == nil and Tier.get(true) == Tier.get("gold"), "stage mapping")
 -- 3. the cheap fallback tint keeps black black and reproduces the gene colour on the base colour
-local fr, fg, fb = Recolor.flatTint(base, 0.9, 0.2, 0.2)
+local fr, fg, fb = Recolor.flatTint(clampBase, 0.9, 0.2, 0.2) -- maths only: flatTint has no caller in src (textured MeshParts ignore Color)
 assert(fr >= 0 and fr <= 1 and fg >= 0 and fg <= 1 and fb >= 0 and fb <= 1)
-assert(fr == 1 and math.abs(base[2] * fg - 0.2) < 0.02 and math.abs(base[3] * fb - 0.2) < 0.02, "fallback tint off") -- a multiply can only darken: red stays the texture red, green/blue drop to the gene value
+assert(fr == 1 and math.abs(clampBase[2] * fg - 0.2) < 0.02 and math.abs(clampBase[3] * fb - 0.2) < 0.02, "fallback tint off") -- a multiply can only darken: red stays the texture red, green/blue drop to the gene value
 assert(0 * fr == 0, "eyes stay black")
 print("lowpoly pattern tests passed")
 '''
