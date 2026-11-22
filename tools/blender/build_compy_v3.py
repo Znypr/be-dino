@@ -693,10 +693,11 @@ def main():
         print("COMPY renders in", os.path.relpath(RENDER_DIR, ROOT))
 
 
-try:
-    main()
-except Exception:
-    import traceback
-    traceback.print_exc()
-    print("ERROR build failed")
-    sys.exit(1)
+if __name__ == "__main__":  # tools/blender/build_compy_blender.py imports the helpers above
+    try:
+        main()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        print("ERROR build failed")
+        sys.exit(1)
