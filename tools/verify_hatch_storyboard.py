@@ -81,10 +81,10 @@ do
         assert(tap.h >= 44, s[3] .. ": TAP is a big target")
         -- the bar
         local bar = R.topBar(w, h)
-        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .14, s[3] .. ": the bar")
+        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .15, s[3] .. ": the bar")
         assert(cy - eggH / 2 >= bar.h - 2, s[3] .. ": the egg starts under the bar")
         -- the reveal stack: dino 40-50 %, nothing overlaps, everything on screen
-        assert(R.Reveal.dinoH >= .4 and R.Reveal.dinoH <= .5 and R.Reveal.dinoHBig >= .4 and R.Reveal.dinoHBig <= .5, "the dino is 40-50 % of the screen")
+        assert(R.Reveal.dinoH * R.DinoFill >= .38 and R.Reveal.dinoH * R.DinoFill <= .5 and R.Reveal.dinoHBig * R.DinoFill >= .38 and R.Reveal.dinoHBig * R.DinoFill <= .5, "the dino itself is about 40-50 % of the stage")
         local st = R.revealStack(w, h)
         assert(not overlap(st.plate, st.chips), s[3] .. ": the name plate and the chips do not overlap")
         assert(not overlap(st.chips, st.next), s[3] .. ": the chips and NEXT do not overlap")

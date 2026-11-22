@@ -34,7 +34,8 @@ local PURPLE = Theme.Colors.purple
 -- other ScreenGuis that are HUD, not hatch: they step aside while the stage is up (BeDinoUI's own pieces are hidden by HatchStage)
 SB.HideGuis = {FriendBonusGui = true, GiftsGui = true, GrowthBanner = true, HubGuideArrow = true, HubPromptBubbleUI = true, PlaytestFeedback = true, TouchGui = true}
 SB.Blur = 14 -- px of the world blur behind the stage
-SB.Veil = .64 -- the stage veil over the world (HatchStage uses .78): darker, so the egg and the words stand out
+SB.Veil = .9 -- the stage veil over the world (HatchStage uses .78): the blurred world stays bright and sunny (lead review 2026-11-22: at most ~10 % darker)
+SB.Rays = .22 -- the sunburst behind the egg, brighter than the stage's .45
 
 local Stage: any = nil
 local ctx: any = nil -- one hatch batch on the stage
@@ -215,13 +216,23 @@ function SB.init(stage: any)
     Stage = stage
     Stage.HideCrystals = true
     Stage.Veil = SB.Veil
-    Stage.NextScale = R.NextScale
+    Stage.NextScale, Stage.PlateScale = R.NextScale, R.PlateScale
+    for _, tier in Stage.Ladder do tier.veil = math.max(tier.veil, SB.Veil - .06) end -- the reveal keeps the world bright too
     for k, v in R.Reveal do Stage.Layout[k] = v end
     -- the paint flipbook sits on the big egg (its egg is EggShare.want of the screen tall)
     Stage.eggRect = function(_s: any): any
         if not ctx then return nil end
         local c, h = eggRect()
         return {x = c.X, y = c.Y, side = R.flipbookSide(h / R.EggShare.want)}
+    end
+    -- the pail and the can pour onto the big egg: their path around the egg grows with it
+    Stage.bucketRect = function(c: Vector2, side: number): (Vector2, number)
+        if not ctx then return c, side end
+        local boost = ctx.body:GetAttribute("HatchEggBoost")
+        boost = if type(boost) == "number" then boost else 1
+        local egg = eggRect()
+        local d = c - egg -- the sequence's path is laid out for the small card egg: pull it in to the big egg's shoulder (storyboard panels 2 and 3)
+        return egg + Vector2.new(d.X * R.BucketPull.x, d.Y * R.BucketPull.y), side * boost
     end
     Stage.isNew = function(): boolean
         local e = ctx and ctx.entries[#ctx.entries]
@@ -280,7 +291,7 @@ function SB.begin(p: any)
         local function sync()
             if not ctx then return end
             local i, n = R.counter(o.Text)
-            ctx.index, ctx.total = i, n
+            if i then ctx.index, ctx.total = i, n end -- a counter without words (the game hides it at times) keeps the batch size
             counterWords.Text = o.Text
             chip.Visible = i ~= nil and not ctx.summary
             if o.Visible then o.Visible = false end
@@ -316,6 +327,8 @@ function SB.newEgg()
     if ctx.buildTween then ctx.buildTween:Cancel() ctx.buildTween = nil end
     ctx.colourShown, ctx.patternShown, ctx.built = false, false, false
     ctx.bar.Visible = not ctx.summary
+    local st = Stage.parts and Stage.parts()
+    if st and st.sun then st.sun.ImageTransparency = SB.Rays end -- brighter rays behind the waiting egg
     setBoost(false)
     local mine = ctx
     task.spawn(function()
@@ -573,7 +586,7 @@ function SB.summary()
         local big = frame(blocker, "Best", L.big.cx, L.big.cy, L.big.h * 1.1, L.big.h, 3)
         local ped = Instance.new("ImageLabel")
         ped.Name, ped.BackgroundTransparency, ped.Image, ped.ScaleType = "Pedestal", 1, Stage.Art.pedestal, Enum.ScaleType.Fit
-        ped.AnchorPoint, ped.Position, ped.Size, ped.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .06), UDim2.fromOffset(L.big.h * .8, L.big.h * .4), 3
+        ped.AnchorPoint, ped.Position, ped.Size, ped.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .16), UDim2.fromOffset(L.big.h * .8, L.big.h * .4), 3
         ped.ImageColor3 = tint:Lerp(WHITE, .35)
         ped.Parent = big
         local glow = Instance.new("ImageLabel")
@@ -581,7 +594,7 @@ function SB.summary()
         glow.AnchorPoint, glow.Position, glow.Size, glow.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .45), UDim2.fromOffset(L.big.h * 1.5, L.big.h * 1.5), 2
         glow.ImageColor3, glow.ImageTransparency = tint:Lerp(WHITE, .3), .25
         glow.Parent = big
-        dinoView(best, big, L.big.h * 1.05, L.big.h * .82, 4)
+        dinoView(best, big, L.big.h * 1.1, L.big.h * .95, 4)
         local bw = math.min(L.big.h * 1.05, size.X * .3)
         local ribbon = Instance.new("ImageLabel")
         ribbon.Name, ribbon.BackgroundTransparency, ribbon.Image, ribbon.ScaleType = "Ribbon", 1, Stage.Art.ribbon, Enum.ScaleType.Fit
@@ -593,7 +606,7 @@ function SB.summary()
         local pw = math.min(L.big.h * .75, size.X * .22)
         local namePlate = Instance.new("ImageLabel")
         namePlate.Name, namePlate.BackgroundTransparency, namePlate.Image, namePlate.ScaleType = "NamePlate", 1, Stage.Art.plate, Enum.ScaleType.Fit
-        namePlate.AnchorPoint, namePlate.Position, namePlate.Size, namePlate.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, L.big.h * .04), UDim2.fromOffset(pw, pw * 137 / 439), 6
+        namePlate.AnchorPoint, namePlate.Position, namePlate.Size, namePlate.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .04), UDim2.fromOffset(pw, pw * 137 / 439), 6
         namePlate.Parent = big
         local nameWords = words(namePlate, best.name or "", math.floor(pw * 137 / 439 * .5), INK, nil, 7)
         nameWords.Position, nameWords.Size, nameWords.AnchorPoint = UDim2.fromScale(.5, .47), UDim2.fromScale(.8, .62), Vector2.new(.5, .5)
@@ -629,7 +642,8 @@ function SB.summary()
         local home, parent, before = ends.Parent, ends.Parent, ctx.endsPosition
         local k = if ctx.body.Size.X.Offset > 0 then ctx.body.AbsoluteSize.X / ctx.body.Size.X.Offset else 1
         local scale = Instance.new("UIScale")
-        scale.Name, scale.Scale = "StoryboardScale", math.max(.5, k)
+        local rowH = if ends.Size.Y.Offset > 0 then ends.Size.Y.Offset else 70
+        scale.Name, scale.Scale = "StoryboardScale", math.max(.5, k, size.Y * R.EndRowShare / rowH) -- PLAY AGAIN / HOME about 12 % of the screen
         scale.Parent = ends
         ends.Parent = layer
         ends.AnchorPoint, ends.Position, ends.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(size.X / 2, L.buttonsY), 30

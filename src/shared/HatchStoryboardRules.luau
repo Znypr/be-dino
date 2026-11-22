@@ -8,7 +8,7 @@ local R = {}
 R.MinText = 19 -- every word on the storyboard stage is at least 19 px on screen (phones included)
 
 -- Panel 1: the egg is the star, about 40 % of the screen height (critique #1: 35-45 %), on a glowing pedestal, under a kit bar.
-R.EggShare = {min = .35, max = .45, want = .42}
+R.EggShare = {min = .35, max = .45, want = .45} -- of the stage under the Roblox top bar (lead review 2026-11-22: 40-45 %)
 R.EggCentreY = .5 -- the egg's centre, as a share of the screen height (under the bar, over the TAP)
 R.FlatEggH = 248 -- design px of the flat egg at zoom 1 (HatchEggSize.flat().h: (383 - 107) * 460 / 512)
 R.EggArtFill = .66 -- PROVISIONAL (Studio, docs/evidence/2026-11-22-hatch-slice1): share of a 256 px paint flipbook cell the egg fills
@@ -38,6 +38,8 @@ function R.plan()
 end
 -- The egg waits for the TAP. A player who never taps still gets the egg after this many seconds (a batch never stalls).
 R.TapWaitMax = 10
+-- The 3D pail / can follow the sequence's bucket path around the egg, pulled in this much (x, y) so they pour from the big egg's shoulder.
+R.BucketPull = {x = .5, y = 1} -- PROVISIONAL (Studio 1274x481, docs/evidence/2026-11-22-hatch-slice1)
 
 -- Words (kid words only: names and rarity words, never numbers or timers).
 R.Words = {tap = "TAP!", next = "NEXT", best = "BEST FIND!", plain = "PLAIN", new = "NEW!"}
@@ -61,8 +63,8 @@ end
 
 -- The top bar (storyboard: purple striped kit header across the top, a cream chip in the middle).
 function R.topBar(w: number, h: number)
-    local barH = math.clamp(math.floor(h * .13 + .5), 48, 110)
-    local chipH = math.max(32, math.floor(barH * .66 + .5))
+    local barH = math.clamp(math.floor(h * .14 + .5), 52, 120)
+    local chipH = math.max(36, math.floor(barH * .8 + .5))
     local text = math.max(R.MinText, math.floor(chipH * .6 + .5))
     return {h = barH, chipW = math.max(150, math.floor(text * 7.4 + .5)), chipH = chipH, text = text, titleText = math.max(R.MinText + 5, math.floor(barH * .62 + .5))}
 end
@@ -72,11 +74,12 @@ end
 function R.wordWidth(word: string, size: number): number
     return #word * size * .68
 end
+R.LabelDrop = .18 -- the plate sits a little low: the can pours from above it (Studio: at .1 the can hid behind the colour plate)
 function R.label(w: number, h: number, eggCx: number, eggCy: number, eggH: number, word: string)
     local margin = 16
     local left = eggCx + eggH * .42 + math.max(12, eggH * .08)
     -- big (storyboard: about 12 % of the screen), but never wider than the room right of the egg
-    local size = math.clamp(math.floor(h * .12 + .5), 30, 120)
+    local size = math.clamp(math.floor(h * .17 + .5), 30, 150)
     size = math.max(30, math.min(size, math.floor((w - margin - left) / (#word * .68 * 1.1 + 1.6))))
     local plateH = math.floor(size * 1.5 + .5)
     local plateW = math.floor(math.max(plateH * 2.4, R.wordWidth(word, size) * 1.1 + size * 1.6) + .5) -- room for the 3 px outline and the kit's rounded caps
@@ -85,7 +88,7 @@ function R.label(w: number, h: number, eggCx: number, eggCy: number, eggH: numbe
     local chipW = math.floor(math.max(plateW * .8, R.wordWidth("UNCOMMON", chipText) + chipText) + .5)
     if left + plateW > w - margin then left = math.max(margin, w - margin - plateW) end
     local cx = left + plateW / 2
-    local cy = eggCy - (plateH + 8 + chipH) / 2 + plateH / 2
+    local cy = eggCy + eggH * R.LabelDrop - (plateH + 8 + chipH) / 2 + plateH / 2 -- a little under the egg's middle: the can pours from the shoulder above
     return {plate = {cx = cx, cy = cy, w = plateW, h = plateH, text = size}, chip = {cx = cx, cy = cy + plateH / 2 + 8 + chipH / 2, w = chipW, h = chipH, text = chipText}}
 end
 
@@ -112,8 +115,11 @@ end
 
 -- Panel 5: the reveal stack, in shares of the screen height (the ribbon banner sits at the very top). The colour + pattern chips get their own
 -- row between the name plate and NEXT. The dino view is 44 % of the screen tall (critique #1: 40-50 %), 48 % for Legendary and up.
-R.Reveal = {dinoY = .38, dinoYBig = .37, dinoH = .48, dinoHBig = .5, pedestalY = .6, plateY = .685, chipsY = .79, nextY = .9}
-R.NextScale = 1.25 -- the reveal's NEXT is a big kit button (storyboard panel 5)
+R.Reveal = {dinoY = .39, dinoYBig = .38, dinoH = .64, dinoHBig = .66, pedestalY = .6, plateY = .665, chipsY = .79, nextY = .9}
+R.NextScale = 1.5 -- the reveal's NEXT is a big kit button (storyboard panel 5, about 10 % of the screen)
+R.PlateScale = 1.3 -- the reveal's name plate (HatchStage) is bigger too
+R.DinoFill = .62 -- PROVISIONAL (Studio): share of its view the dino model fills, so the dino itself is about 40 % of the stage
+R.EndRowShare = .12 -- PLAY AGAIN / HOME row height on the BEST FIND! summary, share of the screen
 function R.revealChips(w: number, h: number)
     local ch = math.clamp(math.floor(h * .05 + .5), 32, 46)
     local text = math.max(R.MinText, math.floor(ch * .58 + .5))
@@ -125,14 +131,14 @@ end
 -- The vertical stack on a screen: {name = {top, bottom}} with the same sizes HatchStage.reveal uses (plate and NEXT scale with fitY).
 function R.revealStack(w: number, h: number)
     local fitY = math.min(1, h / 793)
-    local plateW = math.min(w * .2, 300 * fitY)
+    local plateW = math.min(w * .2, 300 * fitY) * R.PlateScale
     local plateH = plateW * 137 / 439
     local chips = R.revealChips(w, h)
     local nextH = 66 * fitY * R.NextScale
     local L = R.Reveal
-    local dinoBottom = h * L.dinoY + h * L.dinoH / 2
+    local dinoBottom = h * L.dinoY + h * L.dinoH * R.DinoFill / 2 -- the model, not its (transparent) view
     return {
-        dino = {top = h * L.dinoY - h * L.dinoH / 2, bottom = dinoBottom},
+        dino = {top = h * L.dinoY - h * L.dinoH * R.DinoFill / 2, bottom = dinoBottom},
         plate = {top = h * L.plateY - plateH / 2, bottom = h * L.plateY + plateH / 2},
         chips = {top = chips.y - chips.h / 2, bottom = chips.y + chips.h / 2},
         next = {top = h * L.nextY - nextH / 2, bottom = h * L.nextY + nextH / 2},
@@ -185,9 +191,9 @@ function R.summary(w: number, h: number, others: number)
         local c, r = (i - 1) % useCols, math.floor((i - 1) / useCols)
         table.insert(cards, {cx = x0 + c * (cardW + gap) + cardW / 2, cy = y0 + r * (cardH + gap) + cardH / 2, w = cardW, h = cardH})
     end
-    local bigH = math.min(h * .46, bottom - top - h * .12)
+    local bigH = math.min(h * .52, bottom - top) -- the best dino big (storyboard panel 6: about 40 % of the screen)
     local nameText = math.max(R.MinText, math.floor(cardW * .17 + .5))
-    return {bar = bar, big = {cx = w * .29, cy = (top + bottom) / 2 + h * .02, h = bigH}, cards = cards, shown = shown, more = more,
+    return {bar = bar, big = {cx = w * .29, cy = (top + bottom) / 2, h = bigH}, cards = cards, shown = shown, more = more,
         buttonsY = buttonsY, cardText = nameText, chipText = R.MinText}
 end
 

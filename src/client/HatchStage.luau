@@ -51,6 +51,8 @@ Stage.revealExtras = nil :: ((any, any, {() -> ()}, (GuiObject, number) -> ()) -
 Stage.onEnds = nil :: ((any, GuiObject, {() -> ()}) -> ())? -- the last egg's PLAY AGAIN / HOME row was placed
 Stage.onRestore = nil :: (() -> ())? -- the stage closes
 Stage.NextScale = 1 -- size of the reveal's NEXT
+Stage.PlateScale = 1 -- size of the reveal's name plate and pedestal
+Stage.bucketRect = nil :: ((Vector2, number) -> (Vector2, number))? -- where a 3D paint bucket goes (shade px)
 function Stage.parts(): any return stageParts end
 
 local function painted(o: Instance, stop: Instance): GuiObject?
@@ -296,6 +298,7 @@ function Stage.mirrorBuckets(s: any, keep: (Instance, string, any) -> (), conns:
             if show then
                 local c = group.AbsolutePosition + group.AbsoluteSize / 2 - s.shade.AbsolutePosition
                 local side = group.AbsoluteSize.X * Stage.BucketView.side
+                if Stage.bucketRect then c, side = Stage.bucketRect(c, side) end -- BD-1288: around the storyboard's big egg
                 v.frame.Position, v.frame.Size, v.frame.ImageTransparency = UDim2.fromOffset(c.X, c.Y), UDim2.fromOffset(side, side), group.GroupTransparency
                 -- the same tip as the picture: a turn about the camera's line of sight (screen clockwise = positive Rotation)
                 v.part.CFrame = CFrame.fromAxisAngle(v.axis, math.rad(group.Rotation)) * v.base
@@ -493,7 +496,7 @@ function Stage.reveal()
     -- the dino stands on a glowing pedestal in the rarity colour (behind the panel, so behind the dino)
     local grownC = Stage.growDino(s, rank)
     local vc = grownC or Vector2.new(screen.X / 2, screen.Y * Stage.Layout.dinoY)
-    local pw = math.min(screen.X * .2, 340 * fitY)
+    local pw = math.min(screen.X * .2, 340 * fitY) * Stage.PlateScale
     local pedestalY = screen.Y * Stage.Layout.pedestalY -- under the feet
     local pedestal = art("HatchStagePedestal", Stage.Art.pedestal, Vector2.new(pw, pw * 212 / 429), Vector2.new(vc.X, pedestalY), s.panel.ZIndex - 1,
         if rank <= 1 then Color3.fromRGB(150, 225, 255) else color:Lerp(Color3.new(1, 1, 1), .35))
@@ -513,7 +516,7 @@ function Stage.reveal()
     end
     if not info.failed then
         local name = plain(if info.nameLabel then info.nameLabel.Text else "")
-        local plateW = math.min(screen.X * .2, 300 * fitY)
+        local plateW = math.min(screen.X * .2, 300 * fitY) * Stage.PlateScale
         local plateH = plateW * 137 / 439
         local plateC = Vector2.new(vc.X + (if Stage.revealExtras then 0 else 26), screen.Y * Stage.Layout.plateY)
         local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
