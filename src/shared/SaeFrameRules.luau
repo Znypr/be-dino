@@ -1,23 +1,18 @@
 --!strict
--- BD-1287 (docs/246 slice 1): the Crystal Shop landing while Config.MenusSaeFrameEnabled is on, built from the Toybox art kit to match the
--- owner's APPROVED shop window on the Design Board (page Phone UI, "Phone shop windows, built from the art kit"; owner redirect 2026-11-21:
--- "this is not what the proposed menu shop is supposed to look like compare to the dashboard"). Pure numbers, no Instances:
--- client/ShopSaeLanding places the kit pictures where layout() says, tools/verify_sae_frame.py runs it at desktop and phone sizes.
--- The look (the board mocks): the kit panel frame with the studs tile body, the kit green header strip with a big white outlined title at the
--- left and the kit red X at the right; a gold "-- FEATURED --" section heading; big kit rarity cards (name on top, the picture filling the
--- middle, one short kid line, the studded kit green button with the crystal icon and the price, the grey one for a lock); and the tabs
--- OUTSIDE the window on the right as an icon with a white outlined word under it, no tile box behind (Featured, Auras, Trails, Eggs, Potions).
--- Every % is of the whole SCREEN (ScreenGui height + the top bar inset), every position is in ScreenGui px. No text under 19 px (docs/72).
--- Window from 16 % to 88 % of the screen height, 49 % W (58 % narrowed by 15 %, ChatGPT round on v3); the HUD is hidden and the world
--- blurred (14 px) while it is open, like the approved one. v4 finish (ChatGPT 7.5/10 on v3, "structure close, finish differs"): boxy
--- corners (cards 4 px, window 6 px, 3 px black outlines), cards in ONE full-strength colour top to bottom with the faint stud pattern, the
--- body #343447 with low-contrast studs, the header about 19.5 % of the window, names 8 % of the window, buttons 9.5 %, art 43-50 % of
--- the card, standalone rail icons 13 % of the window with bold outlined words. Sizes inside the window are % of the WINDOW height.
+-- BD-1287 (docs/246 slice 1): the numbers of the shop menu kit window (client/KitWindow, KitCard, KitButton, KitStrip, KitRail) and of the
+-- Crystal Shop landing built on it while Config.MenusSaeFrameEnabled is on. The target is the owner's APPROVED Aura Shop window (owner
+-- 2026-11-22: "build reusable menus that just look like the proposed approved ones"): a dark studded window with a striped header strip and a
+-- big white outlined title at the left, the red X at the right, big rarity cards (name, small rarity word, the item picture, a dark effect
+-- strip "x1.15 Growth", the green price button with the orange crystal), and the tabs OUTSIDE the window on the right as an icon with a white
+-- outlined word under it, no box (Featured, Auras, Trails, Eggs, Potions). Pure numbers, no Instances: tools/verify_sae_frame.py runs it at
+-- desktop and phone sizes. Every % is of the whole SCREEN (ScreenGui height + the top bar inset) unless it says window or card; positions are
+-- ScreenGui px. No text under 19 px (docs/72). The HUD is hidden and the world blurred (14 px) while the window is open, like the approved one.
+-- The art: Shared/ShopKit2 (the kit 2 pictures made from the approved window); while a kit 2 slot is empty that piece keeps the Toybox look
+-- (Shared/ToyboxKit; the Card* and Header* crops below are for that fallback).
 local R = {}
 
 R.Cover = 0.94 -- ModalScrim transparency while the window shows: 6 % dark overlay over the blurred world (5-8 %)
 R.Blur = 14 -- px of the menus' blur behind the window (12-16 at 720 p)
-R.WidthShare = 0.58 * 0.85 -- the window width share of the screen
 R.OutlinePx = 3
 R.ArtMax = 0.55 -- the picture's share of the card height: at most 55 % (the approved cards), at least 43 % where it fits
 -- owner 2026-11-21 on v4 ("crystal shop looks too different"): the window is built from the kit pictures 1:1, as the approved one. A card is
@@ -34,10 +29,8 @@ R.MinTap = 44
 R.MinClose = 48
 R.MaxCards = 3
 R.Title = "Crystal Shop"
-R.Featured = "-- FEATURED --"
-R.Gold = {255, 214, 64} -- the section heading words (the mock's gold "-- BOOSTS --")
 R.Ink = {13, 15, 20} -- ToyboxKit.Outline: every outline and word drop
-R.HeaderSlot = "toybox_header_green" -- the Crystal Shop is green (an Aura page would be purple)
+R.HeaderColour = "green" -- the Crystal Shop is green (the Aura page will be purple)
 -- the tabs on the right, in the mocks' order; "featured" is this landing page itself
 R.RailTabs = {"featured", "auras", "trails", "eggs", "potions"}
 R.RailWords = {featured = "Featured", auras = "Auras", trails = "Trails", eggs = "Eggs", potions = "Potions"}
@@ -137,7 +130,13 @@ function R.buttonWord(entry: any): string
     return "OPEN"
 end
 
--- The kit card picture of a featured entry.
+-- The rarity of a featured entry's card (kit 2 card colour): the item's rarity; the egg on the gold (Legendary) card.
+function R.cardRarity(entry: any): string
+    if entry.tab == "eggs" then return "Legendary" end
+    return if entry.item and type(entry.item.rarity) == "string" then entry.item.rarity else "Common"
+end
+
+-- The Toybox kit card picture of a featured entry (the fallback while the kit 2 card is not bound).
 function R.cardSlot(entry: any): string
     if entry.tab == "eggs" then return R.EggCard end
     local rarity = if entry.item then entry.item.rarity else nil
@@ -154,11 +153,20 @@ end
 
 export type Rect = {x: number, y: number, w: number, h: number}
 export type Layout = {
-    window: Rect, frameInset: number, headerH: number, close: number, titleSize: number, heading: Rect, headingSize: number, showHeading: boolean,
+    window: Rect, frameInset: number, headerInset: number, headerH: number, close: number, titleSize: number,
     pad: number, cards: {Rect}, edge: number, nameH: number, cardTitle: number, rarityText: number, rarityH: number, line: boolean, lineH: number,
-    lineText: number, art: number, button: number, buttonText: number, priceIcon: number,
+    lineText: number, stripInset: number, innerGap: number, art: number, artTop: number, button: number, buttonInset: number, buttonText: number, priceIcon: number,
     rail: {x: number, y: number, icon: number, selectedIcon: number, labelSize: number, gap: number, colW: number, slots: {Rect}},
 }
+
+-- The approved Aura Shop window (1544x720 phone shot), measured: window 725x517 from 16 % to 88 % of the screen (w / h = 1.40); header
+-- inset 10 px, 95 px high (18.4 %), the X 86 px (90 % of the header); cards 216x375 (72.5 % of the window), 22 px from the sides, 17 px
+-- apart, 17 px under the header. Inside a card (% of the card height): the name 10.5 % with the rarity word under it, the picture from 21 %
+-- (the dino and its aura about 51 %), the effect strip 10 % (7 % in from each side), the button 12.3 % (4.5 % in), 2.5 % gaps.
+R.Aspect = 1.40
+R.HeaderShare, R.CloseShare = 0.184, 0.9
+R.CardTop, R.CardSide, R.CardGap = 0.033, 0.03, 0.023 -- of the window height / width / width
+R.Card = {edge = 0.025, name = 0.105, rarity = 0.05, strip = 0.10, stripInset = 0.07, button = 0.123, buttonInset = 0.045, gap = 0.025}
 
 -- w, guiH: ScreenGui AbsoluteSize. cards: how many cards (1..3). inset: the top bar above the ScreenGui.
 function R.layout(w: number, guiH: number, cards: number, inset: number?): Layout
@@ -166,63 +174,50 @@ function R.layout(w: number, guiH: number, cards: number, inset: number?): Layou
     local top = math.max(0, inset or 0)
     local h = guiH + top -- the screen height the % are taken of
     local nCards = math.clamp(cards, 1, R.MaxCards)
-    local short = h < 600
-    local frameInset = R.OutlinePx + 1 -- the header and the body sit inside the 3 px window outline
+    local frameInset = R.OutlinePx + 1 -- the body sits inside the 3 px window outline
     local winY = math.max(4, round(h * R.Top) - top)
     local winH = math.min(round(h * (R.Bottom - R.Top)), guiH - 8)
     if winY + winH > guiH - 4 then winY = math.max(4, guiH - 4 - winH) end
-    -- inside the window: % of the WINDOW height (ChatGPT v4), never under the phone floors
-    local close = math.max(R.MinClose, round(winH * 0.14))
-    local headerH = math.max(round(winH * 0.195), close + 6)
-    local titleSize = math.clamp(round(headerH * 0.55), 26, 56)
-    local pad = if short then 6 else math.max(10, round(winH * 0.025))
-    local cardGap = math.clamp(round(w * 0.009), 8, 14)
-    local headingSize = if short then math.max(22, round(h * 0.045)) else math.clamp(round(h * 0.045), 30, 34)
-    local cardTitle = 23 -- set from the card width below (the approved titles: about 19 % of the card width)
-    local rarityText = if short then R.MinText else math.clamp(round(winH * 0.04), 19, 22)
-    local lineText = if short then R.MinText else math.clamp(round(winH * 0.04), 19, 22)
-    local button = math.max(46, round(winH * 0.095))
-    local buttonText = math.clamp(round(button * 0.55), 25, 32)
-    local edge = if short then 6 else 10
-    local nameH = cardTitle + 2
-    local rarityH = rarityText + 2
-    local lineH = lineText + 4
-    local cardMin = edge + 25 + 40 + button + edge -- a picture of at least 40 px
-    local minW = nCards * 128 + (nCards - 1) * cardGap + 2 * (pad + frameInset)
-    local winW = math.min(math.max(round(w * R.WidthShare), minW), w - 16)
+    local headerInset = math.max(frameInset, round(winH * 0.019))
+    local close = math.max(R.MinClose, round(winH * R.HeaderShare * R.CloseShare))
+    local headerH = math.max(round(winH * R.HeaderShare), close + 6)
+    local titleSize = math.clamp(round(headerH * 0.53), 26, 56)
+    local pad = math.max(6, round(winH * R.CardTop))
+    -- the window keeps the approved shape (w / h = 1.40) on any screen; never narrower than three cards wide enough for their buttons
+    local cardGap = math.max(6, round(winH * R.Aspect * R.CardGap))
+    local side = math.max(frameInset + 4, round(winH * R.Aspect * R.CardSide))
+    local minW = nCards * 128 + (nCards - 1) * cardGap + 2 * side
+    local winW = math.min(math.max(round(winH * R.Aspect), minW), w - 16)
     local winX = round((w - winW) / 2)
-    -- the section heading and the cards fill the body under the header
-    local bodyTop = frameInset + headerH + pad
-    local bodyH = winH - bodyTop - pad - frameInset
-    local headingH = headingSize + 2
-    local cardW = math.floor((winW - 2 * (frameInset + pad) - (nCards - 1) * cardGap) / nCards)
-    cardTitle = math.clamp(round(cardW * 0.19), 23, 46)
-    nameH = cardTitle + 2
-    -- inside a card (client/ShopKitCard, the approved Aura Shop card): the name on top with the small rarity word under it, the picture
-    -- (43-50 % of the card), the dark strip with one short line (dropped only when the picture would fall under 36 px), the button at the bottom
-    local function cardFor(withHeading: boolean): (number, number, boolean, number)
-        local y = bodyTop + (if withHeading then headingH + 4 else 0)
-        local ch = winH - frameInset - pad - y
-        local room = ch - 2 * edge - nameH - rarityH - button - 6
-        local withLine = room - lineH - 5 >= 36
-        local fit = room - (if withLine then lineH + 5 else 0)
-        return y, ch, withLine, math.max(0, math.min(fit, cardW - 2 * edge, round(ch * R.ArtMax)))
-    end
-    -- FEATURED shows where it leaves a picture of at least 43 % of the card (a short canvas keeps the room for the cards)
-    local showHeading = bodyH - headingH - 4 >= cardMin
-    local cardY, cardH, line, art = cardFor(showHeading)
-    if showHeading and art < 0.43 * cardH then
-        showHeading = false
-        cardY, cardH, line, art = cardFor(false)
-    end
+    local cardY = headerInset + headerH + pad
+    local cardH = winH - cardY - math.max(frameInset + 4, round(winH * 0.039))
+    local cardW = math.floor((winW - 2 * side - (nCards - 1) * cardGap) / nCards)
+    local C = R.Card
+    local edge = math.max(4, round(cardH * C.edge))
+    local cardTitle = math.clamp(math.min(round(cardH * C.name), round(cardW * 0.19)), 23, 46)
+    local nameH = cardTitle + 2
+    local rarityText = math.clamp(round(cardH * C.rarity), R.MinText, 22)
+    local rarityH = rarityText + 2
+    local button = math.max(R.MinTap, round(cardH * C.button))
+    local buttonText = math.clamp(round(button * 0.6), 24, 34)
+    local lineText = math.clamp(round(cardH * C.strip * 0.62), R.MinText, 26)
+    local lineH = math.max(lineText + 8, round(cardH * C.strip))
+    local gap = math.max(3, round(cardH * C.gap))
+    -- the picture may run up under the small rarity word (drawn over it): its own top is mostly the aura's glow, as on the approved cards
+    local artTop = edge + nameH + round(rarityH * 0.4)
+    local room = cardH - artTop - edge - button - gap - lineH - gap
+    local line = room >= 40
+    if not line then room = cardH - artTop - edge - button - gap end
+    local art = math.max(0, math.min(room, cardW - 4, math.floor(cardH * R.ArtMax)))
     local list: {Rect} = {}
     for i = 1, nCards do
-        table.insert(list, {x = frameInset + pad + (i - 1) * (cardW + cardGap), y = cardY, w = cardW, h = cardH})
+        table.insert(list, {x = side + (i - 1) * (cardW + cardGap), y = cardY, w = cardW, h = cardH})
     end
     -- the rail: standalone illustrated icons (13 % of the window height) with a bold outlined word under each, no box; the selected one bigger
+    local short = h < 600
     local icon = math.max(R.MinTap, round(winH * 0.13))
     local labelSize = if short then R.MinText else math.clamp(round(h * 0.027), 19, 22)
-    local gap = math.max(4, round(h * 0.01))
+    local railGap = math.max(4, round(h * 0.01))
     local longest = 0
     for _, tab in R.RailTabs do longest = math.max(longest, R.textWidth(R.RailWords[tab], labelSize)) end
     local colW = math.max(icon, longest + 6)
@@ -230,17 +225,17 @@ function R.layout(w: number, guiH: number, cards: number, inset: number?): Layou
     if railX + colW > w - 4 then colW = math.max(icon, w - 4 - railX) end
     local slotH = icon + labelSize + 2
     local n = #R.RailTabs
-    local railH = n * slotH + (n - 1) * gap
+    local railH = n * slotH + (n - 1) * railGap
     local railY = winY + frameInset
     if railY + railH > guiH - 4 then railY = math.max(4, guiH - 4 - railH) end
     local slots: {Rect} = {}
-    for i = 1, n do table.insert(slots, {x = railX, y = railY + (i - 1) * (slotH + gap), w = colW, h = slotH}) end
+    for i = 1, n do table.insert(slots, {x = railX, y = railY + (i - 1) * (slotH + railGap), w = colW, h = slotH}) end
     return {
-        window = {x = winX, y = winY, w = winW, h = winH}, frameInset = frameInset, headerH = headerH, close = close, titleSize = titleSize,
-        heading = {x = frameInset + pad, y = bodyTop, w = winW - 2 * (frameInset + pad), h = headingH}, headingSize = headingSize, showHeading = showHeading,
-        pad = pad, cards = list, edge = edge, nameH = nameH, cardTitle = cardTitle, rarityText = rarityText, rarityH = rarityH, line = line, lineH = lineH,
-        lineText = lineText, art = art, button = button, buttonText = buttonText, priceIcon = button - 14,
-        rail = {x = railX, y = railY, icon = icon, selectedIcon = round(icon * 1.12), labelSize = labelSize, gap = gap, colW = colW, slots = slots},
+        window = {x = winX, y = winY, w = winW, h = winH}, frameInset = frameInset, headerInset = headerInset, headerH = headerH, close = close,
+        titleSize = titleSize, pad = pad, cards = list, edge = edge, nameH = nameH, cardTitle = cardTitle, rarityText = rarityText, rarityH = rarityH,
+        line = line, lineH = lineH, lineText = lineText, stripInset = round(cardW * C.stripInset), innerGap = gap, art = art, artTop = artTop, button = button,
+        buttonInset = round(cardW * C.buttonInset), buttonText = buttonText, priceIcon = round(button * 0.72),
+        rail = {x = railX, y = railY, icon = icon, selectedIcon = round(icon * 1.12), labelSize = labelSize, gap = railGap, colW = colW, slots = slots},
     }
 end
 
