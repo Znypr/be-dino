@@ -20,6 +20,7 @@ fail (--no-mutants skips them).
 Usage: python tools/verify_sae_frame.py --runner luau.exe"""
 from pathlib import Path
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -220,8 +221,7 @@ local fails = {}
 local function check(ok, what) if not ok then table.insert(fails, what) end end
 local function near(v, lo, hi) return v >= lo and v <= hi end
 -- 720 p: the docs/246 targets
-local P = M.potionLayout(1280, 720, 0)
-local w = P.window -- BD-1298: the Potion Shop's own numbers (the proposed picture) are checked in LUAU_POTION
+local w -- BD-1298: the Potion Shop has its own checks (LUAU_POTION, the element spec of the proposed picture)
 local I = M.indexLayout(1280, 720, 0)
 w = I.window
 check(near(w.w / 1280, .49, .51) and near(w.h / 720, .62, .64), "Dino Index window 50 x 63 %")
@@ -237,7 +237,7 @@ check(near(I.bar.minFill, 10, 12), "a found dino shows at least 10-12 px of fill
 check(M.PanelZoom >= .4 and M.SilhouetteZoom >= .28, "lead polish round 2: the panel dino and the silhouettes bigger")
 check(near(I.headerH / 720, .095, .105) and near(I.titleSize, 36, 40), "Index header 9.5-10 % H, title 36-40 px")
 check(M.IndexTitle == "Dino Index" and M.IndexColour == "cyan" and M.IndexRail[1] == "dinos" and M.IndexRail[2] == "patterns" and M.IndexRail[3] == "colours", "one cyan title; Dinos / Patterns / Colours on the rail")
-for _, L in {P, I} do
+for _, L in {I} do
     local r = L.rail
     check(near((r.x - L.window.x - L.window.w) / 1280, .009, .016) and near(r.icon / 720, .07, .08) and near(r.gap / 720, .008, .012), "rail 1-1.5 % W right of the window, icons 7-8 % H, 1 % apart")
 end
@@ -253,7 +253,7 @@ check(f == 4 and n == 2, "a page past the end is the last page")
 for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36}, {1274, 423, 58}, {844, 390, 0}, {812, 375, 0}, {667, 375, 0}, {932, 430, 0}, {1180, 820, 36}, {740, 360, 0}} do
     local sw, sh, inset = size[1], size[2], size[3]
     local tag = sw .. "x" .. sh
-    for _, L in {M.potionLayout(sw, sh, inset), M.indexLayout(sw, sh, inset)} do
+    for _, L in {M.indexLayout(sw, sh, inset)} do
         local win = L.window
         check(win.x >= 0 and win.y >= 0 and win.x + win.w <= sw and win.y + win.h <= sh, tag .. ": window on screen")
         check(L.close >= 48 and L.close <= L.headerH and L.titleSize >= 19, tag .. ": X >= 48 px inside the header")
@@ -277,66 +277,85 @@ if #fails > 0 then error("sae menus FAILED:\n" .. table.concat(fails, "\n")) end
 print("sae menus passed")
 '''
 
-# BD-1298: the Potion Shop follows the owner's proposed picture (docs/evidence/2026-11-23-potion-proposal/proposal.jpg; ChatGPT's ranked
-# differences): a 1.40 : 1 window 71.5 % H, three tall cards ~30 % W x 70-73 % H, 2-3 % apart, the bottle 45-48 % of the card (lead review), the
-# name 10-12 %, the rarity word 55 % of the name (19 px floor), the timer inside the header at ~63 %, the X and the title ~15 % bigger, no row under the cards.
+# BD-1298: the Potion Shop is built from the element spec of the owner's proposed picture (docs/menu-specs/potion-shop/spec.json,
+# tools/menu_spec_check.py compares a Studio capture element by element). Here, offline: SaeMenuRules.PotionSpec carries the SAME boxes
+# as spec.json (read below), potionLayout at 720 p puts every element in its box (1.5 %), and at every size the floors hold (19 px text,
+# 44 px buttons, 48 px X) with everything inside the window and the screen.
+POTION_SPEC = json.loads(read('docs/menu-specs/potion-shop/spec.json'))
+
+
+def potion_spec_lua():
+    e = POTION_SPEC['elements']
+    def box(k):
+        return '{' + ', '.join(repr(float(v)) for v in e[k]['box']) + '}'
+    parts = ', '.join(f'{k} = {box("card*." + k)}' for k in ('name', 'rarity', 'badge', 'art', 'strip', 'price'))
+    rail = ', '.join(f'{k} = {box("rail." + k)}' for k in ('featured', 'potions', 'trails', 'auras', 'eggs'))
+    return ('local SPEC = {header = %s, title = %s, timer = %s, close = %s, card1 = %s, card2 = %s, card3 = %s, parts = {%s}, rail = {%s}, tol = %s}\n'
+            % (box('header'), box('title'), box('timer'), box('close'), box('card1'), box('card2'), box('card3'), parts, rail, POTION_SPEC.get('tolerance_pct', 1.5)))
+
+
 LUAU_POTION = r'''
 local fails = {}
 local function check(ok, what) if not ok then table.insert(fails, what) end end
 local function near(v, lo, hi) return v >= lo and v <= hi end
+local function same(a, b, what) -- two {x, y, w, h} in %, within the spec tolerance
+    for i = 1, 4 do if math.abs(a[i] - b[i]) > 0.05 then check(false, what .. ": SaeMenuRules.PotionSpec differs from spec.json") return end end
+end
+-- SaeMenuRules.PotionSpec = spec.json
+local S = M.PotionSpec
+same(S.header, SPEC.header, "header") same(S.title, SPEC.title, "title") same(S.timer, SPEC.timer, "timer") same(S.close, SPEC.close, "close")
+for i = 1, 3 do same({S.cards.x[i], S.cards.y, S.cards.w[i], S.cards.h}, SPEC["card" .. i], "card" .. i) end
+for k, b in SPEC.parts do same(S.card[k], b, "card*." .. k) end
+for i, tab in M.PotionRail do local b = SPEC.rail[tab] check(b ~= nil and math.abs(S.rail.x - b[1]) < .05 and math.abs(S.rail.y + (i - 1) * S.rail.pitch - b[2]) < .05 and math.abs(S.rail.w - b[3]) < .05 and math.abs(S.rail.h - b[4]) < .05, "rail." .. tab .. " = spec.json") end
+-- 720 p: every element in its spec box (% of the window, card parts % of the card)
 local P = M.potionLayout(1280, 720, 0)
 local w = P.window
-check(near(w.w / w.h, 1.36, 1.44) and near(w.h / 720, .70, .73), "Potion Shop window 1.40 : 1, 71.5 % H (the picture)")
-check(math.abs(w.x + w.w / 2 - 640) <= 1 and near(w.y / 720, .15, .18), "Potion Shop centred, top at 15-18 %")
-check(near(P.close, 78, 86) and near(P.titleSize, 44, 48) and P.close + 8 <= P.headerH, "the picture's X (~82 px) and title (~46 px), the X inside the header")
-check(near(P.headerH / w.h, .16, .19), "header 16-19 % of the window (the picture)")
-check(#P.cards == 3 and M.Potion.perPage == 3, "three potions per page")
-for _, c in P.cards do check(near(c.w / w.w, .28, .32) and near(c.h / w.h, .70, .74), "tall cards ~30 % of the window width, 70-74 % of its height") end
-local gap = P.cards[2].x - P.cards[1].x - P.cards[1].w
-check(near(gap / w.w, .02, .03), "cards 2-3 % of the window apart")
-check(math.abs(P.cards[1].x - (w.w - P.cards[3].x - P.cards[3].w)) <= 1, "the card row centred")
+local function pct(r, fw, fh) return {r.x / fw * 100, r.y / fh * 100, r.w / fw * 100, r.h / fh * 100} end
+local function inBox(r, b, fw, fh, what)
+    local g = pct(r, fw, fh)
+    for i = 1, 4 do if math.abs(g[i] - b[i]) > SPEC.tol then check(false, string.format("%s: %s %.1f %% (spec %.1f)", what, ({"x", "y", "w", "h"})[i], g[i], b[i])) end end
+end
+check(near(w.w / w.h, 1.38, 1.43) and near(w.h / 720, .70, .73), "Potion Shop window 1.40 : 1, 71.7 % H (the picture)")
+check(math.abs(w.x + w.w / 2 - 640) <= 1, "Potion Shop centred")
+inBox({x = P.headerInset, y = P.headerInset, w = w.w - 2 * P.headerInset, h = P.headerH}, SPEC.header, w.w, w.h, "header")
+inBox(P.title, SPEC.title, w.w, w.h, "title")
+inBox(P.timer, SPEC.timer, w.w, w.h, "timer")
+local closeX = w.w - P.headerInset - math.floor((P.headerH - P.close) / 2) - P.close
+inBox({x = closeX, y = P.headerInset + math.floor((P.headerH - P.close) / 2), w = P.close, h = P.close}, SPEC.close, w.w, w.h, "close")
+for i = 1, 3 do inBox(P.cards[i], SPEC["card" .. i], w.w, w.h, "card" .. i) end
 local c = P.cards[1]
-check(near(P.art / c.h, .48, .52), "the bottle ~50 % of the card (owner 2026-11-23: the picture's card)")
-check(near(P.cardTitle / c.h, .10, .12) and P.rarityText == math.max(19, math.floor(P.cardTitle * 0.55 + 0.5)), "the name 10-12 % of the card, the rarity word 55 % of it (19 px floor)")
-check(c.y + c.h + 6 <= w.h and w.h - c.y - c.h <= 30, "nothing under the cards (no restock row, no Yours strip)")
-check(P.restock == nil and P.more == nil and P.band == nil, "no restock row, page row or Yours strip in the layout")
-local hw = w.w - 2 * P.headerInset
-local tc = P.timer.x + P.timer.w / 2 - P.headerInset
-check(near(tc / hw, .58, .66), "the restock timer inside the header at ~63 % of its width")
-check(P.timer.size >= 19 and P.timer.y + P.timer.h <= P.headerInset + P.headerH + 4, "the timer text 19+ px, in the header")
-check(M.TimerColour[1] >= 240 and M.TimerColour[2] >= 220 and M.TimerColour[3] < 200, "the timer yellow-white")
-check(P.stripeAt >= .45 and P.stripeAt <= .55, "the header stripes from about half the header (the picture)")
-check(P.badge.x + P.badge.w <= c.w - 4 and P.badge.x >= c.w * 0.6 and P.badge.y == P.artTop and near(P.badge.size, 19, 22), "the small x3 count top right under the rarity word (the picture)")
-check(P.lasts == nil and P.artTop + P.art + 2 + P.lineH + P.innerGap + P.button + P.edge <= c.h, "no Lasts line on the card; the bottle between the rarity word and the strip")
-check(P.artGap == nil and M.shortName("Swift Sip") == "Swift" and M.shortName("Titan") == "Titan", "short names: the first word (the picture)")
+for k, b in SPEC.parts do inBox(P.parts[k], b, c.w, c.h, "card*." .. k) end
+for _, tab in M.PotionRail do local s = P.rail[tab] inBox({x = s.x, y = s.y, w = s.w, h = s.h}, SPEC.rail[tab], w.w, w.h, "rail." .. tab) end
+-- the owner's words (kid words, no multipliers; a count is fine)
 check(M.PotionTitle == "Potions" and M.YoursTitle == "My Potions" and M.DrinkWord == "Drink!", "title Potions; the owned page My Potions with Drink!")
 check(M.PotionRail[1] == "featured" and M.PotionRail[2] == "potions" and M.PotionRail[3] == "trails" and M.PotionRail[4] == "auras" and M.PotionRail[5] == "eggs", "rail Featured, Potions, Trails, Auras, Eggs (the picture)")
-check(near((P.rail.x - w.x - w.w) / 1280, .009, .016) and near(P.rail.icon / 720, .07, .08), "rail 1-1.5 % W right of the window, icons 7-8 % H")
--- kid words: no numbers, "3 left" not "x3", Legendary growth "Grow super fast!"
 check(M.kindWord("growth") == "Grow faster!" and M.kindWord("speed") == "Run faster!" and M.kindWord("growth", "Legendary") == "Grow super fast!", "Grow faster! / Run faster! / Grow super fast!")
 for kind, word in M.SuperWords do check(not string.find(word, "[%d%%]"), "super kid line without numbers: " .. kind) end
-check(M.count(3) == "x3" and M.lasts(300) == "Lasts 5 min", "x3 (a count), Lasts 5 min")
--- the Studio canvas: the bottle still big
-local S = M.potionLayout(1274, 423, 58)
-check(S.art >= 125 and near(S.art / S.cards[1].h, .45, .52), "Studio canvas: the bottle 125+ px, 45-52 % of the card")
+check(M.count(3) == "x3" and M.shortName("Swift Sip") == "Swift" and M.shortName("Titan") == "Titan" and M.lasts(300) == "Lasts 5 min", "x3, short names, Lasts 5 min")
+check(M.TimerColour[1] >= 240 and M.TimerColour[2] >= 200 and M.TimerColour[3] < 120, "the timer yellow (the picture)")
 -- every size: floors, everything fits, inside the window and the screen
 for _, size in {{1280, 720, 0}, {1920, 1080, 0}, {1366, 768, 36}, {1024, 768, 36}, {1274, 423, 58}, {844, 390, 0}, {812, 375, 0}, {667, 375, 0}, {932, 430, 0}, {1180, 820, 36}, {740, 360, 0}} do
     local sw, sh, inset = size[1], size[2], size[3]
     local tag = sw .. "x" .. sh
     local p = M.potionLayout(sw, sh, inset)
-    local win, k = p.window, p.cards[1]
+    local win, k, q = p.window, p.cards[1], p.parts
     check(win.x >= 0 and win.y >= 0 and win.x + win.w <= sw and win.y + win.h <= sh, tag .. ": window on screen")
     check(k.w >= 120, tag .. ": potion card wide enough for its button")
-    check(p.art >= 60, tag .. ": the bottle 60+ px")
-    check(p.artTop + p.art + 2 + p.lineH + p.innerGap + p.button + p.edge <= k.h, tag .. ": potion card parts fit")
-    for _, t in {p.cardTitle, p.rarityText, p.lineText, p.buttonText, p.timer.size, p.badge.size, p.titleSize} do check(t >= 19, tag .. ": potion text >= 19 px") end
-    check(p.button >= 44 and p.page.w >= 44 and p.page.h >= 44 and p.close >= 48, tag .. ": buy button, page arrow 44+ px, X 48+")
-    local closeX = win.w - p.headerInset - math.floor((p.headerH - p.close) / 2) - p.close
-    check(p.page.x + p.page.w <= closeX and p.page.y >= p.headerInset and p.page.y + p.page.h <= p.headerInset + p.headerH, tag .. ": the page arrow in the header, left of the X")
-    check(p.timer.x + p.timer.w <= p.page.x, tag .. ": the timer clear of the page arrow")
-    check(p.timer.x >= p.headerInset + math.floor(p.headerH * 0.2) + M.textWidth(M.YoursTitle, p.titleSize), tag .. ": the timer clear of the title")
-    check(p.badge.w >= M.textWidth("x3", p.badge.size), tag .. ": the badge fits x3")
-    for _, s in p.rail.slots do check(s.x >= win.x + win.w and s.x + s.w <= sw and s.y >= 0 and s.y + s.h <= sh, tag .. ": rail right of the window, on screen") end
+    check(q.art.h >= 60 and q.art.y >= q.rarity.y + q.rarity.h - 2 and q.art.y + q.art.h <= q.strip.y, tag .. ": the bottle 60+ px between the rarity word and the strip")
+    check(q.strip.y + q.strip.h <= q.price.y and q.price.y + q.price.h <= k.h, tag .. ": strip over the button, button inside the card")
+    for _, t in {p.titleSize, p.timer.size, q.name.size, q.rarity.size, q.badge.size, q.strip.size, q.price.size} do check(t >= 19, tag .. ": potion text >= 19 px") end
+    check(q.price.h >= 44 and p.page.w >= 44 and p.page.h >= 44 and p.close >= 48 and p.close <= p.headerH, tag .. ": buy button, page arrow 44+ px, X 48+ inside the header")
+    local cx = win.w - p.headerInset - math.floor((p.headerH - p.close) / 2) - p.close
+    for _, pair in {{p.page, p.timer, M.PotionTitle}, {p.pageMine, p.timerMine, M.YoursTitle}} do
+        local g, t, word = pair[1], pair[2], pair[3]
+        check(g.x >= p.title.x + M.textWidth(word, p.titleSize) and g.y >= p.headerInset and g.y + g.h <= p.headerInset + p.headerH, tag .. ": the page arrow after the title, in the header")
+        local half = #M.TimerSample * 0.5 * t.size / 2
+        check(t.x + t.w / 2 - half >= g.x + g.w and t.x + t.w / 2 + half <= cx, tag .. ": the timer words between the arrow and the X")
+    end
+    for _, tab in M.PotionRail do
+        local s = p.rail[tab]
+        check(s.x >= win.w and win.x + s.x + s.w <= sw and win.y + s.y >= 0 and win.y + s.y + s.h <= sh and s.icon >= 44 and s.label >= 19, tag .. ": rail." .. tab .. " right of the window, on screen, icon 44+")
+    end
 end
 if #fails > 0 then error("potion shop FAILED:\n" .. table.concat(fails, "\n")) end
 print("potion shop passed")
@@ -371,12 +390,16 @@ def scan2(src):
     need('Menu.lasts(item.duration)' in potion and 'Menu.kindWord(item.kind, item.rarity)' in potion and 'multiplier' not in potion, 'kid words: what it does and how long, never the multiplier')
     need('if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end' in potion and 'TimerWords.restockIn(' in potion, 'New in 3 min counts down; a new window redraws')
     # BD-1298: the proposed picture
-    need('badge = if left > 0 then Menu.count(left) else nil' in potion and potion.count('name = Menu.shortName(item.name)') == 2 and 'Lasts_' not in potion, 'the card: short name, the x3 count, no Lasts line (the picture)')
+    need('count = if left > 0 then Menu.count(left) else nil' in potion and potion.count('name = Menu.shortName(item.name)') == 2 and 'Lasts_' not in potion, 'the card: short name, the x3 count, no Lasts line (the picture)')
     need('live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y, t.w, t.h, t.size, 36, Color3.fromRGB(c[1], c[2], c[3]))' in potion,
          'the restock timer in the header, yellow-white')
     need('word = Menu.DrinkWord, grey = false, onPick = function() d.onUse(item) end' in potion and 'state.page = if state.page < pages then state.page + 1 else 1' in potion
          and 'local pages = shopPages + ownPages' in potion, 'drinking stays reachable: the page arrow reaches My Potions with Drink! buttons')
-    need('tabs = Menu.PotionRail, words = Menu.PotionRailWords, selected = "potions"' in potion, 'the rail in the picture order, Potions selected')
+    need('for _, tab in Menu.PotionRail do' in potion and 'tabs = {tab}, words = Menu.PotionRailWords, selected = "potions", icon = railIcon,' in potion
+         and 'local RailArt = {trails = "potion_rail_trails", auras = "potion_rail_auras"}' in potion, 'the rail in the picture order with its purple Trails / Auras icons, Potions selected')
+    need('mark(holder, id)' in potion, 'SpecId cardN marked (tools/menu_spec_check.py)')
+    for sid in ('"window"', '"header"', '"close"', '"title"', '"timer"', 'id .. ".name"', 'id .. ".rarity"', 'id .. ".badge"', 'id .. ".art"', 'id .. ".strip"', 'id .. ".price"', '"rail." .. tab'):
+        need(sid + ')' in potion, f'SpecId {sid} marked (tools/menu_spec_check.py)')
     need('Kit2.headerPieces(w, h, stripeAt)' in src['window'] and 'header2(header, spec.colour, headerW, lay.headerH, lay.stripeAt)' in src['window'], 'KitWindow: a screen may place the header stripes')
     need('IndexTabs.lastTab() ~= "dinos" then return false end' in index and 'IndexTabs.choose(tab) d.open("collection")' in index, 'Patterns / Colours keep their own pages (the rail picks the tab)')
     need('d.hero(card, id, rx, ry, render, render, d.bestMutation(id))' in index and 'Preview.add(card, id, "silhouette", CHARCOAL)' in index and 'Color3.fromRGB(32, 33, 39)' in index, 'found dinos are the game preview in colour, the others a silhouette')
@@ -398,7 +421,7 @@ def scan2(src):
          and 'piece.ImageColor3 = TRACK' in index, 'the progress fill is exact with a visible minimum, on a darker track')
     need('K.HeaderCards = {cyan = "rare"}' in src['kit2'], 'the cyan header is the kit 2 Rare card piece')
     need('function Tabs.choose(tab: string) lastTab = Index.validTab(tab) end' in src['tabs'], 'IndexTabs.choose keeps the tab valid')
-    need('M.Potion = {h = 0.715, aspect = 1.40,' in src['rules'] and 'M.Index = {w = 0.50, h = 0.63,' in src['rules'], 'window sizes: the Potion Shop as the proposed picture (BD-1298), the Index docs/246')
+    need('M.PotionSpec = {' in src['rules'] and 'window = {h = 0.717, aspect = 724 / 516, top = 0.161},' in src['rules'] and 'M.Index = {w = 0.50, h = 0.63,' in src['rules'], 'window sizes: the Potion Shop as the proposed picture (BD-1298), the Index docs/246')
     return errors
 
 
@@ -410,7 +433,9 @@ MUTANTS = {
     'the full catalog name': ('potion', 'key = item.id, rarity = item.rarity, name = Menu.shortName(item.name),', 'key = item.id, rarity = item.rarity, name = item.name,'),
     'the timer leaves the header': ('potion', 'live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y,', 'live.restock = Art.words(window, "Restock", restockWords(d.window), 8, w.h - 30,'),
     'no way to drink': ('potion', 'local pages = shopPages + ownPages', 'local pages = shopPages'),
-    'the rail back in the old order': ('potion', 'tabs = Menu.PotionRail, words = Menu.PotionRailWords,', 'tabs = FrameRules.RailTabs, words = FrameRules.RailWords,'),
+    'the rail back in the old order': ('potion', 'for _, tab in Menu.PotionRail do', 'for _, tab in FrameRules.RailTabs do'),
+    'the cards lose their SpecId': ('potion', 'mark(holder, id)', 'mark(holder, "card")'),
+    'the old rail icons': ('potion', 'selected = "potions", icon = railIcon,', 'selected = "potions", icon = Landing.tabIcon,'),
     'the timer never restocks': ('potion', 'if ProgressionRules.shopWindow(now) ~= d.window then d.restocked() return end', 'if false then return end'),
     'the kit Index hides the Patterns page': ('index', 'IndexTabs.lastTab() ~= "dinos" then return false end', 'false then return false end'),
     'not found dinos in colour': ('index', 'if found then rarityWord(d.speciesIndex(id)) else "Common"', 'rarityWord(d.speciesIndex(id))'),
@@ -422,27 +447,26 @@ MUTANTS = {
     'the Index window at shop size': ('rules', 'M.Index = {w = 0.50, h = 0.63,', 'M.Index = {w = 0.58, h = 0.67,'),
 }
 LUAU_MUTANTS = {
-    'the potion window back at 1.85 : 1': ('M.Potion = {h = 0.715, aspect = 1.40,', 'M.Potion = {h = 0.715, aspect = 1.85,'),
-    'the bottle at 25 % of the card': ('bottle = 0.50,', 'bottle = 0.25,'),
-    'the count in the middle': ('local badge = {x = cardW - c.edge - 4 - badgeW,', 'local badge = {x = math.floor((cardW - badgeW) / 2),'),
-    'the rarity word as big as the name': ('local rarityText = math.clamp(round(cardTitle * 0.55), M.MinText, 32)', 'local rarityText = math.clamp(round(cardTitle * 0.9), M.MinText, 32)'),
-    'the buy button under 44 px': ('local button = if small then M.MinTap else math.max(M.MinTap, round(cH * P.button))', 'local button = if small then 36 else round(cH * 0.09)'),
-    'the timer back at the left': ('timerAt = 0.63,', 'timerAt = 0.25,'),
-    'the X at the shared kit size': ('local close = math.max(round(M.MinClose * 1.15), round(h * P.close))', 'local close = math.max(M.MinClose, round(h * 0.078))'),
-    'the page arrow over the X': ('local page = {x = closeX - math.max(6, round(close * 0.15)) - pageS,', 'local page = {x = closeX - 10,'),
+    'the potion window back at 1.85 : 1': ('window = {h = 0.717, aspect = 724 / 516,', 'window = {h = 0.717, aspect = 1.85,'),
+    'the bottle box drifts from the spec': ('art = {24.0, 27.0, 52.0, 38.0}', 'art = {24.0, 27.0, 52.0, 28.0}'),
+    'the count in the middle': ('badge = {84.0, 21.0, 13.0, 5.4}', 'badge = {44.0, 21.0, 13.0, 5.4}'),
+    'the buy button under 44 px': ('    price.h = math.max(M.MinTap, price.h)\n', ''),
+    'the timer back at the left': ('timer = {55.6, 9.2, 20.7, 4.9}', 'timer = {25.6, 9.2, 20.7, 4.9}'),
+    'the rail off a narrow screen': ('    if winW > maxW then winW = maxW', '    if false then winW = maxW'),
+    'the page arrow over the timer': ('local left, right = page.x + page.w + 6, closeX - 6', 'local left, right = page.x - 60, closeX - 6'),
     'the long name': ('function M.shortName(name: string): string return string.match(name, "^(%S+)") or name end', 'function M.shortName(name: string): string return name end'),
     'Legendary growth with a number': ('growth = "Grow super fast!"', 'growth = "x2 Growth"'),
     'kid line with a number': ('growth = "Grow faster!"', 'growth = "+40% growth"'),
     'the Index panel at 40 %': ('panel = 0.28,', 'panel = 0.40,'),
     'the rail inside the window': ('local x = win.x + win.w + math.max(6, round(w * 0.0125))', 'local x = win.x + win.w - 40'),
-    'text under 19 px on a phone': ('local rarityText = math.clamp(round(cardTitle * 0.55), M.MinText, 32)', 'local rarityText = math.clamp(round(cardTitle * 0.55), 14, 32)'),
+    'text under 19 px on a phone': ('local function text(capPct: number, fh: number): number return math.max(M.MinText,', 'local function text(capPct: number, fh: number): number return math.max(12,'),
 }
 
 
 def run_luau2(runner, rules_text):
     out = ''
     with tempfile.TemporaryDirectory() as tmp:
-        for name, body, word in (('sae_menus', LUAU2, 'sae menus passed'), ('potion_shop', LUAU_POTION, 'potion shop passed')):  # BD-1298
+        for name, body, word in (('sae_menus', LUAU2, 'sae menus passed'), ('potion_shop', potion_spec_lua() + LUAU_POTION, 'potion shop passed')):  # BD-1298
             path = Path(tmp) / (name + '.luau')
             path.write_text('local M=(function()\n' + rules_text.replace('export type', 'type') + '\nend)()\n' + body, encoding='utf-8')
             result = subprocess.run([runner, str(path)], capture_output=True, text=True, encoding='utf-8')

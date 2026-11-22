@@ -1,0 +1,58 @@
+{
+ "misses": [
+  "window: fill #8FE036 -> #B9BAC2 (dE 151)"
+ ],
+ "rows": [
+  {
+   "id": "window",
+   "kind": "box",
+   "box_ref": [
+    0.0,
+    0.0,
+    100.0,
+    100.0
+   ],
+   "box_game": [
+    0.0,
+    0.0,
+    100.0,
+    100.0
+   ],
+   "ref": {
+    "fill": [
+     143.0,
+     224.0,
+     54.0
+    ],
+    "border": {
+     "px": 8.0,
+     "pct_h": 1.550387596899225
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     185.0,
+     186.0,
+     194.0
+    ],
+    "border": {
+     "px": 7.0,
+     "pct_h": 1.6867469879518073
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Potions",
+    "innerTextSize": 45,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 151.0231770292229
+  }
+ ]
+}

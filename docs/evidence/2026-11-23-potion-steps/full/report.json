@@ -1,0 +1,1564 @@
+{
+ "misses": [
+  "window: fill #8FE036 -> #B9BAC2 (dE 151)",
+  "header: fill #66F63F -> #64EB08 (dE 56)",
+  "header: border 0.58 -> 2.65 % h",
+  "header: corner 5 -> 17 % of short side",
+  "timer: text outline 0.00 -> 0.96 % h",
+  "close: border 1.07 -> 2.17 % h",
+  "card1: fill #96A8B7 -> #B8BBC6 (dE 42)",
+  "card1: border 0.10 -> 1.57 % h",
+  "card1: corner 0 -> 5 % of short side",
+  "card2: fill #5DE528 -> #BCBBBF (dE 183)",
+  "card2: border 0.19 -> 1.81 % h",
+  "card2: corner 0 -> 5 % of short side",
+  "card3: fill #F6DC2E -> #B9BCC3 (dE 164)",
+  "card3: border 0.19 -> 1.81 % h",
+  "card3: corner 0 -> 5 % of short side",
+  "card2.name: text outline 0.00 -> 0.96 % h",
+  "card3.name: letter height 6.8 -> 5.5 % h",
+  "card3.name: text colour #FCF559 -> #FEFFFF (dE 166)",
+  "card1.rarity: text outline 0.00 -> 0.96 % h",
+  "card2.rarity: text outline 0.00 -> 0.96 % h",
+  "card3.rarity: letter height 3.7 -> 2.9 % h",
+  "card3.rarity: text outline 0.00 -> 0.96 % h",
+  "card3.badge: letter height 3.9 -> 2.9 % h",
+  "card1.art: art w 47.0 -> 45.3 % of card",
+  "card3.art: art w 52.0 -> 41.3 % of card",
+  "card1.strip: fill #4AC83B -> #464655 (dE 133)",
+  "card1.strip: border 0.68 -> 4.10 % h",
+  "card1.strip: corner 0 -> 12 % of short side",
+  "card2.strip: fill #3EBA22 -> #464655 (dE 127)",
+  "card2.strip: border 0.58 -> 4.46 % h",
+  "card2.strip: corner 0 -> 12 % of short side",
+  "card3.strip: fill #69A325 -> #464655 (dE 110)",
+  "card3.strip: border 0.48 -> 3.49 % h",
+  "card3.strip: corner 0 -> 12 % of short side",
+  "card1.price: y 85.0 -> 83.3 % (build -1.7)",
+  "card1.price: h 13.0 -> 14.7 % (build +1.7)",
+  "card1.price: corner 0 -> 5 % of short side",
+  "card2.price: y 85.0 -> 83.3 % (build -1.7)",
+  "card2.price: h 13.0 -> 14.7 % (build +1.7)",
+  "card2.price: corner 0 -> 5 % of short side",
+  "card3.price: y 85.0 -> 83.3 % (build -1.7)",
+  "card3.price: h 13.0 -> 14.7 % (build +1.7)",
+  "card3.price: fill #90CC0E -> #6DE605 (dE 45)",
+  "rail.auras: art w 11.5 -> 9.1 % of window",
+  "rail.eggs: art w 11.5 -> 7.7 % of window"
+ ],
+ "rows": [
+  {
+   "id": "window",
+   "kind": "box",
+   "box_ref": [
+    0.0,
+    0.0,
+    100.0,
+    100.0
+   ],
+   "box_game": [
+    0.0,
+    0.0,
+    100.0,
+    100.0
+   ],
+   "ref": {
+    "fill": [
+     143.0,
+     224.0,
+     54.0
+    ],
+    "border": {
+     "px": 8.0,
+     "pct_h": 1.550387596899225
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     185.0,
+     186.0,
+     194.0
+    ],
+    "border": {
+     "px": 7.0,
+     "pct_h": 1.6867469879518073
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Potions",
+    "innerTextSize": 45,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 151.0231770292229
+  },
+  {
+   "id": "header",
+   "kind": "box",
+   "box_ref": [
+    2.0000000000000027,
+    1.9999999999999987,
+    96.0,
+    18.0
+   ],
+   "box_game": [
+    1.3745704467353952,
+    1.9277108433734942,
+    97.2508591065292,
+    18.072289156626507
+   ],
+   "ref": {
+    "fill": [
+     102.0,
+     246.0,
+     63.0
+    ],
+    "border": {
+     "px": 3.0,
+     "pct_h": 0.5813953488372093
+    },
+    "corner": {
+     "pct": 5.376344086021505
+    }
+   },
+   "game": {
+    "fill": [
+     100.0,
+     235.0,
+     8.0
+    ],
+    "border": {
+     "px": 11.0,
+     "pct_h": 2.6506024096385543
+    },
+    "corner": {
+     "pct": 17.333333333333336
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Potions",
+    "innerTextSize": 45,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 56.124860801609124
+  },
+  {
+   "id": "title",
+   "kind": "text",
+   "box_ref": [
+    4.099999999999996,
+    6.799999999999999,
+    24.900000000000002,
+    9.4
+   ],
+   "box_game": [
+    4.123711340206185,
+    6.746987951807229,
+    24.914089347079038,
+    9.397590361445783
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 7.55813953488372,
+     "fill": [
+      254.0,
+      254.0,
+      254.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 7.228915662650602,
+     "fill": [
+      254.0,
+      254.5,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Potions",
+    "textSize": 45,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Potions"
+   }
+  },
+  {
+   "id": "timer",
+   "kind": "text",
+   "box_ref": [
+    55.600000000000016,
+    9.200000000000001,
+    20.7,
+    4.9
+   ],
+   "box_game": [
+    55.670103092783506,
+    9.156626506024097,
+    20.618556701030926,
+    5.0602409638554215
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 4.457364341085271,
+     "fill": [
+      251.0,
+      224.0,
+      83.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 4.096385542168675,
+     "fill": [
+      249.0,
+      222.0,
+      90.0
+     ],
+     "stroke_px": 4,
+     "stroke_pct_h": 0.9638554216867471,
+     "stroke_col": [
+      21.0,
+      20.0,
+      2.0
+     ]
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "New in 16 s",
+    "textSize": 26,
+    "textColor": "#FFE04A"
+   },
+   "words": {
+    "words": "New in 16 s"
+   }
+  },
+  {
+   "id": "close",
+   "kind": "box",
+   "box_ref": [
+    85.99999999999999,
+    2.9,
+    11.5,
+    16.6
+   ],
+   "box_game": [
+    86.25429553264605,
+    2.6506024096385543,
+    11.855670103092782,
+    16.626506024096386
+   ],
+   "ref": {
+    "fill": [
+     229.0,
+     18.0,
+     25.0
+    ],
+    "border": {
+     "px": 5.5,
+     "pct_h": 1.065891472868217
+    },
+    "corner": {
+     "pct": 1.2048192771084338
+    }
+   },
+   "game": {
+    "fill": [
+     226.0,
+     13.0,
+     7.0
+    ],
+    "border": {
+     "px": 9.0,
+     "pct_h": 2.1686746987951806
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "gui": {},
+   "fill_dE": 18.920887928424502
+  },
+  {
+   "id": "card1",
+   "kind": "box",
+   "box_ref": [
+    3.1000000000000023,
+    23.5,
+    29.7,
+    72.4
+   ],
+   "box_game": [
+    3.0927835051546393,
+    23.6144578313253,
+    29.553264604810998,
+    72.28915662650603
+   ],
+   "ref": {
+    "fill": [
+     150.0,
+     168.0,
+     183.0
+    ],
+    "border": {
+     "px": 0.5,
+     "pct_h": 0.09689922480620156
+    },
+    "corner": {
+     "pct": 0.46511627906976744
+    }
+   },
+   "game": {
+    "fill": [
+     184.0,
+     187.0,
+     198.0
+    ],
+    "border": {
+     "px": 6.5,
+     "pct_h": 1.566265060240964
+    },
+    "corner": {
+     "pct": 4.651162790697675
+    }
+   },
+   "gui": {
+    "innerText": "",
+    "innerTextSize": 8,
+    "innerFont": "LegacyArial"
+   },
+   "fill_dE": 41.737273509418415
+  },
+  {
+   "id": "card2",
+   "kind": "box",
+   "box_ref": [
+    35.199999999999996,
+    23.5,
+    29.600000000000005,
+    72.4
+   ],
+   "box_game": [
+    35.223367697594504,
+    23.6144578313253,
+    29.553264604810998,
+    72.28915662650603
+   ],
+   "ref": {
+    "fill": [
+     93.0,
+     229.0,
+     40.0
+    ],
+    "border": {
+     "px": 1.0,
+     "pct_h": 0.1937984496124031
+    },
+    "corner": {
+     "pct": 0.46728971962616817
+    }
+   },
+   "game": {
+    "fill": [
+     188.0,
+     187.0,
+     191.0
+    ],
+    "border": {
+     "px": 7.5,
+     "pct_h": 1.8072289156626504
+    },
+    "corner": {
+     "pct": 4.651162790697675
+    }
+   },
+   "gui": {
+    "innerText": "",
+    "innerTextSize": 8,
+    "innerFont": "LegacyArial"
+   },
+   "fill_dE": 183.27574853209575
+  },
+  {
+   "id": "card3",
+   "kind": "box",
+   "box_ref": [
+    67.40000000000002,
+    23.5,
+    29.5,
+    72.4
+   ],
+   "box_game": [
+    67.35395189003437,
+    23.6144578313253,
+    29.553264604810998,
+    72.28915662650603
+   ],
+   "ref": {
+    "fill": [
+     246.0,
+     220.0,
+     46.0
+    ],
+    "border": {
+     "px": 1.0,
+     "pct_h": 0.1937984496124031
+    },
+    "corner": {
+     "pct": 0.46728971962616817
+    }
+   },
+   "game": {
+    "fill": [
+     185.0,
+     188.0,
+     195.0
+    ],
+    "border": {
+     "px": 7.5,
+     "pct_h": 1.8072289156626504
+    },
+    "corner": {
+     "pct": 4.651162790697675
+    }
+   },
+   "gui": {
+    "innerText": "",
+    "innerTextSize": 8,
+    "innerFont": "LegacyArial"
+   },
+   "fill_dE": 164.15236824365343
+  },
+  {
+   "id": "card1.name",
+   "kind": "text",
+   "box_ref": [
+    15.000000000000014,
+    2.9999999999999964,
+    70.0,
+    9.4
+   ],
+   "box_game": [
+    15.11627906976744,
+    3.0,
+    69.76744186046511,
+    9.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 5.813953488372093,
+     "fill": [
+      254.0,
+      254.0,
+      253.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 5.542168674698795,
+     "fill": [
+      254.0,
+      255.0,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Swift",
+    "textSize": 34,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Swift"
+   }
+  },
+  {
+   "id": "card2.name",
+   "kind": "text",
+   "box_ref": [
+    15.000000000000025,
+    2.9999999999999964,
+    69.99999999999999,
+    9.4
+   ],
+   "box_game": [
+    15.11627906976744,
+    3.0,
+    69.76744186046511,
+    9.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 5.813953488372093,
+     "fill": [
+      254.0,
+      254.0,
+      253.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 6.265060240963856,
+     "fill": [
+      254.0,
+      255.0,
+      255.0
+     ],
+     "stroke_px": 4,
+     "stroke_pct_h": 0.9638554216867471,
+     "stroke_col": [
+      15.0,
+      16.0,
+      21.0
+     ]
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Lucky",
+    "textSize": 34,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Lucky"
+   }
+  },
+  {
+   "id": "card3.name",
+   "kind": "text",
+   "box_ref": [
+    15.000000000000016,
+    2.9999999999999964,
+    70.0,
+    9.4
+   ],
+   "box_game": [
+    15.11627906976744,
+    3.0,
+    69.76744186046511,
+    9.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 6.782945736434108,
+     "fill": [
+      252.0,
+      245.0,
+      89.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 5.542168674698795,
+     "fill": [
+      254.0,
+      255.0,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Growth",
+    "textSize": 34,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Growth"
+   }
+  },
+  {
+   "id": "card1.rarity",
+   "kind": "text",
+   "box_ref": [
+    25.000000000000007,
+    13.0,
+    50.0,
+    5.0
+   ],
+   "box_game": [
+    25.0,
+    13.0,
+    50.0,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 2.9069767441860463,
+     "fill": [
+      251.0,
+      254.0,
+      250.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 2.891566265060241,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 4,
+     "stroke_pct_h": 0.9638554216867471,
+     "stroke_col": [
+      15.0,
+      16.0,
+      21.0
+     ]
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Common",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Common"
+   }
+  },
+  {
+   "id": "card2.rarity",
+   "kind": "text",
+   "box_ref": [
+    25.000000000000007,
+    13.0,
+    50.0,
+    5.0
+   ],
+   "box_game": [
+    25.0,
+    13.0,
+    50.0,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 3.10077519379845,
+     "fill": [
+      251.0,
+      253.0,
+      250.5
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 3.614457831325301,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 4,
+     "stroke_pct_h": 0.9638554216867471,
+     "stroke_col": [
+      15.0,
+      16.0,
+      21.0
+     ]
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Common",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Common"
+   }
+  },
+  {
+   "id": "card3.rarity",
+   "kind": "text",
+   "box_ref": [
+    24.999999999999993,
+    13.0,
+    50.0,
+    5.0
+   ],
+   "box_game": [
+    25.0,
+    13.0,
+    50.0,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 3.6821705426356592,
+     "fill": [
+      251.0,
+      253.0,
+      249.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 2.891566265060241,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 4,
+     "stroke_pct_h": 0.9638554216867471,
+     "stroke_col": [
+      15.0,
+      16.0,
+      21.0
+     ]
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "Common",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "Common"
+   }
+  },
+  {
+   "id": "card1.badge",
+   "kind": "text",
+   "box_ref": [
+    84.00000000000001,
+    21.000000000000004,
+    13.0,
+    5.4
+   ],
+   "box_game": [
+    83.72093023255815,
+    21.0,
+    12.790697674418606,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 2.9069767441860463,
+     "fill": [
+      251.0,
+      254.0,
+      250.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 2.891566265060241,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "x1",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "x1"
+   }
+  },
+  {
+   "id": "card2.badge",
+   "kind": "text",
+   "box_ref": [
+    83.99999999999999,
+    21.000000000000004,
+    13.0,
+    5.4
+   ],
+   "box_game": [
+    83.72093023255815,
+    21.0,
+    12.790697674418606,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 2.9069767441860463,
+     "fill": [
+      252.0,
+      253.0,
+      251.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 2.891566265060241,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "x2",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "x2"
+   }
+  },
+  {
+   "id": "card3.badge",
+   "kind": "text",
+   "box_ref": [
+    84.00000000000006,
+    21.000000000000004,
+    13.0,
+    5.4
+   ],
+   "box_game": [
+    83.72093023255815,
+    21.0,
+    12.790697674418606,
+    5.333333333333334
+   ],
+   "ref": {
+    "text": {
+     "cap_pct_h": 3.875968992248062,
+     "fill": [
+      247.0,
+      254.0,
+      252.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "game": {
+    "text": {
+     "cap_pct_h": 2.891566265060241,
+     "fill": [
+      254.0,
+      254.0,
+      255.0
+     ],
+     "stroke_px": 0,
+     "stroke_pct_h": 0.0,
+     "stroke_col": null
+    }
+   },
+   "gui": {
+    "font": "FredokaOne",
+    "stroke": 3,
+    "strokeColor": "#0D0F14",
+    "text": "x1",
+    "textSize": 19,
+    "textColor": "#FFFFFF"
+   },
+   "words": {
+    "words": "x1"
+   }
+  },
+  {
+   "id": "card1.art",
+   "kind": "image",
+   "box_ref": [
+    24.0,
+    26.999999999999996,
+    52.0,
+    38.0
+   ],
+   "box_game": [
+    23.837209302325583,
+    27.0,
+    51.74418604651163,
+    38.0
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 46.97062708112432,
+     "h_pct": 38.01019315602381,
+     "aspect": 0.7112676056338029
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 45.348837209302324,
+     "h_pct": 37.333333333333336,
+     "aspect": 0.6964285714285714
+    }
+   },
+   "gui": {}
+  },
+  {
+   "id": "card2.art",
+   "kind": "image",
+   "box_ref": [
+    23.99999999999999,
+    26.999999999999996,
+    52.0,
+    38.0
+   ],
+   "box_game": [
+    23.837209302325583,
+    27.0,
+    51.74418604651163,
+    38.0
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 51.79558011049723,
+     "h_pct": 38.01019315602381,
+     "aspect": 0.7816901408450704
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 51.74418604651163,
+     "h_pct": 38.0,
+     "aspect": 0.7807017543859649
+    }
+   },
+   "gui": {}
+  },
+  {
+   "id": "card3.art",
+   "kind": "image",
+   "box_ref": [
+    23.999999999999986,
+    26.999999999999996,
+    52.0,
+    38.0
+   ],
+   "box_game": [
+    23.837209302325583,
+    27.0,
+    51.74418604651163,
+    38.0
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 51.97115834815994,
+     "h_pct": 38.01019315602381,
+     "aspect": 0.7816901408450704
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 41.27906976744186,
+     "h_pct": 38.0,
+     "aspect": 0.6228070175438597
+    }
+   },
+   "gui": {}
+  },
+  {
+   "id": "card1.strip",
+   "kind": "box",
+   "box_ref": [
+    6.0,
+    72.5,
+    87.5,
+    10.7
+   ],
+   "box_game": [
+    5.813953488372093,
+    71.0,
+    87.79069767441861,
+    10.666666666666668
+   ],
+   "ref": {
+    "fill": [
+     74.0,
+     200.0,
+     59.0
+    ],
+    "border": {
+     "px": 3.5,
+     "pct_h": 0.6782945736434108
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     70.0,
+     70.0,
+     85.0
+    ],
+    "border": {
+     "px": 17.0,
+     "pct_h": 4.096385542168675
+    },
+    "corner": {
+     "pct": 12.5
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Run faster!",
+    "innerTextSize": 20,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 132.63483705271403,
+   "words": {
+    "words_text": "Run faster!"
+   }
+  },
+  {
+   "id": "card2.strip",
+   "kind": "box",
+   "box_ref": [
+    6.00000000000001,
+    72.5,
+    87.5,
+    10.7
+   ],
+   "box_game": [
+    5.813953488372093,
+    71.0,
+    87.79069767441861,
+    10.666666666666668
+   ],
+   "ref": {
+    "fill": [
+     62.0,
+     186.0,
+     34.0
+    ],
+    "border": {
+     "px": 3.0,
+     "pct_h": 0.5813953488372093
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     70.0,
+     70.0,
+     85.0
+    ],
+    "border": {
+     "px": 18.5,
+     "pct_h": 4.457831325301205
+    },
+    "corner": {
+     "pct": 12.5
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "More luck!",
+    "innerTextSize": 20,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 126.96850003051938,
+   "words": {
+    "words_text": "More luck!"
+   }
+  },
+  {
+   "id": "card3.strip",
+   "kind": "box",
+   "box_ref": [
+    5.9999999999999964,
+    72.5,
+    87.5,
+    10.7
+   ],
+   "box_game": [
+    5.813953488372093,
+    71.0,
+    87.79069767441861,
+    10.666666666666668
+   ],
+   "ref": {
+    "fill": [
+     105.0,
+     163.0,
+     37.0
+    ],
+    "border": {
+     "px": 2.5,
+     "pct_h": 0.4844961240310077
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     70.0,
+     70.0,
+     85.0
+    ],
+    "border": {
+     "px": 14.5,
+     "pct_h": 3.493975903614458
+    },
+    "corner": {
+     "pct": 12.5
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Grow faster!",
+    "innerTextSize": 20,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 110.35397591387454,
+   "words": {
+    "words_text": "Grow faster!"
+   }
+  },
+  {
+   "id": "card1.price",
+   "kind": "box",
+   "box_ref": [
+    3.5000000000000018,
+    85.0,
+    92.5,
+    13.0
+   ],
+   "box_game": [
+    3.488372093023256,
+    83.33333333333334,
+    92.44186046511628,
+    14.666666666666666
+   ],
+   "ref": {
+    "fill": [
+     119.0,
+     237.0,
+     8.0
+    ],
+    "border": {
+     "px": 4.0,
+     "pct_h": 0.7751937984496124
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     109.0,
+     230.0,
+     5.0
+    ],
+    "border": {
+     "px": 2.5,
+     "pct_h": 0.6024096385542169
+    },
+    "corner": {
+     "pct": 4.545454545454546
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "20",
+    "innerTextSize": 26,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 12.569805089976535,
+   "words": {
+    "words_text": "20"
+   }
+  },
+  {
+   "id": "card2.price",
+   "kind": "box",
+   "box_ref": [
+    3.4999999999999885,
+    85.0,
+    92.5,
+    13.0
+   ],
+   "box_game": [
+    3.488372093023256,
+    83.33333333333334,
+    92.44186046511628,
+    14.666666666666666
+   ],
+   "ref": {
+    "fill": [
+     115.0,
+     242.0,
+     5.0
+    ],
+    "border": {
+     "px": 4.0,
+     "pct_h": 0.7751937984496124
+    },
+    "corner": {
+     "pct": 0.0
+    }
+   },
+   "game": {
+    "fill": [
+     108.0,
+     229.0,
+     5.0
+    ],
+    "border": {
+     "px": 2.5,
+     "pct_h": 0.6024096385542169
+    },
+    "corner": {
+     "pct": 4.545454545454546
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "30",
+    "innerTextSize": 26,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 14.7648230602334,
+   "words": {
+    "words_text": "30"
+   }
+  },
+  {
+   "id": "card3.price",
+   "kind": "box",
+   "box_ref": [
+    3.499999999999975,
+    85.0,
+    92.5,
+    13.0
+   ],
+   "box_game": [
+    3.488372093023256,
+    83.33333333333334,
+    92.44186046511628,
+    14.666666666666666
+   ],
+   "ref": {
+    "fill": [
+     144.0,
+     204.0,
+     14.0
+    ],
+    "border": {
+     "px": 4.0,
+     "pct_h": 0.7751937984496124
+    },
+    "corner": {
+     "pct": 2.0408163265306123
+    }
+   },
+   "game": {
+    "fill": [
+     109.0,
+     230.0,
+     5.0
+    ],
+    "border": {
+     "px": 2.5,
+     "pct_h": 0.6024096385542169
+    },
+    "corner": {
+     "pct": 4.545454545454546
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "25",
+    "innerTextSize": 26,
+    "innerFont": "FredokaOne"
+   },
+   "fill_dE": 44.51965857910413,
+   "words": {
+    "words_text": "25"
+   }
+  },
+  {
+   "id": "rail.featured",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    1.4999999999999991,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    1.4457831325301205,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 11.34020618556701,
+     "h_pct": 15.180722891566264,
+     "aspect": 1.0476190476190477
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Featured",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Featured"
+   }
+  },
+  {
+   "id": "rail.potions",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    19.000000000000004,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    19.03614457831325,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 11.34020618556701,
+     "h_pct": 16.3855421686747,
+     "aspect": 0.9705882352941176
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Potions",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Potions"
+   }
+  },
+  {
+   "id": "rail.trails",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    36.50000000000001,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    36.385542168674704,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.27906976744186,
+     "aspect": 0.9880952380952381
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 10.137457044673539,
+     "h_pct": 16.3855421686747,
+     "aspect": 0.8676470588235294
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Trails",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Trails"
+   }
+  },
+  {
+   "id": "rail.auras",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    54.0,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    53.975903614457835,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.27906976744186,
+     "aspect": 0.9880952380952381
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 9.106529209621993,
+     "h_pct": 14.93975903614458,
+     "aspect": 0.8548387096774194
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Auras",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Auras"
+   }
+  },
+  {
+   "id": "rail.eggs",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    71.5,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    71.56626506024097,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 7.731958762886598,
+     "h_pct": 15.66265060240964,
+     "aspect": 0.6923076923076923
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Eggs",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Eggs"
+   }
+  }
+ ]
+}

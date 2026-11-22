@@ -241,28 +241,29 @@ def potion_mock(L, runner, w, h, inset):
     lay = L['potion']
     lay['_inset'] = inset
     x0, y0 = window(canvas, L, lay, 'Potions', 'green', runner)
+    P = lay['parts']  # BD-1298: the element spec rects (card px)
     for (name, rarity, file, kind, lasts, price), r in zip(POTIONS, lay['cards']):
         x, y, cw, ch = x0 + r['x'], y0 + r['y'], r['w'], r['h']
         d = L['studded']['shopkit2_card_' + rarity.lower()]
         studK = cw / d['w']
         studded(canvas, d, x, y, cw, ch, studK * 0.7, studK)
-        e = lay['edge']
-        name = name.split()[0]  # the card shows the first word (BD-1298)
-        words(canvas, name, x + 4, y + e, cw - 8, lay['nameH'], max(19, min(lay['cardTitle'], int((cw - 12) / (len(name) * 0.56)))))  # KitCard fits the name
-        words(canvas, rarity, x + 4, y + e + lay['nameH'] - 2, cw - 8, lay['rarityH'], lay['rarityText'])
-        by = ch - e - lay['button']
-        sy = by - lay['innerGap'] - lay['lineH']
-        bottom = sy - 2  # BD-1298: the bottle between the rarity word and the strip
-        art = min(lay['art'], bottom - lay['artTop'], cw - 4)
-        picture(canvas, ITEMS / f'potion-{file}-512.png', x + (cw - art) // 2, y + lay['artTop'] + (bottom - lay['artTop'] - art) // 2, art, art)
-        bg = lay['badge']
+        name = name.split()[0]  # the card shows the first word
+        n, rw, bg, a, s, b = P['name'], P['rarity'], P['badge'], P['art'], P['strip'], P['price']
+        words(canvas, name, x + n['x'], y + n['y'], n['w'], n['h'], max(19, min(n['size'], int(n['w'] / (len(name) * 0.56)))))
+        words(canvas, rarity, x + rw['x'], y + rw['y'], rw['w'], rw['h'], rw['size'])
         words(canvas, 'x3', x + bg['x'], y + bg['y'], bg['w'], bg['h'], bg['size'], align='right')
-        strip(canvas, L, x + lay['stripInset'], y + sy, cw - 2 * lay['stripInset'], lay['lineH'], kind, lay['lineText'])
-        button(canvas, L, x + lay['buttonInset'], y + by, cw - 2 * lay['buttonInset'], lay['button'], price=price, text=lay['buttonText'])
-    t, g = lay['timer'], lay['page']  # BD-1298: the restock words and the page arrow in the header
+        side = round(a['h'] / 0.85)
+        picture(canvas, ITEMS / f'potion-{file}-512.png', x + a['x'] + (a['w'] - side) // 2, y + a['y'] + (a['h'] - side) // 2, side, side)
+        strip(canvas, L, x + s['x'], y + s['y'], s['w'], s['h'], kind, s['size'])
+        button(canvas, L, x + b['x'], y + b['y'], b['w'], b['h'], price=price, text=b['size'])
+    t, g = lay['timer'], lay['page']  # the restock words and the page arrow in the header
     words(canvas, 'New in 2 min', x0 + t['x'], y0 + t['y'], t['w'], t['h'], t['size'])
     button(canvas, L, x0 + g['x'], y0 + g['y'], g['w'], g['h'], word='>', grey=True, text=g['text'])
-    rail(canvas, lay, [('featured', 'Featured'), ('potions', 'Potions'), ('trails', 'Trails'), ('auras', 'Auras'), ('eggs', 'Eggs')], 'potions', SHOP_ICONS, inset)
+    icons = dict(SHOP_ICONS, trails=ICONS / 'shop-tab-trails-v3.png', auras=ICONS / 'shop-tab-auras-v3.png')
+    for tab, word in [('featured', 'Featured'), ('potions', 'Potions'), ('trails', 'Trails'), ('auras', 'Auras'), ('eggs', 'Eggs')]:
+        s = lay['rail'][tab]
+        one = {'rail': {'slots': [{'x': x0 + s['x'], 'y': y0 + s['y'] - inset, 'w': s['w'], 'h': s['h']}], 'icon': s['icon'], 'labelSize': s['label']}}
+        rail(canvas, one, [(tab, word)], 'potions', icons, inset)
     return canvas
 
 
