@@ -68,7 +68,8 @@
     100,
     100
    ],
-   "fill": "#2B2D39"
+   "fill": "#2B2D39",
+   "fill_sample": "edge"
   },
   "header": {
    "box": [

@@ -102,16 +102,32 @@ def crop(img: np.ndarray, box) -> np.ndarray:
     return img[y0:y1, x0:x1]
 
 
-def measure_fill(c: np.ndarray):
+def measure_fill(c: np.ndarray, sample: str = "inner"):
+    """Body colour. sample="inner": the middle 60 % (most boxes); "edge": the outer 2.5 % band only (a window whose middle is
+    covered by cards); "dark": the dark plate under coloured words (an effect strip), i.e. pixels darker than the words."""
     if c.size == 0:
         return None
     h, w = c.shape[:2]
-    inner = c[int(h * .2):int(h * .8) or 1, int(w * .2):int(w * .8) or 1].reshape(-1, 3)
+    if sample == "edge":
+        b = max(2, int(min(h, w) * .025))
+        inner = np.concatenate([c[:b].reshape(-1, 3), c[-b:].reshape(-1, 3), c[:, :b].reshape(-1, 3), c[:, -b:].reshape(-1, 3)])
+    else:
+        inner = c[int(h * .2):int(h * .8) or 1, int(w * .2):int(w * .8) or 1].reshape(-1, 3)
     L = lum(inner)
-    keep = inner[(L > 55) & (L < 235)]  # not outline, not white text
+    if sample == "dark":
+        keep = inner[(L > 25) & (L < 120)]
+    else:
+        keep = inner[(L > 55) & (L < 235)]  # not outline, not white text
     if len(keep) < 10:
         keep = inner
     return [float(v) for v in np.median(keep, axis=0)]
+
+
+def grow(box, img_shape, frac: float = 0.02):
+    """The box grown outward by frac of its short side: a kit piece's dark outline sits just OUTSIDE the measured box."""
+    x, y, w, h = box
+    d = max(2.0, min(w, h) * frac)
+    return (x - d, y - d, w + 2 * d, h + 2 * d)
 
 
 def measure_border(c: np.ndarray, win_h_px: float):
@@ -218,11 +234,13 @@ def measure_all(img: np.ndarray, box, e: dict, win_h_px: float, frame):
     if kind == "text":
         out["text"] = measure_text(c, win_h_px, e.get("color"))
     elif kind == "image":
-        out["image"] = measure_image(c, frame[2], frame[3])
+        if e.get("measure_art", True):  # off where the proposal's background is blurred world (rail icons)
+            out["image"] = measure_image(c, frame[2], frame[3])
     else:
-        out["fill"] = measure_fill(c)
-        out["border"] = measure_border(c, win_h_px)
-        out["corner"] = measure_corner(c)
+        out["fill"] = measure_fill(c, e.get("fill_sample", "inner"))
+        g = crop(img, grow(box, img.shape))
+        out["border"] = measure_border(g, win_h_px)
+        out["corner"] = measure_corner(g)
     return out
 
 
