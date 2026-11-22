@@ -1,0 +1,327 @@
+{
+ "screen": "dino-index",
+ "proposal": "docs/menu-specs/dino-index/proposal.jpg",
+ "proposal_window_px": [
+  183,
+  86,
+  523,
+  275
+ ],
+ "cards": [
+  "card1",
+  "card2",
+  "card3",
+  "card4",
+  "card5",
+  "card6",
+  "card7",
+  "card8"
+ ],
+ "note": "Boxes in % of the WINDOW (card children in % of their card), measured 2026-11-23 on the owner's Dino Index proposal (Design Board, Phone mock-ups). Card colours follow the game's rarity of each species, so card fills are not fixed here. The proposal's egg/paw/crystal icon column is replaced by Patterns/Colours/Fusion (lead decision, BD-1299) and is not in the spec.",
+ "tolerance_pct": 1.5,
+ "steps": [
+  {
+   "name": "1 window + header",
+   "elements": [
+    "window",
+    "header",
+    "title",
+    "close"
+   ]
+  },
+  {
+   "name": "2 zone panel + zone buttons",
+   "elements": [
+    "zone.panel",
+    "zone.name",
+    "zonebtn.*"
+   ]
+  },
+  {
+   "name": "3 grid",
+   "elements": [
+    "card?",
+    "card*.name",
+    "card*.art"
+   ]
+  },
+  {
+   "name": "4 bars",
+   "elements": [
+    "zone.bar",
+    "footer"
+   ]
+  },
+  {
+   "name": "5 selected + rewards",
+   "elements": [
+    "selected.*",
+    "rewards.*"
+   ]
+  }
+ ],
+ "elements": {
+  "window": {
+   "box": [
+    0,
+    0,
+    100,
+    100
+   ],
+   "fill": "#2B2D39",
+   "fill_sample": "edge"
+  },
+  "header": {
+   "box": [
+    0.3,
+    0.6,
+    99.4,
+    13.7
+   ],
+   "fill": "#3FD8F0"
+  },
+  "title": {
+   "box": [
+    2.2,
+    3.6,
+    27.1,
+    7.9
+   ],
+   "kind": "text",
+   "words": "^Dino Index$",
+   "font": "FredokaOne"
+  },
+  "close": {
+   "box": [
+    92.4,
+    2.4,
+    6.1,
+    10.9
+   ],
+   "fill": "#E8202A"
+  },
+  "zone.panel": {
+   "box": [
+    1.9,
+    19.4,
+    16.7,
+    62.4
+   ],
+   "kind": "image"
+  },
+  "zone.name": {
+   "box": [
+    3.0,
+    23.0,
+    14.5,
+    6.0
+   ],
+   "kind": "text",
+   "words": "^(Meadow|Forest|Beach|Volcano)$",
+   "font": "FredokaOne"
+  },
+  "zone.bar": {
+   "box": [
+    21.0,
+    74.9,
+    51.2,
+    7.5
+   ],
+   "words_text": "^\\d+/\\d+$"
+  },
+  "footer": {
+   "box": [
+    2.9,
+    86.0,
+    70.4,
+    11.0
+   ],
+   "words_text": "^Found: \\d+/\\d+$"
+  },
+  "selected.panel": {
+   "box": [
+    75.5,
+    17.9,
+    23.0,
+    42.1
+   ],
+   "fill": "#55555B"
+  },
+  "selected.name": {
+   "box": [
+    78.0,
+    45.5,
+    18.0,
+    6.0
+   ],
+   "kind": "text",
+   "words": "^[A-Z][a-z]+$",
+   "font": "FredokaOne"
+  },
+  "selected.rarity": {
+   "box": [
+    80.0,
+    53.3,
+    14.0,
+    4.6
+   ],
+   "kind": "text",
+   "words": "^(Common|Uncommon|Rare|Epic|Legendary|Secret)$"
+  },
+  "rewards.box": {
+   "box": [
+    75.5,
+    61.6,
+    23.3,
+    35.4
+   ],
+   "fill": "#1E2B22"
+  },
+  "rewards.title": {
+   "box": [
+    77.0,
+    63.0,
+    14.0,
+    4.8
+   ],
+   "kind": "text",
+   "words": "^Rewards:$"
+  },
+  "rewards.claim": {
+   "box": [
+    77.2,
+    80.6,
+    20.0,
+    12.7
+   ],
+   "fill": "#FFE825",
+   "words_text": "^(CLAIM!|Got it!|Find \\d+ more!)$"
+  },
+  "zonebtn.meadow": {
+   "box": [
+    101.0,
+    14.9,
+    16.4,
+    12.0
+   ],
+   "fill": "#72F239",
+   "words_text": "^Meadow$"
+  },
+  "zonebtn.forest": {
+   "box": [
+    101.0,
+    28.4,
+    16.4,
+    12.0
+   ],
+   "fill": "#248A44",
+   "words_text": "^Forest$"
+  },
+  "zonebtn.beach": {
+   "box": [
+    101.0,
+    41.8,
+    16.4,
+    12.0
+   ],
+   "fill": "#E9D197",
+   "words_text": "^Beach$"
+  },
+  "zonebtn.volcano": {
+   "box": [
+    101.0,
+    54.9,
+    16.4,
+    12.0
+   ],
+   "fill": "#F04440",
+   "words_text": "^Volcano$"
+  },
+  "card1": {
+   "box": [
+    20.1,
+    19.4,
+    12.6,
+    26.1
+   ]
+  },
+  "card2": {
+   "box": [
+    33.7,
+    19.4,
+    12.6,
+    26.1
+   ]
+  },
+  "card3": {
+   "box": [
+    47.0,
+    19.4,
+    12.6,
+    26.1
+   ]
+  },
+  "card4": {
+   "box": [
+    60.4,
+    19.4,
+    12.6,
+    26.1
+   ]
+  },
+  "card5": {
+   "box": [
+    20.1,
+    47.0,
+    12.6,
+    26.1
+   ]
+  },
+  "card6": {
+   "box": [
+    33.7,
+    47.0,
+    12.6,
+    26.1
+   ]
+  },
+  "card7": {
+   "box": [
+    47.0,
+    47.0,
+    12.6,
+    26.1
+   ]
+  },
+  "card8": {
+   "box": [
+    60.4,
+    47.0,
+    12.6,
+    26.1
+   ]
+  },
+  "card*.name": {
+   "box": [
+    4.0,
+    77.0,
+    92.0,
+    21.0
+   ],
+   "kind": "text",
+   "parent": "card",
+   "words": "^([A-Z][a-z]+|\\?\\?\\?)$",
+   "font": "FredokaOne"
+  },
+  "card*.art": {
+   "box": [
+    5.0,
+    6.0,
+    90.0,
+    70.0
+   ],
+   "kind": "image",
+   "parent": "card"
+  }
+ }
+}

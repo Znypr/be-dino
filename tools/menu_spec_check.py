@@ -48,7 +48,7 @@ def expand(spec: dict) -> dict:
     out = {}
     for key, e in spec["elements"].items():
         if key.startswith("card*."):
-            for c in CARDS:
+            for c in spec.get("cards", CARDS):  # the screen's own card list (Dino Index has 8), else card1-3
                 if c in spec["elements"]:
                     out[c + key[5:]] = dict(e, parent=c)
         else:
@@ -102,16 +102,32 @@ def crop(img: np.ndarray, box) -> np.ndarray:
     return img[y0:y1, x0:x1]
 
 
-def measure_fill(c: np.ndarray):
+def measure_fill(c: np.ndarray, sample: str = "inner"):
+    """Body colour. sample="inner": the middle 60 % (most boxes); "edge": the outer 2.5 % band only (a window whose middle is
+    covered by cards); "dark": the dark plate under coloured words (an effect strip), i.e. pixels darker than the words."""
     if c.size == 0:
         return None
     h, w = c.shape[:2]
-    inner = c[int(h * .2):int(h * .8) or 1, int(w * .2):int(w * .8) or 1].reshape(-1, 3)
+    if sample == "edge":
+        b = max(2, int(min(h, w) * .025))
+        inner = np.concatenate([c[:b].reshape(-1, 3), c[-b:].reshape(-1, 3), c[:, :b].reshape(-1, 3), c[:, -b:].reshape(-1, 3)])
+    else:
+        inner = c[int(h * .2):int(h * .8) or 1, int(w * .2):int(w * .8) or 1].reshape(-1, 3)
     L = lum(inner)
-    keep = inner[(L > 55) & (L < 235)]  # not outline, not white text
+    if sample == "dark":
+        keep = inner[(L > 25) & (L < 120)]
+    else:
+        keep = inner[(L > 55) & (L < 235)]  # not outline, not white text
     if len(keep) < 10:
         keep = inner
     return [float(v) for v in np.median(keep, axis=0)]
+
+
+def grow(box, img_shape, frac: float = 0.02):
+    """The box grown outward by frac of its short side: a kit piece's dark outline sits just OUTSIDE the measured box."""
+    x, y, w, h = box
+    d = max(2.0, min(w, h) * frac)
+    return (x - d, y - d, w + 2 * d, h + 2 * d)
 
 
 def measure_border(c: np.ndarray, win_h_px: float):
@@ -164,20 +180,29 @@ def measure_text(c: np.ndarray, win_h_px: float, color_hint=None):
     if letters.sum() < 15:
         return None
     ys = np.where(letters.any(axis=1))[0]
-    # stroke thickness: grow the letter mask one px at a time while the new ring is mostly dark
+    # stroke thickness: grow the letter mask one px at a time. The first ring or two is anti-aliased grey between the letter fill and
+    # the dark outline, so a ring counts as outline when its MEAN brightness is low (< 110) rather than requiring black pixels; the
+    # anti-aliased first ring is allowed to be lighter (< 170). Stops at the first ring that is clearly not outline.
+    # the outline must also be clearly darker than the element's own background (a dark panel behind the word is not outline)
+    others = L[~letters & (L > 40)]  # neither letter fill nor the darkest outline core: mostly the background
+    bg = float(np.median(others)) if others.size else 255.0
+    limit = min(110.0, bg - 35.0)
     grown, stroke = letters.copy(), 0
-    for _ in range(12):
+    for i in range(14):
         nxt = grown.copy()
         nxt[1:, :] |= grown[:-1, :]
         nxt[:-1, :] |= grown[1:, :]
         nxt[:, 1:] |= grown[:, :-1]
         nxt[:, :-1] |= grown[:, 1:]
         ring = nxt & ~grown
-        if ring.sum() == 0 or (dark & ring).sum() / ring.sum() < 0.55:
+        if ring.sum() == 0:
+            break
+        mean = float(L[ring].mean())
+        if mean >= (max(limit, 60.0) + 60.0 if i == 0 else limit):
             break
         stroke += 1
         grown = nxt
-    ring_px = grown & ~letters
+    ring_px = grown & ~letters & dark
     stroke_col = [float(v) for v in np.median(a[ring_px], axis=0)] if ring_px.sum() else None
     return {
         "cap_pct_h": (ys.max() - ys.min() + 1) / win_h_px * 100,
@@ -209,11 +234,13 @@ def measure_all(img: np.ndarray, box, e: dict, win_h_px: float, frame):
     if kind == "text":
         out["text"] = measure_text(c, win_h_px, e.get("color"))
     elif kind == "image":
-        out["image"] = measure_image(c, frame[2], frame[3])
+        if e.get("measure_art", True):  # off where the proposal's background is blurred world (rail icons)
+            out["image"] = measure_image(c, frame[2], frame[3])
     else:
-        out["fill"] = measure_fill(c)
-        out["border"] = measure_border(c, win_h_px)
-        out["corner"] = measure_corner(c)
+        out["fill"] = measure_fill(c, e.get("fill_sample", "inner"))
+        g = crop(img, grow(box, img.shape))
+        out["border"] = measure_border(g, win_h_px)
+        out["corner"] = measure_corner(g)
     return out
 
 

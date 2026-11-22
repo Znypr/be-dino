@@ -63,7 +63,8 @@
     100,
     100
    ],
-   "fill": "#2B2D39"
+   "fill": "#2B2D39",
+   "fill_sample": "edge"
   },
   "header": {
    "box": [
@@ -193,7 +194,8 @@
    "fill": "#3A3B3F",
    "parent": "card",
    "words_text": "^(?!.*\\bx\\d)(?!.*%)[A-Z][^0-9]*!$",
-   "note": "kid words, no multiplier, ends with !: Run faster! / Grow faster! / Grow super fast!"
+   "note": "kid words, no multiplier, ends with !: Run faster! / Grow faster! / Grow super fast!",
+   "fill_sample": "dark"
   },
   "card*.price": {
    "box": [
@@ -214,7 +216,8 @@
     16.5
    ],
    "kind": "image",
-   "words_text": "^Featured$"
+   "words_text": "^Featured$",
+   "measure_art": false
   },
   "rail.potions": {
    "box": [
@@ -224,7 +227,8 @@
     16.5
    ],
    "kind": "image",
-   "words_text": "^Potions$"
+   "words_text": "^Potions$",
+   "measure_art": false
   },
   "rail.trails": {
    "box": [
@@ -234,7 +238,8 @@
     16.5
    ],
    "kind": "image",
-   "words_text": "^Trails$"
+   "words_text": "^Trails$",
+   "measure_art": false
   },
   "rail.auras": {
    "box": [
@@ -244,7 +249,8 @@
     16.5
    ],
    "kind": "image",
-   "words_text": "^Auras$"
+   "words_text": "^Auras$",
+   "measure_art": false
   },
   "rail.eggs": {
    "box": [
@@ -254,7 +260,8 @@
     16.5
    ],
    "kind": "image",
-   "words_text": "^Eggs$"
+   "words_text": "^Eggs$",
+   "measure_art": false
   }
  },
  "words_note": "'words' = regex the element's own Text must match; 'words_text' = regex for the text label INSIDE the element (strip, price, rail label); 'font' = Font name."
