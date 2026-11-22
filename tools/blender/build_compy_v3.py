@@ -58,6 +58,14 @@ SRC = arg("--src", os.path.join(ROOT, "build", "hy3d-compy", "out", "q34_shape.g
 BLEND_OUT = os.path.join(ROOT, "assets", "blender", "creatures", "Compy_V3.blend")
 TEX_DIR = os.path.join(ROOT, "assets", "blender", "creatures", "textures", "compy_v3")
 RENDER_DIR = os.path.join(ROOT, "docs", "evidence", "2026-11-22-compy-v3")
+# Owner 2026-11-22 "can there not be less low poly?": --detail multiplies the triangle budget, --smooth ANGLE shades smooth with hard
+# edges only above ANGLE degrees, --tag NAME writes the .blend, textures and renders to build/compy-variants/NAME (try-outs, not committed).
+DETAIL = float(arg("--detail", "1"))
+SMOOTH = arg("--smooth")
+TAG = arg("--tag")
+if TAG:
+    _VAR = os.path.join(ROOT, "build", "compy-variants", TAG)
+    BLEND_OUT, TEX_DIR, RENDER_DIR = os.path.join(_VAR, "Compy_V3.blend"), os.path.join(_VAR, "textures"), _VAR
 V = Vector
 
 
@@ -298,8 +306,12 @@ def split_parts(bm):
         # cap the cut openings
         bnd = [e for e in pb.edges if e.is_boundary]
         if bnd:
+            caps = pb.faces.layers.int.get("tag") or pb.faces.layers.int.new("tag")
+            bnd = [e for e in pb.edges if e.is_boundary]  # a new layer invalidates element references: collect again
             res = bmesh.ops.holes_fill(pb, edges=bnd, sides=0)
-            bmesh.ops.triangulate(pb, faces=res["faces"])
+            tri = bmesh.ops.triangulate(pb, faces=res["faces"])
+            for f in tri["faces"]:
+                f[caps] = CAP_TAG  # inside faces: always lime, never part of the cream band
         bmesh.ops.recalc_face_normals(pb, faces=pb.faces[:])
         print("COMPY split %-5s faces %6d islands %d (stray dropped %d) open edges after cap %d" % (
             name, len(pb.faces), len(islands), len(stray), sum(1 for e in pb.edges if e.is_boundary)))
@@ -310,10 +322,10 @@ def split_parts(bm):
 def decimate(ob, target):
     activate(ob)
     n = tris_of(ob.data)
-    if n > target:
+    if n > target * DETAIL:
         mod = ob.modifiers.new("dec", "DECIMATE")
         mod.decimate_type = "COLLAPSE"
-        mod.ratio = target / n
+        mod.ratio = min(1.0, target * DETAIL / n)
         mod.use_collapse_triangulate = True
         if ob.name in ("Body", "Head", "Tail"):
             mod.use_symmetry = True
@@ -322,7 +334,7 @@ def decimate(ob, target):
     # merge the near-coplanar triangles the collapse leaves into big flat planes (no lumpy noise), then triangulate them again
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(DISSOLVE_DEG), use_dissolve_boundaries=False,
+    bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(DISSOLVE_DEG / max(1.0, DETAIL)), use_dissolve_boundaries=False,
                              verts=bm.verts[:], edges=bm.edges[:])
     bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
     bm.to_mesh(ob.data)
@@ -330,6 +342,21 @@ def decimate(ob, target):
     print("COMPY decimated %-5s tris %d" % (ob.name, tris_of(ob.data)))
     for p in ob.data.polygons:
         p.use_smooth = False
+
+
+def apply_shading(ob):
+    """--smooth ANGLE (owner 2026-11-22 'less low poly'): smooth shading, hard edges only where the surface bends more than ANGLE."""
+    if SMOOTH is None:
+        return
+    limit = math.radians(float(SMOOTH))
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for f in bm.faces:
+        f.smooth = True
+    for e in bm.edges:
+        e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0) > limit)
+    bm.to_mesh(ob.data)
+    bm.free()
 
 
 # ------------------------------------------------------------------ face details
@@ -410,13 +437,18 @@ def add_claws(ob):
         p.use_smooth = False
 
 
+CAP_TAG = 5
+
+
 def colour_for(name, c, n, tag, info):
     if tag in TAG_COL:
         return TAG_COL[tag]
+    if tag == CAP_TAG:
+        return LIME
     ny = CREAM_NY if c.z < 1.35 else 0.05   # iteration 3: the neck band wraps further round so the side view shows it like the sheet
     if name == "Body" and n.y > ny and abs(c.x) < CREAM_HALF_W(c.z) and c.z > CREAM_Z0 and c.y > -0.1:
         return CREAM
-    if name == "Head" and c.z < HEAD_Z + 0.2 and n.y > 0.0 and n.z < 0.5 and c.y < 0.6 and abs(c.x) < 0.32:
+    if name == "Head" and c.z < HEAD_Z + 0.2 and n.y > 0.0 and n.z < 0.5 and 0.0 < c.y < 0.6 and abs(c.x) < 0.32:  # front half only
         return CREAM
     return LIME
 
@@ -441,6 +473,23 @@ def apply_colours(ob):
     bm.normal_update()
     info = {"toe_y": max(v.co.y for v in bm.verts)}
     cols = [colour_for(ob.name, f.calc_center_median(), f.normal, f[tag] if tag else 0, info) for f in bm.faces]
+    # clean the lime/cream border: a denser mesh (--detail) leaves single cream triangles by the arms; each lime/cream face takes the
+    # area-weighted majority of itself and its edge neighbours (3 passes, 6 with --detail); eye, highlight, claw and nostril faces never change
+    bm.faces.ensure_lookup_table()
+    soft = [not (tag and (f[tag] in TAG_COL or f[tag] == CAP_TAG)) for f in bm.faces]
+    area = [f.calc_area() for f in bm.faces]
+    for _ in range(3 + 3 * int(DETAIL > 1)):
+        nxt = list(cols)
+        for f in bm.faces:
+            i = f.index
+            if not soft[i]:
+                continue
+            votes = {LIME: 0.0, CREAM: 0.0}
+            for g in [f] + [g for e in f.edges for g in e.link_faces if g is not f]:
+                if soft[g.index] and cols[g.index] in votes:
+                    votes[cols[g.index]] += area[g.index]
+            nxt[i] = LIME if votes[LIME] >= votes[CREAM] else CREAM
+        cols = nxt
     bm.free()
     attr = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
     for poly, col in zip(me.polygons, cols):
@@ -470,11 +519,12 @@ def set_origin(ob):
 
 
 def uv_and_bake(ob):
-    size = TEX_SIZE.get(ob.name, 128)
+    size = TEX_SIZE.get(ob.name, 128) * (2 if DETAIL > 1 else 1)
     activate(ob)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(50), island_margin=0.03, area_weight=0.0)
+    # --detail: a dense smooth mesh cut at 50 degrees makes many tiny islands that bleed at the game's 256 px re-bake; 80 keeps them big
+    bpy.ops.uv.smart_project(angle_limit=math.radians(80 if DETAIL > 1 else 50), island_margin=0.03, area_weight=0.0)
     bpy.ops.object.mode_set(mode="OBJECT")
     img = bpy.data.images.new("Compy_V3_" + ob.name, size, size, alpha=False)
     mat = bpy.data.materials.new("Compy_V3_" + ob.name)
@@ -494,7 +544,7 @@ def uv_and_bake(ob):
     nt.nodes.active = tex
     ob.data.materials.clear()
     ob.data.materials.append(mat)
-    bpy.ops.object.bake(type="EMIT", margin=6, use_clear=True)
+    bpy.ops.object.bake(type="EMIT", margin=12 if DETAIL > 1 else 6, use_clear=True)
     os.makedirs(TEX_DIR, exist_ok=True)
     path = os.path.join(TEX_DIR, "Compy_V3_%s.png" % ob.name)
     img.filepath_raw = path
@@ -622,6 +672,7 @@ def main():
         render("feet", (0.35, 1, 0), scale=1.7, target=(0, 0, 0.35), prefix="labels")
         return
     for ob in objs:
+        apply_shading(ob)
         uv_and_bake(ob)
     lo = [min((ob.matrix_world @ V(c))[i] for ob in objs for c in ob.bound_box) for i in range(3)]
     hi = [max((ob.matrix_world @ V(c))[i] for ob in objs for c in ob.bound_box) for i in range(3)]

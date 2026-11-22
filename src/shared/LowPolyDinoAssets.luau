@@ -19,9 +19,10 @@
 -- guess broke the owner rule (Stegosaurus 4.9, Mosasaurus 3.3 and Ichthyosaurus 3.5 below the 6.6 Compy, Raptor above Triceratops,
 -- Therizinosaurus above the T-Rex).
 return {
-    compy = {assetId = 75361856704264, version = "v3", scale = 2.2, tier = 1, class = "Ground"},
+    compy = {assetId = 109434792230390, version = "v4", scale = 2.2, tier = 1, class = "Ground"},
     -- BD-1291 (owner OK 2026-11-22): Compy V3 = local Hunyuan3D-2 mesh of the owner-approved sheet, cut into 7 parts and decimated in
-    -- Blender (tools/blender/build_compy_v3.py), textures embedded in the FBX (Studio-checked: every part has its TextureID). Was v1 94548957808227.
+    -- Blender (tools/blender/build_compy_v3.py), textures embedded in the FBX (Studio-checked: every part has its TextureID). Owner pick 'D softest': 6.9k tris, smooth
+    -- shading with hard edges only above 75 degrees (--detail 4 --smooth 75). Was flat v3 75361856704264, before that v1 94548957808227.
     triceratops = {assetId = 107596736973492, version = "v3", scale = 2.86, tier = 3, class = "Ground"},
     tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},

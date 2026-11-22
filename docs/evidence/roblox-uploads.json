@@ -1590,5 +1590,15 @@
     "sha256": "fe0ff39f476d835969417681464e62987da06fdf0a3682f7dcb9d5a7b801f6c6",
     "moderation": "Approved",
     "uploaded": "2026-11-22T17:16:46Z"
+  },
+  {
+    "assetId": "109434792230390",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft textured parts",
+    "file": "Compy_V3_soft.fbx",
+    "bytes": 437212,
+    "sha256": "c8bca636017ef31f711820e3d96a5d0cfb430eb5cc65fe8f1d80a373bce65d7c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T18:06:13Z"
   }
 ]
