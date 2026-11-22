@@ -45,4 +45,9 @@ foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path $env:APPD
     $lnk.Save()
 }
 if (Test-Path $old) { Remove-Item -LiteralPath $old -Recurse -Force }
-Write-Output "Installed: $exe"
+# the repo the installed app shows: the main checkout (first entry of git worktree list), never a temporary worktree
+$main = ((& git -C $root worktree list --porcelain) | Select-Object -First 1) -replace '^worktree ', ''
+$cfg = Join-Path $env:APPDATA 'Be Dino Desk'
+New-Item -ItemType Directory -Force $cfg | Out-Null
+Set-Content -LiteralPath (Join-Path $cfg 'repo.txt') -Value ($main -replace '/', '\') -Encoding ASCII
+Write-Output "Installed: $exe (shows $main)"

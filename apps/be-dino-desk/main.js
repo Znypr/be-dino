@@ -7,7 +7,14 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const { Readable } = require('stream');
 
-const REPO = process.env.BE_DINO_REPO || 'C:\\Users\\znypr\\Documents\\be-dino';
+// The repo to show: BE_DINO_REPO, else repo.txt in the app's data folder (build.ps1 writes the main checkout there), else the
+// checkout this source sits in (apps/be-dino-desk -> ../..). No machine path is stored in the repo (public repo rule).
+function repoPath() {
+  if (process.env.BE_DINO_REPO) return process.env.BE_DINO_REPO;
+  try { const t = fs.readFileSync(path.join(app.getPath('appData'), 'Be Dino Desk', 'repo.txt'), 'utf8').trim(); if (t && fs.existsSync(t)) return t; } catch {}
+  return path.resolve(__dirname, '..', '..');
+}
+const REPO = repoPath();
 const PY = process.env.BE_DINO_PYTHON || 'python';
 const TOOLS = process.env.BE_DINO_TOOLS || path.join(REPO, 'tools');   // a worktree's tools can list the main checkout
 const FEEDBACK = path.join(REPO, 'docs', 'feedback', 'asset-desk.json');
