@@ -1,0 +1,261 @@
+{
+ "screen": "potion-shop",
+ "proposal": "docs/menu-specs/potion-shop/proposal.jpg",
+ "proposal_window_px": [
+  410,
+  116,
+  724,
+  516
+ ],
+ "note": "Boxes are [x, y, w, h] in % of the WINDOW (outer dark frame). Card children are in % of their card. Measured 2026-11-23 from the owner's proposal (Design Board, Phone shops, 'Potions'). Rail items are outside the window (x > 100).",
+ "tolerance_pct": 1.5,
+ "steps": [
+  {
+   "name": "1 window",
+   "elements": [
+    "window"
+   ]
+  },
+  {
+   "name": "2 header",
+   "elements": [
+    "header",
+    "title",
+    "timer",
+    "close"
+   ]
+  },
+  {
+   "name": "3 cards",
+   "elements": [
+    "card1",
+    "card2",
+    "card3"
+   ]
+  },
+  {
+   "name": "4 card contents",
+   "elements": [
+    "card*.name",
+    "card*.rarity",
+    "card*.badge",
+    "card*.art",
+    "card*.strip",
+    "card*.price"
+   ]
+  },
+  {
+   "name": "5 rail",
+   "elements": [
+    "rail.featured",
+    "rail.potions",
+    "rail.trails",
+    "rail.auras",
+    "rail.eggs"
+   ]
+  }
+ ],
+ "elements": {
+  "window": {
+   "box": [
+    0,
+    0,
+    100,
+    100
+   ],
+   "fill": "#2B2D39"
+  },
+  "header": {
+   "box": [
+    2.0,
+    2.0,
+    96.0,
+    18.0
+   ],
+   "fill": "#5CE62E"
+  },
+  "title": {
+   "box": [
+    4.1,
+    6.8,
+    24.9,
+    9.4
+   ],
+   "text": "Potions",
+   "kind": "text",
+   "words": "^Potions$",
+   "font": "FredokaOne"
+  },
+  "timer": {
+   "box": [
+    55.6,
+    9.2,
+    20.7,
+    4.9
+   ],
+   "text": "New in 1:42",
+   "kind": "text",
+   "color": "#FFE04A",
+   "words": "^New in \\d",
+   "font": "FredokaOne"
+  },
+  "close": {
+   "box": [
+    86.0,
+    2.9,
+    11.5,
+    16.6
+   ],
+   "fill": "#E8202A"
+  },
+  "card1": {
+   "box": [
+    3.1,
+    23.5,
+    29.7,
+    72.4
+   ],
+   "fill": "#C7C9D1"
+  },
+  "card2": {
+   "box": [
+    35.2,
+    23.5,
+    29.6,
+    72.4
+   ],
+   "fill": "#5CE62E"
+  },
+  "card3": {
+   "box": [
+    67.4,
+    23.5,
+    29.5,
+    72.4
+   ],
+   "fill": "#FFE04A"
+  },
+  "card*.name": {
+   "box": [
+    15.0,
+    3.0,
+    70.0,
+    9.4
+   ],
+   "kind": "text",
+   "parent": "card",
+   "words": "^[A-Z][a-z]+$",
+   "font": "FredokaOne",
+   "note": "one short word like the proposal: Swift / Hearty / Titan"
+  },
+  "card*.rarity": {
+   "box": [
+    25.0,
+    13.0,
+    50.0,
+    5.0
+   ],
+   "kind": "text",
+   "parent": "card",
+   "words": "^(Common|Uncommon|Rare|Epic|Legendary|Secret)$",
+   "font": "FredokaOne"
+  },
+  "card*.badge": {
+   "box": [
+    84.0,
+    21.0,
+    13.0,
+    5.4
+   ],
+   "kind": "text",
+   "parent": "card",
+   "words": "^x\\d+$",
+   "font": "FredokaOne",
+   "note": "a stock count is fine; multipliers are not"
+  },
+  "card*.art": {
+   "box": [
+    24.0,
+    27.0,
+    52.0,
+    38.0
+   ],
+   "kind": "image",
+   "parent": "card"
+  },
+  "card*.strip": {
+   "box": [
+    6.0,
+    72.5,
+    87.5,
+    10.7
+   ],
+   "fill": "#3A3B3F",
+   "parent": "card",
+   "words_text": "^(?!.*\\bx\\d)(?!.*%)[A-Z][^0-9]*!$",
+   "note": "kid words, no multiplier, ends with !: Run faster! / Grow faster! / Grow super fast!"
+  },
+  "card*.price": {
+   "box": [
+    3.5,
+    85.0,
+    92.5,
+    13.0
+   ],
+   "fill": "#5CE62E",
+   "parent": "card",
+   "words_text": "^[\\d,]+$"
+  },
+  "rail.featured": {
+   "box": [
+    102.7,
+    1.5,
+    11.4,
+    16.5
+   ],
+   "kind": "image",
+   "words_text": "^Featured$"
+  },
+  "rail.potions": {
+   "box": [
+    102.7,
+    19.0,
+    11.4,
+    16.5
+   ],
+   "kind": "image",
+   "words_text": "^Potions$"
+  },
+  "rail.trails": {
+   "box": [
+    102.7,
+    36.5,
+    11.4,
+    16.5
+   ],
+   "kind": "image",
+   "words_text": "^Trails$"
+  },
+  "rail.auras": {
+   "box": [
+    102.7,
+    54.0,
+    11.4,
+    16.5
+   ],
+   "kind": "image",
+   "words_text": "^Auras$"
+  },
+  "rail.eggs": {
+   "box": [
+    102.7,
+    71.5,
+    11.4,
+    16.5
+   ],
+   "kind": "image",
+   "words_text": "^Eggs$"
+  }
+ },
+ "words_note": "'words' = regex the element's own Text must match; 'words_text' = regex for the text label INSIDE the element (strip, price, rail label); 'font' = Font name."
+}
