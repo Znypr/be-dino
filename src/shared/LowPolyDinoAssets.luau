@@ -19,11 +19,9 @@
 -- guess broke the owner rule (Stegosaurus 4.9, Mosasaurus 3.3 and Ichthyosaurus 3.5 below the 6.6 Compy, Raptor above Triceratops,
 -- Therizinosaurus above the T-Rex).
 return {
-    compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
-    -- BD-1291 CANDIDATE, NOT live (the lead switches it only after a Studio check of TextureID, gene recolour and gait): Compy V3,
-    -- Hunyuan3D-2 mesh of the owner-approved sheet cut into 7 parts and decimated in Blender (tools/blender/build_compy_v3.py), 3.0 studs
-    -- tall at scale 1 so scale 2.2 keeps 6.6: to switch, set the compy line above to assetId 75361856704264, version "v3" (scale 2.2,
-    -- tier 1, class Ground unchanged). Superseded candidates: V2 113931173586605 and 100016392044055 (script-built).
+    compy = {assetId = 75361856704264, version = "v3", scale = 2.2, tier = 1, class = "Ground"},
+    -- BD-1291 (owner OK 2026-11-22): Compy V3 = local Hunyuan3D-2 mesh of the owner-approved sheet, cut into 7 parts and decimated in
+    -- Blender (tools/blender/build_compy_v3.py), textures embedded in the FBX (Studio-checked: every part has its TextureID). Was v1 94548957808227.
     triceratops = {assetId = 107596736973492, version = "v3", scale = 2.86, tier = 3, class = "Ground"},
     tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},
