@@ -73,8 +73,10 @@ def fbx_forward_axis(facing):
         raise ValueError("--faces must be +Y or -Y, got %r" % (facing,))
 
 
-def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None, faces="+Y"):
+def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None, faces="+Y", embed_textures=False):
     cmd = [blender, "--background", "--factory-startup", str(blend), "--python", str(SELF), "--", "--out", str(out), "--faces", faces]
+    if embed_textures:
+        cmd.append("--embed-textures")
     if rig:
         cmd.append("--rig")
     if anim:
@@ -106,6 +108,7 @@ def outer_main(argv, runner=subprocess.run, environ=None, out=print):
     ap.add_argument("--anim", action="store_true", help="bake all actions into the FBX (implies --rig)")
     ap.add_argument("--apply-transforms", action="store_true", help="apply rotation+scale to meshes (only when there is no armature)")
     ap.add_argument("--faces", default="+Y", choices=sorted(FACING_TO_FBX_FORWARD), help="direction the model faces in Blender (default +Y)")
+    ap.add_argument("--embed-textures", action="store_true", help="embed the material image textures in the FBX (BD-1291 Compy V2 texture route)")
     ap.add_argument("--dry-run", action="store_true", help="print the Blender command, run nothing")
     ap.add_argument("--no-check", action="store_true", help="skip tools/check_model_for_roblox.py")
     args = ap.parse_args(argv)
@@ -123,7 +126,7 @@ def outer_main(argv, runner=subprocess.run, environ=None, out=print):
         return 2
     out_path.parent.mkdir(parents=True, exist_ok=True)
     report = out_path.with_suffix(".report.json")
-    cmd = blender_command(blender, blend, out_path, args.rig or args.anim, args.anim, args.apply_transforms, report, args.faces)
+    cmd = blender_command(blender, blend, out_path, args.rig or args.anim, args.anim, args.apply_transforms, report, args.faces, args.embed_textures)
     out("Blender command: " + " ".join('"%s"' % c if " " in c else c for c in cmd))
     if args.dry_run:
         return 0
@@ -217,6 +220,7 @@ def inner_main(argv):
     ap.add_argument("--anim", action="store_true")
     ap.add_argument("--apply-transforms", action="store_true")
     ap.add_argument("--report")
+    ap.add_argument("--embed-textures", action="store_true")
     args = ap.parse_args(argv)
 
     scene = bpy.context.scene
@@ -261,6 +265,9 @@ def inner_main(argv):
         apply_unit_scale=True, global_scale=0.01, axis_forward=fbx_forward_axis(args.faces), axis_up="Y",
         colors_type="SRGB", mesh_smooth_type="OFF", add_leaf_bones=False, bake_anim=bool(args.anim and use_rig),
     )
+    if args.embed_textures:
+        # the images must exist on disk or be packed; COPY + embed puts their bytes inside the FBX (one file for the upload)
+        kw.update(path_mode="COPY", embed_textures=True)
     if use_rig:
         kw.update(primary_bone_axis="Y", secondary_bone_axis="X", use_armature_deform_only=False)
     if args.anim and use_rig:
