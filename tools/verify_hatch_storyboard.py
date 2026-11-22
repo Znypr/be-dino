@@ -81,7 +81,7 @@ do
         assert(tap.h >= 44, s[3] .. ": TAP is a big target")
         -- the bar
         local bar = R.topBar(w, h)
-        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .13, s[3] .. ": the bar")
+        assert(bar.text >= R.MinText and bar.titleText >= R.MinText and bar.chipH < bar.h and bar.h <= h * .14, s[3] .. ": the bar")
         assert(cy - eggH / 2 >= bar.h - 2, s[3] .. ": the egg starts under the bar")
         -- the reveal stack: dino 40-50 %, nothing overlaps, everything on screen
         assert(R.Reveal.dinoH >= .4 and R.Reveal.dinoH <= .5 and R.Reveal.dinoHBig >= .4 and R.Reveal.dinoHBig <= .5, "the dino is 40-50 % of the screen")
@@ -100,7 +100,11 @@ do
             assert(S.shown + (if S.more > 0 then 1 else 0) == #S.cards and S.shown + S.more == others, s[3] .. ": every other dino is a card or counted in +N")
             local bigBox = {cx = S.big.cx, cy = S.big.cy, w = S.big.h * 1.1, h = S.big.h}
             for i, c in S.cards do
-                assert(c.w >= 110, s[3] .. ": a card is at least 110 px wide")
+                assert(c.w >= 128, s[3] .. ": a card is at least 128 px wide (a dino name at 19 px fits)")
+                local K = R.cardStack(c.w, c.h, S.cardText, S.chipText)
+                assert(K.dinoH >= c.h * .35, s[3] .. ": the dino keeps at least a third of its card")
+                assert(K.nameCy + K.nameH / 2 <= K.chipCy - K.chipH / 2 and K.dinoCy + K.dinoH / 2 <= K.nameCy - K.nameH / 2, s[3] .. ": dino, name and chip never overlap in a card")
+                assert(K.chipCy + K.chipH / 2 <= c.h, s[3] .. ": the chip stays in its card")
                 assert(c.cx - c.w / 2 >= 0 and c.cx + c.w / 2 <= w and c.cy - c.h / 2 >= S.bar.h and c.cy + c.h / 2 <= S.buttonsY - 24, s[3] .. ": card " .. i .. " on screen, under the bar, over the buttons (" .. others .. ")")
                 assert(not boxes(c, bigBox), s[3] .. ": card " .. i .. " is not over the best dino")
                 for j, d in S.cards do if j ~= i then assert(not boxes(c, d), s[3] .. ": cards do not overlap") end end
@@ -240,9 +244,17 @@ do -- BD-1288: the real hatch screen with the storyboard flag on. The base smoke
     tapOn(m, m.body)
     frames(2)
     check(m.body:GetAttribute("HatchTapWait") == false, "the tap starts the egg")
+    local SBR = requireModule(SharedFolder.HatchStoryboardRules)
+    local seen, at = false, 0
+    for f = 1, 150 do
+        frames(1)
+        if m.body:GetAttribute("HatchBuildUp") == true and not seen then seen, at = true, f / 30 end
+    end
+    check(seen and math.abs(at - SBR.plan().buildUpAt) < .15, "the build-up starts on the sequence clock at the end of the pattern hold, at " .. at)
     took = untilReveal(m, 9)
     check(revealed(m) and took <= 4.2, "then the dinosaur comes, took " .. took)
     check(m.nexts == 0, "the start tap never skips to the next egg")
+    check(m.body:GetAttribute("HatchBuildUp") == false, "the build-up flag is off again after the burst")
     m.gui:Destroy()
     -- the waiting egg: Skip the rest still works
     m = start({rarity = 1, remaining = 3})
@@ -330,12 +342,13 @@ def check_sources(overrides=None):
 
 
 MUTANTS = {
-    'the egg is small again': {RULES: [('R.EggShare = {min = .35, max = .45, want = .40}', 'R.EggShare = {min = .35, max = .45, want = .28}')]},
+    'the egg is small again': {RULES: [('R.EggShare = {min = .35, max = .45, want = .42}', 'R.EggShare = {min = .35, max = .45, want = .28}')]},
     'the colour name flashes by': {RULES: [('R.Paint = {leftStart = .35, rightStart = 1.25,', 'R.Paint = {leftStart = .35, rightStart = .9,')]},
     'the build-up drags': {RULES: [('R.BuildUp = .7', 'R.BuildUp = 1.4')]},
     'phone words under 19 px': {RULES: [('R.MinText = 19', 'R.MinText = 14')]},
     'the plate covers the egg': {RULES: [('local left = eggCx + eggH * .42 + math.max(12, eggH * .08)', 'local left = eggCx - eggH * .2')]},
     'chips sit on the name plate': {RULES: [('chipsY = .79', 'chipsY = .72')]},
+    'the card name sits on the chip': {RULES: [('local nameCy = chipCy - chipH / 2 - 3 - nameH / 2', 'local nameCy = chipCy - nameH / 4')]},
     'the summary cards spill off the screen': {RULES: [('local areaL, areaR = w * .54, w - 16', 'local areaL, areaR = w * .54, w + 120')]},
     'the best find is the last egg': {RULES: [('if r > rank then best, rank = i, r end', 'if r >= rank then best, rank = i, r end')]},
     'one egg gets a summary': {RULES: [('return type(total) == "number" and total >= 2', 'return type(total) == "number" and total >= 1')]},
@@ -351,6 +364,7 @@ MUTANTS = {
 SCREEN_MUTANTS = {
     'screen: the tap on the waiting egg is ignored': {SEQUENCE: [('        if state.gate then Timeline.tap(state) return end -- BD-1288', '        if state.gate then return end -- BD-1288')]},
     'screen: the storyboard runs with the flag off': {SEQUENCE: [('local SB = if Config.HatchStoryboardEnabled == true and Config.HatchStageEnabled == true then', 'local SB = if true then')]},
+    'screen: the build-up never starts': {SEQUENCE: [('state.t >= SB.plan().buildUpAt and state.t < state.durs.build', 'false')]},
     'screen: no TAP attribute': {SEQUENCE: [('a.body:SetAttribute("HatchTapWait", state.gate == true)', 'a.body:SetAttribute("HatchTapWait", false)')]},
 }
 

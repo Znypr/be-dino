@@ -130,7 +130,8 @@ RunService.Heartbeat:Connect(function()
                         colors[i] = if swatch then swatch.BackgroundColor3 else Color3.new(1, 1, 1)
                         if Storyboard then
                             -- BD-1288: the pail names the colour, the can names the pattern; the storyboard times its own build-up
-                            pcall(Stage.playPaint, if i == 1 then "pour" else "spots", if i == 1 then {colors[1]} else {colors[1] or colors[2], colors[2]})
+                            local plain = i == 2 and body:GetAttribute("HatchPatternName") == "" -- no pattern: the can pours a second coat, no spots
+                            pcall(Stage.playPaint, if i == 1 or plain then "pour" else "spots", if i == 1 or plain then {colors[1]} else {colors[1] or colors[2], colors[2]})
                             pcall(if i == 1 then Storyboard.colour else Storyboard.pattern)
                             chip.Visible = false -- the small chip gives way to the big plate (this handler then returns at once)
                             return

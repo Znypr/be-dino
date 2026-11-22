@@ -383,6 +383,10 @@ function Seq.play(args: Args): Handle
         local b = if SB then a.body:GetAttribute("HatchEggBoost") else nil
         return if type(b) == "number" then b else 1
     end
+    local function eggShift(): Vector2 -- design px that move the egg to the middle of the stage (HatchStoryboard; zero = as before)
+        local v = if SB then a.body:GetAttribute("HatchEggShift") else nil
+        return if typeof(v) == "Vector2" then v else Vector2.zero
+    end
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     -- BD-1067: the card sits where Bootstrap / ModalCompact put the body: (18, 98) in the desktop panel, (4, 0) in the phone scroller, and the camera
     -- moves (anchor in the middle) used to assume (18, 98) always, which pushed the whole card 98 px down in a small window. The body is also shrunk,
@@ -1212,7 +1216,13 @@ function Seq.play(args: Args): Handle
         Timeline.step(state, frameDt)
         if SB then
             a.body:SetAttribute("HatchTapWait", state.gate == true) -- BD-1288: HatchStoryboard shows the TAP button while this is true
-            if not motion and not burstDone then eggZoom.Scale = eggBoost() end -- Reduce Motion: the big egg without the push-in
+            -- the crack build-up of the storyboard starts on the sequence's own clock (a slow frame rate keeps the names up as long)
+            a.body:SetAttribute("HatchBuildUp", not state.gate and not state.pending and not fastEgg and state.t >= SB.plan().buildUpAt and state.t < state.durs.build)
+            if not motion and not burstDone then -- Reduce Motion: the big egg in the middle without the push-in
+                local shift = eggShift()
+                eggZoom.Scale = eggBoost()
+                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + shift.X, CENTER_EGG.Y + shift.Y)
+            end
         end
         local t = state.t
         local vt = Timeline.visualT(state)
@@ -1232,7 +1242,8 @@ function Seq.play(args: Args): Handle
                 -- A gentle sway while the buckets paint (and while the server answer is still on its way).
                 local swayAmp = 1 - math.clamp(bp * 4, 0, 1)
                 a.eggView.Rotation = rot * esc.shakeScale + math.sin(vt * 3.4) * 2.8 * swayAmp
-                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp)
+                local shift = eggShift()
+                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale + shift.X, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp + shift.Y)
                 eggZoom.Scale = Timeline.zoom(bp) * eggBoost()
                 bodyScale.Scale = Timeline.cameraZoom(bp) * fit
                 a.body.Position = UDim2.fromOffset(bodyCenter.X + sx, bodyCenter.Y + sy)

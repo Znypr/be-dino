@@ -100,6 +100,17 @@ local function kitImage(parent: GuiObject, slot: string, z: number): ImageLabel?
     image.Parent = parent
     return image
 end
+-- the face of a plate or chip: the kit's gloss button picture nearest to `fill` (toybox_button_*, sliced 1:1); the flat chip only when
+-- the kit ids are not bound
+local function kitFace(f: GuiObject, fill: Color3, z: number?): ()
+    local slot = Kit.buttonSlot(math.floor(fill.R * 255 + .5), math.floor(fill.G * 255 + .5), math.floor(fill.B * 255 + .5))
+    if Kit.ready(Slots.Images, "button") and kitImage(f, slot, z or f.ZIndex) then
+        f.BackgroundTransparency = 1
+        return
+    end
+    f.BackgroundTransparency = 0
+    Chip.apply(f, fill, INK)
+end
 -- a kit gloss button (Toybox skin) in our own layer; the word stays >= 19 px
 local function kitButton(parent: Instance, name: string, text: string, cx: number, cy: number, w: number, h: number, size: number, fill: Color3, z: number): TextButton
     local b = Instance.new("TextButton")
@@ -153,13 +164,50 @@ local function eggRect(): (Vector2, number)
     return centre, size.Y * R.EggShare.want
 end
 -- the egg's zoom so it is EggShare.want of the screen tall (HatchSequence multiplies its own zoom by the body attribute HatchEggBoost)
-local function setBoost()
+local function setBoost(shift: boolean)
     if not ctx then return end
     local body = ctx.body
     local design = body.Size.Y.Offset
     if design <= 0 or body.AbsoluteSize.Y <= 0 then return end
     local px = body.AbsoluteSize.Y / design -- screen px per design px of the card (its fit scale included)
     body:SetAttribute("HatchEggBoost", R.eggBoost(R.FlatEggH * px, screen().Y))
+    -- and the shift that puts the egg in the middle of the stage (the card may sit off-centre on a wide or compact window)
+    local egg = body:FindFirstChild("PremiumHatchEgg", true)
+    if shift and egg and egg:IsA("GuiObject") and egg.AbsoluteSize.X > 0 then
+        local size = screen()
+        local goal = ctx.shade.AbsolutePosition + Vector2.new(size.X / 2, size.Y * R.EggCentreY)
+        local now = egg.AbsolutePosition + egg.AbsoluteSize / 2
+        local old = body:GetAttribute("HatchEggShift")
+        old = if typeof(old) == "Vector2" then old else Vector2.zero
+        body:SetAttribute("HatchEggShift", old + (goal - now) / px)
+        -- the sequence's own glow rings, rays and old buckets sit on the card's egg: they move with it (each egg places them again)
+        local total = body:GetAttribute("HatchEggShift") :: Vector2
+        local panel = ctx.panel
+        local k = if panel.Size.X.Offset > 0 and panel.AbsoluteSize.X > 0 then panel.AbsoluteSize.X / panel.Size.X.Offset else 1
+        for _, name in {"HatchFxBack", "HatchFxFront"} do
+            local l = panel:FindFirstChild(name)
+            if l and l:IsA("GuiObject") then
+                local last = ctx.layerSet[name]
+                local base = if last and l.Position == last.set then last.base else l.Position
+                local set = base + UDim2.fromOffset(total.X * px / k, total.Y * px / k)
+                l.Position = set
+                ctx.layerSet[name] = {base = base, set = set, layer = l}
+            end
+        end
+    end
+    -- the stage's warm glow behind the egg and the dino, centred on the stage too
+    local s = Stage.parts and Stage.parts()
+    if s and s.glow and s.panel.AbsoluteSize.X > 0 then
+        local k = if s.panel.Size.X.Offset > 0 then s.panel.AbsoluteSize.X / s.panel.Size.X.Offset else 1
+        local size = screen()
+        local goal = ctx.shade.AbsolutePosition + Vector2.new(size.X / 2, size.Y * R.EggCentreY)
+        local before = s.glow.Position
+        if not ctx.glowMoved then
+            ctx.glowMoved = true
+            table.insert(ctx.restore, function() if s.glow.Parent then s.glow.Position = before end end)
+        end
+        s.glow.Position = UDim2.fromOffset((goal.X - s.panel.AbsolutePosition.X) / k, (goal.Y - s.panel.AbsolutePosition.Y) / k)
+    end
 end
 
 -- 1. the stage -----------------------------------------------------------------------------------------------------------------------
@@ -167,6 +215,7 @@ function SB.init(stage: any)
     Stage = stage
     Stage.HideCrystals = true
     Stage.Veil = SB.Veil
+    Stage.NextScale = R.NextScale
     for k, v in R.Reveal do Stage.Layout[k] = v end
     -- the paint flipbook sits on the big egg (its egg is EggShare.want of the screen tall)
     Stage.eggRect = function(_s: any): any
@@ -194,7 +243,7 @@ function SB.begin(p: any)
     layer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     layer.Parent = gui.Parent
     ctx = {gui = gui, shade = p.shade, panel = p.panel, body = p.body, layer = layer, restore = {}, egg = {}, words = {}, entries = {}, conns = {},
-        total = nil, index = nil, buildTween = nil, summary = false, seen = {}}
+        total = nil, index = nil, buildTween = nil, summary = false, seen = {}, layerSet = {}}
     local restore = ctx.restore
     -- the world blurs behind the stage
     local blur = Instance.new("BlurEffect")
@@ -220,8 +269,7 @@ function SB.begin(p: any)
         strip.BackgroundTransparency, strip.BackgroundColor3 = 0, PURPLE
     end
     local chip = frame(strip, "CounterChip", (size.X + 8) / 2, bar.h / 2, bar.chipW, bar.chipH, 4)
-    chip.BackgroundTransparency = 0
-    Chip.apply(chip, CREAM, INK)
+    kitFace(chip, WHITE, 4)
     local counterWords = words(chip, "", bar.text, INK, nil, 5)
     local title = words(strip, "", bar.titleText, WHITE, INK, 5)
     title.Name, title.Visible = "Title", false
@@ -243,8 +291,20 @@ function SB.begin(p: any)
     end
     for _, o in p.panel:GetDescendants() do mirror(o) end
     table.insert(ctx.conns, p.panel.DescendantAdded:Connect(function(o) task.defer(mirror, o) end))
+    -- the compact window's scroll bar never shows on the stage
+    for _, d in p.panel:GetDescendants() do
+        if d:IsA("ScrollingFrame") and d.ScrollBarImageTransparency < 1 then
+            local before = d.ScrollBarImageTransparency
+            d.ScrollBarImageTransparency = 1
+            table.insert(restore, function() if d.Parent then d.ScrollBarImageTransparency = before end end)
+        end
+    end
     -- the TAP while the egg waits (HatchSequence: body attribute HatchTapWait)
     table.insert(ctx.conns, p.body:GetAttributeChangedSignal("HatchTapWait"):Connect(function() SB.tapState() end))
+    -- the build-up starts on the sequence's clock (HatchSequence: body attribute HatchBuildUp)
+    table.insert(ctx.conns, p.body:GetAttributeChangedSignal("HatchBuildUp"):Connect(function()
+        if p.body:GetAttribute("HatchBuildUp") == true then SB.buildUp() end
+    end))
     SB.newEgg()
 end
 
@@ -256,10 +316,14 @@ function SB.newEgg()
     if ctx.buildTween then ctx.buildTween:Cancel() ctx.buildTween = nil end
     ctx.colourShown, ctx.patternShown, ctx.built = false, false, false
     ctx.bar.Visible = not ctx.summary
-    setBoost()
-    task.defer(function()
-        if not ctx then return end
-        setBoost() -- the body has its final fit scale one frame later
+    setBoost(false)
+    local mine = ctx
+    task.spawn(function()
+        task.wait() task.wait()
+        if ctx ~= mine then return end
+        setBoost(true) -- the body has its final fit scale a frame later; the egg moves to the middle on the next frame
+        task.wait() task.wait()
+        if ctx ~= mine then return end
         local c, h = eggRect()
         local size = screen()
         local ped = R.eggPedestal(size.X, size.Y, c.Y, h)
@@ -307,14 +371,12 @@ local function plate(kind: string, word: string, tier: number, fill: Color3)
     local size = screen()
     local spec = R.label(size.X, size.Y, c.X, c.Y, h, word)
     local p = frame(ctx.layer, "Storyboard" .. kind, spec.plate.cx, spec.plate.cy, spec.plate.w, spec.plate.h, 10)
-    p.BackgroundTransparency = 0
-    Chip.apply(p, fill, INK)
+    kitFace(p, fill, 10)
     words(p, word, spec.plate.text, WHITE, INK, 12)
     add(ctx.words, p)
     local t = math.clamp(tier, 1, 6)
     local chip = frame(ctx.layer, "Storyboard" .. kind .. "Tier", spec.chip.cx, spec.chip.cy, spec.chip.w, spec.chip.h, 10)
-    chip.BackgroundTransparency = 0
-    Chip.apply(chip, Theme.RarityColors[t], INK)
+    kitFace(chip, Theme.RarityColors[t], 10)
     words(chip, R.tierWord(Timeline.TierNames[t]), spec.chip.text, WHITE, INK, 12)
     add(ctx.words, chip)
     pop(p)
@@ -326,10 +388,6 @@ function SB.colour()
     local body = ctx.body
     local fill = body:GetAttribute("HatchColourRgb")
     plate("Colour", R.colourWord(body:GetAttribute("HatchColourName")), body:GetAttribute("HatchColourTier") or 1, if typeof(fill) == "Color3" then fill else WHITE)
-    local mine = ctx
-    task.delay(R.Hold.colour + .6, function() -- no pattern bucket came (a plain v2 egg): the build-up starts anyway
-        if ctx == mine and not ctx.patternShown then SB.buildUp() end
-    end)
 end
 function SB.pattern()
     if not ctx or ctx.patternShown then return end
@@ -338,8 +396,6 @@ function SB.pattern()
     local name = body:GetAttribute("HatchPatternName")
     local fill = body:GetAttribute("HatchPatternRgb")
     plate("Pattern", R.patternWord(name, name == ""), body:GetAttribute("HatchPatternTier") or 1, if typeof(fill) == "Color3" then fill else WHITE)
-    local mine = ctx
-    task.delay(R.Hold.pattern, function() if ctx == mine then SB.buildUp() end end)
 end
 
 -- 5. the build-up: rays in the rarity colour, a growing glow, the shake (Legendary and up keep HatchStage's own gold build-up) -----------
@@ -367,6 +423,7 @@ function SB.buildUp()
     elseif s then
         pcall(Stage.buildUp)
     end
+    -- (no drawn cracks: the crack flipbook was turned down by the owner on 2026-11-16, "Yes, 3D shards"; the burst keeps the 3D shards)
     pcall(Stage.crackCharge) -- the egg shakes and a white glow swells (it does nothing with Reduce Motion)
 end
 
@@ -418,7 +475,8 @@ function SB.revealChips(s: any, plateRect: any, restore: {() -> ()}, popAt: (Gui
     local spec = R.revealChips(size.X, size.Y)
     local items = {}
     if type(e.colourName) == "string" and e.colourName ~= "" then table.insert(items, {e.colourName, e.colour}) end
-    table.insert(items, {if type(e.patternName) == "string" and e.patternName ~= "" then e.patternName else "Plain", e.patternColour})
+    local plainPattern = not (type(e.patternName) == "string" and e.patternName ~= "")
+    table.insert(items, {if plainPattern then "Plain" else e.patternName, if plainPattern then e.colour else e.patternColour})
     local widths, total = {}, 0
     for i, item in items do
         widths[i] = R.chipWidth(item[1], spec.text, spec.swatch)
@@ -430,7 +488,7 @@ function SB.revealChips(s: any, plateRect: any, restore: {() -> ()}, popAt: (Gui
         local chip = Instance.new("Frame")
         chip.Name, chip.AnchorPoint, chip.BackgroundTransparency = "StoryboardRevealChip" .. i, Vector2.new(0, .5), 0
         chip.Position, chip.Size, chip.ZIndex = UDim2.fromOffset(x, spec.y), UDim2.fromOffset(w, spec.h), s.panel.ZIndex + 31
-        Chip.apply(chip, CREAM, INK)
+        kitFace(chip, WHITE, chip.ZIndex)
         local sw = Chip.swatch(chip, spec.swatch, nil, chip.ZIndex + 1)
         sw.AnchorPoint, sw.Position = Vector2.new(0, .5), UDim2.new(0, 8, .5, 0)
         sw.BackgroundColor3 = if typeof(item[2]) == "Color3" then item[2] else WHITE
@@ -456,7 +514,8 @@ function SB.ends(s: any, ends: GuiObject, restore: {() -> ()})
     ctx.ends, ctx.endsPosition = ends, before
     local size = s.shade.AbsoluteSize
     local fitY = math.min(1, size.Y / 793)
-    local b = kitButton(ctx.layer, "StoryboardNext", R.Words.next, size.X / 2, size.Y * R.Reveal.nextY, 250 * fitY, math.max(44, 66 * fitY), math.max(R.MinText + 3, math.floor(34 * fitY)), GREEN, 20)
+    local big = R.NextScale
+    local b = kitButton(ctx.layer, "StoryboardNext", R.Words.next, size.X / 2, size.Y * R.Reveal.nextY, 250 * fitY * big, math.max(44, 66 * fitY * big), math.max(R.MinText + 3, math.floor(34 * fitY * big)), GREEN, 20)
     ctx.next = b
     pop(b, .05)
     b.Activated:Connect(function() SB.summary() end)
@@ -545,8 +604,7 @@ function SB.summary()
         local card = frame(blocker, "Card" .. i, cell.cx, cell.cy, cell.w, cell.h, 3)
         local e = others[i]
         if i > L.shown or not e then
-            card.BackgroundTransparency = 0
-            Chip.apply(card, CREAM, INK)
+            if not kitImage(card, "toybox_card_common", 3) then card.BackgroundTransparency = 0 Chip.apply(card, CREAM, INK) end
             words(card, "+" .. L.more, math.floor(cell.w * .3), INK, nil, 5)
         else
             local rank = math.clamp(e.rarity or 1, 1, 6)
@@ -554,14 +612,13 @@ function SB.summary()
                 card.BackgroundTransparency = 0
                 Chip.apply(card, Theme.RarityColors[rank]:Lerp(WHITE, .5), INK)
             end
-            local holder = frame(card, "Dino", cell.w / 2, cell.h * .38, cell.w * .9, cell.h * .58, 4)
-            dinoView(e, holder, cell.w * .9, cell.h * .58, 5)
-            local name = frame(card, "Name", cell.w / 2, cell.h * .74, cell.w * .94, L.cardText + 6, 6)
+            local K = R.cardStack(cell.w, cell.h, L.cardText, L.chipText)
+            local holder = frame(card, "Dino", cell.w / 2, K.dinoCy, cell.w * .9, K.dinoH, 4)
+            dinoView(e, holder, cell.w * .9, K.dinoH, 5)
+            local name = frame(card, "Name", cell.w / 2, K.nameCy, cell.w * .96, K.nameH, 6)
             words(name, e.name or "", L.cardText, WHITE, INK, 7)
-            local chipH = L.chipText + 10
-            local tier = frame(card, "Tier", cell.w / 2, cell.h - chipH / 2 - cell.h * .04, math.min(cell.w * .9, R.wordWidth("UNCOMMON", L.chipText) + 14), chipH, 6)
-            tier.BackgroundTransparency = 0
-            Chip.apply(tier, Theme.RarityColors[rank], INK)
+            local tier = frame(card, "Tier", cell.w / 2, K.chipCy, math.min(cell.w * .9, R.wordWidth("UNCOMMON", L.chipText) + 14), K.chipH, 6)
+            kitFace(tier, Theme.RarityColors[rank], 6)
             words(tier, R.tierWord(Timeline.TierNames[rank]), L.chipText, WHITE, INK, 7)
         end
         pop(card, .1 + i * .06)
@@ -602,7 +659,8 @@ function SB.finish()
     clear(c.words)
     if c.buildTween then c.buildTween:Cancel() end
     for i = #c.restore, 1, -1 do pcall(c.restore[i]) end
-    if c.body.Parent then c.body:SetAttribute("HatchEggBoost", nil) end
+    for _, entry in c.layerSet do if entry.layer.Parent and entry.layer.Position == entry.set then entry.layer.Position = entry.base end end
+    if c.body.Parent then c.body:SetAttribute("HatchEggBoost", nil) c.body:SetAttribute("HatchEggShift", nil) end
     c.layer:Destroy()
     refreshKnown()
 end

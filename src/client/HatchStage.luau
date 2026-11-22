@@ -50,6 +50,7 @@ Stage.isNew = nil :: (() -> boolean)? -- one more reason for the NEW! sticker (a
 Stage.revealExtras = nil :: ((any, any, {() -> ()}, (GuiObject, number) -> ()) -> ())? -- colour + pattern chips instead of the colour dots
 Stage.onEnds = nil :: ((any, GuiObject, {() -> ()}) -> ())? -- the last egg's PLAY AGAIN / HOME row was placed
 Stage.onRestore = nil :: (() -> ())? -- the stage closes
+Stage.NextScale = 1 -- size of the reveal's NEXT
 function Stage.parts(): any return stageParts end
 
 local function painted(o: Instance, stop: Instance): GuiObject?
@@ -587,8 +588,9 @@ function Stage.reveal()
         local ok, Skin = pcall(require, Shared:WaitForChild("ToyboxSkin"))
         local next = Instance.new("TextButton")
         next.Name, next.Text, next.AutoButtonColor = "HatchStageNext", "NEXT", false
-        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250 * fitY, 66 * fitY), UDim2.fromOffset(hc.X, hc.Y)
-        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, math.max(20, math.floor(34 * fitY)), Color3.new(1, 1, 1), s.panel.ZIndex + 32
+        local big = Stage.NextScale -- BD-1288: the storyboard's NEXT is bigger (1 = as before)
+        next.AnchorPoint, next.Size, next.Position = Vector2.new(.5, .5), UDim2.fromOffset(250 * fitY * big, 66 * fitY * big), UDim2.fromOffset(hc.X, hc.Y)
+        next.BackgroundColor3, next.Font, next.TextSize, next.TextColor3, next.ZIndex = Color3.fromRGB(88, 200, 64), Enum.Font.FredokaOne, math.max(20, math.floor(34 * fitY * big)), Color3.new(1, 1, 1), s.panel.ZIndex + 32
         next.Parent = s.shade
         next.Activated:Connect(function()
             -- the same tap as on the egg (HatchSequence's StageTap), never the backdrop's close
