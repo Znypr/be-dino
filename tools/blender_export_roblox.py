@@ -74,7 +74,7 @@ def fbx_forward_axis(facing):
 
 
 def blender_command(blender, blend, out, rig=False, anim=False, apply_transforms=False, report=None, faces="+Y", embed_textures=False):
-    cmd = [blender, "--background", "--factory-startup", str(blend), "--python", str(SELF), "--", "--out", str(out), "--faces", faces]
+    cmd = [blender, "--background", "--factory-startup", str(blend), "--python", str(SELF), "--", "--out", str(out), "--faces=" + faces]  # "=": a bare "-Y" would read as an option
     if embed_textures:
         cmd.append("--embed-textures")
     if rig:
@@ -238,6 +238,18 @@ def inner_main(argv):
                 ob.select_set(True)
             bpy.context.view_layer.objects.active = meshes[0]
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    if args.faces == "+Y" and not use_rig:
+        # Roblox's importer IGNORES the FBX axis_forward: 2026-11-22 the Compy exported with forward Z and with -Z arrived identical,
+        # head at +Z (the Roblox back), so the animator's box joints sat at the wrong ends. Blender +Y always arrives as Roblox +Z,
+        # so a creature facing +Y is turned 180 degrees about Z here (real geometry) and then faces -Z, the Roblox front.
+        import math
+        from mathutils import Matrix
+        turn = Matrix.Rotation(math.pi, 4, "Z")
+        for ob in meshes:
+            if ob.parent is None:
+                ob.matrix_world = turn @ ob.matrix_world
+        bpy.context.view_layer.update()
+        print("Facing: turned %d top-level meshes 180 degrees about Z (+Y model -> Roblox -Z front)" % sum(1 for o in meshes if o.parent is None))
     if armatures:
         print("Rest pose: reset %d pose bones, actions unassigned" % reset_to_rest_pose(armatures))
         bpy.context.view_layer.update()
