@@ -54,13 +54,13 @@ local SCREENS = {{844, 390, "phone landscape"}, {667, 375, "small phone"}, {1280
 -- 1. RULES
 do
     assert(R.MinText >= 19)
-    assert(R.EggShare.want >= .35 and R.EggShare.want <= .45, "the egg is 35-45 % of the screen")
+    assert(R.EggShare.want >= .5 and R.EggShare.want <= .6, "the egg is about half the screen (storyboard panel 1)")
     for _, s in SCREENS do
         local w, h = s[1], s[2]
         -- the boost brings any drawn egg to the wanted share
         for _, drawn in {h * .2, h * .3, h * .38} do
             local tall = drawn * R.eggBoost(drawn, h)
-            assert(tall >= h * .35 and tall <= h * .45, s[3] .. ": the boosted egg is 35-45 % of the screen")
+            assert(tall >= h * .5 and tall <= h * .6, s[3] .. ": the boosted egg is about half the screen")
         end
         assert(R.eggBoost(0, h) == 1 and R.eggBoost(100, 0) == 1, "no geometry yet = no boost")
         local eggH, cx, cy = h * R.EggShare.want, w / 2, h * R.EggCentreY
@@ -73,7 +73,7 @@ do
             assert(L.plate.w >= R.wordWidth(word, L.plate.text) + L.plate.text * .5 or L.plate.cx + L.plate.w / 2 >= w - 17, s[3] .. ": the word fits its plate")
             assert(L.chip.cy > L.plate.cy, "the rarity chip is under the name")
             assert(L.plate.cx - L.plate.w / 2 >= cx + eggH * .3, s[3] .. ": the plate is right of the egg, not over it (" .. word .. ")")
-            assert(L.plate.text >= h * .07, s[3] .. ": the name is BIG")
+            assert(L.plate.text >= h * .065, s[3] .. ": the name is BIG")
         end
         -- the TAP under the egg, inside the screen, its word >= 19 px
         local tap = R.tapButton(w, h, cy, eggH)
@@ -342,12 +342,12 @@ def check_sources(overrides=None):
 
 
 MUTANTS = {
-    'the egg is small again': {RULES: [('R.EggShare = {min = .35, max = .45, want = .45}', 'R.EggShare = {min = .35, max = .45, want = .28}')]},
+    'the egg is small again': {RULES: [('R.EggShare = {min = .5, max = .6, want = .57}', 'R.EggShare = {min = .5, max = .6, want = .4}')]},
     'the colour name flashes by': {RULES: [('R.Paint = {leftStart = .35, rightStart = 1.25,', 'R.Paint = {leftStart = .35, rightStart = .9,')]},
     'the build-up drags': {RULES: [('R.BuildUp = .7', 'R.BuildUp = 1.4')]},
     'phone words under 19 px': {RULES: [('R.MinText = 19', 'R.MinText = 14')]},
     'the plate covers the egg': {RULES: [('local left = eggCx + eggH * .42 + math.max(12, eggH * .08)', 'local left = eggCx - eggH * .2')]},
-    'chips sit on the name plate': {RULES: [('chipsY = .8,', 'chipsY = .66,')]},
+    'chips sit on the name plate': {RULES: [('chipsY = .765,', 'chipsY = .66,')]},
     'the card name sits on the chip': {RULES: [('local nameCy = chipCy - chipH / 2 - 3 - nameH / 2', 'local nameCy = chipCy - nameH / 4')]},
     'the summary cards spill off the screen': {RULES: [('local areaL, areaR = w * .54, w - 16', 'local areaL, areaR = w * .54, w + 120')]},
     'the best find is the last egg': {RULES: [('if r > rank then best, rank = i, r end', 'if r >= rank then best, rank = i, r end')]},

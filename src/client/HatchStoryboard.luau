@@ -218,6 +218,7 @@ function SB.init(stage: any)
     Stage.HideCrystals = true
     Stage.Veil = SB.Veil
     Stage.VeilColor = SB.VeilColor
+    Stage.PlateText = 1.3
     for _, tier in Stage.Ladder do tier.veil = math.max(tier.veil, SB.Veil - .06) end -- the reveal keeps the world bright too
     for k, v in R.Reveal do Stage.Layout[k] = v end
     -- the paint flipbook sits on the big egg (its egg is EggShare.want of the screen tall)
@@ -594,7 +595,7 @@ function SB.summary()
         local big = frame(blocker, "Best", L.big.cx, L.big.cy, L.big.h * 1.1, L.big.h, 3)
         local ped = Instance.new("ImageLabel")
         ped.Name, ped.BackgroundTransparency, ped.Image, ped.ScaleType = "Pedestal", 1, Stage.Art.pedestal, Enum.ScaleType.Fit
-        ped.AnchorPoint, ped.Position, ped.Size, ped.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .16), UDim2.fromOffset(L.big.h * .8, L.big.h * .4), 3
+        ped.AnchorPoint, ped.Position, ped.Size, ped.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .06), UDim2.fromOffset(L.big.h * .8, L.big.h * .4), 3
         ped.ImageColor3 = tint:Lerp(WHITE, .35)
         ped.Parent = big
         local glow = Instance.new("ImageLabel")
@@ -602,7 +603,7 @@ function SB.summary()
         glow.AnchorPoint, glow.Position, glow.Size, glow.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .45), UDim2.fromOffset(L.big.h * 1.5, L.big.h * 1.5), 2
         glow.ImageColor3, glow.ImageTransparency = tint:Lerp(WHITE, .3), .25
         glow.Parent = big
-        dinoView(best, big, L.big.h * 1.54, L.big.h * 1.33, 4, .6) -- 1.4x (lead review 2026-11-22), under its ribbon
+        dinoView(best, big, L.big.h * 1.3, L.big.h * 1.15, 4, .52) -- 1.4x the first summary (lead review 2026-11-22): under its ribbon, its feet above the name plate
         local bw = math.min(L.big.h * 1.05, size.X * .3)
         local ribbon = Instance.new("ImageLabel")
         ribbon.Name, ribbon.BackgroundTransparency, ribbon.Image, ribbon.ScaleType = "Ribbon", 1, Stage.Art.ribbon, Enum.ScaleType.Fit
@@ -614,7 +615,7 @@ function SB.summary()
         local pw = math.min(L.big.h * .75, size.X * .22)
         local namePlate = Instance.new("ImageLabel")
         namePlate.Name, namePlate.BackgroundTransparency, namePlate.Image, namePlate.ScaleType = "NamePlate", 1, Stage.Art.plate, Enum.ScaleType.Fit
-        namePlate.AnchorPoint, namePlate.Position, namePlate.Size, namePlate.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, -L.big.h * .04), UDim2.fromOffset(pw, pw * 137 / 439), 6
+        namePlate.AnchorPoint, namePlate.Position, namePlate.Size, namePlate.ZIndex = Vector2.new(.5, .5), UDim2.new(.5, 0, 1, pw * 137 / 439 / 2), UDim2.fromOffset(pw, pw * 137 / 439), 6
         namePlate.Parent = big
         local nameWords = words(namePlate, best.name or "", math.floor(pw * 137 / 439 * .5), INK, nil, 7)
         nameWords.Position, nameWords.Size, nameWords.AnchorPoint = UDim2.fromScale(.5, .47), UDim2.fromScale(.8, .62), Vector2.new(.5, .5)
@@ -655,7 +656,11 @@ function SB.summary()
         local rowH = if ends.Size.Y.Offset > 0 then ends.Size.Y.Offset else 70
         if play and homeButton and play:IsA("GuiObject") and homeButton:IsA("GuiObject") then
             local was = {ends.Size, homeButton.Size, homeButton.Position, play.Position}
-            local bw, bh, gap = play.Size.X.Offset, play.Size.Y.Offset, 16
+            local bh, gap = play.Size.Y.Offset, 16
+            local bw = math.floor(size.X * R.EndButtonShare / math.max(.1, size.Y * R.EndRowShare / math.max(1, bh)) + .5) -- about 30 % of the width each, after the scale below
+            local wasPlay = play.Size
+            play.Size = UDim2.fromOffset(bw, bh)
+            table.insert(ctx.restore, function() play.Size = wasPlay end)
             play.Position, homeButton.Position, homeButton.Size = UDim2.fromOffset(0, 0), UDim2.fromOffset(bw + gap, 0), UDim2.fromOffset(bw, bh)
             local wasText = (homeButton :: any).TextSize
             if homeButton:IsA("TextButton") and play:IsA("TextButton") then homeButton.TextSize = play.TextSize end

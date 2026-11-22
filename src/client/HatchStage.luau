@@ -53,6 +53,7 @@ Stage.onEnds = nil :: ((any, GuiObject, {() -> ()}) -> ())? -- the last egg's PL
 Stage.onRestore = nil :: (() -> ())? -- the stage closes
 Stage.NextScale = 1 -- size of the reveal's NEXT
 Stage.PlateScale = 1 -- size of the reveal's name plate and pedestal
+Stage.PlateText = 1 -- the name's share of its plate (BD-1288: 1.3x bigger words)
 Stage.bucketRect = nil :: ((Vector2, number) -> (Vector2, number))? -- where a 3D paint bucket goes (shade px)
 function Stage.parts(): any return stageParts end
 
@@ -523,7 +524,7 @@ function Stage.reveal()
         local plate = art("HatchStagePlate", Stage.Art.plate, Vector2.new(plateW, plateH), plateC, s.panel.ZIndex + 31)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.BackgroundTransparency, nameLabel.AnchorPoint = 1, Vector2.new(.5, .5)
-        nameLabel.Position, nameLabel.Size, nameLabel.ZIndex = UDim2.fromScale(.5, .47), UDim2.fromScale(.8, .62), plate.ZIndex + 1
+        nameLabel.Position, nameLabel.Size, nameLabel.ZIndex = UDim2.fromScale(.5, .47), UDim2.fromScale(.8 * Stage.PlateText, .62 * Stage.PlateText), plate.ZIndex + 1
         nameLabel.Font, nameLabel.TextScaled, nameLabel.Text, nameLabel.TextColor3 = Enum.Font.FredokaOne, true, name, Stage.Ink
         local ns = Instance.new("UIStroke")
         ns.Color, ns.Thickness = Color3.new(1, 1, 1), 2.5
