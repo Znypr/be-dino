@@ -55,12 +55,12 @@ local function veil(gui: ScreenGui): () -> ()
 end
 
 -- The kit 2 header strip in pieces (Shared/ShopKit2.headerPieces): caps and stripes at the strip's height scale, the stud column tiled.
-local function header2(parent: Instance, colour: string, w: number, h: number): boolean
+local function header2(parent: Instance, colour: string, w: number, h: number, stripeAt: number?): boolean
     if not table.find(Kit2.HeaderColours, colour) then return false end -- BD-1296: a colour with no kit 2 strip is never drawn green
     local id = Kit2.image(Slots.Images, Kit2.headerSlot(colour))
     if not id then return false end
     local k = h / Kit2.Header.h
-    for i, p in Kit2.headerPieces(w, h) do
+    for i, p in Kit2.headerPieces(w, h, stripeAt) do
         local crop = {x = p.cropX, y = 0, w = p.cropW, h = Kit2.Header.h}
         if p.tile then Art.tiled(parent, "Strip" .. i, id, p.x, 0, p.w, h, 33, crop, p.cropW * k, h)
         else Art.picture(parent, "Strip" .. i, id, p.x, 0, p.w, h, 33, crop).ScaleType = Enum.ScaleType.Stretch end
@@ -123,7 +123,7 @@ local function draw(shade: GuiObject, gui: GuiBase2d, spec: any): Frame
     local header = Art.box(window, "KitHeader", hi, hi, headerW, lay.headerH, 33)
     local xInset = math.floor((lay.headerH - lay.close) / 2)
     local closeX = headerW - xInset - lay.close
-    if not header2(header, spec.colour, headerW, lay.headerH) and not headerCard(header, spec.colour, headerW, lay.headerH) then header1(header, spec.colour, headerW, lay.headerH, closeX + math.floor(lay.close / 2)) end
+    if not header2(header, spec.colour, headerW, lay.headerH, lay.stripeAt) and not headerCard(header, spec.colour, headerW, lay.headerH) then header1(header, spec.colour, headerW, lay.headerH, closeX + math.floor(lay.close / 2)) end
     local title = Art.words(header, "Title", spec.title, math.floor(lay.headerH * 0.2), -math.floor(lay.headerH * 0.04), headerW * 0.6, lay.headerH, lay.titleSize, 35)
     title.TextXAlignment = Enum.TextXAlignment.Left
     local closeId = Kit2.image(Slots.Images, Kit2.CloseSlot)

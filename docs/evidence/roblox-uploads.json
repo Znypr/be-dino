@@ -1622,6 +1622,26 @@
     "uploaded": "2026-11-22T18:17:05Z"
   },
   {
+    "assetId": "95783251087352",
+    "assetType": "Decal",
+    "displayName": "shop-tab-trails-v3",
+    "file": "shop-tab-trails-v3.png",
+    "bytes": 69844,
+    "sha256": "2bbb6e2656ae01663f75cbafde94e9f10c420fe9c5a317164894b38ed8922915",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T23:26:19Z"
+  },
+  {
+    "assetId": "114908676787760",
+    "assetType": "Decal",
+    "displayName": "shop-tab-auras-v3",
+    "file": "shop-tab-auras-v3.png",
+    "bytes": 131678,
+    "sha256": "59d3a7fba2bf724c2dad6eb32d25ca6565c132209fb12469950cc7ede7f24c05",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T23:26:25Z"
+  },
+  {
     "assetId": "89901460152216",
     "assetType": "Decal",
     "displayName": "shopkit2_button_green",
