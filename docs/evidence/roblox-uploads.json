@@ -1622,16 +1622,6 @@
     "uploaded": "2026-11-22T18:17:05Z"
   },
   {
-<<<<<<< HEAD
-    "assetId": "138676742704852",
-    "assetType": "Model",
-    "displayName": "Compy V3 soft no vertex colours",
-    "file": "Compy_V3_soft_novc.fbx",
-    "bytes": 433052,
-    "sha256": "6092dda39262cb81fc9208faf4d28cbab24a0b8ecf5dd7272d8d85ec63e1ff5b",
-    "moderation": "Approved",
-    "uploaded": "2026-11-23T00:01:34Z"
-=======
     "assetId": "95783251087352",
     "assetType": "Decal",
     "displayName": "shop-tab-trails-v3",
@@ -1810,7 +1800,6 @@
     "sha256": "bc7d7919fd5a82fcaeee0ec503bd3ca68ee71be88285c8c25733026e30744940",
     "moderation": "Approved",
     "uploaded": "2026-11-22T01:30:03Z"
->>>>>>> origin/main
   },
   {
     "assetId": "110481121294523",
@@ -1831,5 +1820,15 @@
     "sha256": "25dc17dadab7ebed581eaf01c55380c664c7a6a6aa4b65ccdfeff08407116041",
     "moderation": "Approved",
     "uploaded": "2026-11-22T22:18:52Z"
+  },
+  {
+    "assetId": "138676742704852",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft no vertex colours",
+    "file": "Compy_V3_soft_novc.fbx",
+    "bytes": 433052,
+    "sha256": "6092dda39262cb81fc9208faf4d28cbab24a0b8ecf5dd7272d8d85ec63e1ff5b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T00:01:34Z"
   }
 ]
