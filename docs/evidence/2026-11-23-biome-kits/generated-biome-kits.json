@@ -1,0 +1,247 @@
+{
+  "note": "BD-1315 biome kits (docs/250 S2): desert, tundra, volcano and the jungle ledge. Style guides: ChatGPT sheets (sheet-*-chatgpt.jpg) made from the approved vegetation v2 sheet and the biome grid; meshes = Roblox Studio generate_mesh with prompts written from those sheets, published to the owner's account 2026-11-23. tris = real face count (EditableMesh). Every piece checked close up in Studio under the owner's cohesion rule (docs/250 s8); rejects below. Owner 2026-11-23 second note: no stone rings or ground discs at plant bases, plant each biome like nature; all plants were regenerated with clean bases (clean-*.jpg) and KitDensity thins the small plants per biome. Rocks and spires sink 12% into the terrain (PropGround.RockSink), which buries a thin rim.",
+  "items": {
+    "veg2_desert_saguaro": {
+      "asset": 88215990023102,
+      "tris": 1190,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "tall round-armed saguaro cactus with pink flowers"
+    },
+    "veg2_desert_acacia": {
+      "asset": 98055641929016,
+      "tris": 1500,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "acacia tree with a wide flat umbrella canopy"
+    },
+    "veg2_desert_cactus_cluster": {
+      "asset": 73356820925066,
+      "tris": 1000,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "three fat round cacti with yellow flowers"
+    },
+    "veg2_desert_barrel": {
+      "asset": 73501662599786,
+      "tris": 798,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "squat barrel cactus with pink flowers"
+    },
+    "veg2_desert_fruit_cactus": {
+      "asset": 104357785768075,
+      "tris": 896,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "small cactus with red fruits"
+    },
+    "veg2_desert_grass": {
+      "asset": 137246578898278,
+      "tris": 400,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "dry golden grass tuft"
+    },
+    "veg2_desert_flowers": {
+      "asset": 94345384129402,
+      "tris": 500,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "pink and yellow desert flowers"
+    },
+    "veg2_desert_bones": {
+      "asset": 96210042686377,
+      "tris": 700,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "bleached dino rib bones in a sand mound"
+    },
+    "veg2_desert_spire": {
+      "asset": 133332310281004,
+      "tris": 1198,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "red striped mesa rock spire"
+    },
+    "veg2_desert_ledge": {
+      "asset": 78999617003904,
+      "tris": 1000,
+      "reference": "refs/ref-kit_desert.png",
+      "what": "low sandstone ledge with a small cactus"
+    },
+    "veg2_tundra_pine": {
+      "asset": 119655066986735,
+      "tris": 1198,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "snowy pine with soft snow caps"
+    },
+    "veg2_tundra_frost_tree": {
+      "asset": 94552299953576,
+      "tris": 1500,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "frosted tree, white trunk, snowy teal crown"
+    },
+    "veg2_tundra_berry_bush": {
+      "asset": 84346387380367,
+      "tris": 900,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "snowy holly bush with red berries"
+    },
+    "veg2_tundra_snow_mound": {
+      "asset": 123505817236731,
+      "tris": 600,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "soft snow mound with a green sprout"
+    },
+    "veg2_tundra_ice_crystals": {
+      "asset": 101643348157940,
+      "tris": 700,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "pale blue ice crystals in snow"
+    },
+    "veg2_tundra_grass": {
+      "asset": 125854880822565,
+      "tris": 400,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "frosty grass tuft"
+    },
+    "veg2_tundra_snowdrops": {
+      "asset": 132615553392343,
+      "tris": 500,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "white and lilac snowdrops"
+    },
+    "veg2_tundra_tusk": {
+      "asset": 118081433288326,
+      "tris": 600,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "old tusks sticking out of snow"
+    },
+    "veg2_tundra_boulder": {
+      "asset": 82576923565628,
+      "tris": 700,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "grey boulder with a snow cap"
+    },
+    "veg2_tundra_ice_spire": {
+      "asset": 100307921925448,
+      "tris": 998,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "tall ice spire of rounded blocks"
+    },
+    "veg2_tundra_ledge": {
+      "asset": 88617261219663,
+      "tris": 1000,
+      "reference": "refs/ref-kit_tundra.png",
+      "what": "low snowy rock outcrop with icicles"
+    },
+    "veg2_volcano_charred_tree": {
+      "asset": 136574200915810,
+      "tris": 1500,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "regrowing tree with a dark trunk and fresh green leaves"
+    },
+    "veg2_volcano_stump": {
+      "asset": 99559384947949,
+      "tris": 798,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "charcoal stump with a green sprout"
+    },
+    "veg2_volcano_fire_fern": {
+      "asset": 117623704015728,
+      "tris": 900,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "fire-coloured fern shrub"
+    },
+    "veg2_volcano_crystals": {
+      "asset": 107214976859144,
+      "tris": 700,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "amber crystals on dark rocks"
+    },
+    "veg2_volcano_ash_grass": {
+      "asset": 90131431323706,
+      "tris": 400,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "ash grass with warm tips"
+    },
+    "veg2_volcano_fire_flowers": {
+      "asset": 87669606566547,
+      "tris": 500,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "red-orange fire flowers"
+    },
+    "veg2_volcano_ledge": {
+      "asset": 129149613550662,
+      "tris": 1000,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "cooled lava rock ledge with ash and a red-leaf plant"
+    },
+    "veg2_jungle_ledge": {
+      "asset": 79977803283463,
+      "tris": 1000,
+      "reference": "refs/ref-jungle_ledge.png",
+      "what": "mossy jungle rock ledge with vines"
+    },
+    "veg2_volcano_red_tree": {
+      "asset": 99058049156741,
+      "tris": 1500,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "slender twisty tree with a round crown of red leaves"
+    },
+    "veg2_volcano_boulder": {
+      "asset": 93625416188101,
+      "tris": 700,
+      "reference": "refs/ref-kit_volcano.png",
+      "what": "ash-dusted pumice boulder with a fern sprout"
+    }
+  },
+  "rejected": {
+    "121141223337833": "desert cactus cluster on a slab",
+    "126850104342056": "barrel came out as a mini saguaro",
+    "115467993942994": "prickly pear without pads",
+    "110282373812854": "tumbleweed like a pumpkin",
+    "92152452713801": "pot-shaped boulder",
+    "137976661330614": "acacia with a small canopy",
+    "90942164601198": "sage bush on a flat slab",
+    "132760020583939": "boulder like a bread loaf",
+    "87196363994188": "rock on a slab",
+    "110748394106291": "berry bush of stacked balls",
+    "113045624870710": "tusk came out as an animal",
+    "122748020953908": "black box boulder",
+    "70962939558234": "ledge like an iced cake",
+    "93473899953687": "ledge blob with an eye",
+    "88004325780539": "charred tree with door-like holes",
+    "107412635513294": "fire shrub like pumpkins",
+    "134977633247880": "boulder like a spotted shell",
+    "89196633563457": "jungle spire like a candle",
+    "75446404960997": "jungle pillar of pink balls",
+    "103637028501893": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "82607931125617": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "80767760637689": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "94255418892570": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "89701904051299": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "114585329118265": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "96333564006552": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "77400917797387": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "119530302594360": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "98353028712797": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "133825371174695": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "102824556511923": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "111824447177875": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "91707705886479": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "95976718991574": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "90890604253686": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "134387028151026": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "137548860986422": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "140724925314149": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "93881134193926": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "80012137217335": "baked stone ring / sand or snow disc at the base (owner 2026-11-23: no stones at plant bases); replaced by a clean-base version",
+    "89315015346904": "hoodoo of stacked discs (cake-like)",
+    "133332310281004_note": "kept: the mesa spire keeps a few fallen rocks at its foot on purpose (natural talus, as in the ChatGPT desert sheet)",
+    "76087463220269": "basalt spire on a base plate",
+    "135376465148368": "ice spire of stacked cubes",
+    "88576104332664": "mesa spire as a smooth cone",
+    "129778096488540": "desert grass that reads as fire",
+    "105742366145439": "veg2_volcano_ember_tree: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "100193709905624": "veg2_volcano_lava_rock: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "86233854641616": "veg2_volcano_lava_pool: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "93694067900827": "veg2_volcano_spire: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "85205781798394": "veg2_volcano_charred_tree: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "107954387073847": "veg2_volcano_stump: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "88145110904084": "veg2_volcano_ledge: painted fire / embers / glowing lava in the mesh look flat and static (owner 2026-11-23); removed from the kit",
+    "95993292890453": "basalt spire of plain purple boxes (geometric)"
+  }
+}
