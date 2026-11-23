@@ -44,3 +44,10 @@ to the owner first; phone part budget; food maps regenerated if placements chang
 failed the food spread rule.
 
 More trees: raise the tree layer (chance and cap) by about 25%, most in the meadow and the beach, after the remodels, within `BiomePlacement.PartBudget` and the `verify_world_art` triangle checks.
+
+## Cohesion rule (owner 2026-11-23)
+"Make sure the maps / biomes and vegetation look realistic and cohesive for the game we are building, like a plant pot wouldn't make any
+sense, unless it's part of a shop decoration." Every kit piece is checked close up in Studio before it is wired: it must grow from the
+ground or sit on it, with no pots, stands, base plates or foreign objects, and it must match its biome kit's palette and chunkiness.
+Rejected for this rule so far: the potted elephant ear (100877600173393), the rock like a cake pot (118201682667163) and the fern on
+a dirt bulb (99395664937835), none of them used.
