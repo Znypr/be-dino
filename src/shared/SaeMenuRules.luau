@@ -26,6 +26,9 @@ M.PotionSpec = {
         strip = {6.0, 72.5, 87.5, 10.7}, price = {3.5, 85.0, 92.5, 13.0}},
     rail = {x = 102.7, y = 1.5, w = 11.4, h = 16.5, pitch = 17.5},
     titleCap = 7.56, timerCap = 4.46, nameCap = 5.81, rarityCap = 2.91, badgeCap = 2.91, stripCap = 3.4, capShare = 0.7, stripeAt = 0.48,
+    -- the dark outline round the words, % of the window height (the picture measures stroke + drop: title 1.74, names 1.16-1.36,
+    -- timer and rarity 1.16, the count about 1)
+    outline = {title = 1.2, timer = 0.8, name = 1.0, rarity = 0.9, badge = 0.5}, -- the checker reads stroke + drop: about 0.55 % over these
 }
 M.Potion = {perPage = 3}
 -- bar: lead polish 2026-11-23 (ChatGPT round 1): 24-28 px at 720 p (docs/246 said 5 % H)
@@ -201,6 +204,9 @@ function M.potionLayout(w: number, guiH: number, inset: number?)
         window = win, headerInset = headerInset, headerH = headerH, close = close, titleSize = titleSize, stripeAt = S.stripeAt,
         cards = cards, title = title, timer = timer, page = page, timerMine = timerMine, pageMine = pageMine,
         parts = {name = name, rarity = rarity, badge = badge, art = art, strip = strip, price = price}, rail = railSlots,
+        outline = {title = math.max(3, round(S.outline.title / 100 * winH)), timer = math.max(3, round(S.outline.timer / 100 * winH)),
+            name = math.max(3, round(S.outline.name / 100 * winH)), rarity = math.max(3, round(S.outline.rarity / 100 * winH)),
+            badge = math.max(3, round(S.outline.badge / 100 * winH))},
     }
 end
 

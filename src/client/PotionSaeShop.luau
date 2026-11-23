@@ -23,7 +23,6 @@ local TimerWords = require(Shared.TimerWords)
 local Art = require(script.Parent.KitArt)
 local KitWindow = require(script.Parent.KitWindow)
 local KitButton = require(script.Parent.KitButton)
-local KitStrip = require(script.Parent.KitStrip)
 local KitRail = require(script.Parent.KitRail)
 local Landing = require(script.Parent.ShopSaeLanding)
 
@@ -51,9 +50,20 @@ end
 -- The rail icons: the picture's purple swirl (Trails) and purple ring (Auras) on this screen, the shop tab icons otherwise (Featured keeps
 -- the crystals: there is no red %-tag art).
 local RailArt = {trails = "potion_rail_trails", auras = "potion_rail_auras"}
+local RailCrop = {trails = {38, 37, 435}, auras = {37, 38, 435}} -- x, y, side in picture px of the 512 px art (its drawn part)
 local function railIcon(tab: string): string?
     local slot = RailArt[tab]
     return (if slot then ShopArt.validId((Slots.Images :: any)[slot]) else nil) or Landing.tabIcon(tab)
+end
+
+-- The picture's outline thickness on a kit word (KitArt.words draws a main and a drop copy, both outlined).
+local function outline(label: TextLabel?, px: number): TextLabel?
+    if not label or not label.Parent then return label end
+    for _, l in {label, label.Parent:FindFirstChild(label.Name .. "Drop")} do
+        local s = if l then l:FindFirstChildOfClass("UIStroke") else nil
+        if s then s.Thickness = px end
+    end
+    return label
 end
 
 local function mark(o: Instance?, id: string)
@@ -62,19 +72,20 @@ end
 
 -- One potion card at r (window px) with the parts of lay.parts (card px): the kit 2 rarity card, the name, the rarity word, the count,
 -- the picture, the strip, the button. c = {key, rarity, name, picture, effect, count?, price?, word?, grey?, gem?, onPick}.
-local function card(window: Frame, i: number, r: any, P: any, c: any)
+local function card(window: Frame, i: number, r: any, P: any, O: any, c: any)
     local id = "card" .. i
     local holder = Art.box(window, "KitCard_" .. c.key, r.x, r.y, r.w, r.h, 34)
     mark(holder, id)
     local slot = Kit2.cardSlot(c.rarity)
     local studK = r.w / Kit2.Studded[slot].w
-    Art.studded(holder, "Face", slot, 0, 0, r.w, r.h, 34, studK * 0.7, studK)
+    Art.studded(holder, "Face", slot, 0, 0, r.w, r.h, 34, studK * 0.2, studK) -- the picture's thin dark card edge (about a third of the kit outline)
     Art.tap(holder, "Tap", 0, 0, r.w, r.h, 35, c.onPick)
     local n, rw, b, a, s, p = P.name, P.rarity, P.badge, P.art, P.strip, P.price
-    mark(Art.words(holder, "Name", c.name, n.x, n.y, n.w, n.h, FrameRules.fitSize(c.name, n.w, n.size), 38), id .. ".name")
-    mark(Art.words(holder, "Rarity", c.rarity, rw.x, rw.y, rw.w, rw.h, FrameRules.fitSize(c.rarity, rw.w + 20, rw.size), 38), id .. ".rarity")
+    mark(outline(Art.words(holder, "Name", c.name, n.x, n.y, n.w, n.h, FrameRules.fitSize(c.name, n.w, n.size), 38), O.name), id .. ".name")
+    mark(outline(Art.words(holder, "Rarity", c.rarity, rw.x, rw.y, rw.w, rw.h, FrameRules.fitSize(c.rarity, rw.w + 20, rw.size), 38), O.rarity), id .. ".rarity")
     if c.count then
         local count = Art.words(holder, "Badge", c.count, b.x, b.y, b.w, b.h, b.size, 38)
+        outline(count, O.badge)
         count.TextXAlignment = Enum.TextXAlignment.Right
         mark(count, id .. ".badge")
     end
@@ -83,10 +94,15 @@ local function card(window: Frame, i: number, r: any, P: any, c: any)
         -- fill the box height like the picture
         local box = Art.box(holder, "Art", a.x, a.y, a.w, a.h, 36)
         mark(box, id .. ".art")
-        local side = math.floor(a.h / 0.85 + 0.5)
+        local side = math.floor(a.h / 0.845 + 0.5)
         Art.picture(box, "Picture", c.picture, math.floor((a.w - side) / 2), math.floor((a.h - side) / 2), side, side, 36)
     end
-    mark(KitStrip.draw(holder, "Strip", s.x, s.y, s.w, s.h, 37, {text = c.effect, textSize = s.size}), id .. ".strip")
+    -- the dark kit strip with the picture's thin, nearly square edge (the kit outline at half size), the kid words on it
+    local strip = Art.box(holder, "Strip", s.x, s.y, s.w, s.h, 37)
+    local k = s.h / Kit2.Studded[Kit2.StripSlot].h
+    Art.studded(strip, "Face", Kit2.StripSlot, 0, 0, s.w, s.h, 37, k * 0.5, k)
+    Art.words(strip, "Line", c.effect, 0, -math.floor(s.h * 0.05), s.w, s.h, FrameRules.fitSize(c.effect, s.w - 14, s.size), 38)
+    mark(strip, id .. ".strip")
     mark(KitButton.draw(holder, "Button", p.x, p.y, p.w, p.h, 37, {price = c.price, word = c.word, grey = c.grey, gem = c.gem,
         textSize = p.size, iconSize = math.floor(p.h * 0.72), onPress = c.onPick}), id .. ".price")
 end
@@ -153,14 +169,14 @@ function M.build(body: GuiObject, d: any): boolean
                     local dy = if drop and drop:IsA("TextLabel") then drop.Position.Y.Offset - main.Position.Y.Offset else 0
                     main.Position, main.Size = UDim2.fromOffset(t.x - hi, t.y - hi), UDim2.fromOffset(t.w, t.h)
                     if drop and drop:IsA("TextLabel") then drop.Position, drop.Size = UDim2.fromOffset(t.x - hi, t.y - hi + dy), UDim2.fromOffset(t.w, t.h) end
-                    mark(main, "title")
+                    mark(outline(main, lay.outline.title), "title")
                 end
             end
             -- in the header: the yellow restock words, the page arrow left of the X
             local t = if mine then lay.timerMine else lay.timer
             local c = Menu.TimerColour
             live.restock = Art.words(window, "Restock", restockWords(d.window), t.x, t.y, t.w, t.h, t.size, 36, Color3.fromRGB(c[1], c[2], c[3]))
-            mark(live.restock, "timer")
+            mark(outline(live.restock, lay.outline.timer), "timer")
             local g = if mine then lay.pageMine else lay.page
             KitButton.draw(window, "PageButton", g.x, g.y, g.w, g.h, 36, {word = Menu.PageWord, grey = true, textSize = g.text, onPress = function()
                 state.page = if state.page < pages then state.page + 1 else 1
@@ -168,7 +184,7 @@ function M.build(body: GuiObject, d: any): boolean
             end})
             for i, data in cards do
                 local r = lay.cards[i]
-                if r then card(window, i, r, lay.parts, data) end
+                if r then card(window, i, r, lay.parts, lay.outline, data) end
             end
             if mine and #cards == 0 then
                 local r1, r3 = lay.cards[1], lay.cards[3]
@@ -183,6 +199,12 @@ function M.build(body: GuiObject, d: any): boolean
                     tabs = {tab}, words = Menu.PotionRailWords, selected = "potions", icon = railIcon,
                     onTab = function(picked: string) if picked ~= "potions" then d.onTab(picked) end end,
                 })
+                -- the purple swirl / ring art has a wide clear margin: show its square middle so it reads as big as the other icons
+                local crop = RailCrop[tab]
+                local art = slot:FindFirstChild("KitTabIcon_" .. tab)
+                if crop and art and art:IsA("ImageLabel") and RailArt[tab] and art.Image == ShopArt.validId((Slots.Images :: any)[RailArt[tab]]) then
+                    art.ImageRectOffset, art.ImageRectSize = Vector2.new(crop[1], crop[2]), Vector2.new(crop[3], crop[3])
+                end
             end
         end,
     }
