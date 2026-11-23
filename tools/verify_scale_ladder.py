@@ -33,7 +33,7 @@ MEASURED = {
     'tyrannosaurus': (5.83, 10.62, 11.43),  # BD-992: SCALED_FROM_STUDIO (the BD-232 Studio box 5.31 x 9.67 x 10.41 at scale 3.47, now scale 3.81)
     'raptor': (3.49, 6.60, 7.74),
     'stegosaurus': (5.25, 7.25, 11.70),
-    'ankylosaurus': (5.77, 6.51, 10.68),  # BD-992: SCALED_FROM_STUDIO (the BD-232 Studio box 7.78 x 8.78 x 14.40 at scale 3.6, now scale 2.67)
+    'ankylosaurus': (6.95, 5.88, 9.90),  # BD-1307: V5 model, Studio box 3.82 x 3.23 x 5.44 at scale 1 x 1.82
     'archaeopteryx': (7.17, 5.31, 5.92),
     'baryonyx': (3.99, 7.99, 9.33),
     'brachiosaurus': (3.73, 8.00, 8.73),
@@ -41,10 +41,10 @@ MEASURED = {
     'elasmosaurus': (3.95, 8.78, 10.74),
     'gallimimus': (2.42, 6.61, 7.78),
     'ichthyosaurus': (4.89, 5.57, 11.13),
-    'microraptor': (7.11, 4.56, 5.29),
+    'microraptor': (3.71, 6.15, 7.52),  # BD-1307: V5 model, Studio box 1.81 x 3.00 x 3.67 at scale 1 x 2.05
     'mosasaurus': (5.48, 5.77, 16.92),
     'pachycephalosaurus': (4.51, 7.25, 8.43),
-    'parasaurolophus': (5.30, 7.27, 9.09),
+    'parasaurolophus': (3.15, 7.26, 9.70),  # BD-1307: V5 model, Studio box 1.30 x 3.00 x 4.01 at scale 1 x 2.42
     'plesiosaurus': (4.66, 7.74, 8.34),
     'pteranodon': (7.07, 4.62, 6.89),
     'quetzalcoatlus': (8.20, 6.12, 8.04),
@@ -61,7 +61,7 @@ SECRET_BOXES = {
     'dodo': (3.81, 6.61, 6.92),  # MEASURED at scale 1 1.1 x 1.91 x 2 (docs/173) x 3.46
     'duck': (4.39, 6.61, 6.06),  # MEASURED at scale 1 1.45 x 2.18 x 2 (docs/173) x 3.03
     'penguin': (5.81, 6.19, 4.76),  # MEASURED at scale 1 2.44 x 2.6 x 2 (docs/173) x 2.38
-    'budgiesaurus': (3.60, 6.60, 7.12),  # MEASURED at scale 1 4 x 7.33 x 7.91 (docs/173) x 0.9
+    'budgiesaurus': (4.61, 6.09, 6.09),  # MEASURED at scale 1 2.27 x 3 x 3 (docs/173) x 2.03
     'foxosaurus': (3.00, 6.64, 6.32),  # MEASURED (BD-602 v2 Place 1 box 3.8 x 8.4 x 8.0 at scale 1) x 0.79
     'cockatoosaurus': (3.80, 6.66, 6.74),  # MEASURED at scale 1 3.427 x 6 x 6.07 (docs/173) x 1.11
     'eaglesaurus': (4.00, 5.52, 7.75),  # MEASURED at scale 1 4 x 5.518 x 7.747 (docs/173) x 1.0
@@ -73,7 +73,6 @@ SECRET_SIZE_TIER = 1  # SS8: every secret is sized as a tier 1 (Compy-sized) fin
 # verifiers keep one source of boxes. Remove the entry here (and set measured = true) once the real box is read.
 SCALED_FROM_STUDIO = {
     'tyrannosaurus': ((5.31, 9.67, 10.41), 3.47, 3.81),
-    'ankylosaurus': ((7.78, 8.78, 14.40), 3.6, 2.67),
 }
 ALL_BOXES = {**MEASURED, **SECRET_BOXES}  # the 22 shipped species + the 7 secrets
 TOLERANCE = 0.02  # BD-232: allowed relative gap between a species size and the 10%-per-tier rule

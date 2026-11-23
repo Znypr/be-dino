@@ -9,6 +9,11 @@ Recolor.Base = {
     compy = {0.37, 0.58, 0.32},
     raptor = {0.80, 0.49, 0.36},
     triceratops = {0.59, 0.30, 0.13},
+    -- BD-1307: the V5 models (body-weighted average of the baked Body texture, same bodyWeight rule as below)
+    ankylosaurus = {0.70, 0.54, 0.33},
+    parasaurolophus = {0.86, 0.47, 0.42},
+    microraptor = {0.21, 0.38, 0.59},
+    budgiesaurus = {0.53, 0.73, 0.12},
 }
 local DEFAULT_BASE = {0.5, 0.5, 0.5}
 local function smooth(x: number, a: number, b: number): number

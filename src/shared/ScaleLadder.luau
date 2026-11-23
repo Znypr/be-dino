@@ -55,7 +55,7 @@ ScaleLadder.Dino = {
         tyrannosaurus = {scale = 3.81, tier = 5, basis = "height", target = 10.63, width = 5.83, height = 10.62, length = 11.43, snout = 5.71, headLength = 5.63, measured = false}, -- BD-992: the KING, one step above tier 5; box = the BD-232 Studio box x 3.81 / 3.47 (not re-read in Studio)
         raptor = {scale = 1.65, tier = 1, basis = "height", target = 6.60, width = 3.49, height = 6.60, length = 7.74, snout = 3.87, headLength = 2.80, measured = true},
         stegosaurus = {scale = 3.9, tier = 2, basis = "height", target = 7.26, width = 5.25, height = 7.25, length = 11.70, snout = 5.85, headLength = 2.55, measured = true},
-        ankylosaurus = {scale = 2.67, tier = 4, basis = "bulk", target = 7.38, width = 5.77, height = 6.51, length = 10.68, snout = 5.34, headLength = 3.83, measured = false}, -- BD-992: Armored is sized by bulk (squat, wide); box = the BD-232 Studio box x 2.67 / 3.6 (not re-read in Studio)
+        ankylosaurus = {scale = 1.82, tier = 4, basis = "bulk", target = 7.38, width = 6.95, height = 5.88, length = 9.90, snout = 4.95, headLength = 1.87, measured = true}, -- BD-1307: V5 model, Studio box 3.82 x 3.23 x 5.44 at scale 1 (2026-11-23) x 1.82
         archaeopteryx = {scale = 1.77, tier = 2, basis = "bulk", target = 6.10, width = 7.17, height = 5.31, length = 5.92, snout = 2.96, headLength = 1.34, measured = true},
         baryonyx = {scale = 3.11, tier = 3, basis = "height", target = 7.99, width = 3.99, height = 7.99, length = 9.33, snout = 4.67, headLength = 3.82, measured = true},
         brachiosaurus = {scale = 2.91, tier = 3, basis = "height", target = 7.99, width = 3.73, height = 8.00, length = 8.73, snout = 4.37, headLength = 3.52, measured = true},
@@ -63,10 +63,10 @@ ScaleLadder.Dino = {
         elasmosaurus = {scale = 3.58, tier = 4, basis = "height", target = 8.78, width = 3.95, height = 8.78, length = 10.74, snout = 5.37, headLength = 4.38, measured = true},
         gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, snout = 3.89, headLength = 2.52, measured = true},
         ichthyosaurus = {scale = 3.71, tier = 3, basis = "bulk", target = 6.71, width = 4.89, height = 5.57, length = 11.13, snout = 5.57, headLength = 5.11, measured = true},
-        microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, snout = 2.31, headLength = 0.32, measured = true},
+        microraptor = {scale = 2.05, tier = 1, basis = "bulk", target = 5.55, width = 3.71, height = 6.15, length = 7.52, snout = 3.76, headLength = 3.96, measured = true}, -- BD-1307: V5 model, Studio box 1.81 x 3.00 x 3.67 at scale 1 (2026-11-23) x 2.05
         mosasaurus = {scale = 5.64, tier = 5, basis = "bulk", target = 8.12, width = 5.48, height = 5.77, length = 16.92, snout = 8.46, headLength = 4.37, measured = true},
         pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, snout = 4.21, headLength = 3.54, measured = true},
-        parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, snout = 4.54, headLength = 3.94, measured = true},
+        parasaurolophus = {scale = 2.42, tier = 2, basis = "height", target = 7.26, width = 3.15, height = 7.26, length = 9.70, snout = 4.85, headLength = 5.15, measured = true}, -- BD-1307: V5 model, Studio box 1.30 x 3.00 x 4.01 at scale 1 (2026-11-23) x 2.42
         plesiosaurus = {scale = 2.78, tier = 3, basis = "bulk", target = 6.71, width = 4.66, height = 7.74, length = 8.34, snout = 4.17, headLength = 3.92, measured = true},
         pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, snout = 3.45, headLength = 2.29, measured = true},
         quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, snout = 4.02, headLength = 3.41, measured = true},
@@ -89,7 +89,7 @@ ScaleLadder.Dino = {
             dodo = {scale = 3.46, tier = 1, basis = "height", target = 6.60, width = 3.81, height = 6.61, length = 6.92, snout = 3.46, headLength = 1.52, measured = true},
             duck = {scale = 3.03, tier = 1, basis = "height", target = 6.60, width = 4.39, height = 6.61, length = 6.06, snout = 3.03, headLength = 1.33, measured = true},
             penguin = {scale = 2.38, tier = 1, basis = "bulk", target = 5.55, width = 5.81, height = 6.19, length = 4.76, snout = 2.38, headLength = 1.05, measured = true},
-            budgiesaurus = {scale = 0.9, tier = 1, basis = "bulk", target = 5.55, width = 3.60, height = 6.60, length = 7.12, snout = 3.56, headLength = 1.57, measured = true},
+            budgiesaurus = {scale = 2.03, tier = 1, basis = "bulk", target = 5.55, width = 4.61, height = 6.09, length = 6.09, snout = 3.04, headLength = 3.25, measured = true},
             foxosaurus = {scale = 0.79, tier = 1, basis = "height", target = 6.60, width = 3.00, height = 6.64, length = 6.32, snout = 3.16, headLength = 1.39, measured = true},
             cockatoosaurus = {scale = 1.11, tier = 1, basis = "bulk", target = 5.55, width = 3.80, height = 6.66, length = 6.74, snout = 3.37, headLength = 1.48, measured = true},
             eaglesaurus = {scale = 1.0, tier = 1, basis = "bulk", target = 5.55, width = 4.00, height = 5.52, length = 7.75, snout = 3.88, headLength = 1.71, measured = true},
