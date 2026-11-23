@@ -215,5 +215,6 @@
  "python tools/verify_world_layer.py --runner /tmp/luau/luau": 0.3,
  "python tools/verify_world_look.py --runner /tmp/luau/luau": 0.1,
  "python tools/verify_world_overlap.py --runner /tmp/luau/luau": 0.7,
- "python tools/verify_world_props.py --runner /tmp/luau/luau": 23.2
+ "python tools/verify_world_props.py --runner /tmp/luau/luau": 23.2,
+ "python tools/verify_biome_rotation.py --runner /tmp/luau/luau": 0.3
 }

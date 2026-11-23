@@ -200,7 +200,10 @@ local function muteDefaultAnimate(character: Model): boolean
     return true
 end
 
-local function pivotFor(role: string, size: Vector3, side: number): Vector3
+local function pivotFor(role: string, size: Vector3, side: number, joint: Vector3?): Vector3
+    -- BD-1307: a model built with its own head/tail joint (Blender origin at the centre of the neck/tail cut, kept as the MeshPart PivotOffset,
+    -- stored by LowPolyDinos.clone as a fraction of the part size) turns there; the box-corner guesses below are for the generated models.
+    if joint and (role == "head" or role == "tail" or role == "neck") then return joint * size end
     if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
     if role == "head" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck, bottom back
     if role == "tail" then return Vector3.new(0, 0, -size.Z / 2) end -- tail root: the front (-Z) end meets the body
@@ -215,7 +218,7 @@ local function collect(visual: Model): {any}
         local weld = if part:IsA("MeshPart") then part:FindFirstChild("ResourceWeld") else nil
         if weld and weld:IsA("Weld") then
             table.insert(list, {part = part, weld = weld, role = part:GetAttribute("LPRole") or "body",
-                side = part:GetAttribute("LPSide") or 1, lead = part:GetAttribute("LPLead") == true})
+                side = part:GetAttribute("LPSide") or 1, lead = part:GetAttribute("LPLead") == true, joint = part:GetAttribute("LPJoint")})
         end
     end
     return list
@@ -319,7 +322,7 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
-            local pivot = pivotFor(item.role, part.Size, item.side)
+            local pivot = pivotFor(item.role, part.Size, item.side, item.joint)
             -- Joint pivot rotation (the anchor never moves, no stretch) + shared whole-body bob + head peck forward in studs (-Z), both
             -- expressed in the part's own frame through the weld's rest rotation.
             local lift = 0 -- BD-556: a Water flipper pivots at mid height and its tip dipped up to 0.3 stud into the ground: hold the lowest corner at its rest height

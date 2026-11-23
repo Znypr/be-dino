@@ -91,12 +91,12 @@ class ApplyTests(unittest.TestCase):
         nine = (("foxosaurus", 112996440434481, (3.8, 8.4, 8.0), "v2"), ("chickosaurus", 108391746824463, (1.28, 2.16, 2.00), "v3"),
                  ("pigeon", 83982208995212, (1.82, 2.31, 2.00), "v3"), ("dodo", 128146035116312, (1.10, 1.91, 2.00), "v3"),
                  ("duck", 129901658996389, (1.45, 2.18, 2.00), "v3"), ("penguin", 120950430829492, (2.44, 2.60, 2.00), "v3"),
-                 ("budgiesaurus", 107910518074360, (4.00, 7.33, 7.91), "v2"),
+                 ("budgiesaurus", 81211624431392, (2.27, 3.00, 3.00), "v5"),  # BD-1307: V5 Hunyuan model (was v2 107910518074360 at 4.00 x 7.33 x 7.91)
                  ("cockatoosaurus", 77920946493998, (3.427, 6.000, 6.070), "v1"), ("eaglesaurus", 116840996663024, (4.000, 5.518, 7.747), "v1"))
         root = scratch()
         try:
             for species, asset, box, version in nine:
-                bind.apply(species, asset, box, None, version, True, root)
+                bind.apply(species, asset, box, {"budgiesaurus": 1.60}.get(species), version, True, root)  # BD-1307: V5 head part measured
             for rel in (bind.CONFIG, bind.REGISTRY, bind.LADDER, bind.BOUND):
                 self.assertEqual((root / rel).read_text(encoding="utf-8"), (ROOT / rel).read_text(encoding="utf-8"), rel)
         finally:

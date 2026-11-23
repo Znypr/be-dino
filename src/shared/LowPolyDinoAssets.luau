@@ -18,6 +18,8 @@
 -- Config.SpeciesRarities. History: BD-225 first used scale = 2.0 * 1.1^(tier - 1) * shape; the Studio boxes (BD-471) showed that shape
 -- guess broke the owner rule (Stegosaurus 4.9, Mosasaurus 3.3 and Ichthyosaurus 3.5 below the 6.6 Compy, Raptor above Triceratops,
 -- Therizinosaurus above the T-Rex).
+-- BD-1307 (owner 2026-11-23 "Yes, wire them in"): ankylosaurus, microraptor, parasaurolophus and budgiesaurus are the V5 Hunyuan models
+-- (tools/hy_dino.py, docs/169 section 8; v1/v2 ids: anky 125812700099310, micro 137027841072493, para 125203763120290, budgie 107910518074360).
 return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
     -- BD-1291 candidate (owner 2026-11-22: dinos parked, NOT live): Compy V3 soft 122878777932897 (Hunyuan shape, facing fixed); a
@@ -26,7 +28,7 @@ return {
     tyrannosaurus = {assetId = 70893952304488, version = "v1", scale = 3.81, tier = 5, class = "Ground"},
     raptor = {assetId = 83260397513385, version = "v1", scale = 1.65, tier = 1, class = "Ground"},
     stegosaurus = {assetId = 92335618053209, version = "v1", scale = 3.9, tier = 2, class = "Ground"},
-    ankylosaurus = {assetId = 125812700099310, version = "v1", scale = 2.67, tier = 4, class = "Armored"},
+    ankylosaurus = {assetId = 71224485443187, version = "v5", scale = 1.82, tier = 4, class = "Armored"},
     archaeopteryx = {assetId = 108659121473793, version = "v1", scale = 1.77, tier = 2, class = "Fly"},
     baryonyx = {assetId = 131708938808155, version = "v1", scale = 3.11, tier = 3, class = "Ground"},
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 2.91, tier = 3, class = "Ground"},
@@ -34,10 +36,10 @@ return {
     elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 3.58, tier = 4, class = "Ground"},
     gallimimus = {assetId = 99873366835296, version = "v1", scale = 3.89, tier = 1, class = "Ground"},
     ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 3.71, tier = 3, class = "Water"},
-    microraptor = {assetId = 137027841072493, version = "v1", scale = 1.52, tier = 1, class = "Fly"},
+    microraptor = {assetId = 89552849463606, version = "v5", scale = 2.05, tier = 1, class = "Fly"},
     mosasaurus = {assetId = 116180724806366, version = "v1", scale = 5.64, tier = 5, class = "Water"},
     pachycephalosaurus = {assetId = 75417530223759, version = "v1", scale = 2.81, tier = 2, class = "Ground"},
-    parasaurolophus = {assetId = 125203763120290, version = "v1", scale = 3.03, tier = 2, class = "Ground"},
+    parasaurolophus = {assetId = 80788415993379, version = "v5", scale = 2.42, tier = 2, class = "Ground"},
     plesiosaurus = {assetId = 107885207120586, version = "v1", scale = 2.78, tier = 3, class = "Water"},
     pteranodon = {assetId = 101283644467729, version = "v1", scale = 1.54, tier = 2, class = "Fly"},
     quetzalcoatlus = {assetId = 126028097030256, version = "v1", scale = 2.04, tier = 4, class = "Fly"},
@@ -50,7 +52,7 @@ return {
     dodo = {assetId = 128146035116312, version = "v3", scale = 3.46, tier = 1, class = "Ground"},
     duck = {assetId = 129901658996389, version = "v3", scale = 3.03, tier = 1, class = "Ground"},
     penguin = {assetId = 120950430829492, version = "v3", scale = 2.38, tier = 1, class = "Water"},
-    budgiesaurus = {assetId = 107910518074360, version = "v2", scale = 0.9, tier = 1, class = "Fly"},
+    budgiesaurus = {assetId = 81211624431392, version = "v5", scale = 2.03, tier = 1, class = "Fly"},
     cockatoosaurus = {assetId = 77920946493998, version = "v1", scale = 1.11, tier = 1, class = "Fly"},
     eaglesaurus = {assetId = 116840996663024, version = "v1", scale = 1.0, tier = 1, class = "Fly"},
 }

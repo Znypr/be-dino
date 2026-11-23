@@ -114,15 +114,18 @@ local function softenTitle()
     title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=.35,.5,1,1
     cardAlpha(.35,false)
 end
-local function showTitle(id:string,name:string,soft:boolean?)
+local SUB_DEFAULT=sub.Text
+-- BD-1314: `line` (optional) replaces the line under the word for this card (the biome cards); nil = the usual weather line, as before.
+local function showTitle(id:string,name:string,soft:boolean?,line:string?)
     titleToken+=1 local mine=titleToken
+    sub.Text=line or SUB_DEFAULT
     soft=soft or inHall() -- re-checked here: the cave may have been entered since the weather changed
     titleBig=not soft
     if menuOpen() then
         task.spawn(function()
             local waited=0
             while menuOpen() and waited<20 do task.wait(.25) waited+=.25 end
-            if mine==titleToken and not menuOpen() then showTitle(id,name,soft or inHall()) end
+            if mine==titleToken and not menuOpen() then showTitle(id,name,soft or inHall(),line) end
         end)
         return
     end

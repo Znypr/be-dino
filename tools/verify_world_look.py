@@ -164,7 +164,8 @@ def static_checks():
     for flag, row in FLAGS.items():
         if len(re.findall(r'^    %s = false,$' % flag, config, re.M)) != 1:
             errors.append('Config.%s must ship false exactly once' % flag)
-        for needle in ('_flag_off("%s",' % flag, 'Rule("%s", "set", True,' % flag, '("%s", "%s' % (flag, row)):
+        on = 'False' if flag == 'PlazaHubEnabled' else 'True'  # BD-1312: the plaza shops are off in the playtest too (owner: shops only in the cave)
+        for needle in ('_flag_off("%s",' % flag, 'Rule("%s", "set", %s,' % (flag, on), '("%s", "%s' % (flag, row)):
             if needle not in profiles:
                 errors.append('release_profiles.py is missing %s' % needle)
         if '"%s"' % flag not in playtest or '"%s"' % flag not in rehearsal:

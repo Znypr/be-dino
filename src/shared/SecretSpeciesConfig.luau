@@ -40,7 +40,7 @@ Secret.Species = {
     dodo = { id = "dodo", name = "Dodo", secret = true, class = "Ground", weight = 14, assetId = 128146035116312 },
     duck = { id = "duck", name = "Duck", secret = true, class = "Ground", weight = 18, assetId = 129901658996389 },
     penguin = { id = "penguin", name = "Penguin", secret = true, class = "Water", weight = 12, assetId = 120950430829492 },
-    budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 107910518074360 },
+    budgiesaurus = { id = "budgiesaurus", name = "Budgiesaurus", secret = true, class = "Fly", weight = 10, assetId = 81211624431392 },
     foxosaurus = { id = "foxosaurus", name = "Foxosaurus", secret = true, class = "Ground", weight = 6, assetId = 112996440434481 },
     -- BD-621 / BD-622 (docs/115 SS14): the two special birds, both Fly like the Budgiesaurus; PROVISIONAL weights, rarer than the fox.
     cockatoosaurus = { id = "cockatoosaurus", name = "Cockatoosaurus", secret = true, class = "Fly", weight = 5, assetId = 77920946493998 },

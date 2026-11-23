@@ -13,12 +13,13 @@ def read(path):
 
 
 class PlazaShopsTests(unittest.TestCase):
-    def test_flag_ships_off_and_playtest_turns_it_on(self):
+    def test_flag_ships_off_and_playtest_keeps_it_off(self):  # BD-1312: owner 2026-11-23 'the shops should only be in the cave'
         text = read('src/shared/Config.luau')
         import release_profiles as profiles
         playtest = profiles.apply_profile(text, 'playtest')[0]
         self.assertIn('    PlazaShopsV2Enabled = false,\n', text)
-        self.assertIn('PlazaShopsV2Enabled = true', playtest)
+        self.assertIn('PlazaShopsV2Enabled = false', playtest)
+        self.assertIn('PlazaHubEnabled = false', playtest)
         self.assertIn('PlazaShopsV2Enabled', [key for key, _ in profiles.REHEARSAL_ON])
         self.assertEqual(profiles.verify_source(text, 'default').errors, [])
 

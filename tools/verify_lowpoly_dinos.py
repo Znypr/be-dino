@@ -10,11 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 # BD-225/BD-232: every shipped species (Config.SpeciesOrder) is mapped; ids are the real published ids (generate_mesh, compy V3 from Blender).
 EXPECTED_IDS = {
     "compy": "94548957808227", "raptor": "83260397513385", "triceratops": "107596736973492", "tyrannosaurus": "70893952304488",
-    "stegosaurus": "92335618053209", "brachiosaurus": "104593280278631", "ankylosaurus": "125812700099310",
+    "stegosaurus": "92335618053209", "brachiosaurus": "104593280278631", "ankylosaurus": "71224485443187",
     "archaeopteryx": "108659121473793", "baryonyx": "131708938808155", "dimorphodon": "117242533934118",
     "elasmosaurus": "76344726254379", "gallimimus": "99873366835296", "ichthyosaurus": "133825037148251",
-    "microraptor": "137027841072493", "mosasaurus": "116180724806366", "pachycephalosaurus": "75417530223759",
-    "parasaurolophus": "125203763120290", "plesiosaurus": "107885207120586", "pteranodon": "101283644467729",
+    "microraptor": "89552849463606", "mosasaurus": "116180724806366", "pachycephalosaurus": "75417530223759",
+    "parasaurolophus": "80788415993379", "plesiosaurus": "107885207120586", "pteranodon": "101283644467729",
     "quetzalcoatlus": "126028097030256", "spinosaurus": "94005222354362", "therizinosaurus": "94894343028103",
 }
 CLASSES = {"Fly": {"pteranodon", "quetzalcoatlus", "dimorphodon", "archaeopteryx", "microraptor"},
