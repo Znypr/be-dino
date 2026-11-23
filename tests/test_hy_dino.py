@@ -66,6 +66,25 @@ class SheetTests(unittest.TestCase):
             self.assertTrue((Path(d) / "out" / "q34.png").exists())
 
 
+class BleedTests(unittest.TestCase):
+    def test_outline_and_background_go_but_the_eye_highlight_stays(self):
+        try:
+            from PIL import Image, ImageDraw
+            import hy_dino
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        im = Image.new("RGB", (120, 100), (220, 220, 220))
+        dr = ImageDraw.Draw(im)
+        dr.ellipse((10, 10, 110, 90), fill=(90, 110, 200), outline=(0, 0, 0), width=4)    # body with a black outline
+        dr.ellipse((60, 30, 84, 54), fill=(5, 5, 5))                                     # eye
+        dr.ellipse((70, 34, 76, 40), fill=(250, 250, 250))                               # highlight (as light as the background)
+        out = hy_dino.bleed_fill(im)
+        self.assertGreater(sum(out.getpixel((2, 2))[:3]), 0)
+        self.assertGreater(out.getpixel((2, 2))[2], out.getpixel((2, 2))[0], "corner now carries the body blue, not grey")
+        self.assertGreater(sum(out.getpixel((73, 37))), 700, "the eye highlight is not background")
+        self.assertGreater(sum(out.getpixel((60, 12))), 150, "the black outline ring was replaced by body colour")
+
+
 class ConfigTests(unittest.TestCase):
     QUAD = {"size": [3.3, 5.4, 3.0], "y": [-2.7, 2.7], "legs": [[0.5, 1.6], [-1.1, 0.0]], "leg_top": 0.8, "leg_inner": 0.15,
             "head_z": 2.2, "head_y": 1.7, "tail_y": -1.5}

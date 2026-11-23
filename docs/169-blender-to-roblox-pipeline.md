@@ -187,7 +187,13 @@ One tool per step, so a colour tweak reruns only the colour step. Proven on Pach
   - `REGIONS`: forced colour by part and y range.
   - `CLASS = "Armored"`: shorter steps in the animations.
 - **Animation:** one bone per part. The actions use the keys of `src/shared/LowPolyClips.luau` and the phase rules of `LowPolyGait` (left and right half a stride apart, back legs another half), so the GIFs show what the game plays.
-- **Species configs:** they live in `tools/blender/dino_species/`, starting with `ankylosaurus.py`.
+- **Species configs:** they live in `tools/blender/dino_species/`: ankylosaurus, parasaurolophus, microraptor, budgiesaurus (2026-11-23).
+- **When Hunyuan gets it wrong** (seen on Para and Budgie):
+  - A flat or broken shape: rerun `gen --seed 7` (or another number).
+  - Still broken: use the sheet's clean side view as the input (Parasaurolophus) and pass `config --rot 90`.
+  - A shape turned sideways: pass `config --rot 90|270`, check with a probe render, and the value is written into `cfg.py` as `ROT_DEG`.
+- **Eyes:** found automatically from the side drawing (the white highlight with black all round it). A glossy black dome with a white highlight goes on both sides of the head; set `EYES = None` to switch this off.
+- **Outline cleanup:** the sheet's black outline and background are replaced by the figure's own colours grown outward (`bleed_fill`), so crests and tails that stick out past the drawing never pick up grey or black.
 
 **Sheets that cut cleanly** (ask ChatGPT for exactly this):
 - One row of four views: FRONT, 3/4, SIDE (snout to the right), BACK, at the same scale and in the same neutral pose.

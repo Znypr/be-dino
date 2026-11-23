@@ -75,7 +75,7 @@ def load_hi(src):
     for o in list(bpy.context.scene.objects):
         if o is not hi:
             bpy.data.objects.remove(o)
-    hi.data.transform(Matrix.Rotation(math.radians(cfg.get("ROT_DEG", 180)), 4, "Z"))
+    hi.data.transform(Matrix.Rotation(math.radians(float(arg("--rot", cfg.get("ROT_DEG", 180)))), 4, "Z"))
     lo = [min(v.co[i] for v in hi.data.vertices) for i in range(3)]
     up = [max(v.co[i] for v in hi.data.vertices) for i in range(3)]
     s = SIZE / (up[2] - lo[2])
@@ -411,6 +411,88 @@ def render_views(parts, preview):
         bpy.ops.render.render(write_still=True)
 
 
+
+def find_eye(bmin, bmax):
+    """Eye centre (y, z) and radius in model space from the side drawing: the dark pixels in the head's upper front corner."""
+    import numpy as np
+    path = os.path.join(D, "proj-side.png")
+    if not os.path.exists(path):
+        return None
+    im = bpy.data.images.load(path)
+    w, h = im.size
+    px = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)[..., :3]   # row 0 = bottom
+    bpy.data.images.remove(im)
+    lum = px.mean(axis=2)
+    vv, uu = np.mgrid[0:h, 0:w]
+    u, v = uu / (w - 1), vv / (h - 1)
+    dark = lum < 0.1
+    # the eye = a white highlight with black all round it, in the head's upper half (the drawing's catchlight)
+    white = (lum > 0.85) & (u > 0.4) & (v > 0.45)
+    best, bestscore = None, 0
+    k = max(4, int(min(w, h) * 0.03))
+    for y0, x0 in zip(*np.where(white)):
+        win = dark[max(0, y0 - k):y0 + k + 1, max(0, x0 - k):x0 + k + 1]
+        score = win.mean()
+        if score > bestscore:
+            best, bestscore = (y0, x0), score
+    if best is None or bestscore < 0.35:
+        return None
+    y0, x0 = best
+    R = int(min(w, h) * 0.12)
+    win = dark[max(0, y0 - R):y0 + R + 1, max(0, x0 - R):x0 + R + 1]
+    ys, xs = np.where(win)
+    ys, xs = ys + max(0, y0 - R), xs + max(0, x0 - R)
+    cu, cv = xs.mean() / (w - 1), ys.mean() / (h - 1)
+    ry = (np.percentile(xs, 95) - np.percentile(xs, 5)) / 2 / (w - 1) * (bmax[1] - bmin[1])
+    rz = (np.percentile(ys, 95) - np.percentile(ys, 5)) / 2 / (h - 1) * (bmax[2] - bmin[2])
+    return (float(bmin[1] + cu * (bmax[1] - bmin[1])), float(bmin[2] + cv * (bmax[2] - bmin[2])), float(max(0.06, 0.9 * min(ry, rz) + 0.1 * max(ry, rz))))
+
+
+def add_eye_pieces(ob, y, z, r):
+    """Glossy eye on both sides of the head: a flat black dome on the surface plus a white highlight up-front. Returns
+    (first eye face, first highlight face, end) so the caller can colour them."""
+    from mathutils.bvhtree import BVHTree
+    me = ob.data
+    bvh = BVHTree.FromObject(ob, bpy.context.evaluated_depsgraph_get())
+    hits = []
+    for s in (1, -1):
+        hit = bvh.ray_cast(V((s * 5.0, y, z)), V((-s, 0, 0)))
+        if hit[0] is not None:
+            n = hit[1].normalized()
+            if n.x * s < 0:
+                n = -n
+            hits.append((hit[0], n))
+    bmx = bmesh.new()
+    bmx.from_mesh(me)
+    n0 = len(bmx.faces)
+
+    def dome(c, n, rad, h, segs):
+        ref = V((0, 0, 1)) if abs(n.z) < 0.9 else V((1, 0, 0))
+        a = n.cross(ref).normalized()
+        b = n.cross(a).normalized()
+        ring0 = [bmx.verts.new(c - n * 0.02 + (a * math.cos(2 * math.pi * i / segs) + b * math.sin(2 * math.pi * i / segs)) * rad) for i in range(segs)]
+        ring1 = [bmx.verts.new(c + n * h * 0.6 + (a * math.cos(2 * math.pi * i / segs) + b * math.sin(2 * math.pi * i / segs)) * rad * 0.75) for i in range(segs)]
+        apex = bmx.verts.new(c + n * h)
+        for i in range(segs):
+            j = (i + 1) % segs
+            bmx.faces.new((ring0[i], ring0[j], ring1[j], ring1[i])).smooth = True
+            bmx.faces.new((ring1[i], ring1[j], apex)).smooth = True
+        mid = bmx.verts.new(c - n * 0.02)
+        for i in range(segs):
+            bmx.faces.new((ring0[(i + 1) % segs], ring0[i], mid))
+    for c, n in hits:
+        dome(c, n, r, r * 0.35, 14)
+    n1 = len(bmx.faces)
+    for c, n in hits:
+        up = (V((0, 0, 1)) - n * n.z).normalized()
+        fwd = (V((0, 1, 0)) - n * n.y).normalized()
+        dome(c + n * r * 0.33 + up * r * 0.38 + fwd * r * 0.2, n, r * 0.24, r * 0.08, 8)
+    n2 = len(bmx.faces)
+    bmx.to_mesh(me)
+    bmx.free()
+    return n0, n1, n2
+
+
 def stage_colour():
     NAME = cfg["NAME"]
     bpy.ops.wm.open_mainfile(filepath=os.path.join(D, "parts.blend"))
@@ -449,12 +531,19 @@ def stage_colour():
         print("HY spikes chosen %d (both sides)" % len(tips))
     bump_colour = cfg.get("BUMP_COLOUR", "#E6CFA0")
     top = cfg.get("TOP")
+    eyes = cfg.get("EYES", "auto")
+    eye = find_eye(bmin, bmax) if eyes == "auto" else (tuple(eyes) if eyes else None)
+    print("HY eye", None if eye is None else tuple(round(x, 3) for x in eye))
     for ob in parts:
         name, me = ob.name, ob.data
         n_before = len(me.polygons)
         mine = [(p, n) for p, n in tips if cfg["label"](V(p)) == name]
         if mine:
             add_cones(me, mine, sp["height"], sp["radius"], sp.get("sink", 0.08))
+        eye_faces = None
+        if eye and name == "Head":
+            bpy.context.view_layer.update()
+            eye_faces = add_eye_pieces(ob, *eye)
         activate(ob)
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
@@ -472,7 +561,7 @@ def stage_colour():
         me.materials.clear()
         me.materials.append(projection_material("%s_%s_proj" % (NAME, name), imgs, img))
         me.materials.append(flat_material("%s_%s_bump" % (NAME, name), bump_colour, img))
-        for p_ in list(me.polygons)[n_before:]:
+        for p_ in list(me.polygons)[n_before:(eye_faces[0] if eye_faces else len(me.polygons))]:
             p_.material_index = 1
         for reg in cfg.get("REGIONS", []):
             if reg["part"] == name:
@@ -484,6 +573,15 @@ def stage_colour():
             for p_ in me.polygons:
                 if p_.material_index == 0 and p_.normal.z > top.get("min_nz", -1.0) and p_.center.z > top.get("zmin", -99):
                     p_.material_index = 2
+        if eye_faces:
+            e0, e1, e2 = eye_faces
+            me.materials.append(flat_material("%s_eye" % NAME, cfg.get("EYE_COLOUR", "#10151A"), img))
+            me.materials.append(flat_material("%s_glint" % NAME, "#FFFFFF", img))
+            ki = len(me.materials) - 2
+            for p_ in list(me.polygons)[e0:e1]:
+                p_.material_index = ki
+            for p_ in list(me.polygons)[e1:e2]:
+                p_.material_index = ki + 1
         activate(ob)
         bpy.ops.object.bake(type="EMIT")
         img.filepath_raw = os.path.join(tex_dir, "%s_%s.png" % (NAME, name))
