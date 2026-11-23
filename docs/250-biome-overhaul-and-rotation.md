@@ -75,3 +75,14 @@ ChatGPT proposed hex colours, fog, grade, bloom, particles and sound per biome. 
 2. **8 minutes** per biome.
 3. **Featured dinos get a boost** (about x2 chance). Every dino stays hatchable in every biome.
 4. **No reset:** the storm only reskins the island, and players keep playing where they are.
+
+## 8. Art rule for every biome kit (owner 2026-11-23)
+"make sure the maps / biomes and vegetation look realistic and cohesive for the game we are building, like a plant pot wouldn't make any sense, unless it's part of a shop decoration".
+
+Every kit piece gets a close-up Studio check before it is wired:
+- it grows from the ground;
+- it has no pot, stand, base plate or foreign object;
+- it matches its kit's palette and chunkiness.
+
+Pots and plinths belong only to shop decoration (the tree-variety notes, docs/evidence/2026-11-23-tree-variety/README.md).
+
