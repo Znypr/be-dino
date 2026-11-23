@@ -24,6 +24,14 @@ VegetationV2.Assets = {
     veg2_tree_oak = {assetId = "93533177854872", tris = 1200, ref = "tree_oak", what = "wide umbrella oak with a bent trunk and three round cloud crowns"},
     veg2_palm_coconut = {assetId = "87978584265482", tris = 1200, ref = "palm_coconut", what = "coconut palm with a hibiscus at the foot"},
     veg2_palm_flower = {assetId = "131648210939538", tris = 1200, ref = "palm_flower", what = "flower palm with a vine and a pink bloom"},
+    -- BD-1315 jungle kit (biome overhaul docs/250 S2): shown only through kitVisual("jungle", ...) once the S1 biome clock swaps kits. Roblox
+    -- generate_mesh in the toy style of the Jungle panel (docs/evidence/2026-11-23-biome-overhaul/biome-grid-chatgpt.jpg); reference = a
+    -- Studio picture of the mesh in docs/evidence/2026-11-23-jungle-kit/refs. Ferns and mossy rocks reuse the approved veg2 ones.
+    veg2_jungle_canopy = {assetId = "139306681391247", tris = 1500, ref = "jungle_canopy", what = "jungle canopy tree, buttress roots, two leaf layers, hanging vines"},
+    veg2_jungle_elephant_ear = {assetId = "92282282039125", tris = 800, ref = "jungle_elephant_ear", what = "wide clump of big heart-shaped elephant ear leaves"},
+    veg2_jungle_monstera = {assetId = "80843788267545", tris = 900, ref = "jungle_monstera", what = "mound of split monstera leaves"},
+    veg2_jungle_hibiscus = {assetId = "139247532251059", tris = 500, ref = "jungle_hibiscus", what = "two red hibiscus blooms in dark leaves"},
+    veg2_jungle_stump = {assetId = "80638240272132", tris = 800, ref = "jungle_stump", what = "mossy stump wrapped in a vine, orange mushrooms"},
     veg2_bush_red = {assetId = "77978853272967", tris = 900, ref = "bush_berry_red", what = "green dome with small red berries"},
     veg2_bush_blue = {assetId = "99690382623326", tris = 900, ref = "bush_berry_blue", what = "green dome with small blueberries"},
     veg2_bush_grape = {assetId = "139210058341686", tris = 900, ref = "bush_grape_purple", what = "green dome with small purple grape bunches"},
@@ -97,6 +105,27 @@ function VegetationV2.visualFor(id: string, biome: string, roll: number): string
     end
     if id == "world_boulder_mossy_s" then return "veg2_rock_mossy" end
     if id == "world_boulder_mossy_m" or id == "world_boulder_mossy_l" then return choose(roll, "veg2_rock_spiral", "veg2_rock_mossy", .3) end
+    return nil
+end
+
+-- BD-1315 (docs/250, contract with S1 BD-1314): the visual key for a placed slot in a whole-island biome kit, or nil = keep today's
+-- visualFor(id, subBiome, roll). Pure: S1's BiomeClock / client swap reads CurrentBiome and calls this; placements, colliders and food
+-- hosts never change. "meadow" is today's map (nil everywhere). layer (optional): "log" slots (a dead tree lying down) keep today's look.
+function VegetationV2.kitVisual(biomeId: string, kitId: string, roll: number, layer: string?): string?
+    if biomeId ~= "jungle" or layer == "log" then return nil end
+    local id = kitId
+    if string.sub(id, 1, 11) == "world_tree_" then
+        -- every standing tree is jungle: mostly the buttress canopy tree, some twisty vine trees and flower palms for variety
+        return pick3(roll, "veg2_jungle_canopy", .6, "veg2_tree_twisty", .25, "veg2_palm_flower")
+    end
+    if id == "world_bush_a" or id == "world_bush_b" then return choose(roll, "veg2_jungle_elephant_ear", "veg2_jungle_monstera", .5) end
+    -- the mushroom slots grow to 4-12 studs (SmallBand): mostly leafy plants, a mossy stump only now and then
+    if id == "world_mushrooms_a" then return pick3(roll, "veg2_jungle_elephant_ear", .5, "veg2_fern_a", .3, "veg2_jungle_stump") end
+    if id == "world_fern_a" or id == "world_horsetail_a" then return choose(roll, "veg2_fern_a", "veg2_jungle_elephant_ear", .7) end
+    if id == "world_fern_b" then return "veg2_fern_b" end
+    if id == "world_flowers_a" then return choose(roll, "veg2_jungle_hibiscus", "veg2_flowers_hibiscus", .6) end
+    if id == "world_grass_a" or id == "world_grass_b" then return choose(roll, "veg2_fern_a", "veg2_fern_b", .55) end
+    if string.sub(id, 1, 14) == "world_boulder_" then return choose(roll, "veg2_rock_mossy", "veg2_rock_spiral", .65) end
     return nil
 end
 

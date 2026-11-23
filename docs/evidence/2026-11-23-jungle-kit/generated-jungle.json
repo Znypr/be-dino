@@ -1,0 +1,43 @@
+{
+  "note": "BD-1315 jungle kit (biome overhaul docs/250 S2). Roblox Studio generate_mesh, text prompts in the toy style of the Jungle panel of docs/evidence/2026-11-23-biome-overhaul/biome-grid-chatgpt.jpg, published to the owner's account by the generator 2026-11-23. tris = real face count measured in Studio (EditableMesh). Ferns and mossy rocks reuse veg2_fern_a/_b and veg2_rock_mossy/_spiral. Owner cohesion rule 2026-11-23: no pots, stands or foreign objects; rejects below.",
+  "items": {
+    "veg2_jungle_canopy": {
+      "asset": 139306681391247,
+      "tris": 1500,
+      "reference": "refs/ref-jungle_canopy.png",
+      "what": "canopy tree, buttress roots, two leaf layers, hanging vines"
+    },
+    "veg2_jungle_elephant_ear": {
+      "asset": 92282282039125,
+      "tris": 800,
+      "reference": "refs/ref-jungle_elephant_ear.png",
+      "what": "wide clump of six big heart leaves, no pot"
+    },
+    "veg2_jungle_monstera": {
+      "asset": 80843788267545,
+      "tris": 900,
+      "reference": "refs/ref-jungle_monstera.png",
+      "what": "mound of split monstera leaves"
+    },
+    "veg2_jungle_hibiscus": {
+      "asset": 139247532251059,
+      "tris": 500,
+      "reference": "refs/ref-jungle_hibiscus.png",
+      "what": "two red hibiscus blooms in dark leaves"
+    },
+    "veg2_jungle_stump": {
+      "asset": 80638240272132,
+      "tris": 800,
+      "reference": "refs/ref-jungle_stump.png",
+      "what": "mossy stump with a vine and orange mushrooms"
+    }
+  },
+  "rejected": {
+    "100877600173393": "elephant ear in a white pot",
+    "88946006175571": "spiky yellow fern",
+    "113664692781582": "ball wearing a leaf hat",
+    "98012489482834": "blue pudding boulder",
+    "118201682667163": "rock like a cake pot with a cactus",
+    "99395664937835": "tiny fern on a dirt bulb"
+  }
+}
