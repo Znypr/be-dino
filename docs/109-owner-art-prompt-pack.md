@@ -116,7 +116,7 @@ Roblox upload (all groups): Studio, View > Asset Manager > Bulk Import, owner ac
 - Bind: CODE: keys `notify_*`, `toast_body` in `UIIconAssets`, toast code change (BD-304 follow-up).
 
 ### D3. Aura icons and potion frames (BD-101)
-- Aura icons: owner images exist for Meadow Glow and Tidal Halo (`resources/ui/v2/items/aura-meadow-v1.png`, `aura-tidal-v1.png`, upload pending). Royal Nova is missing: file `resources/ui/v2/items/aura-royal-v1.png`; prompt: shared + ICON block + "a glowing purple and gold ring with a small crown of light above it, matching the Meadow and Tidal aura icons". Bind: TABLE/AUTO (`aura_<id>`).
+- Aura icons: owner images exist for Meadow Glow and Tidal Halo (`resources/archive/ui/v2/items/aura-meadow-v1.png`, `aura-tidal-v1.png`, upload pending). Royal Nova is missing: file `resources/ui/v2/items/aura-royal-v1.png`; prompt: shared + ICON block + "a glowing purple and gold ring with a small crown of light above it, matching the Meadow and Tidal aura icons". Bind: TABLE/AUTO (`aura_<id>`).
 - Potion icons: the 12 bottles exist in `resources/ui/v2/items/` with `potion_icon_*` registry lines. BD-101 closes when `PotionArt.luau` code bottles are no longer shown; verify each line is "in game".
 - Potion rarity frames (5, P2): `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png`, 512 x 512, 9-slice. Prompt: shared + "an empty rounded square card frame, thick outline, [grey / green / blue / purple / gold] candy-metal rim, small gems in the top corners, transparent centre and outside".
 

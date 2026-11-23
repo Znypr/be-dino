@@ -1,4 +1,4 @@
-"""BD-178: contact sheet of the 10 trail icons (Blender renders, resources/ui/v2/icons/trail-<id>-v1.png).
+"""BD-178: contact sheet of the 10 trail icons (Blender renders, resources/archive/ui/v2/icons/trail-<id>-v1.png).
 
 Each icon is shown at 128, 64 and 32 px on a light and a dark UI panel, plus the 32 px version enlarged 4x with nearest-neighbour so the
 pixels can be judged. Sizes below 128 are box-filtered (a mipmap-style downscale, the way the engine minifies a 128 px image); this is
@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-ICONS = ROOT / 'resources/ui/v2/icons'
+ICONS = ROOT / 'resources/archive/ui/v2/icons'  # BD-1305: the Blender v1 renders are archived (live icons: trail-<id>-v2.png)
 OUT = ROOT / 'docs/evidence/2026-10-17-trails/trail-icons-contact-sheet.png'
 ORDER = [('white', 'puff'), ('fern', 'leaf'), ('tidal', 'bubbles'), ('ember', 'flame'), ('violet', 'pulse rings'), ('electric', 'arc'), ('frost', 'comet'), ('solar', 'sun'), ('nova', 'sparkle'), ('astra', 'star')]
 LIGHT = (242, 244, 250)   # light UI card

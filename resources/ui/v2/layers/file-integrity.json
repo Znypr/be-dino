@@ -128,7 +128,7 @@
       "edgeMarginPx": 14
     },
     {
-      "source": "resources/ui/v2/items/aura-meadow-v1.png",
+      "source": "resources/archive/ui/v2/items/aura-meadow-v1.png",
       "bytes": 1227623,
       "sha256": "d9d03bcae38206cea70653494eb4835288d4ab51351a4e9352bff048a63ef61f",
       "size": [
@@ -142,7 +142,7 @@
       "edgeMarginPx": 0
     },
     {
-      "source": "resources/ui/v2/items/aura-tidal-v1.png",
+      "source": "resources/archive/ui/v2/items/aura-tidal-v1.png",
       "bytes": 1101335,
       "sha256": "ea14625b4bfd9a380b9e7d34c8205cbd51234b60a47767327a1d0750567c9856",
       "size": [

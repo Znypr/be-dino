@@ -58,26 +58,15 @@ Read from `tools/release_profiles.py` and `src/shared/Config.luau`.
 <a id="missing"></a>
 ## Missing
 
-70 gaps. Deliver the file at the exact folder and name shown.
+59 gaps. Deliver the file at the exact folder and name shown.
 
 | Kind | How many |
 |---|---|
-| picture | 50 |
-| icon | 9 |
-| asset id | 8 |
-| registry line | 2 |
+| picture | 44 |
+| icon | 8 |
+| registry line | 5 |
+| asset id | 1 |
 | not in code | 1 |
-
-### Aura
-
-| Item | Missing | Put it in folder | File name | Note |
-|---|---|---|---|---|
-| [Meadow Glow](Shop-items.md#aura-meadow) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/aura-meadow-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
-| [Meadow Glow](Shop-items.md#aura-meadow) | asset id | `resources/ui/v2/items` | `AssetSlots.Images.aura_meadow` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
-| [Tidal Halo](Shop-items.md#aura-tidal) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/aura-tidal-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
-| [Tidal Halo](Shop-items.md#aura-tidal) | asset id | `resources/ui/v2/items` | `AssetSlots.Images.aura_tidal` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
-| [Royal Nova](Shop-items.md#aura-royal) | picture | `resources/ui/v2/items` | `aura-royal-v1.png` | no aura picture |
-| [Royal Nova](Shop-items.md#aura-royal) | asset id | `resources/ui/v2/items` | `AssetSlots.Images.aura_royal` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
 
 ### Biome
 
@@ -130,19 +119,10 @@ Read from `tools/release_profiles.py` and `src/shared/Config.luau`.
 
 | Item | Missing | Put it in folder | File name | Note |
 |---|---|---|---|---|
-| [Berry](World-and-food.md#food-berry) | picture | `resources/ui/v2/items` | `food-berry-v1.png` | no food picture |
-| [Fruit](World-and-food.md#food-fruit) | picture | `resources/ui/v2/items` | `food-fruit-v1.png` | no food picture |
-| [Egg](World-and-food.md#food-egg) | picture | `resources/ui/v2/items` | `food-egg-v1.png` | no food picture |
-| [Amber](World-and-food.md#food-amber) | picture | `resources/ui/v2/items` | `food-amber-v1.png` | no food picture |
-
-### Fusion tier
-
-| Item | Missing | Put it in folder | File name | Note |
-|---|---|---|---|---|
-| [Gold](Mutations-and-fusion.md#fusion-gold) | asset id | `resources/ui/v2/icons` | `AssetSlots.Images.tier_gold` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
-| [Emerald](Mutations-and-fusion.md#fusion-emerald) | icon | `resources/ui/v2/icons` | `tier-emerald-v1.png` | no tier icon |
-| [Emerald](Mutations-and-fusion.md#fusion-emerald) | asset id | `resources/ui/v2/icons` | `AssetSlots.Images.tier_emerald` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
-| [Diamond](Mutations-and-fusion.md#fusion-diamond) | asset id | `resources/ui/v2/icons` | `AssetSlots.Images.tier_diamond` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
+| [Berry](World-and-food.md#food-berry) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/food-berry-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
+| [Fruit](World-and-food.md#food-fruit) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/food-fruit-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
+| [Egg](World-and-food.md#food-egg) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/food-egg-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
+| [Amber](World-and-food.md#food-amber) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/food-amber-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
 
 ### Landmark
 
@@ -170,8 +150,7 @@ Read from `tools/release_profiles.py` and `src/shared/Config.luau`.
 
 | Item | Missing | Put it in folder | File name | Note |
 |---|---|---|---|---|
-| [Golden Drumstick](World-and-food.md#food-golden-drumstick) | picture | `resources/ui/v2/items` | `food-golden-drumstick-v1.png` | no picture |
-| [Golden Drumstick](World-and-food.md#food-golden-drumstick) | asset id | `resources/ui/v2/items` | `AssetSlots.Images.golden_drumstick_icon` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
+| [Golden Drumstick](World-and-food.md#food-golden-drumstick) | registry line | `docs/77-asset-registry.md` | `resources/ui/v2/items/food-golden-drumstick-v1.png` | picture exists but has no line in docs/77; add one line (name, file, asset id, used by, status) |
 | [Golden Drumstick (mesh)](World-and-food.md#food-golden-drumstick) | asset id | `resources/models` | `AssetSlots.Meshes.golden_drumstick_mesh` | uploaded id not written into the slot yet; after the upload, tools/bind_assets.py writes the id; add the docs/77 line |
 
 ### Statue

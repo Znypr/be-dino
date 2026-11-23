@@ -36,8 +36,8 @@ ICONS = ["notify-crystal-v1", "egg-green-spotted-v1", "fusion", "index-tab-colou
          "shop-tab-trails-v1", "shop-tab-conditions-v1", "station-potions-v1", "egg-nest-single-v1", "egg-nest-v1", "station-index-v1",
          "station-fusion-v1", "station-nests-v1", "station-settings-v1", "station-style-v1", "shop-tile-eggs-v1", "shop-tile-auras-v1",
          "shop-tile-trails-v1", "shop-tile-conditions-v1", "trophy", "home", "class-ground-v1", "mutation-ember-v1", "mutation-frost-v1",
-         "mutation-aurora-v1", "notify-star-v1", "notify-level-v1", "trail-fern-v1", "trail-tidal-v1", "trail-ember-v1", "trail-solar-v1",
-         "trail-nova-v1", "trail-astra-v1", "rarity-common-v1", "rarity-uncommon-v1", "rarity-rare-v1", "rarity-epic-v1",
+         "mutation-aurora-v1", "notify-star-v1", "notify-level-v1", "trail-fern-v2", "trail-tidal-v2", "trail-ember-v2", "trail-solar-v2",
+         "trail-nova-v2", "trail-astra-v2", "rarity-common-v1", "rarity-uncommon-v1", "rarity-rare-v1", "rarity-epic-v1",
          "rarity-legendary-v1", "rarity-mythic-v1", "weather-clear-v1", "paint-bucket-v1", "shield", "hud-heart-v1", "leap-v1"]
 for n in ICONS:
     A[n] = u(I + n + ".png", 180)
@@ -255,8 +255,8 @@ P.append(("Auras", "big aura art on rarity cards, Equip / Equipped / price on ea
 
 # 8 Trails
 tc = ""
-for i, (art, r, name, price) in enumerate([("trail-fern-v1", 0, "Fern", "OWNED"), ("trail-tidal-v1", 1, "Tidal", "60"), ("trail-ember-v1", 2, "Ember", "120"),
-                                           ("trail-solar-v1", 3, "Solar", "250"), ("trail-nova-v1", 4, "Nova", "500"), ("trail-astra-v1", 5, "Astra", "900")]):
+for i, (art, r, name, price) in enumerate([("trail-fern-v2", 0, "Fern", "OWNED"), ("trail-tidal-v2", 1, "Tidal", "60"), ("trail-ember-v2", 2, "Ember", "120"),
+                                           ("trail-solar-v2", 3, "Solar", "250"), ("trail-nova-v2", 4, "Nova", "500"), ("trail-astra-v2", 5, "Astra", "900")]):
     x, y = 10 + (i % 3) * 248, 10 + (i // 3) * 182
     tc += ('<div class="card" style="left:%dpx;top:%dpx;width:238px;height:172px;%s"><div class="n ol" style="font-size:18px">%s</div>'
            '<img src="%s" style="height:72px"><div class="r ol" style="color:%s">%s</div></div>' % (x, y, bg(RAR[r][1]), name, A[art], RAR[r][2], RAR[r][0]))

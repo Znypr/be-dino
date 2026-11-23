@@ -131,9 +131,9 @@ New traits are rolled from the inputs (PROVISIONAL, version `fusion-odds-provisi
 
 | Tier | Icon | Asset id | Mask | Odds from |
 |---|---|---|---|---|
-| [Gold](#fusion-gold) | yes: `resources/ui/v2/layers/mutation-gold-v1.png` | not bound | n/a | `src/server/IdentityFusion.luau` Recipes |
-| [Emerald](#fusion-emerald) | MISSING | not bound | n/a | `src/server/IdentityFusion.luau` Recipes |
-| [Diamond](#fusion-diamond) | yes: `resources/ui/v2/layers/mutation-diamond-v1.png` | not bound | n/a | `src/server/IdentityFusion.luau` Recipes |
+| [Gold](#fusion-gold) | yes: `resources/ui/v2/layers/mutation-gold-v1.png` | bound | n/a | `src/server/IdentityFusion.luau` Recipes |
+| [Emerald](#fusion-emerald) | yes: `resources/ui/v2/icons/tier-emerald-v1.png` | bound | n/a | `src/server/IdentityFusion.luau` Recipes |
+| [Diamond](#fusion-diamond) | yes: `resources/ui/v2/layers/mutation-diamond-v1.png` | bound | n/a | `src/server/IdentityFusion.luau` Recipes |
 
 <a id="fusion-gold"></a>
 ### Gold
@@ -149,6 +149,8 @@ id: `gold`
 ### Emerald
 
 id: `emerald`
+
+<img src="../../resources/ui/v2/icons/tier-emerald-v1.png" alt="Emerald" width="96">
 
 - **Needs:** 3 Gold dinos (same species and same pattern). All are used up.
 - **Result:** one new Emerald dino; the next stage is guaranteed.

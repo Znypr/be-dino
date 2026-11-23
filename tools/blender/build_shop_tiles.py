@@ -28,6 +28,7 @@ from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'resources/ui/v2/icons'
+ARCHIVED = ROOT / 'resources/archive/ui/v2/icons'  # BD-1305: v1 renders superseded by the owner's -v2 picks
 BLEND = ROOT / 'tools/blender/shop_tiles.blend'
 
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -759,7 +760,7 @@ def main():
                 o.hide_render = other != key
         scene.camera = cams[key]
         scene.render.resolution_x = scene.render.resolution_y = px
-        path = OUT / fn
+        path = OUT / fn if not (ARCHIVED / fn).exists() else ARCHIVED / fn  # BD-1305: superseded renders stay in the archive
         scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True)
         print('rendered', path)

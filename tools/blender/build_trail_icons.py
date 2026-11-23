@@ -3,7 +3,7 @@
 Run headless (no Studio, no MCP session):
     "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" --background --python tools/blender/build_trail_icons.py
 Optional: add `-- --size 128` or `-- --samples 128`. Outputs:
-    resources/ui/v2/icons/trail-<id>-v1.png   128 x 128 RGBA, transparent background (the files to upload)
+    resources/archive/ui/v2/icons/trail-<id>-v1.png   128 x 128 RGBA, transparent background (the files to upload)
     tools/blender/trail_icons.blend           the scene, one collection per icon, so the shapes can be edited
 Then run `python tools/make_trail_icon_sheet.py` for the contact sheet and `python tools/verify_trail_icons.py`.
 
@@ -27,7 +27,7 @@ import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'resources/ui/v2/icons'
+OUT = ROOT / 'resources/archive/ui/v2/icons'  # BD-1305: superseded by the owner's pick trail-<id>-v2.png, so renders land in the archive
 BLEND = ROOT / 'tools/blender/trail_icons.blend'
 CONFIG = ROOT / 'src/shared/ProgressionConfig.luau'
 

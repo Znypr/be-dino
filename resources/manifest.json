@@ -384,259 +384,259 @@
     },
     {
       "logicalId": "ui_v2_components_button-blue_png",
-      "source": "ui/v2/components/button-blue.png",
+      "source": "archive/ui/v2/components/button-blue.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "f9415a5e781586a20189979de2b1ab2e15b810267b6f74b83349af74f3feb610"
     },
     {
       "logicalId": "ui_v2_components_button-blue_svg",
-      "source": "ui/v2/components/button-blue.svg",
+      "source": "archive/ui/v2/components/button-blue.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "ceb42e8831b9191eb67547f8b95117d796968da193ef3715dff0fff4b3a87706"
     },
     {
       "logicalId": "ui_v2_components_button-dark_png",
-      "source": "ui/v2/components/button-dark.png",
+      "source": "archive/ui/v2/components/button-dark.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "495fd052d23e63d049aa0d5d0264c20098c7fd6fccb6ceb9fd926d1ee4e6391f"
     },
     {
       "logicalId": "ui_v2_components_button-dark_svg",
-      "source": "ui/v2/components/button-dark.svg",
+      "source": "archive/ui/v2/components/button-dark.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "b565bbe564389960e2a95e4926358dc9dda2c1efd50fa29f776ccc19cd4bb070"
     },
     {
       "logicalId": "ui_v2_components_button-gold_png",
-      "source": "ui/v2/components/button-gold.png",
+      "source": "archive/ui/v2/components/button-gold.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "f2f6ed681b3c6b37aff7d5496c65e34ddf0c9eb23c74e7a223f7bd100efb3a07"
     },
     {
       "logicalId": "ui_v2_components_button-gold_svg",
-      "source": "ui/v2/components/button-gold.svg",
+      "source": "archive/ui/v2/components/button-gold.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "db63a5fe9931516e42751fccd69d0f5334ba374b113d5d209ef745217591221d"
     },
     {
       "logicalId": "ui_v2_components_button-green_png",
-      "source": "ui/v2/components/button-green.png",
+      "source": "archive/ui/v2/components/button-green.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "c7bcc8bbeed8f0d976ffb784c077f79786c07cdd2667c885fc762eef76fbe32f"
     },
     {
       "logicalId": "ui_v2_components_button-green_svg",
-      "source": "ui/v2/components/button-green.svg",
+      "source": "archive/ui/v2/components/button-green.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "fe0b73d6fb4035bf03cfb3e13ce68e5e0882206ebe467e49d7053b35eb09d088"
     },
     {
       "logicalId": "ui_v2_components_button-purple_png",
-      "source": "ui/v2/components/button-purple.png",
+      "source": "archive/ui/v2/components/button-purple.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "5c6ce8aed29d34a60f9f37580c1fc88ea8d55d182b9faf0dcc95d1ba2b6a9338"
     },
     {
       "logicalId": "ui_v2_components_button-purple_svg",
-      "source": "ui/v2/components/button-purple.svg",
+      "source": "archive/ui/v2/components/button-purple.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "7316a6f6cd2fe9be2998ee7dd3a481deb54d1db5ce908699493454f03c3eda26"
     },
     {
       "logicalId": "ui_v2_components_button-red_png",
-      "source": "ui/v2/components/button-red.png",
+      "source": "archive/ui/v2/components/button-red.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "87445644e90ae32b0ad8532113372df53cea9c42454597a2dc87500526129c41"
     },
     {
       "logicalId": "ui_v2_components_button-red_svg",
-      "source": "ui/v2/components/button-red.svg",
+      "source": "archive/ui/v2/components/button-red.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "690985345ee75636fe3a37625beb684b656299dc90cf1cb7d72a239dd03ed3ae"
     },
     {
       "logicalId": "ui_v2_components_card-common_png",
-      "source": "ui/v2/components/card-common.png",
+      "source": "archive/ui/v2/components/card-common.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "552d2515326b768ceca01accb3cc0991b3abbd567d539da061c55fffc1c06e4c"
     },
     {
       "logicalId": "ui_v2_components_card-common_svg",
-      "source": "ui/v2/components/card-common.svg",
+      "source": "archive/ui/v2/components/card-common.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "9d63b50e75d3fda8955f7eb6579af193dafb397171fa17b01031a503709eebe1"
     },
     {
       "logicalId": "ui_v2_components_card-legendary_png",
-      "source": "ui/v2/components/card-legendary.png",
+      "source": "archive/ui/v2/components/card-legendary.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "9d43e26cd521b6701ab6f3cdd82854d19f358ffbb2256c869875f65258b88707"
     },
     {
       "logicalId": "ui_v2_components_card-legendary_svg",
-      "source": "ui/v2/components/card-legendary.svg",
+      "source": "archive/ui/v2/components/card-legendary.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "7bd70ca31079910231591c669aa22a457390cde6960361b30e32e7fdaff724f5"
     },
     {
       "logicalId": "ui_v2_components_card-rare_png",
-      "source": "ui/v2/components/card-rare.png",
+      "source": "archive/ui/v2/components/card-rare.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "35c278b452cee5f2e083f035af7a3fb663ac4a392997c8a0cd0cba1478e6a53e"
     },
     {
       "logicalId": "ui_v2_components_card-rare_svg",
-      "source": "ui/v2/components/card-rare.svg",
+      "source": "archive/ui/v2/components/card-rare.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "2763ec78e8f34d3a5fbbfae95ff11e4729277abcf7ee7d8566bc34d236e185b1"
     },
     {
       "logicalId": "ui_v2_components_close_png",
-      "source": "ui/v2/components/close.png",
+      "source": "archive/ui/v2/components/close.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "4a4051cf4c92dd9344674192c1c49f0af943daa56b422bffc3579008426e4931"
     },
     {
       "logicalId": "ui_v2_components_close_svg",
-      "source": "ui/v2/components/close.svg",
+      "source": "archive/ui/v2/components/close.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "4e4371c794d694f337ba71c2244d96abf6aeee32645f7f2a30a8af7ee94d0e20"
     },
     {
       "logicalId": "ui_v2_components_header-blue_png",
-      "source": "ui/v2/components/header-blue.png",
+      "source": "archive/ui/v2/components/header-blue.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "2a8b64779523950ca1da4f42484a404a46b541f5911f5d80e4e255a5e4f65e16"
     },
     {
       "logicalId": "ui_v2_components_header-blue_svg",
-      "source": "ui/v2/components/header-blue.svg",
+      "source": "archive/ui/v2/components/header-blue.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "49351090d8189b252bb45df86e05d47af89ac14d1db412980b311e2b1bda9a46"
     },
     {
       "logicalId": "ui_v2_components_header-dark_png",
-      "source": "ui/v2/components/header-dark.png",
+      "source": "archive/ui/v2/components/header-dark.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "608a061d92df50b561e600a45e44cfaa38437b949cad2f2ecfd9f8d4b0ef9d14"
     },
     {
       "logicalId": "ui_v2_components_header-dark_svg",
-      "source": "ui/v2/components/header-dark.svg",
+      "source": "archive/ui/v2/components/header-dark.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "0c171cc1778505686bc9a11b64ffa5da1d08dae97ca1d1968d85698666f8f086"
     },
     {
       "logicalId": "ui_v2_components_header-gold_png",
-      "source": "ui/v2/components/header-gold.png",
+      "source": "archive/ui/v2/components/header-gold.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "4a4d3d36798830dbe17228d8cb2b9d099c099bd11f89b115e5e9ee3914d01bcf"
     },
     {
       "logicalId": "ui_v2_components_header-gold_svg",
-      "source": "ui/v2/components/header-gold.svg",
+      "source": "archive/ui/v2/components/header-gold.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "04c2e275b80b352616518e14d6d22bcc4c1e8da7331e1dbd76b857d71bcb62c8"
     },
     {
       "logicalId": "ui_v2_components_header-green_png",
-      "source": "ui/v2/components/header-green.png",
+      "source": "archive/ui/v2/components/header-green.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "f9444edbd3b1cadb19f732ad4d4c8c9693ea6d586399399b30c54e736adf98e3"
     },
     {
       "logicalId": "ui_v2_components_header-green_svg",
-      "source": "ui/v2/components/header-green.svg",
+      "source": "archive/ui/v2/components/header-green.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "53d44764a6ba61ffa374a5a03e4dc0bed826fc8eb2359631372c902c7ab659b1"
     },
     {
       "logicalId": "ui_v2_components_header-purple_png",
-      "source": "ui/v2/components/header-purple.png",
+      "source": "archive/ui/v2/components/header-purple.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "bee806d302f8c3f0c85d3e19101bd4928395ebe32c05fcd78c8a4d98103d508c"
     },
     {
       "logicalId": "ui_v2_components_header-purple_svg",
-      "source": "ui/v2/components/header-purple.svg",
+      "source": "archive/ui/v2/components/header-purple.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "d3f978894c97bfd81fd7d58636c55b53fe82feb101042ae2c67d552e7b12284c"
     },
     {
       "logicalId": "ui_v2_components_header-red_png",
-      "source": "ui/v2/components/header-red.png",
+      "source": "archive/ui/v2/components/header-red.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "0c22b3d9916efbcf3de1dd87b8d3e70e25fc7918afb2437a9cdaebf19bf136b0"
     },
     {
       "logicalId": "ui_v2_components_header-red_svg",
-      "source": "ui/v2/components/header-red.svg",
+      "source": "archive/ui/v2/components/header-red.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "a57760c573571222a277ea8e0703bdba97699e069175648b96f4cdb58501c726"
     },
     {
       "logicalId": "ui_v2_components_popup-body_png",
-      "source": "ui/v2/components/popup-body.png",
+      "source": "archive/ui/v2/components/popup-body.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "877b347228d81d7705be2fa4862669c388ce66262b65326ed515ab1a693ff965"
     },
     {
       "logicalId": "ui_v2_components_popup-body_svg",
-      "source": "ui/v2/components/popup-body.svg",
+      "source": "archive/ui/v2/components/popup-body.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "83824e502537675e78f4a873d9ceccd716f5ea0d4843709e0c0d859af6d64e47"
     },
     {
       "logicalId": "ui_v2_components_progress-track_png",
-      "source": "ui/v2/components/progress-track.png",
+      "source": "archive/ui/v2/components/progress-track.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "741ece26853ae3a1d9bc37b5e5e5e423976dab453843e40af67fdfeeffca5afc"
     },
     {
       "logicalId": "ui_v2_components_progress-track_svg",
-      "source": "ui/v2/components/progress-track.svg",
+      "source": "archive/ui/v2/components/progress-track.svg",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "41c934643ffc90a65dade20f3d2cdab4badf40b46c511327a3d230771fbe02ec"
     },
     {
       "logicalId": "ui_v2_components_reward-burst_png",
-      "source": "ui/v2/components/reward-burst.png",
+      "source": "archive/ui/v2/components/reward-burst.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
       "sha256": "045dc07d24805070a9a7ef4dcdf34014f440c56d5bc24201ca653a40a0a273d1"

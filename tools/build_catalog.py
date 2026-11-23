@@ -521,7 +521,7 @@ def build_shop(ctx: Ctx) -> Page:
     status, blocks = [], []
     for au in prog["Auras"]:
         a = f"aura-{au['id']}"
-        pic = ctx.find_picture("Aura", au["name"], f"Shop-items#{a}", [f"resources/ui/v2/items/aura-{au['id']}-v1.png"], f"resources/ui/v2/items/aura-{au['id']}-v1.png", what="no aura picture")
+        pic = ctx.find_picture("Aura", au["name"], f"Shop-items#{a}", [f"resources/ui/v2/items/aura-{au['id']}"], f"resources/ui/v2/items/aura-{au['id']}-v1.png", what="no aura picture")
         aid = ctx.asset_id_status("Aura", au["name"], f"Shop-items#{a}", slots.get(f"aura_{au['id']}"), f"AssetSlots.Images.aura_{au['id']}", "resources/ui/v2/items")
         status.append([f"[{au['name']}](#{a})", f"yes: `{pic}`" if pic else "MISSING", aid, "n/a", "`src/shared/ProgressionConfig.luau` Auras"])
         blocks.append(item_heading(a, au["name"], 4) + f"id: `{au['id']}`\n\n" + (ctx.image(pic, au["name"], 96) + "\n\n" if pic else "")
@@ -533,7 +533,7 @@ def build_shop(ctx: Ctx) -> Page:
     trail_ids = prog.get("TrailIconAssetIds") or {}
     for t in prog["Trails"]:
         a = f"trail-{t['id']}"
-        pic = ctx.find_picture("Trail", t["name"], f"Shop-items#{a}", [f"resources/ui/v2/icons/trail-{t['id']}-v1.png"], f"resources/ui/v2/icons/trail-{t['id']}-v1.png", kind="icon", what="no trail icon")
+        pic = ctx.find_picture("Trail", t["name"], f"Shop-items#{a}", [f"resources/ui/v2/icons/trail-{t['id']}"], f"resources/ui/v2/icons/trail-{t['id']}-v1.png", kind="icon", what="no trail icon")
         aid = ctx.asset_id_status("Trail", t["name"], f"Shop-items#{a}", trail_ids.get(t["id"]), f"ProgressionConfig.TrailIconAssetIds.{t['id']}", "resources/ui/v2/icons")
         status.append([f"[{t['name']}](#{a})", f"yes: `{pic}`" if pic else "MISSING", aid, "n/a", "`src/shared/ProgressionConfig.luau` Trails"])
         price = "free" if t["price"] == 0 else num(t["price"]) + " crystals"

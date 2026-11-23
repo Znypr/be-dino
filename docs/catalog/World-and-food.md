@@ -37,15 +37,17 @@ Every pickup gives food points (growth and eggs come from them). The island has 
 
 | Food | Picture | Model | Mask | Points from |
 |---|---|---|---|---|
-| [Berry](#food-berry) | MISSING | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
-| [Fruit](#food-fruit) | MISSING | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
-| [Egg](#food-egg) | MISSING | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
-| [Amber](#food-amber) | MISSING | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
+| [Berry](#food-berry) | yes: `resources/ui/v2/items/food-berry-v1.png` | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
+| [Fruit](#food-fruit) | yes: `resources/ui/v2/items/food-fruit-v1.png` | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
+| [Egg](#food-egg) | yes: `resources/ui/v2/items/food-egg-v1.png` | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
+| [Amber](#food-amber) | yes: `resources/ui/v2/items/food-amber-v1.png` | 2 world-kit model(s) in code | n/a | `src/server/FoodService.luau` TYPES |
 
 <a id="food-berry"></a>
 ### Berry
 
 id: `berry`
+
+<img src="../../resources/ui/v2/items/food-berry-v1.png" alt="Berry" width="96">
 
 - **Food points:** 1
 - **Share of food on the island:** 70%
@@ -57,6 +59,8 @@ id: `berry`
 
 id: `fruit`
 
+<img src="../../resources/ui/v2/items/food-fruit-v1.png" alt="Fruit" width="96">
+
 - **Food points:** 4
 - **Share of food on the island:** 20%
 - **Comes back after:** 12 seconds
@@ -67,6 +71,8 @@ id: `fruit`
 
 id: `egg`
 
+<img src="../../resources/ui/v2/items/food-egg-v1.png" alt="Egg" width="96">
+
 - **Food points:** 15
 - **Share of food on the island:** 7%
 - **Comes back after:** 40 seconds
@@ -76,6 +82,8 @@ id: `egg`
 ### Amber
 
 id: `amber`
+
+<img src="../../resources/ui/v2/items/food-amber-v1.png" alt="Amber" width="96">
 
 - **Food points:** 50
 - **Share of food on the island:** 3%
@@ -90,10 +98,12 @@ id: `amber`
 
 id: `golden_drumstick`
 
+<img src="../../resources/ui/v2/items/food-golden-drumstick-v1.png" alt="Golden Drumstick" width="96">
+
 - A giant tasty snack!
 - **Food points:** 60 (PROVISIONAL)
 - **Chance:** 1% of food slots (1 in 100)
-- Picture: MISSING; icon id: not bound; mesh id: not bound. Switch: off in the default build, on in the playtest build.
+- Picture: yes; icon id: bound; mesh id: not bound. Switch: off in the default build, on in the playtest build.
 
 <a id="weather"></a>
 ## Weather

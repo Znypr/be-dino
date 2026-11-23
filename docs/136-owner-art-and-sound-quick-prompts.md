@@ -50,8 +50,8 @@ Save nothing new; just bulk-import these files and send the ids.
 | `resources/ui/v2/stage/eggs/egg-01_cracked.png` ... `egg-05_astra.png` | `egg_cond_cracked`, `egg_cond_dirty`, `egg_cond_normal`, `egg_cond_rainbow`, `egg_cond_astra` |
 | `resources/effects/fx-v2/glowPlate.png`, `ringSoft.png`, `ringShock.png`, `speedLine.png`, `crystalSheet.png` | `glowPlate`, `ringSoft`, `ringShock`, `speedLine`, `crystalSheet` |
 | `resources/effects/fx-v2/ribbonSoft.png` (stop-gap; skip if you do B1 below) | `ribbonSoft` |
-| `resources/ui/v2/items/aura-meadow-v1.png`, `aura-tidal-v1.png` | `aura_meadow`, `aura_tidal` |
-| your two owner trail images saved as `resources/ui/v2/icons/trail-white-v1.png`, `trail-fern-v1.png` | `trail_white`, `trail_fern` |
+| `resources/archive/ui/v2/items/aura-meadow-v1.png`, `aura-tidal-v1.png` | `aura_meadow`, `aura_tidal` |
+| your two owner trail images saved as `resources/archive/ui/v2/icons/trail-white-v1.png`, `trail-fern-v1.png` | `trail_white`, `trail_fern` |
 
 Good looks like: the egg stage JPG is opaque; the five eggs have transparent corners.
 

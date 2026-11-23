@@ -12,6 +12,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 ICONS = ROOT / 'resources/ui/v2/icons'
+ARCHIVED = ROOT / 'resources/archive/ui/v2/icons'  # BD-1305: v1 renders the owner's -v2 picks replaced
+
+
+def icon_file(fn):
+    return ICONS / fn if (ICONS / fn).exists() else ARCHIVED / fn
 OUT = ROOT / 'docs/evidence/2026-10-17-shop/shop-tiles-contact-sheet.png'
 TABS = [('auras', 'shop-tab-auras-v1.png', 'Auras tab'), ('trails', 'shop-tab-trails-v1.png', 'Trails tab'),
         ('eggs', 'egg-green-spotted-v1.png', 'Eggs tab + product'), ('conditions', 'shop-tab-conditions-v1.png', 'Conditions tab'),
@@ -51,7 +56,7 @@ def main():
             d.text((x, 34), '32 px x4' if zoomed else f'{size} px', fill=INK, font=small)
             x += size + PAD
     for r, (_tab, fn, label) in enumerate(TABS):
-        icon = Image.open(ICONS / fn).convert('RGBA')
+        icon = Image.open(icon_file(fn)).convert('RGBA')
         y = head_h + r * row_h
         d.text((PAD, y + row_h // 2 - 18), label, fill=INK, font=font)
         d.text((PAD, y + row_h // 2 + 2), fn.replace('-v1.png', ''), fill=(90, 94, 110), font=small)
@@ -65,13 +70,13 @@ def main():
     d.rectangle([0, y0, width, sheet.height], fill=LIGHT)
     d.text((PAD, y0 + 6), 'Landing tiles, 256 px on a light panel', fill=INK, font=font)
     for i, (_t, fn) in enumerate(TILES):
-        img = Image.open(ICONS / fn).convert('RGBA')
+        img = Image.open(icon_file(fn)).convert('RGBA')
         sheet.paste(img, (PAD + i * (256 + PAD), y0 + 30), img)
     y1 = y0 + 30 + 256 + PAD * 2
     d.rectangle([0, y1, width, sheet.height], fill=DARK)
     d.text((PAD, y1 + 6), 'The same tiles at 128 px on a dark panel (about phone size)', fill=(235, 238, 245), font=font)
     for i, (_t, fn) in enumerate(TILES):
-        img = fit(Image.open(ICONS / fn).convert('RGBA'), 128)
+        img = fit(Image.open(icon_file(fn)).convert('RGBA'), 128)
         sheet.paste(img, (PAD + i * (256 + PAD), y1 + 30), img)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(OUT)
