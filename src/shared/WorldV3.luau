@@ -107,6 +107,37 @@ function WorldV3.inland(x: number, z: number): number
     return WorldV3.coast(angleOf(x, z)) - math.sqrt(dx * dx + dz * dz)
 end
 
+-- BD-1309: rolling relief amplitude per zone (studs) and the hill noise. Blended by angle so a zone border never steps.
+WorldV3.Rolling = {meadow = 7, forest = 12, pine = 8, beach = 4, volcano = 5}
+function WorldV3.rolling(x: number, z: number): number
+    local a = angleOf(x, z) + math.noise(x / 90, z / 90, 31.7) * 16
+    local wsum, amp = 0, 0
+    for _, zone in WorldV3.Zones do
+        local w = math.exp(-(angDist(a, (zone.from + zone.to) / 2) / 38) ^ 2)
+        wsum += w
+        amp += w * (WorldV3.Rolling[zone.id] or 6)
+    end
+    amp /= math.max(wsum, 1e-6)
+    local n1 = math.noise(x / 85, z / 85, 41.3)
+    local n2 = math.noise(x / 38, z / 38, 42.9)
+    -- never a pit below the land (an inland pond), and the hills soften within ~30 studs of a path so the paths stay walkable
+    return math.max(-1.5, amp * (1.7 * math.max(0, n1 + .12) ^ 1.25 + .45 * n2)) * (1 - .6 * WorldV3.pathNear(x, z))
+end
+
+-- 0..1: closeness to a path centre line (1 on the path, 0 from about 34 studs out), smooth, for softening relief next to the paths.
+function WorldV3.pathNear(x: number, z: number): number
+    local dx, dz = x - WorldV3.CenterX, z - WorldV3.CenterZ
+    local r = math.sqrt(dx * dx + dz * dz)
+    local d = math.abs(r - WorldV3.RingRadius)
+    for _, spoke in WorldV3.Spokes do
+        local a = math.rad(spoke.angle)
+        local ux, uz = math.cos(a), math.sin(a)
+        local along = dx * ux + dz * uz
+        if along > WorldV3.PlazaRadius - 6 and along < spoke.to + 20 then d = math.min(d, math.abs(-dx * uz + dz * ux)) end
+    end
+    return 1 - smoothstep(6, 34, d)
+end
+
 -- Land height before the coast and the plaza shape it (zone relief + gentle roll).
 local function landHeight(x: number, z: number): number
     local h = 3 + math.noise(x / 70, z / 70, 14) * 2.2 + math.noise(x / 23, z / 23, 15) * .6
@@ -129,6 +160,10 @@ local function landHeight(x: number, z: number): number
     -- Palm beach: low and flat, with the lagoon basin.
     local zone = WorldV3.zoneAt(x, z)
     if zone.id == "beach" then h = lerp(h, 1.6, .6) end
+    -- BD-1309 (owner 2026-11-23 "map looks really boring and flat"): rolling hills over the whole island (dunes on the beach, after its
+    -- flattening). Mostly bumps up (hills, not pits), two noise octaves, amplitude blended between zone centres so no zone border steps;
+    -- softened next to every path (WorldV3.pathNear), so the ring road and the spokes stay walkable.
+    h += WorldV3.rolling(x, z)
     local dl = ((x - LAGOON_X) / 54) ^ 2 + ((z - LAGOON_Z) / 44) ^ 2
     h -= 7.5 * math.exp(-dl * 1.4)
     return h

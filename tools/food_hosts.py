@@ -43,7 +43,8 @@ BUSH_IDS = ('world_bush_a', 'world_bush_b')
 TREE_PREFIXES = ('world_tree_canopy', 'world_tree_conifer', 'world_tree_cycad')
 # (host, food kind): a host takes that food while it carries fewer foods than this (a rock with up to 4 finds, eggs only while it has fewer than 2)
 CAP = {('bush', 'berry'): 7, ('tree', 'fruit'): 5, ('rock', 'amber'): 4, ('rock', 'egg'): 2, ('treefoot', 'egg'): 2, ('landmark', 'amber'): 6, ('landmark', 'egg'): 4}
-GAP_LIMIT = 23.0        # studs: no walkable spot farther than this from food after the moves (the written V3 rule is 25; the V3 map itself reaches 22.2)
+GAP_LIMIT = 25.0        # studs: no walkable spot farther than this from food after the moves = the written V3 rule (BD-1309: on the hillier island the V3 map
+                        # itself reaches 24.4 at a forest hillside, so the old 23 could never be met)
 GAP_STEP = 4.0          # studs: the lattice the gap guard checks
 GAP_ROUNDS = 400
 BUSH_OUT = 0.9          # berries: studs outside the bush footprint (Studio 2026-11-16: inside the rim the dome hid most of them)

@@ -543,7 +543,7 @@ function Arena.build()
     if caveHub.enabled then Biome.useHub(caveHub.biome) end
     if (Layout :: any).V3 then Biome.useV3(BiomeMap.V3) end -- BD-1209: routes, keep-outs and landmark sites of the round island
     if WorldToon.enabled(Config) then Biome.useToonPlants(WorldToon.Swaps, WorldToon.swapList) end -- BD-1224: round glossy bushes, no spiky fronds
-    if Veg2.enabled(Config) then Biome.BushV2 = Veg2.BushRule end -- BD-1239 follow-up: smaller berry bushes, open grass and flowers between clumps
+    if Veg2.enabled(Config) then Biome.BushV2 = Veg2.BushRule Biome.TreeGrowth = Veg2.TreeGrowth end -- BD-1309: trees grow from saplings to old giants -- BD-1239 follow-up: smaller berry bushes, open grass and flowers between clumps
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do
