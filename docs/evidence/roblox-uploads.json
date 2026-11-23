@@ -1620,5 +1620,185 @@
     "sha256": "fee51dc0df1541f9a46c09abea9af0e247852ca70cf5e0b388476ef9d6cb490f",
     "moderation": "Approved",
     "uploaded": "2026-11-22T18:17:05Z"
+  },
+  {
+    "assetId": "89901460152216",
+    "assetType": "Decal",
+    "displayName": "shopkit2_button_green",
+    "file": "button-green.png",
+    "bytes": 18892,
+    "sha256": "35e16c6246b4f7a862b6b2e5ea7906258d1eb992a50bc2483c38af28b474ed57",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:28:42Z"
+  },
+  {
+    "assetId": "133050456830377",
+    "assetType": "Decal",
+    "displayName": "shopkit2_button_grey",
+    "file": "button-grey.png",
+    "bytes": 18113,
+    "sha256": "d27bb3570d1d0558a415e93eeac013f37ddc8aa8214eed3b84a8ff2c35167502",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:28:48Z"
+  },
+  {
+    "assetId": "95548708374407",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_art_aura_meadow",
+    "file": "card-art-aura-meadow.png",
+    "bytes": 171251,
+    "sha256": "fb8e5667e86a508765e73a73bdee6ba7667fbeae625e07ab039bbef05037566c",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:28:53Z"
+  },
+  {
+    "assetId": "136424924958790",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_art_aura_royal",
+    "file": "card-art-aura-royal.png",
+    "bytes": 188975,
+    "sha256": "808c962c23970e6cac38b474d89e185db8c8449a8e709be4a195e19f3f1da1ff",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:28:58Z"
+  },
+  {
+    "assetId": "84303164347750",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_art_aura_tidal",
+    "file": "card-art-aura-tidal.png",
+    "bytes": 154661,
+    "sha256": "c6bf9fd5a54dc601a4bddd0db5890cc4a1fe1c6d5e1e88053023a470ebdd8c77",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:03Z"
+  },
+  {
+    "assetId": "75850956662846",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_art_trail_fern_drift",
+    "file": "card-art-trail-fern-drift.png",
+    "bytes": 118941,
+    "sha256": "a7204a445f752ccc2ff133ee83ebec91467a86af76cf1d21f3b961bc3cd7ec78",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:08Z"
+  },
+  {
+    "assetId": "113932931162816",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_common",
+    "file": "card-common.png",
+    "bytes": 69510,
+    "sha256": "e2fb676736382e7ba6f6843f6da4fe38c911b7502359550a4b3f8e7a3bc0f094",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:13Z"
+  },
+  {
+    "assetId": "94522066010236",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_epic",
+    "file": "card-epic.png",
+    "bytes": 72323,
+    "sha256": "6671044005b866080e42f22aaf64360b5b171f0580bf6eb74268c123d54d3d8b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:20Z"
+  },
+  {
+    "assetId": "80056743289498",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_legendary",
+    "file": "card-legendary.png",
+    "bytes": 72010,
+    "sha256": "775c5f0e601f49a4fa26733810ae4653d17155d86e27a971eedc448fc2b54155",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:26Z"
+  },
+  {
+    "assetId": "120643484027014",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_mythic",
+    "file": "card-mythic.png",
+    "bytes": 73964,
+    "sha256": "30045bfa0bc7de900676bb002d15c553463b99619b54b18cfce7b82a82499abc",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:33Z"
+  },
+  {
+    "assetId": "131034426579393",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_rare",
+    "file": "card-rare.png",
+    "bytes": 70420,
+    "sha256": "07f834d66820ed8f930335a6fff8d2d388feb9066f961d3da6a8ad52bc40b4f6",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:38Z"
+  },
+  {
+    "assetId": "70612265588271",
+    "assetType": "Decal",
+    "displayName": "shopkit2_card_uncommon",
+    "file": "card-uncommon.png",
+    "bytes": 72265,
+    "sha256": "944743f179b212abd2ed2360d2e9e41a8176ae172f1333dd3c75231f5b410198",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:43Z"
+  },
+  {
+    "assetId": "131450177697783",
+    "assetType": "Decal",
+    "displayName": "shopkit2_close",
+    "file": "close.png",
+    "bytes": 15908,
+    "sha256": "26d9c661fac7e07084e9387379e9dacb8ec20d066131e1acb9c7bc05cba740b7",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:48Z"
+  },
+  {
+    "assetId": "135394892140969",
+    "assetType": "Decal",
+    "displayName": "shopkit2_effect_strip",
+    "file": "effect-strip.png",
+    "bytes": 22281,
+    "sha256": "db1e92b5d0f0634142b1c7077e795b38a404a85593948242f62709567d3431bd",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:53Z"
+  },
+  {
+    "assetId": "115738669207647",
+    "assetType": "Decal",
+    "displayName": "shopkit2_header_green",
+    "file": "header-green.png",
+    "bytes": 31836,
+    "sha256": "f203c88a984f4d8bdc61867c923e03185155812a45e1ad5958cf8088b401f3bd",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:29:58Z"
+  },
+  {
+    "assetId": "93677927399055",
+    "assetType": "Decal",
+    "displayName": "shopkit2_header_purple",
+    "file": "header-purple.png",
+    "bytes": 32269,
+    "sha256": "bc7d7919fd5a82fcaeee0ec503bd3ca68ee71be88285c8c25733026e30744940",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T01:30:03Z"
+  },
+  {
+    "assetId": "110481121294523",
+    "assetType": "Model",
+    "displayName": "Pachycephalosaurus V5",
+    "file": "Pachy_V5.fbx",
+    "bytes": 514684,
+    "sha256": "9512db9768f6a789e17adf8a2d9af75e98ac73e6f753a34c0921acae371d8d38",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T22:15:29Z"
+  },
+  {
+    "assetId": "118889310886467",
+    "assetType": "Model",
+    "displayName": "Pachycephalosaurus V5b",
+    "file": "Pachy_V5b.fbx",
+    "bytes": 509036,
+    "sha256": "25dc17dadab7ebed581eaf01c55380c664c7a6a6aa4b65ccdfeff08407116041",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T22:18:52Z"
   }
 ]
