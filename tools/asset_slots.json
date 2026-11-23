@@ -2285,6 +2285,32 @@
    ]
   },
   {
+   "name": "potion_rail_trails",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_rail_trails",
+   "group": "Images.potion_rail_trails",
+   "table": "Images",
+   "reader": [
+    "src/client/PotionSaeShop.luau",
+    "\"potion_rail_trails\""
+   ]
+  },
+  {
+   "name": "potion_rail_auras",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "potion_rail_auras",
+   "group": "Images.potion_rail_auras",
+   "table": "Images",
+   "reader": [
+    "src/client/PotionSaeShop.luau",
+    "\"potion_rail_auras\""
+   ]
+  },
+  {
    "name": "shop_tab_conditions",
    "kind": "image",
    "target": "slot",

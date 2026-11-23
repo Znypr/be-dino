@@ -1,0 +1,203 @@
+{
+ "misses": [
+  "rail.auras: art w 11.5 -> 9.1 % of window",
+  "rail.eggs: art w 11.5 -> 7.7 % of window"
+ ],
+ "rows": [
+  {
+   "id": "rail.featured",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    1.4999999999999991,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    1.4457831325301205,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 11.34020618556701,
+     "h_pct": 15.180722891566264,
+     "aspect": 1.0476190476190477
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Featured",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Featured"
+   }
+  },
+  {
+   "id": "rail.potions",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    19.000000000000004,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    19.03614457831325,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 11.34020618556701,
+     "h_pct": 16.3855421686747,
+     "aspect": 0.9705882352941176
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Potions",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Potions"
+   }
+  },
+  {
+   "id": "rail.trails",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    36.50000000000001,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    36.385542168674704,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.27906976744186,
+     "aspect": 0.9880952380952381
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 10.137457044673539,
+     "h_pct": 16.3855421686747,
+     "aspect": 0.8676470588235294
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Trails",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Trails"
+   }
+  },
+  {
+   "id": "rail.auras",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    54.0,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    53.975903614457835,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.27906976744186,
+     "aspect": 0.9880952380952381
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 9.106529209621993,
+     "h_pct": 14.93975903614458,
+     "aspect": 0.8548387096774194
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Auras",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Auras"
+   }
+  },
+  {
+   "id": "rail.eggs",
+   "kind": "image",
+   "box_ref": [
+    102.70000000000003,
+    71.5,
+    11.4,
+    16.5
+   ],
+   "box_game": [
+    102.74914089347078,
+    71.56626506024097,
+    11.34020618556701,
+    16.3855421686747
+   ],
+   "ref": {
+    "image": {
+     "w_pct": 11.464088397790055,
+     "h_pct": 16.472868217054263,
+     "aspect": 0.9764705882352941
+    }
+   },
+   "game": {
+    "image": {
+     "w_pct": 7.731958762886598,
+     "h_pct": 15.66265060240964,
+     "aspect": 0.6923076923076923
+    }
+   },
+   "gui": {
+    "innerStroke": 3,
+    "innerText": "Eggs",
+    "innerTextSize": 19,
+    "innerFont": "FredokaOne"
+   },
+   "words": {
+    "words_text": "Eggs"
+   }
+  }
+ ]
+}
