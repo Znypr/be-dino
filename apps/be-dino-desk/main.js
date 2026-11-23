@@ -77,6 +77,71 @@ function feedbackSave(fb) {
   return { saved: true, items: Object.keys(clean.items).length };
 }
 
+// Menus tab (BD-1301): owner notes per spec element and free pins, in docs/feedback/menu-feedback.json
+// { screens: { screen: { elements: { specId: [note] }, pins: [note + {x, y, side}] } } }, note = {id, tags, note, severity, should,
+// at, check, status}. Every change is one operation applied to the file as it is on disk right now (agents may have set a note to
+// "done" meanwhile), so the desk never writes back a stale copy. Smoke mode applies it in memory only and never writes.
+const MENU_FB = path.join(REPO, 'docs', 'feedback', 'menu-feedback.json');
+const MENU_TAGS = ['Size', 'Position', 'Colour', 'Outline', 'Text size', 'Words', 'Font', 'Spacing', 'Art', 'Missing', 'Remove'];
+let smokeMenuFb = null;
+const menuFbRead = () => {
+  if (SMOKE && smokeMenuFb) return smokeMenuFb;
+  const d = readJson(MENU_FB, null);
+  return d && typeof d === 'object' && d.screens && typeof d.screens === 'object' ? d : { screens: {} };
+};
+const str = (v, n) => String(v ?? '').slice(0, n);
+function noteFields(f, base = {}) {
+  const out = { ...base };
+  if ('tags' in f) out.tags = (Array.isArray(f.tags) ? f.tags : []).filter((t) => MENU_TAGS.includes(t));
+  if ('note' in f) out.note = str(f.note, 2000).trim();
+  if ('severity' in f) out.severity = f.severity === 'nice' ? 'nice' : 'must';
+  if ('should' in f) out.should = str(f.should, 300).trim();
+  if ('status' in f) out.status = f.status === 'done' ? 'done' : 'open';
+  if ('check' in f) out.check = str(f.check, 19);
+  return out;
+}
+function menuFbOp(op) {
+  const data = JSON.parse(JSON.stringify(menuFbRead()));
+  const screen = str(op && op.screen, 80);
+  if (!/^[a-z0-9][a-z0-9_-]*$/i.test(screen)) throw new Error('bad screen');
+  const scr = (data.screens[screen] = data.screens[screen] || { elements: {}, pins: [] });
+  scr.elements = scr.elements || {}; scr.pins = scr.pins || [];
+  const all = () => [...Object.values(scr.elements).flat(), ...scr.pins];
+  if (op.kind === 'add') {
+    const n = noteFields({ tags: [], note: '', severity: 'must', should: '', status: 'open', check: '', ...op.fields },
+      { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) });
+    if (!n.tags.length && !n.note) throw new Error('empty note');
+    n.at = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19);   // local time, like report.json
+    const t = op.target || {};
+    if (t.element) {
+      const id = str(t.element, 80);
+      if (!/^[a-z0-9_.*-]+$/i.test(id)) throw new Error('bad element');
+      (scr.elements[id] = scr.elements[id] || []).push(n);
+    } else {
+      const clamp = (v) => Math.round(Math.max(-50, Math.min(150, Number(v) || 0)) * 100) / 100;
+      scr.pins.push({ ...n, x: clamp(t.x), y: clamp(t.y), side: t.side === 'proposal' ? 'proposal' : 'build' });
+    }
+  } else if (op.kind === 'update' || op.kind === 'remove') {
+    const n = all().find((x) => x && x.id === op.id);
+    if (!n) throw new Error('note not found (changed on disk?)');
+    if (op.kind === 'update') Object.assign(n, noteFields(op.fields || {}));
+    else {
+      for (const k of Object.keys(scr.elements)) { scr.elements[k] = scr.elements[k].filter((x) => x !== n); if (!scr.elements[k].length) delete scr.elements[k]; }
+      scr.pins = scr.pins.filter((x) => x !== n);
+    }
+  } else throw new Error('bad op');
+  const ordered = { about: 'Owner notes per menu element from the Be Dino Desk Menus tab (docs/247, BD-1301). Agents: read before each menu step; '
+    + 'set status "done" + "commit" when fixed; never delete a note.', screens: {} };
+  for (const s of Object.keys(data.screens).sort()) {
+    const v = data.screens[s];
+    ordered.screens[s] = { elements: Object.fromEntries(Object.entries(v.elements || {}).sort()), pins: v.pins || [] };
+  }
+  if (SMOKE) { smokeMenuFb = ordered; return { smoke: true, data: ordered }; }
+  fs.mkdirSync(path.dirname(MENU_FB), { recursive: true });
+  fs.writeFileSync(MENU_FB, JSON.stringify(ordered, null, 1) + '\n', 'utf8');
+  return { saved: true, data: ordered };
+}
+
 const winFile = () => path.join(app.getPath('userData'), 'window.json');
 function createWindow() {
   const b = readJson(winFile(), { width: 1360, height: 900 });
@@ -104,6 +169,8 @@ app.whenReady().then(() => {
   handle('catalog', catalog);
   handle('feedback:load', feedbackLoad);
   handle('feedback:save', feedbackSave);
+  handle('menufb:load', menuFbRead);
+  handle('menufb:op', menuFbOp);
   handle('open:file', (rel) => {   // "Show in folder" for one picture
     const file = path.resolve(REPO, String(rel));
     if (!file.startsWith(path.resolve(REPO) + path.sep) || !fs.existsSync(file)) throw new Error('not found');

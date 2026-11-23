@@ -8,7 +8,9 @@ Adding a source = one entry in SOURCES (a glob) or a keyword in EVIDENCE. Pure s
 import argparse
 import json
 import re
+import struct
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,6 +53,19 @@ EVIDENCE = [
 MAX_FOLDERS = 6
 MAX_PER_FOLDER = 24
 TAB_ORDER = ["Dinos", "World", "UI kit", "Screens", "Text and buttons"]
+
+# Menus tab (BD-1301): one screen per docs/menu-specs/<screen>/spec.json; its newest check = the newest report.json of
+# tools/menu_spec_check.py found by these globs ({screen} = folder name, {key} = its first word: potion-shop -> potion).
+# Adding a source = one line.
+MENU_SPECS = "docs/menu-specs/*/spec.json"
+MENU_REPORTS = [
+    "build/menu-check/{screen}/**/report.json",
+    "docs/evidence/*{key}*/**/report.json",
+]
+# A screen with no check yet can still show a Studio picture of its build on the BUILD side (no boxes): screen -> glob, newest file wins.
+MENU_SAMPLE_BUILDS = {
+    "dino-index": "docs/evidence/2026-11-23-index-proposal/1-*.jpg",
+}
 
 
 def rel(p: Path) -> str:
@@ -96,7 +111,146 @@ def catalog():
         group(tab, name, "Newest evidence folders: " + ", ".join(d.name for d in hits), items)
     tabs["Text and buttons"] = [{"id": "Text and buttons/specimens", "name": "Specimens", "note": "Drawn live in the app with the game font.",
                                   "items": [], "kind": "specimens"}]
-    return {"root": str(ROOT), "tabs": [{"name": t, "groups": tabs[t]} for t in TAB_ORDER if t in tabs]}
+    return {"root": str(ROOT), "tabs": [{"name": t, "groups": tabs[t]} for t in TAB_ORDER if t in tabs], "menus": menus()}
+
+
+# ---------- Menus tab (BD-1301) ----------
+
+def image_size(p: Path):
+    """(w, h) of a PNG or JPEG from its header (stdlib only); None if unknown."""
+    try:
+        with open(p, "rb") as f:
+            head = f.read(26)
+            if head[:8] == b"\x89PNG\r\n\x1a\n":
+                return list(struct.unpack(">II", head[16:24]))
+            if head[:2] != b"\xff\xd8":
+                return None
+            f.seek(2)
+            while True:
+                m = f.read(2)
+                if len(m) < 2 or m[0] != 0xFF:
+                    return None
+                if m[1] in (0xD8, 0x01) or 0xD0 <= m[1] <= 0xD7:
+                    continue
+                n = struct.unpack(">H", f.read(2))[0]
+                if 0xC0 <= m[1] <= 0xCF and m[1] not in (0xC4, 0xC8, 0xCC):
+                    h, w = struct.unpack(">xHH", f.read(5))
+                    return [w, h]
+                f.seek(n - 2, 1)
+    except (OSError, struct.error):
+        return None
+
+
+def spec_elements(spec: dict, size):
+    """Spec elements (card* templates expanded) with their box in % of the proposal PICTURE (what the desk draws)."""
+    cards = spec.get("cards") or ("card1", "card2", "card3")   # the screen's own card list (Dino Index has 8)
+    raw = {}
+    for k, e in spec.get("elements", {}).items():
+        if k.startswith("card*."):
+            for c in cards:
+                if c in spec["elements"]:
+                    raw[c + k[5:]] = dict(e, parent=c)
+        else:
+            raw[k] = {kk: vv for kk, vv in e.items() if kk != "parent"}
+    wx, wy, ww, wh = spec.get("proposal_window_px", [0, 0, 1, 1])
+
+    def px(k):
+        b = raw[k]["box"]
+        if raw[k].get("parent"):
+            x, y, w, h = px(raw[k]["parent"])
+            return x + b[0] / 100 * w, y + b[1] / 100 * h, b[2] / 100 * w, b[3] / 100 * h
+        return wx + b[0] / 100 * ww, wy + b[1] / 100 * wh, b[2] / 100 * ww, b[3] / 100 * wh
+
+    out = []
+    for k, e in raw.items():
+        x, y, w, h = px(k)
+        pct = [x / size[0] * 100, y / size[1] * 100, w / size[0] * 100, h / size[1] * 100] if size else None
+        out.append({"id": k, "kind": e.get("kind", "box"), "parent": e.get("parent"), "pct": pct,
+                    **{f: e[f] for f in ("fill", "color", "text", "words", "words_text", "font", "note") if f in e}})
+    return out
+
+
+def geom_pcts(folder: Path):
+    """Build boxes in % of the capture from a geom json next to an older report (before reports carried pct_game)."""
+    for g in sorted(folder.glob("*.json")):
+        if g.name == "report.json":
+            continue
+        try:
+            d = json.loads(g.read_text(encoding="utf-8"))
+            vw, vh = d["viewport"]
+            ix, iy = (0, 0) if d.get("ignoreInset", True) else d.get("inset", [0, 0])
+            return {k: [(v["rect"][0] + ix) / vw * 100, (v["rect"][1] + iy) / vh * 100, v["rect"][2] / vw * 100, v["rect"][3] / vh * 100]
+                    for k, v in d["elements"].items()}
+        except (OSError, ValueError, KeyError, TypeError, ZeroDivisionError):
+            continue
+    return {}
+
+
+def read_report(p: Path, screen: str, elems: dict):
+    try:
+        r = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(r, dict) or not isinstance(r.get("rows"), list) or r.get("screen", screen) != screen:
+        return None
+    at =r.get("at") or datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")
+    misses = [m for m in r.get("misses", []) if isinstance(m, str)]
+    ids = {row.get("id") for row in r["rows"]}
+    shot = r.get("shot")
+    if not shot or not (ROOT / shot).is_file():   # older reports: the capture saved next to it
+        pics = [f for f in sorted(p.parent.iterdir()) if f.suffix.lower() in IMG and f.stem not in ids]
+        pics.sort(key=lambda f: not any(w in f.stem.lower() for w in ("capture", "shot", "studio", "build")))
+        shot = rel(pics[0]) if pics else None
+    gp = None
+    rows = []
+    for row in r["rows"]:
+        k = row.get("id")
+        row = dict(row)
+        row.setdefault("misses", [m for m in misses if m.startswith(f"{k}:")])
+        row.setdefault("status", "missing" if row.get("missing") else ("miss" if row["misses"] else "pass"))
+        if "pct_ref" not in row and elems.get(k):
+            row["pct_ref"] = elems[k]["pct"]
+        if "pct_game" not in row and not row.get("missing"):
+            gp = geom_pcts(p.parent) if gp is None else gp
+            if k in gp:
+                row["pct_game"] = gp[k]
+        crop_pair = p.parent / f"{k}.png"
+        if crop_pair.is_file():
+            row["pair"] = rel(crop_pair)
+        rows.append(row)
+    return {"report": rel(p), "at": at, "step": r.get("step"), "self_test": bool(r.get("self_test")), "misses": misses,
+            "shot": shot, "shot_size": r.get("shot_size") or (image_size(ROOT / shot) if shot else None),
+            "owner_pins": r.get("owner_pins", []), "rows": rows}
+
+
+def menus():
+    out = []
+    for sp in sorted(ROOT.glob(MENU_SPECS)):
+        try:
+            spec = json.loads(sp.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        screen = sp.parent.name
+        prop = spec.get("proposal") or rel(sp.parent / "proposal.jpg")
+        size = image_size(ROOT / prop)
+        elems = spec_elements(spec, size)
+        by_id = {e["id"]: e for e in elems}
+        found = {f for pat in MENU_REPORTS for f in ROOT.glob(pat.format(screen=screen, key=screen.split("-")[0]))}
+        checks = [c for c in (read_report(f, screen, by_id) for f in found) if c]
+        checks.sort(key=lambda c: c["at"], reverse=True)
+        sample = None
+        if not checks and screen in MENU_SAMPLE_BUILDS:
+            pics = sorted(ROOT.glob(MENU_SAMPLE_BUILDS[screen]), key=lambda f: f.stat().st_mtime, reverse=True)
+            if pics:
+                sample = {"report": None, "at": datetime.fromtimestamp(pics[0].stat().st_mtime).isoformat(timespec="seconds"),
+                          "step": None, "self_test": False, "sample": True, "misses": [], "shot": rel(pics[0]),
+                          "shot_size": image_size(pics[0]), "owner_pins": [], "rows": []}
+        out.append({"screen": screen, "spec": rel(sp), "proposal": prop, "proposal_size": size,
+                    "window_px": spec.get("proposal_window_px"), "tolerance_pct": spec.get("tolerance_pct", 1.5),
+                    "steps": spec.get("steps", []), "elements": elems,
+                    "latest": checks[0] if checks else sample,
+                    "history": [{"report": c["report"], "at": c["at"], "step": c["step"], "misses": len(c["misses"])} for c in checks[:20]]})
+    return out
 
 
 def main(argv=None):
@@ -112,6 +266,10 @@ def main(argv=None):
         for t in c["tabs"]:
             for g in t["groups"]:
                 print(f"{t['name']:<18} {g['name']:<32} {len(g['items'])}")
+        for m in c["menus"]:
+            last = m["latest"]
+            print(f"{'Menus':<18} {m['screen']:<32} {len(m['elements'])} elements, "
+                  + (f"{len(last['misses'])} misses ({last['at']})" if last else "no check yet"))
         return 0
     sys.stdout.write(json.dumps(c))
     return 0

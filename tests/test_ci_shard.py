@@ -16,12 +16,26 @@ class ShardTests(unittest.TestCase):
         self.assertTrue(all(not l.startswith("#") for l in lines))
         self.assertIn("python tools/verify_sources.py --compiler /tmp/luau/luau-compile", lines)
 
-    def test_four_shards_cover_every_line_once(self):
+    def test_five_shards_cover_every_line_once(self):
         lines = cs.check_lines()
-        got = [l for k in range(1, 5) for l in cs.shard(lines, k, 4)]
+        got = [l for k in range(1, 6) for l in cs.shard(lines, k, 5)]
         self.assertEqual(sorted(got), sorted(lines))
-        sizes = [len(cs.shard(lines, k, 4)) for k in range(1, 5)]
-        self.assertLessEqual(max(sizes) - min(sizes), 1)
+
+    def test_shards_are_balanced_by_measured_time(self):
+        # BD-1303: round-robin left one shard at 401 s and another at 173 s; time balancing keeps them within a few percent
+        est = cs.estimate(cs.check_lines(), 5)
+        self.assertLessEqual(max(est) - min(est), 0.05 * max(est), est)
+
+    def test_most_commands_have_a_measured_time(self):
+        lines, times = cs.check_lines(), cs.load_times()
+        known = sum(1 for l in lines if l in times)
+        self.assertGreaterEqual(known, 0.9 * len(lines), "refresh tools/ci_shard_times.json with --update-times")
+
+    def test_balancing_is_deterministic_and_keeps_list_order(self):
+        lines = ["a", "b", "c", "d", "e"]
+        times = {"a": 10, "b": 1, "c": 9, "d": 2, "e": 1}
+        self.assertEqual(cs.assign(lines, 2, times), [[0, 1, 4], [2, 3]])  # a,c,d,b,e onto the lighter side
+        self.assertEqual(cs.shard(lines, 2, 2, times), ["c", "d"])
 
     def test_bad_shard_is_refused(self):
         with self.assertRaises(SystemExit):
@@ -34,7 +48,7 @@ class ShardTests(unittest.TestCase):
     def test_the_workflow_runs_the_shards_and_keeps_the_required_check(self):
         wf = cs.WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("python tools/ci_shard.py --shard", wf)
-        self.assertIn("shard: [1, 2, 3, 4]", wf)
+        self.assertIn("shard: [1, 2, 3, 4, 5]", wf)
         self.assertIn("\n  build:\n", wf, "the ruleset requires a check named build")
 
 

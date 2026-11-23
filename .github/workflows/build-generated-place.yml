@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 # BD-1302 (owner 2026-11-23 "do all"): the old single job ran about 180 Luau checks one after another (15 of 18 minutes).
-# Now `checks` (repo checks, build, unit tests) and four `luau` shards run in parallel; `build` is the one required check and
+# Now `checks` (repo checks, build, unit tests) and five time-balanced `luau` shards run in parallel; `build` is the one required check and
 # passes when every job passed or was skipped. A pull request skips the Luau shards only when tools/ci_shard.py finds no changed
 # file that is game input or used by a listed script. Build uploads happen on pushes only.
 jobs:
@@ -120,8 +120,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
-    name: luau (${{ matrix.shard }}/4)
+        shard: [1, 2, 3, 4, 5]
+    name: luau (${{ matrix.shard }}/5)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -144,7 +144,7 @@ jobs:
           unzip /tmp/luau.zip -d /tmp/luau
       - name: Check Luau sources and behavior
         env:
-          # the check list: tools/ci_shard.py reads this block from this file and runs every 4th line in each shard
+          # the check list: tools/ci_shard.py reads this block from this file and runs one time-balanced share in each of the 5 shards (BD-1303)
           CI_LUAU_CHECKS: |
             python tools/bind_ui_icons.py --check
             python tools/bind_visual_assets.py --check
@@ -371,7 +371,7 @@ jobs:
             python tools/verify_predation_tick.py --runner /tmp/luau/luau
             python tools/verify_predation_tick.py --runner /tmp/luau/luau --selftest
             python tools/generate_sfx.py --check
-        run: python tools/ci_shard.py --shard "${{ matrix.shard }}/4"
+        run: python tools/ci_shard.py --shard "${{ matrix.shard }}/5"
 
   build:
     needs: [changes, checks, luau]
