@@ -69,7 +69,7 @@ function Tile({ item, size, bg, verdict, onOpen, onVerdict }: {
   return (
     <div className="group/tile flex flex-col gap-1" style={{ width: size }} data-item={item.id}>
       <button onClick={onOpen} className={cn('relative overflow-hidden rounded-md border', ring(verdict))} style={{ width: size, height: size, background: bg }}>
-        <img src={desk.media(item.src)} alt={item.title} loading="lazy" draggable={false} className="size-full object-contain p-1.5" />
+        <img src={desk.thumb(item.src)} alt={item.title} loading="lazy" decoding="async" draggable={false} className="size-full object-contain p-1.5" />
         <span className="absolute inset-x-1 bottom-1 flex justify-center gap-1 opacity-0 transition-opacity group-hover/tile:opacity-100">
           {VERDICTS.map(({ v, Icon, label }) => (
             <span key={v} role="button" title={label} onClick={(e) => { e.stopPropagation(); onVerdict(v); }}

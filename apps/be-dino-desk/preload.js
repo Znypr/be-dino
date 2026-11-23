@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('desk', {
   menuFeedback: { load: () => ipcRenderer.invoke('menufb:load'), op: (op) => ipcRenderer.invoke('menufb:op', op) },
   openFile:(rel) => ipcRenderer.invoke('open:file', rel),
   media: (rel) => 'desk://repo/' + String(rel).split('/').map(encodeURIComponent).join('/'),
+  thumb: (rel, px) => 'desk://repo/' + String(rel).split('/').map(encodeURIComponent).join('/') + '?thumb=' + (px || 360),
   smokeShot: (name) => ipcRenderer.invoke('smoke:shot', name),
   smokeDone: (report) => ipcRenderer.invoke('smoke:done', report),
 });

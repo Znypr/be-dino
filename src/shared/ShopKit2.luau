@@ -84,13 +84,14 @@ function K.artSlot(tab: string, item: any): string?
 end
 
 -- The five header pieces for a header of width w and height h: {x, w, cropX, cropW, tile}. tile = the stud column repeated over that width.
-function K.headerPieces(w: number, h: number): {{x: number, w: number, cropX: number, cropW: number, tile: boolean}}
+-- at: where the first stripe starts (share of the width; default StripeAt).
+function K.headerPieces(w: number, h: number, at: number?): {{x: number, w: number, cropX: number, cropW: number, tile: boolean}}
     local H = K.Header
     local k = h / H.h
     local left = math.floor(H.leftCap * k + 0.5)
     local right = math.floor(H.rightCap.w * k + 0.5)
     local stripesW = math.floor(H.stripes.w * k + 0.5)
-    local stripesX = math.floor(w * K.StripeAt - (H.stripes.first - H.stripes.x) * k + 0.5)
+    local stripesX = math.floor(w * (at or K.StripeAt) - (H.stripes.first - H.stripes.x) * k + 0.5) -- BD-1298: a screen may start them elsewhere
     stripesX = math.clamp(stripesX, left, math.max(left, w - right - stripesW))
     local out = {{x = 0, w = left, cropX = 0, cropW = H.leftCap, tile = false}}
     if stripesX > left then table.insert(out, {x = left, w = stripesX - left, cropX = H.tile.x, cropW = H.tile.w, tile = true}) end

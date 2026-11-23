@@ -15,16 +15,44 @@ local M = {}
 
 M.MinText, M.MinTap, M.MinClose = 19, 44, 48
 M.Top = 0.215 -- the window top (21-22 % H)
-M.Potion = {w = 0.58, h = 0.67, card = 0.32, bottle = 0.13, minBottle = 84, button = 0.065, restockText = 22, perPage = 3, band = 0.07}
+-- BD-1298: the Potion Shop is built from the element spec of the owner's PROPOSED PICTURE (docs/menu-specs/potion-shop/spec.json, the
+-- same numbers: boxes [x, y, w, h] in % of the window, card parts in % of the card; caps = letter heights in % of the window height
+-- measured on the picture; capShare = FredokaOne letter height / text size). tools/verify_sae_frame.py checks the two agree.
+M.PotionSpec = {
+    window = {h = 0.717, aspect = 724 / 516, top = 0.161},
+    header = {2.0, 2.0, 96.0, 18.0}, title = {4.1, 6.8, 24.9, 9.4}, timer = {55.6, 9.2, 20.7, 4.9}, close = {86.0, 2.9, 11.5, 16.6},
+    cards = {x = {3.1, 35.2, 67.4}, y = 23.5, w = {29.7, 29.6, 29.5}, h = 72.4},
+    card = {name = {15.0, 3.0, 70.0, 9.4}, rarity = {25.0, 13.0, 50.0, 5.0}, badge = {84.0, 21.0, 13.0, 5.4}, art = {24.0, 27.0, 52.0, 38.0},
+        strip = {6.0, 72.5, 87.5, 10.7}, price = {3.5, 85.0, 92.5, 13.0}},
+    rail = {x = 102.7, y = 1.5, w = 11.4, h = 16.5, pitch = 17.5},
+    titleCap = 7.56, timerCap = 4.46, nameCap = 5.81, rarityCap = 2.91, badgeCap = 2.91, stripCap = 3.4, capShare = 0.7, stripeAt = 0.48,
+    -- the dark outline round the words, % of the window height (the picture measures stroke + drop: title 1.74, names 1.16-1.36,
+    -- timer and rarity 1.16, the count about 1)
+    outline = {title = 1.2, timer = 0.8, name = 1.0, rarity = 0.9, badge = 0.5}, -- the checker reads stroke + drop: about 0.55 % over these
+}
+M.Potion = {perPage = 3}
 -- bar: lead polish 2026-11-23 (ChatGPT round 1): 24-28 px at 720 p (docs/246 said 5 % H)
 M.Index = {w = 0.50, h = 0.63, card = 0.16, render = 0.11, panel = 0.28, bar = 0.036, cols = 4, rows = 2}
-M.PotionTitle, M.IndexTitle = "Potion Shop", "Dino Index"
+M.PotionTitle, M.IndexTitle = "Potions", "Dino Index"
 M.PotionColour, M.IndexColour = "green", "cyan" -- the shop green header; the Index cyan (docs/246)
 -- kid words: what a potion does (never "+40 %") and how long it lasts
 M.KindWords = {speed = "Run faster!", growth = "Grow faster!", loot = "More luck!"}
+-- BD-1298: a Legendary potion says it is stronger, still without a number
+M.SuperWords = {speed = "Run super fast!", growth = "Grow super fast!", loot = "Super lucky!"}
 -- lead polish 2026-11-23: the page button pages potions ("Next >", "< Back"), the empty strip says "No potions yet!"
 M.SoldOut, M.MoreWord, M.BackWord = "Sold out", "Next >", "< Back" -- kidtext-ok: the page arrow on the button (lead polish 2026-11-23: "Next" with an arrow)
 M.YoursWord, M.NoneWord = "Yours", "No potions yet!"
+-- BD-1298 (LEAD decision): no row under the cards. The small arrow in the header pages the shop, then the player's own potions ("My
+-- Potions", a green "Drink!" button on each card), then back to the shop: drinking stays one tap away without a strip in the window.
+-- LEAD decisions (owner 2026-11-23 "proposal still way better"): the card shows the picture's words only (the short name, the rarity
+-- word, the "x3" count, the kid words, the price); how long a potion lasts shows on My Potions (its strip) and in the drink confirm; a
+-- two-word catalog name shows its first word ("Swift Sip" -> "Swift") like the picture.
+M.PageWord, M.YoursTitle, M.DrinkWord = ">", "My Potions", "Drink!" -- kidtext-ok: the page arrow
+M.TimerSample = "New in 2 min" -- the restock words at their longest (TimerWords.restockIn, a 2 min shop window), for the header room
+M.TimerColour = {255, 224, 74} -- the yellow restock words in the header (the picture), dark outline as every kit word
+-- the shop rail in the picture's order (Featured, Potions, Trails, Auras, Eggs)
+M.PotionRail = {"featured", "potions", "trails", "auras", "eggs"}
+M.PotionRailWords = {featured = "Featured", potions = "Potions", trails = "Trails", auras = "Auras", eggs = "Eggs"}
 -- the Index rail (outside the window) and the shop rail (slice 1's tabs, Potions selected)
 M.IndexRail = {"dinos", "patterns", "colours", "fusion"}
 M.IndexRailWords = {dinos = "Dinos", patterns = "Patterns", colours = "Colours", fusion = "Fusion"}
@@ -41,8 +69,13 @@ function M.lasts(seconds: number): string
     local s = math.max(0, math.ceil(seconds))
     return if s < 60 then "Lasts " .. s .. " s" else "Lasts " .. (s // 60) .. " min"
 end
-function M.kindWord(kind: string): string return M.KindWords[kind] or "Feel great!" end
--- "x3" (how many of a potion or a dino the player has)
+function M.kindWord(kind: string, rarity: string?): string
+    if rarity == "Legendary" and M.SuperWords[kind] then return M.SuperWords[kind] end
+    return M.KindWords[kind] or "Feel great!"
+end
+-- BD-1298: the card name, the first word of a catalog name ("Swift Sip" -> "Swift", one word stays)
+function M.shortName(name: string): string return string.match(name, "^(%S+)") or name end
+-- "x3" (how many: a potion in stock or owned, a dino; a count, never a multiplier)
 function M.count(n: number): string return "x" .. tostring(math.max(0, math.floor(n))) end
 
 -- The offers of one page (1-based) and how many pages there are.
@@ -93,64 +126,87 @@ local function windowRect(w: number, guiH: number, h: number, top: number, share
     return {x = round((w - winW) / 2), y = y, w = winW, h = winH}
 end
 
--- The Potion Shop. w, guiH: ScreenGui AbsoluteSize; inset: the top bar above the ScreenGui. Returns the KitWindow / KitCard layout plus
--- restock (the "New in 3 min" line), more (the page button) and band (the "Yours" strip with the owned potions; nil when no room).
+-- The Potion Shop. w, guiH: ScreenGui AbsoluteSize; inset: the top bar above the ScreenGui. BD-1298: every rect comes from the
+-- element spec of the owner's PROPOSED PICTURE (M.PotionSpec = docs/menu-specs/potion-shop/spec.json; boxes in % of the window, card
+-- parts in % of the card; tools/menu_spec_check.py compares the Studio build element by element). The window is 71.7 % H at the
+-- picture's 1.403 : 1; on a short screen it grows (at most 90 % H) so the buy button keeps 44 px, and the floors (19 px text, 44 px
+-- buttons, 48 px X) win over the picture where they meet. Returns the KitWindow layout (window, headerInset, headerH, close, titleSize,
+-- stripeAt, cards = the card rects) plus, in window px: title, timer, page (the small arrow left of the X) and rail (one slot per tab);
+-- in card px: parts = {name, rarity, badge, art, strip, price} (each {x, y, w, h, size?}).
 function M.potionLayout(w: number, guiH: number, inset: number?)
     w, guiH = math.max(320, w), math.max(240, guiH)
     local top = math.max(0, inset or 0)
     local h = guiH + top
-    local P = M.Potion
-    local pad = math.max(6, round(h * 0.027))
-    local edge = math.max(4, round(h * 0.008))
-    local cardTitle = math.clamp(round(h * 0.035), 23, 26)
-    local nameH = cardTitle + 2
-    local rarityText = math.clamp(round(h * 0.028), M.MinText, 22)
-    local rarityH = rarityText + 2
-    local button = math.max(M.MinTap, round(h * P.button))
-    local buttonText = math.clamp(round(h * 0.037), 24, 28)
-    local lineText = math.clamp(round(h * 0.028), M.MinText, 22)
-    local lineH = math.max(lineText + 8, round(h * 0.042))
-    local gap = math.max(3, round(h * 0.0055))
-    local artTop = edge + nameH + round(rarityH * 0.4)
-    local rowH = math.max(M.MinTap, button)
-    local bandH = math.max(M.MinTap + 4, round(h * P.band))
-    -- a provisional header for the needed height (the real one is from the final window height)
-    local hi0, hh0 = header(h, round(h * P.h))
-    -- the bottle: 13 % H, at least minBottle px (a short screen: big enough to read), never more than the screen leaves (40 px floor)
-    local around = hi0 + hh0 + pad + artTop + gap + lineH + gap + button + edge + pad + rowH + math.max(6, round(pad * 0.6)) + (M.MinTap + 4) + pad
-    local art = math.clamp(math.max(round(h * P.bottle), P.minBottle), 40, math.max(40, guiH - 8 - around))
-    local needCard = artTop + art + gap + lineH + gap + button + edge
-    local cardH = math.max(round(h * P.card), needCard)
-    local needH = hi0 + hh0 + pad + cardH + pad + rowH + math.max(6, round(pad * 0.6)) + (M.MinTap + 4) + pad -- room for the owned strip (the only place to drink a potion)
-    local winRect = windowRect(w, guiH, h, top, P.w, P.h, 3 * 128 + 2 * 12 + 2 * 16, needH)
-    local headerInset, headerH, close, titleSize = header(h, winRect.h)
-    local side = math.max(8, round(winRect.w * 0.03))
-    local cardGap = math.clamp(round(h * 0.019), 8, 15)
-    local cardW = math.floor((winRect.w - 2 * side - 2 * cardGap) / 3)
-    local cardY = headerInset + headerH + pad
-    -- squeezed (a short phone): the card gives back what it can (never under what its parts need)
-    local spare = winRect.h - (cardY + cardH + math.max(6, round(pad * 0.7)) + rowH + math.max(6, round(pad * 0.6)) + M.MinTap + 4 + math.max(6, round(pad * 0.8)))
-    if spare < 0 then cardH = math.max(needCard, cardH + spare) end
-    local cards: {Rect} = {}
-    for i = 1, 3 do table.insert(cards, {x = side + (i - 1) * (cardW + cardGap), y = cardY, w = cardW, h = cardH}) end
-    local rowY = cardY + cardH + math.max(6, round(pad * 0.7))
-    local moreW = math.max(110, round(cardW * 0.62))
-    local more = {x = winRect.w - side - moreW, y = rowY, w = moreW, h = rowH}
-    local restock = {x = side + 4, y = rowY, w = more.x - side - 12, h = rowH, size = P.restockText}
-    local bandY = rowY + rowH + math.max(6, round(pad * 0.6))
-    local bandRoom = winRect.h - bandY - math.max(6, round(pad * 0.8))
-    local band: any = nil
-    if bandRoom >= M.MinTap + 4 then
-        local bh = math.min(bandRoom, bandH)
-        band = {x = side, y = bandY, w = winRect.w - 2 * side, h = bh, icon = math.max(M.MinTap, math.min(bh - 4, bh - 12)), text = math.clamp(round(h * 0.028), M.MinText, 22)}
+    local S = M.PotionSpec
+    local C = S.card
+    -- the window: the buy button (13 % of a 72.4 % card) needs 44 px
+    local needH = math.ceil(M.MinTap / (C.price[4] / 100 * S.cards.h / 100))
+    local winH = math.min(math.max(round(h * S.window.h), needH), guiH - 8, round(h * 0.9))
+    local winW = math.min(round(winH * S.window.aspect), w - 16)
+    -- a narrow screen: the window (centred) leaves room for the rail on its right; it keeps the picture's shape
+    local maxW = math.floor((w / 2 - 4) / ((S.rail.x + S.rail.w) / 100 - 0.5))
+    if winW > maxW then winW = maxW winH = math.min(winH, round(winW / S.window.aspect)) end
+    local y = math.max(4, round(h * S.window.top) - top)
+    if y + winH > guiH - 4 then y = math.max(4, guiH - 4 - winH) end
+    local win = {x = round((w - winW) / 2), y = y, w = winW, h = winH}
+    local function rect(b: {number}, fw: number, fh: number): Rect
+        return {x = round(b[1] / 100 * fw), y = round(b[2] / 100 * fh), w = round(b[3] / 100 * fw), h = round(b[4] / 100 * fh)}
     end
-    local shopWords = {"Featured", "Auras", "Trails", "Eggs", "Potions"}
+    local function text(capPct: number, fh: number): number return math.max(M.MinText, round(capPct / 100 * fh / S.capShare)) end
+    -- the header: KitWindow draws the strip at headerInset with headerH and the X centred in its height at its right end
+    local header = rect(S.header, winW, winH)
+    local close = math.max(M.MinClose, round(S.close[4] / 100 * winH))
+    local headerH = math.max(header.h, close + 4)
+    local headerInset = header.y
+    local title = rect(S.title, winW, winH)
+    local titleSize = text(S.titleCap, winH)
+    local timer = rect(S.timer, winW, winH)
+    -- the page arrow is not in the picture: as small as a tap allows, right after the title (each page's own title), so the timer keeps
+    -- the picture's place and size between it and the X; its words get smaller (19 px floor) only when that room is short
+    local closeX = winW - headerInset - math.floor((headerH - close) / 2) - close
+    local spec = rect(S.timer, winW, winH)
+    local function row(titleWord: string)
+        local page = {x = title.x + M.textWidth(titleWord, titleSize) + 6, y = headerInset + math.floor((headerH - M.MinTap) / 2), w = M.MinTap, h = M.MinTap, text = 26}
+        local left, right = page.x + page.w + 6, closeX - 6
+        local size = math.max(M.MinText, math.min(text(S.timerCap, winH), math.floor((right - left) / (#M.TimerSample * 0.5))))
+        local half = math.ceil(#M.TimerSample * 0.5 * size / 2)
+        local centre = math.max(left + half, math.min(right - half, spec.x + spec.w / 2))
+        return page, {x = round(centre - spec.w / 2), y = spec.y, w = spec.w, h = math.max(spec.h, math.ceil(size * 0.8)), size = size}
+    end
+    local page, timer = row(M.PotionTitle)
+    local pageMine, timerMine = row(M.YoursTitle)
+    -- the cards and their parts
+    local cards: {Rect} = {}
+    for i = 1, 3 do table.insert(cards, rect({S.cards.x[i], S.cards.y, S.cards.w[i], S.cards.h}, winW, winH)) end
+    local cw, ch = cards[1].w, cards[1].h
+    local name, rarity, badge = rect(C.name, cw, ch), rect(C.rarity, cw, ch), rect(C.badge, cw, ch)
+    local art, strip, price = rect(C.art, cw, ch), rect(C.strip, cw, ch), rect(C.price, cw, ch)
+    name.size, rarity.size, badge.size = text(S.nameCap, winH), text(S.rarityCap, winH), text(S.badgeCap, winH)
+    -- the labels keep the picture's boxes (the letters, about 0.7 of the text size, fit them; a right-aligned count may run left)
+    name.h, rarity.h, badge.h = math.max(name.h, math.ceil(name.size * 0.8)), math.max(rarity.h, math.ceil(rarity.size * 0.8)), math.max(badge.h, math.ceil(badge.size * 0.8))
+    -- floors: the buy button 44 px (kept on the card's bottom), the strip over it, the bottle between the rarity word and the strip
+    local priceBottom = price.y + price.h
+    price.h = math.max(M.MinTap, price.h)
+    price.y = math.min(price.y, priceBottom - price.h)
+    strip.size = text(S.stripCap, winH)
+    strip.h = math.max(strip.h, strip.size + 8)
+    strip.y = math.min(strip.y, price.y - math.max(2, round(ch * 0.018)) - strip.h)
+    art.h = math.max(0, math.min(art.h, strip.y - 4 - art.y))
+    price.size = math.max(24, round(price.h * 0.6))
+    -- the rail outside the window: one slot per tab (an icon with its word under it)
+    local railSlots = {}
+    for i, tab in M.PotionRail do
+        local r = rect({S.rail.x, S.rail.y + (i - 1) * S.rail.pitch, S.rail.w, S.rail.h}, winW, winH)
+        local label = math.max(M.MinText, round(r.h * 0.24))
+        railSlots[tab] = {x = r.x, y = r.y, w = r.w, h = math.max(r.h, M.MinTap + label + 2), icon = math.max(M.MinTap, r.h - label - 2), label = label}
+    end
     return {
-        window = winRect, headerInset = headerInset, headerH = headerH, close = close, titleSize = titleSize, pad = pad,
-        cards = cards, edge = edge, nameH = nameH, cardTitle = cardTitle, rarityText = rarityText, rarityH = rarityH, line = true,
-        lineH = lineH, lineText = lineText, stripInset = round(cardW * 0.07), innerGap = gap, art = art, artTop = artTop, button = button,
-        buttonInset = round(cardW * 0.045), buttonText = buttonText, priceIcon = round(button * 0.72),
-        restock = restock, more = more, band = band, rail = rail(w, guiH, h, winRect, shopWords),
+        window = win, headerInset = headerInset, headerH = headerH, close = close, titleSize = titleSize, stripeAt = S.stripeAt,
+        cards = cards, title = title, timer = timer, page = page, timerMine = timerMine, pageMine = pageMine,
+        parts = {name = name, rarity = rarity, badge = badge, art = art, strip = strip, price = price}, rail = railSlots,
+        outline = {title = math.max(3, round(S.outline.title / 100 * winH)), timer = math.max(3, round(S.outline.timer / 100 * winH)),
+            name = math.max(3, round(S.outline.name / 100 * winH)), rarity = math.max(3, round(S.outline.rarity / 100 * winH)),
+            badge = math.max(3, round(S.outline.badge / 100 * winH))},
     }
 end
 
