@@ -428,6 +428,10 @@ end
 -- Config.VegetationV2Enabled Arena sets this before generate(). Round bushes (kit family "bush", also at a tree foot) are sized to
 -- minHeight..maxHeight kit studs instead of the 4-12 stud Small band, and of the shrub-layer bush picks only `keep` stay bushes, `flowers`
 -- become a flower or grass clump on the ground cover layer and the rest are open ground. nil = the grammar exactly as before.
+-- BD-1309 (owner 2026-11-23 "most trees are the same size, we need more dynamic growth"): when set (Arena, vegetation v2 island) a tree's
+-- scale is a growth curve instead of the flat .9-1.6 range: min + (max - min) * u^skew (many young trees, a few old giants) times an age
+-- field (young .. old, a slow noise field of ageScale studs), so a grove grows old together and its edge is young. nil = the old range.
+BiomePlacement.TreeGrowth = nil :: {min: number, max: number, skew: number, ageScale: number, young: number, old: number}?
 BiomePlacement.BushV2 = nil :: {minHeight: number, maxHeight: number, maxWidth: number, keep: number, flowers: number}?
 function BiomePlacement.smallScale(data: any, u: number): number
     local v2 = BiomePlacement.BushV2
@@ -853,6 +857,10 @@ function BiomePlacement.generate(options): {Placement}
                     if math.sqrt(x ^ 2 + (z - 30) ^ 2) < BiomePlacement.SmallBand.spawnClear then continue end
                 elseif lay == "colossal" then
                     scale = BiomePlacement.colossalScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: 80-140 studs
+                elseif lay == "tree" and BiomePlacement.TreeGrowth then
+                    local g = BiomePlacement.TreeGrowth
+                    local age = field(seed, 9, x, z, g.ageScale)
+                    scale = (g.min + (g.max - g.min) * BiomePlacement.hash(seed, li, ix, iz, 6) ^ g.skew) * (g.young + (g.old - g.young) * age)
                 else
                     local range = if replaced then Spec[id].scale elseif coverSwap then BiomePlacement.Scales.groundcover else BiomePlacement.Scales[lay]
                     scale = range[1] + (range[2] - range[1]) * BiomePlacement.hash(seed, li, ix, iz, 6)

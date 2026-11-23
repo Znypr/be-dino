@@ -39,7 +39,11 @@ VegetationV2.CoverKeep = .5
 -- become flower or grass clumps, 15% are open ground. The food map for this world is FoodLayerDataV3HostsVeg2 (tools/food_hosts.py --veg2).
 -- Height factor of the shown mesh for the berry bushes (a lower dome, so a row of bushes reads as bushes, not a hedge). 1 = uniform.
 VegetationV2.Squash = table.freeze({veg2_bush_red = .8, veg2_bush_blue = .8, veg2_bush_grape = .8})
-VegetationV2.BushRule = table.freeze({minHeight = 3, maxHeight = 5.5, maxWidth = 11, keep = .75, flowers = .15})
+VegetationV2.BushRule = table.freeze({minHeight = 3, maxHeight = 5.5, maxWidth = 11, keep = .74, flowers = .15}) -- BD-1309: keep .75 -> .74 on the hillier island
+
+-- BD-1309: tree growth on this island (BiomePlacement.TreeGrowth): scale .6-2.0 skewed young, times an age field .75-1.3 over ~70 studs,
+-- so the same kit tree shows from a 0.45x sapling to a 2.6x old giant and groves differ in age.
+VegetationV2.TreeGrowth = table.freeze({min = .6, max = 2.0, skew = 1.35, ageScale = 70, young = .75, old = 1.3})
 
 function VegetationV2.enabled(config: any): boolean
     return type(config) == "table" and config.WorldV3Enabled == true and config.ToonWorldEnabled == true and config.VegetationV2Enabled == true

@@ -215,7 +215,7 @@ TOON_SWAP = ('local WorldToon=' + est.vwa.wrapped('src/shared/WorldToon.luau') +
 
 
 # BD-1239 follow-up: with Config.VegetationV2Enabled Arena.build() also sets the v2 bush rule (BiomePlacement.BushV2 = VegetationV2.BushRule).
-VEG2_RULE = ('local VegetationV2=' + est.vwa.wrapped('src/shared/VegetationV2.luau') + chr(10) + 'Biome.BushV2 = VegetationV2.BushRule' + chr(10))
+VEG2_RULE = ('local VegetationV2=' + est.vwa.wrapped('src/shared/VegetationV2.luau') + chr(10) + 'Biome.BushV2 = VegetationV2.BushRule' + chr(10) + 'Biome.TreeGrowth = VegetationV2.TreeGrowth' + chr(10))
 
 
 def dump(runner, profile='playtest', world=None, toon=False, veg2=False):
