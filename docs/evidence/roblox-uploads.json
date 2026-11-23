@@ -1830,5 +1830,45 @@
     "sha256": "6092dda39262cb81fc9208faf4d28cbab24a0b8ecf5dd7272d8d85ec63e1ff5b",
     "moderation": "Approved",
     "uploaded": "2026-11-23T00:01:34Z"
+  },
+  {
+    "assetId": "71224485443187",
+    "assetType": "Model",
+    "displayName": "Anky_V5",
+    "file": "Anky_V5.fbx",
+    "bytes": 1092492,
+    "sha256": "eb22762fecbe0b9187df4a5448dc4060d20b15cf7fc3f893bf194d1e6a88766b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T01:38:13Z"
+  },
+  {
+    "assetId": "80788415993379",
+    "assetType": "Model",
+    "displayName": "Para_V5",
+    "file": "Para_V5.fbx",
+    "bytes": 1320108,
+    "sha256": "ef904cd96e8f65ad1fb8bc019598f4b4ce05a4b2a001d8333ce64b52a486a462",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T01:38:30Z"
+  },
+  {
+    "assetId": "89552849463606",
+    "assetType": "Model",
+    "displayName": "Micro_V5",
+    "file": "Micro_V5.fbx",
+    "bytes": 1425388,
+    "sha256": "57ab5cec3224abe8f5a123dcfb24dadeb0f57c1c11760a97b16de348f95a8e08",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T01:38:49Z"
+  },
+  {
+    "assetId": "81211624431392",
+    "assetType": "Model",
+    "displayName": "Budgie_V5",
+    "file": "Budgie_V5.fbx",
+    "bytes": 1226860,
+    "sha256": "0060cdb567763c34bf68de5fb2323bcd848da0d6794f990c143a773848fd380e",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T01:39:04Z"
   }
 ]
