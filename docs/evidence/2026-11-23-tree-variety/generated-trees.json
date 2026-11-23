@@ -1,0 +1,9 @@
+{
+  "note": "BD-1311 tree variety (owner 2026-11-23: more trees, more variations, remodel the trees that look too geometric). Roblox Studio generate_mesh, text prompts in the style of the approved vegetation v2 sheet (docs/evidence/2026-11-16-vegetation-v2), published to the owner's account by the generator 2026-11-23 (publishedAssetId of each job). tris = real face count measured in Studio (EditableMesh). refs/ = crops of Studio pictures of each generated mesh. Rejected first-round pines (published, not used): 82591327398755 (dull faceted fir), 112889306890314 (blue ball spruce).",
+  "items": {
+    "veg2_pine_fir": {"asset": 121078729284419, "maxTriangles": 1200, "tris": 1200, "reference": "refs/ref-pine_fir.png", "what": "soft fir with three puffy rounded tiers and a round tip", "replaces": ["veg2_pine_a 104792252201636", "veg2_pine_b 77837197584497"]},
+    "veg2_pine_cypress": {"asset": 94010378329800, "maxTriangles": 1000, "tris": 1000, "reference": "refs/ref-pine_cypress.png", "what": "soft flame-shaped cypress with mushrooms at the foot"},
+    "veg2_pine_bonsai": {"asset": 71668823008966, "maxTriangles": 1200, "tris": 1200, "reference": "refs/ref-pine_bonsai.png", "what": "leaning bonsai pine with three cloud pads"},
+    "veg2_tree_oak": {"asset": 93533177854872, "maxTriangles": 1200, "tris": 1200, "reference": "refs/ref-tree_oak.png", "what": "wide umbrella oak with a bent trunk and three round cloud crowns"}
+  }
+}

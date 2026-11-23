@@ -25,8 +25,8 @@ class VegetationV2Tests(unittest.TestCase):
     def test_eighteen_published_ids_with_registry_lines(self):
         veg = read('src/shared/VegetationV2.luau')
         items = re.findall(r'(veg2_\w+) = \{assetId = "(\d+)"', veg)
-        self.assertEqual(len(items), 18)
-        self.assertEqual(len({i for _, i in items}), 18)
+        self.assertGreaterEqual(len(items), 18)  # BD-1311: 18 sheet objects, then the tree variants (two cone pines retired)
+        self.assertEqual(len({i for _, i in items}), len(items))
         registry = read('docs/77-asset-registry.md')
         for key, aid in items:
             self.assertIn(f'| world_gen_{key} |', registry)

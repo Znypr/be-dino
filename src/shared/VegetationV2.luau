@@ -14,8 +14,14 @@ VegetationV2.Assets = {
     veg2_tree_flower = {assetId = "77092440397911", tris = 1500, ref = "tree_flower", what = "rounded flower tree, white blossoms, mushrooms at the foot"},
     veg2_tree_twisty = {assetId = "76763874077682", tris = 2500, ref = "tree_twisty_landmark", what = "big twisty-trunk tree with vines and pink flowers"},
     veg2_tree_fruit = {assetId = "109141890199115", tris = 1500, ref = "tree_fruit_orange", what = "fruit tree with oranges"},
-    veg2_pine_a = {assetId = "104792252201636", tris = 900, ref = "pine_a", what = "dark four-layer pine with mushrooms"},
-    veg2_pine_b = {assetId = "77837197584497", tris = 900, ref = "pine_b", what = "young three-layer pine with a lime tip"},
+    -- BD-1311 (owner 2026-11-23: "more trees more variations and remodel some current trees that look too geometric"): the layered cone pines
+    -- veg2_pine_a (104792252201636) and veg2_pine_b (77837197584497) read as hard cone stacks and are retired; three soft pines replace them,
+    -- plus a fourth broadleaf. Same route (Roblox generate_mesh, text prompt in the approved sheet's style), reference = a Studio picture of
+    -- the generated mesh in docs/evidence/2026-11-23-tree-variety/refs.
+    veg2_pine_fir = {assetId = "121078729284419", tris = 1200, ref = "pine_fir", what = "soft fir with three puffy rounded tiers and a round tip"},
+    veg2_pine_cypress = {assetId = "94010378329800", tris = 1000, ref = "pine_cypress", what = "soft flame-shaped cypress with mushrooms at the foot"},
+    veg2_pine_bonsai = {assetId = "71668823008966", tris = 1200, ref = "pine_bonsai", what = "leaning bonsai pine with three cloud pads"},
+    veg2_tree_oak = {assetId = "93533177854872", tris = 1200, ref = "tree_oak", what = "wide umbrella oak with a bent trunk and three round cloud crowns"},
     veg2_palm_coconut = {assetId = "87978584265482", tris = 1200, ref = "palm_coconut", what = "coconut palm with a hibiscus at the foot"},
     veg2_palm_flower = {assetId = "131648210939538", tris = 1200, ref = "palm_flower", what = "flower palm with a vine and a pink bloom"},
     veg2_bush_red = {assetId = "77978853272967", tris = 900, ref = "bush_berry_red", what = "green dome with small red berries"},
@@ -60,17 +66,25 @@ end
 local function choose(roll: number, a: string, b: string, share: number): string
     return if roll < share then a else b
 end
+-- BD-1311: three-way pick: a below share1, b below share1 + share2, else c.
+local function pick3(roll: number, a: string, share1: number, b: string, share2: number, c: string): string
+    return if roll < share1 then a elseif roll < share1 + share2 then b else c
+end
 
 -- Which v2 key shows for a kit id in a sub-biome (BiomeMap id), with roll in [0, 1) a deterministic per-prop value. nil = keep the current
 -- visual (dead trees, bare rocks, mushrooms, logs and landmarks are not part of this family).
 function VegetationV2.visualFor(id: string, biome: string, roll: number): string?
     local beach = biome == "badlands" -- the palm beach zone of World V3
     local damp = biome == "fern" or biome == "marsh" or biome == "conifer"
-    if id == "world_tree_canopy_s" then return choose(roll, "veg2_tree_flower", "veg2_tree_fruit", .55) end
-    if id == "world_tree_canopy_m" then return choose(roll, "veg2_tree_fruit", "veg2_tree_flower", if biome == "meadow" then .55 else .4) end
-    if id == "world_tree_canopy_l" then return "veg2_tree_twisty" end
-    if id == "world_tree_conifer_s" then return choose(roll, "veg2_pine_b", "veg2_pine_a", .7) end
-    if id == "world_tree_conifer_m" or id == "world_tree_conifer_l" then return choose(roll, "veg2_pine_a", "veg2_pine_b", .65) end
+    if id == "world_tree_canopy_s" then return pick3(roll, "veg2_tree_flower", .45, "veg2_tree_fruit", .3, "veg2_tree_oak") end
+    if id == "world_tree_canopy_m" then
+        return if biome == "meadow" then pick3(roll, "veg2_tree_fruit", .45, "veg2_tree_flower", .3, "veg2_tree_oak")
+            else pick3(roll, "veg2_tree_oak", .35, "veg2_tree_flower", .35, "veg2_tree_fruit")
+    end
+    if id == "world_tree_canopy_l" then return choose(roll, "veg2_tree_twisty", "veg2_tree_oak", .6) end
+    -- BD-1311: three soft pines (fir, cypress, bonsai) instead of the two cone stacks; the leaning bonsai stays rare so groves read as pines.
+    if id == "world_tree_conifer_s" then return pick3(roll, "veg2_pine_fir", .45, "veg2_pine_cypress", .4, "veg2_pine_bonsai") end
+    if id == "world_tree_conifer_m" or id == "world_tree_conifer_l" then return pick3(roll, "veg2_pine_fir", .4, "veg2_pine_cypress", .35, "veg2_pine_bonsai") end
     if string.sub(id, 1, 16) == "world_tree_cycad" then return choose(roll, "veg2_palm_coconut", "veg2_palm_flower", if beach then .65 else .4) end
     if id == "world_bush_a" then return choose(roll, "veg2_bush_red", "veg2_bush_blue", .5) end
     if id == "world_bush_b" then return if roll < .34 then "veg2_bush_grape" elseif roll < .67 then "veg2_bush_blue" else "veg2_bush_red" end
