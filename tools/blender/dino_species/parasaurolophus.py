@@ -7,8 +7,16 @@ FRONT = (0.34, 1.09)
 BACK = (-0.86, 0.04)
 MID = 0.19
 
+# head cut: a neck plane tilted forward (back of the skull under the crest -> throat), so the whole crest turns with the head
+NECK_P, NECK_N = (0, 0.20, 1.85), (0, 0.37, 0.93)
+
+
+def above_neck(c):
+    return (c.y - NECK_P[1]) * NECK_N[1] + (c.z - NECK_P[2]) * NECK_N[2] > 0
+
+
 def label(c):
-    if c.y > HEAD_Y and c.z > LEG_Z:
+    if above_neck(c) and c.z > LEG_Z:
         return 'Head'
     if c.y < TAIL_Y and c.z > LEG_Z * 0.5:
         return 'Tail'
@@ -17,7 +25,7 @@ def label(c):
     return 'Body'
 
 CUTS = [
-    ((0, HEAD_Y, 0), (0, 1, 0), ((-9, -9, LEG_Z), (9, 9, 9))),
+    (NECK_P, NECK_N, ((-9, -0.3, 1.3), (9, 9, 9))),
     ((0, TAIL_Y, 0), (0, 1, 0), None),
     ((0, 0, LEG_Z), (0, 0, 1), ((LEG_X - 0.05, FRONT[0], 0), (9, FRONT[1], LEG_Z + 0.05))),
     ((0, 0, LEG_Z), (0, 0, 1), ((LEG_X - 0.05, BACK[0], 0), (9, BACK[1], LEG_Z + 0.05))),
