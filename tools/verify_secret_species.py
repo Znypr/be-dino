@@ -59,7 +59,7 @@ def module(path):
 # changing an id) fails this verifier until this table, docs/173 and the evidence line change in the same commit. Every id is a published
 # `generate_mesh` Model of the owner's account (Roblox economy details: AssetTypeId 10, creator znyprs, the same as the 22 shipped species).
 # Never invent an id: a slot that is not here stays 0.
-BOUND_IDS = {'budgiesaurus': 107910518074360, 'chickosaurus': 108391746824463, 'cockatoosaurus': 77920946493998, 'dodo': 128146035116312, 'duck': 129901658996389, 'eaglesaurus': 116840996663024, 'foxosaurus': 112996440434481, 'penguin': 120950430829492, 'pigeon': 83982208995212}
+BOUND_IDS = {'budgiesaurus': 81211624431392, 'chickosaurus': 108391746824463, 'cockatoosaurus': 77920946493998, 'dodo': 128146035116312, 'duck': 129901658996389, 'eaglesaurus': 116840996663024, 'foxosaurus': 112996440434481, 'penguin': 120950430829492, 'pigeon': 83982208995212}
 SLOT_RE = re.compile(r'(\{ id = "(\w+)", name = "[^"]+", secret = true, class = "\w+", weight = \d+, assetId = )(\d+)( \})')
 
 
@@ -1079,7 +1079,7 @@ def static():
 
     # docs
     registry = read('docs/77-asset-registry.md')
-    for name, asset in (('secret_dino_budgiesaurus', '107910518074360'), ('secret_dino_foxosaurus', '112996440434481'), ('secret_dino_chickosaurus', '108391746824463'),
+    for name, asset in (('secret_dino_budgiesaurus', '81211624431392'), ('secret_dino_foxosaurus', '112996440434481'), ('secret_dino_chickosaurus', '108391746824463'),
                         ('secret_dino_cockatoosaurus', '77920946493998'), ('secret_dino_eaglesaurus', '116840996663024')):
         need(re.search(rf'^\| {name} \|.*{asset}', registry, re.M) is not None, f'docs/77 line for {name} ({asset})')
     need(re.search(r'^\| secret_dino_foxosaurus \|.*BOUND', registry, re.M) is not None, 'docs/77 says the Foxosaurus line is BOUND')
