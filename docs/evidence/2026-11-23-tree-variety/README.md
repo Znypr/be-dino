@@ -36,7 +36,7 @@ World V3 playtest island (WorldV3Enabled + ToonWorldEnabled + VegetationV2Enable
 | dead / burnt | faceted kit `tree_burnt` | 3 soft | mossy bare old tree, hollow stump with mushrooms, charred volcano tree with soft ember cracks |
 | colossal broadleaf | twisty x 80-140 studs | 1 landmark | a higher-detail giant (about 5,000 tris, colossal layer only) |
 
-**Jungle slice (owner 2026-11-23: "also more terrains like more jungle features and assets"), after the tree slices:** a readable jungle
+**Jungle slice (owner 2026-11-23: "also more terrains like more jungle features and assets"), ON HOLD until the lead sends the jungle biome brief (biome overhaul plan on the Design Board, so the art matches):** a readable jungle
 part of the broadleaf forest (biome `fern`, or a jungle sub-zone in `WorldV3.Zones`): dense canopy, buttress-root trees, vines/lianas,
 big-leaf plants and ferns, mossy rocks or ruins, a small stream or waterfall pool, and darker varied jungle ground (terrain materials and
 colours in `src/server/IslandTerrain.luau`, `WorldV3.surface` / `weights`). Art from generate_mesh or Blender/Hunyuan; plan with pictures
