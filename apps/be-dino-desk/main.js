@@ -1,7 +1,8 @@
 // Be Dino Desk (docs/247-be-dino-desk.md, BD-1292). Shows what is in the game as grids and keeps the owner's verdict per item.
 // The catalog comes from tools/desk_catalog.py (run with the system python); pictures load through desk://repo/<rel>, which only
 // serves image files under the repo. Feedback is written to docs/feedback/asset-desk.json on every change (never in smoke mode).
-const { app, BrowserWindow, ipcMain, protocol, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, Menu, shell, nativeImage } = require('electron');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -45,12 +46,39 @@ async function catalog() {
   return JSON.parse(r.out);
 }
 
+// Thumbnails (owner 2026-11-23 "loading catalog really slow"): grid tiles ask for desk://repo/<rel>?thumb=<px>. The first request
+// resizes the picture once with Electron's own image code and keeps a small JPEG in <userData>/thumbs, keyed by path, size, mtime and
+// width, so later loads read a few KB instead of decoding a full-size capture (up to several MB) per tile. Full size stays the default.
+function thumbFile(file, st, w) {
+  const key = crypto.createHash('sha1').update(file + '|' + st.size + '|' + st.mtimeMs + '|' + w).digest('hex');
+  return path.join(app.getPath('userData'), 'thumbs', key.slice(0, 2), key + '.jpg');
+}
+
 function media(req) {
   const u = new URL(req.url);
   const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
   const file = path.resolve(REPO, rel);
   const ok = u.host === 'repo' && file.toLowerCase().startsWith(path.resolve(REPO).toLowerCase() + path.sep) && TYPES[path.extname(file).toLowerCase()];
   if (!ok || !fs.existsSync(file) || !fs.statSync(file).isFile()) return new Response('not found', { status: 404 });
+  const w = Math.min(1024, Math.max(32, parseInt(u.searchParams.get('thumb') || '0', 10) || 0));
+  if (u.searchParams.get('thumb')) {
+    try {
+      const st = fs.statSync(file);
+      const out = thumbFile(file, st, w);
+      if (!fs.existsSync(out)) {
+        const img = nativeImage.createFromPath(file);
+        if (!img.isEmpty()) {
+          const size = img.getSize();
+          const small = size.width > w ? img.resize({ width: w, quality: 'good' }) : img;
+          fs.mkdirSync(path.dirname(out), { recursive: true });
+          fs.writeFileSync(out, small.toJPEG(82));
+        }
+      }
+      if (fs.existsSync(out)) {
+        return new Response(fs.readFileSync(out), { status: 200, headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=3600' } });
+      }
+    } catch { /* fall through to the full picture */ }
+  }
   return new Response(Readable.toWeb(fs.createReadStream(file)), {
     status: 200, headers: { 'Content-Type': TYPES[path.extname(file).toLowerCase()], 'Cache-Control': 'max-age=60' },
   });

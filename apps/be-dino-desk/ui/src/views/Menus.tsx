@@ -478,7 +478,7 @@ export default function Menus({ menus }: { menus: MenuScreen[] }) {
             return (
               <button key={s.screen} data-screen={s.screen} onClick={() => { setIdx(i); setSel(null); }}
                 className={cn('flex gap-2 rounded-md p-1.5 text-left hover:bg-accent', i === idx && 'bg-accent')}>
-                <img src={desk.media(s.proposal)} alt="" className="h-10 w-16 shrink-0 rounded-sm object-cover" />
+                <img src={desk.thumb(s.proposal, 160)} alt="" className="h-10 w-16 shrink-0 rounded-sm object-cover" />
                 <span className="flex min-w-0 flex-col text-xs">
                   <span className="truncate font-medium">{s.screen}</span>
                   <span className={cn('text-[11px]', s.latest && !s.latest.sample ? (s.latest.misses.length ? 'text-[#fca5a5]' : 'text-ok') : 'text-muted-foreground')}>
