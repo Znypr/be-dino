@@ -11,13 +11,37 @@ const { Readable } = require('stream');
 // The repo to show: BE_DINO_REPO, else repo.txt in the app's data folder (build.ps1 writes the main checkout there), else the
 // checkout this source sits in (apps/be-dino-desk -> ../..). No machine path is stored in the repo (public repo rule).
 function repoPath() {
-  if (process.env.BE_DINO_REPO) return process.env.BE_DINO_REPO;
-  try { const t = fs.readFileSync(path.join(app.getPath('appData'), 'Be Dino Desk', 'repo.txt'), 'utf8').trim(); if (t && fs.existsSync(t)) return t; } catch {}
-  return path.resolve(__dirname, '..', '..');
+  // Every candidate must really be a Be Dino checkout (has tools/desk_catalog.py); the first one that is wins. Owner 2026-11-23: the
+  // shortcut-started app fell back to its own install folder although repo.txt was right (an environment value inherited from Windows
+  // Explorer is the likely cause), so a stale or wrong value is skipped instead of trusted, and the choice is logged.
+  const tried = [];
+  const ok = (p) => { try { return !!p && fs.existsSync(path.join(p, 'tools', 'desk_catalog.py')); } catch { return false; } };
+  const read = (f) => { try { return fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim(); } catch { return ''; } };
+  const cands = [
+    ['env BE_DINO_REPO', process.env.BE_DINO_REPO],
+    ['repo.txt (app data)', read(path.join(app.getPath('appData'), 'Be Dino Desk', 'repo.txt'))],
+    ['repo.txt (next to the app)', read(path.join(path.dirname(process.execPath), 'repo.txt'))],
+    ['source checkout', path.resolve(__dirname, '..', '..')],
+    ['Documents/be-dino', path.join(require('os').homedir(), 'Documents', 'be-dino')],
+  ];
+  let pick = null;
+  for (const [why, p] of cands) {
+    const good = ok(p);
+    tried.push(`${why}: ${p || '-'}${good ? '' : ' (no tools/desk_catalog.py)'}`);
+    if (good && !pick) pick = [why, p];
+  }
+  try {
+    fs.mkdirSync(path.join(app.getPath('appData'), 'Be Dino Desk'), { recursive: true });
+    fs.writeFileSync(path.join(app.getPath('appData'), 'Be Dino Desk', 'desk.log'),
+      new Date().toISOString() + ' repo = ' + (pick ? `${pick[1]} (${pick[0]})` : 'NONE') + '\n  ' + tried.join('\n  ') + '\n');
+  } catch {}
+  REPO_TRIED = tried;
+  return pick ? pick[1] : path.resolve(__dirname, '..', '..');
 }
+let REPO_TRIED = [];
 const REPO = repoPath();
 const PY = process.env.BE_DINO_PYTHON || 'python';
-const TOOLS = process.env.BE_DINO_TOOLS || path.join(REPO, 'tools');   // a worktree's tools can list the main checkout
+const TOOLS = (process.env.BE_DINO_TOOLS && fs.existsSync(path.join(process.env.BE_DINO_TOOLS, 'desk_catalog.py'))) ? process.env.BE_DINO_TOOLS : path.join(REPO, 'tools');   // a worktree's tools can list the main checkout
 const FEEDBACK = path.join(REPO, 'docs', 'feedback', 'asset-desk.json');
 const SMOKE = process.argv.includes('--smoke');
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
@@ -42,7 +66,7 @@ function run(script, args, timeoutMs = 120000) {
 
 async function catalog() {
   const r = await run('desk_catalog.py', ['--root', REPO]);
-  if (r.code !== 0) throw new Error('desk_catalog.py failed: ' + (r.err || r.out).slice(-600));
+  if (r.code !== 0) throw new Error('desk_catalog.py failed: ' + (r.err || r.out).slice(-600) + ' | repo candidates: ' + REPO_TRIED.join('; '));
   return JSON.parse(r.out);
 }
 
