@@ -59,3 +59,7 @@ apps/be-dino-desk/node_modules/
 apps/be-dino-desk/ui/node_modules/
 apps/be-dino-desk/dist/
 apps/be-dino-desk/release/
+
+# BD-1304 tools/hy_dino.py working folders (generated models, renders, GIFs)
+build/hy-*/
+build/hy3d-*/

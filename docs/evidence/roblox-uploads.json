@@ -1620,5 +1620,35 @@
     "sha256": "fee51dc0df1541f9a46c09abea9af0e247852ca70cf5e0b388476ef9d6cb490f",
     "moderation": "Approved",
     "uploaded": "2026-11-22T18:17:05Z"
+  },
+  {
+    "assetId": "138676742704852",
+    "assetType": "Model",
+    "displayName": "Compy V3 soft no vertex colours",
+    "file": "Compy_V3_soft_novc.fbx",
+    "bytes": 433052,
+    "sha256": "6092dda39262cb81fc9208faf4d28cbab24a0b8ecf5dd7272d8d85ec63e1ff5b",
+    "moderation": "Approved",
+    "uploaded": "2026-11-23T00:01:34Z"
+  },
+  {
+    "assetId": "110481121294523",
+    "assetType": "Model",
+    "displayName": "Pachycephalosaurus V5",
+    "file": "Pachy_V5.fbx",
+    "bytes": 514684,
+    "sha256": "9512db9768f6a789e17adf8a2d9af75e98ac73e6f753a34c0921acae371d8d38",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T22:15:29Z"
+  },
+  {
+    "assetId": "118889310886467",
+    "assetType": "Model",
+    "displayName": "Pachycephalosaurus V5b",
+    "file": "Pachy_V5b.fbx",
+    "bytes": 509036,
+    "sha256": "25dc17dadab7ebed581eaf01c55380c664c7a6a6aa4b65ccdfeff08407116041",
+    "moderation": "Approved",
+    "uploaded": "2026-11-22T22:18:52Z"
   }
 ]
