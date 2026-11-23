@@ -94,7 +94,7 @@ def static_checks():
     config, profiles = read('src/shared/Config.luau'), read('tools/release_profiles.py')
     if len(re.findall(r'^    %s = false,$' % flag, config, re.M)) != 1:
         errors.append('Config.%s must ship false exactly once' % flag)
-    for needle in ('_flag_off("%s",' % flag, 'Rule("%s", "set", True,' % flag, '("%s", "BD-1248' % flag):
+    for needle in ('_flag_off("%s",' % flag, 'Rule("%s", "set", False,' % flag, '("%s", "BD-1248' % flag):  # BD-1312: off in the playtest too (shops only in the cave)
         if needle not in profiles:
             errors.append('release_profiles.py is missing %s' % needle)
     if '"%s"' % flag not in read('tools/release_playtest.py') or '"%s"' % flag not in read('tests/test_rehearsal.py'):
