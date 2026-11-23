@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import world_colliders  # noqa: E402
 EVIDENCE = ROOT / 'docs/evidence/2026-11-16-vegetation-v2'
+TREES = ROOT / 'docs/evidence/2026-11-23-tree-variety'  # BD-1311: tree variants (generated-trees.json, refs/)
 
 
 def read(path):
@@ -47,7 +48,7 @@ check(not Veg.enabled({WorldV3Enabled = true, ToonWorldEnabled = true}) and not 
     and not Veg.enabled({ToonWorldEnabled = true, VegetationV2Enabled = true}) and not Veg.enabled(nil), "off otherwise")
 local n = 0
 for key in Veg.Assets do n += 1 check(Veg.ready(key), "published id for " .. key) end
-check(n == 18, "18 sheet objects (" .. n .. ")")
+check(n == expected, "published family size (" .. n .. " of " .. expected .. ")")
 -- the island as the playtest builds it (World V3 + toon swap; tools/world_colliders.dump), placement only: `placed` is injected
 check(#placed > 1000, "island has placements (" .. #placed .. ")")
 local used, leftAlone = {}, {}
@@ -143,15 +144,16 @@ def source_checks():
     veg = read('src/shared/VegetationV2.luau')
     items = re.findall(r'(veg2_\w+) = \{assetId = "(\d+)", tris = \d+, ref = "(\w+)"', veg)
     ids = [i for _, i, _ in items]
-    if len(items) != 18 or len(set(ids)) != 18:
-        errors.append('18 distinct published ids expected')
+    if len(items) < 18 or len(set(ids)) != len(items):
+        errors.append('distinct published ids expected (%d items, %d ids)' % (len(items), len(set(ids))))
     evidence = json.loads((EVIDENCE / 'generated-vegetation.json').read_text(encoding='utf-8'))['items']
+    evidence.update(json.loads((TREES / 'generated-trees.json').read_text(encoding='utf-8'))['items'])
     for key, aid, ref in items:
         if f'| world_gen_{key} |' not in registry or f'| {aid} |' not in registry:
             errors.append(f'docs/77 line missing for {key} ({aid})')
         if evidence.get(key, {}).get('asset') != int(aid):
-            errors.append(f'generated-vegetation.json does not match {key}')
-        if not (EVIDENCE / 'refs' / f'ref-{ref}.png').is_file():
+            errors.append(f'generated-vegetation.json / generated-trees.json does not match {key}')
+        if not any((d / 'refs' / f'ref-{ref}.png').is_file() for d in (EVIDENCE, TREES)):
             errors.append(f'reference picture missing: refs/ref-{ref}.png')
     return errors
 
@@ -178,7 +180,8 @@ def main():
         problems.append('the v2 island must not have more placements in game than the PR #619 rule (%d > %d)' % (now, before))
         print('FAIL:', problems[-1])
     rows = ',\n'.join('{layer="%s",id="%s",x=%.3f,z=%.3f,scale=%.4f}' % (p['layer'], p['id'], p['x'], p['z'], p['scale']) for p in props)
-    source = ('local Kit=' + module(read('src/shared/WorldKitData.luau')) + '\nlocal Veg=' + module(read('src/shared/VegetationV2.luau')) +
+    expected = len(re.findall(r'(veg2_\w+) = \{assetId = "(\d+)"', read('src/shared/VegetationV2.luau')))
+    source = ('local expected = %d\n' % expected + 'local Kit=' + module(read('src/shared/WorldKitData.luau')) + '\nlocal Veg=' + module(read('src/shared/VegetationV2.luau')) +
               '\nlocal placed = {\n' + rows + '\n}\n' + LUAU)
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'veg2.luau'
