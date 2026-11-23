@@ -208,7 +208,12 @@ def stage_parts():
             bmesh.ops.delete(pb, geom=stray, context="FACES")
             bmesh.ops.delete(pb, geom=[v for v in pb.verts if not v.link_faces], context="VERTS")
         bnd = [e for e in pb.edges if e.is_boundary]
+        cap = None
         if bnd:
+            # the cut face's centre and radius: the joint pivot (colour stage) and the joint ball (below)
+            bv = list({v for e in bnd for v in e.verts})
+            c = sum((v.co for v in bv), V()) / len(bv)
+            cap = (tuple(c), sum((v.co - c).length for v in bv) / len(bv))
             res = bmesh.ops.holes_fill(pb, edges=bnd, sides=0)
             bmesh.ops.triangulate(pb, faces=res["faces"])
         bmesh.ops.recalc_face_normals(pb, faces=pb.faces[:])
@@ -217,6 +222,8 @@ def stage_parts():
         pb.free()
         ob = bpy.data.objects.new(name, me)
         sc.collection.objects.link(ob)
+        if cap:
+            ob["cap"], ob["cap_r"] = cap
         activate(ob)
         n = tris(me)
         target = BUDGET.get(name, 300) * detail
@@ -239,6 +246,22 @@ def stage_parts():
         bmd.to_mesh(ob.data)
         bmd.free()
         print("HY part %-6s islands %d tris %d" % (name, len(islands), tris(ob.data)))
+    # joint balls: a body-coloured ball half inside the body at each turning part's cut, so a head or tail turned by a clip
+    # shows a rounded neck instead of a flat stump or a gap
+    body = sc.objects.get("Body")
+    for name in cfg.get("JOINT_BALLS", ["Head", "Tail"]):
+        ob = sc.objects.get(name)
+        if not (body and ob and "cap" in ob):
+            continue
+        bb = bmesh.new()
+        bb.from_mesh(body.data)
+        r = ob["cap_r"] * float(cfg.get("JOINT_BALL_SCALE", 0.9))
+        ball = bmesh.ops.create_icosphere(bb, subdivisions=2, radius=r, matrix=Matrix.Translation(V(ob["cap"])))
+        for f in {f for v in ball["verts"] for f in v.link_faces}:
+            f.smooth = True
+        bb.to_mesh(body.data)
+        bb.free()
+        print("HY joint ball %s r %.2f at %s" % (name, r, tuple(round(x, 2) for x in ob["cap"])))
     bm.free()
     bpy.data.objects.remove(hi)
     bpy.context.scene.render.filepath = "//"
@@ -353,11 +376,13 @@ def uv_for(view, co, bmin, bmax):
     return (nx, nz)
 
 
-def pivot_of(name, me):
+def pivot_of(name, me, cap=None):
     lo = [min(v.co[i] for v in me.vertices) for i in range(3)]
     up = [max(v.co[i] for v in me.vertices) for i in range(3)]
     cx, cy, cz = [(a + b) / 2 for a, b in zip(lo, up)]
     n = name.lower()
+    if cap is not None and ("head" in n or "tail" in n):
+        return V(cap)   # centre of the neck / tail-root cut: the part turns on its joint ball instead of sliding off
     if "head" in n:
         return V((cx, lo[1], lo[2]))
     if "tail" in n:
@@ -602,7 +627,7 @@ def stage_colour():
             me.color_attributes.remove(a)
         img.pack()
         img.filepath_raw = "//textures/%s_%s.png" % (NAME, name)
-        piv = pivot_of(name, me)
+        piv = pivot_of(name, me, tuple(ob["cap"]) if "cap" in ob else None)
         me.transform(Matrix.Translation(-piv))
         ob.location = piv
     for im in imgs.values():

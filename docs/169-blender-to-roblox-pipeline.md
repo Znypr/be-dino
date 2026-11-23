@@ -193,6 +193,7 @@ One tool per step, so a colour tweak reruns only the colour step. Proven on Pach
   - Still broken: use the sheet's clean side view as the input (Parasaurolophus) and pass `config --rot 90`.
   - A shape turned sideways: pass `config --rot 90|270`, check with a probe render, and the value is written into `cfg.py` as `ROT_DEG`.
 - **Eyes:** found automatically from the side drawing (the white highlight with black all round it). A glossy black dome with a white highlight goes on both sides of the head; set `EYES = None` to switch this off.
+- **Joints:** the head and the tail turn around the centre of their cut, not a corner, and a body-coloured ball sits half inside the body at each of those cuts (`JOINT_BALLS`, default head and tail; `JOINT_BALL_SCALE` 0.9 of the cut's radius). A turned head then shows a rounded neck, never a gap or a flat stump. Cut the head where the neck is narrowest and keep crests and frills above the cut: Parasaurolophus uses a neck plane tilted forward (`NECK_P`, `NECK_N`), because a plane straight across left half the crest on the body.
 - **Outline cleanup:** the sheet's black outline and background are replaced by the figure's own colours grown outward (`bleed_fill`), so crests and tails that stick out past the drawing never pick up grey or black.
 
 **Sheets that cut cleanly** (ask ChatGPT for exactly this):
