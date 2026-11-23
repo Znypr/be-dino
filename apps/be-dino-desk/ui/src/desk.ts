@@ -41,6 +41,7 @@ type DeskApi = {
   menuFeedback: { load(): Promise<MenuFeedback>; op(op: MenuOp): Promise<MenuOpResult> };
   openFile(rel: string): Promise<boolean>;
   media(rel: string): string;
+  thumb(rel: string, px?: number): string; // small cached JPEG for grid tiles
   smokeShot(name: string): Promise<void>;
   smokeDone(report: unknown): Promise<void>;
 };
