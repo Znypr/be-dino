@@ -1,4 +1,5 @@
-"""BD-178: offline check of the 10 trail shop icons (Blender renders, resources/ui/v2/icons/trail-<id>-v1.png).
+"""BD-178: offline check of the 10 trail shop icons (Blender renders, resources/archive/ui/v2/icons/trail-<id>-v1.png:
+superseded by the owner's ChatGPT pick trail-<id>-v2.png in resources/ui/v2/icons, archived by BD-1305; the live -v2 file must exist).
 
 For each trail in ProgressionConfig.Trails: the PNG exists, is 128 x 128 RGBA with transparent corners, fills a sensible part of the
 frame, keeps a clear margin, shows the trail's `color` (or `accent`) on a good share of its opaque pixels, and has a light rim ring.
@@ -33,7 +34,9 @@ if len(ids) != 10:
 slots = {s['name']: s for s in json.loads((ROOT / 'tools/asset_slots.json').read_text(encoding='utf-8'))['slots']}
 masks = {}
 for tid in ids:
-    path = ROOT / f'resources/ui/v2/icons/trail-{tid}-v1.png'
+    if not (ROOT / f'resources/ui/v2/icons/trail-{tid}-v2.png').exists():
+        err(f'{tid}: live icon trail-{tid}-v2.png missing in resources/ui/v2/icons')
+    path = ROOT / f'resources/archive/ui/v2/icons/trail-{tid}-v1.png'
     if not path.exists():
         err(f'{tid}: {path.name} missing')
         continue

@@ -1,7 +1,7 @@
 {
   "logicalId": "aura_meadow_v1",
   "name": "Meadow Glow",
-  "source": "resources/ui/v2/items/aura-meadow-v1.png",
+  "source": "resources/archive/ui/v2/items/aura-meadow-v1.png",
   "status": "Generated draft; not Roblox uploaded or integrated",
   "tool": "built-in image_gen",
   "transparent_background": true,

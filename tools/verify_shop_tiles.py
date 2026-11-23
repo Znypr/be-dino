@@ -22,6 +22,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 ICONS = ROOT / 'resources/ui/v2/icons'
+ARCHIVED = ROOT / 'resources/archive/ui/v2/icons'  # BD-1305: v1 renders the owner's -v2 picks replaced
 errors = []
 
 
@@ -42,7 +43,7 @@ def near(px, solid, want, dist):
 
 
 def load(slot, fn):
-    path = ICONS / fn
+    path = ICONS / fn if (ICONS / fn).exists() else ARCHIVED / fn
     if not path.exists():
         err(f'{slot}: {fn} missing')
         return None

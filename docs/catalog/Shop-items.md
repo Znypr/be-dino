@@ -185,16 +185,16 @@ id: `growth_legendary`
 
 | Aura | Picture | Asset id | Mask | Odds from |
 |---|---|---|---|---|
-| [Meadow Glow](#aura-meadow) | yes: `resources/ui/v2/items/aura-meadow-v1.png` | not bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
-| [Tidal Halo](#aura-tidal) | yes: `resources/ui/v2/items/aura-tidal-v1.png` | not bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
-| [Royal Nova](#aura-royal) | MISSING | not bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
+| [Meadow Glow](#aura-meadow) | yes: `resources/ui/v2/items/aura-meadow-v3.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
+| [Tidal Halo](#aura-tidal) | yes: `resources/ui/v2/items/aura-tidal-v3.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
+| [Royal Nova](#aura-royal) | yes: `resources/ui/v2/items/aura-royal-v3.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Auras |
 
 <a id="aura-meadow"></a>
 ### Meadow Glow
 
 id: `meadow`
 
-<img src="../../resources/ui/v2/items/aura-meadow-v1.png" alt="Meadow Glow" width="96">
+<img src="../../resources/ui/v2/items/aura-meadow-v3.png" alt="Meadow Glow" width="96">
 
 - **Rarity:** Common
 - **Growth:** +15%
@@ -206,7 +206,7 @@ id: `meadow`
 
 id: `tidal`
 
-<img src="../../resources/ui/v2/items/aura-tidal-v1.png" alt="Tidal Halo" width="96">
+<img src="../../resources/ui/v2/items/aura-tidal-v3.png" alt="Tidal Halo" width="96">
 
 - **Rarity:** Rare
 - **Growth:** +35%
@@ -217,6 +217,8 @@ id: `tidal`
 ### Royal Nova
 
 id: `royal`
+
+<img src="../../resources/ui/v2/items/aura-royal-v3.png" alt="Royal Nova" width="96">
 
 - **Rarity:** Legendary
 - **Growth:** +70%
@@ -230,23 +232,23 @@ id: `royal`
 
 | Trail | Icon | Asset id | Mask | Odds from |
 |---|---|---|---|---|
-| [Normal White](#trail-white) | yes: `resources/ui/v2/icons/trail-white-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Fern Drift](#trail-fern) | yes: `resources/ui/v2/icons/trail-fern-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Tidal Wake](#trail-tidal) | yes: `resources/ui/v2/icons/trail-tidal-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Ember Trail](#trail-ember) | yes: `resources/ui/v2/icons/trail-ember-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Violet Pulse](#trail-violet) | yes: `resources/ui/v2/icons/trail-violet-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Electric Arc](#trail-electric) | yes: `resources/ui/v2/icons/trail-electric-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Frost Comet](#trail-frost) | yes: `resources/ui/v2/icons/trail-frost-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Solar Flare](#trail-solar) | yes: `resources/ui/v2/icons/trail-solar-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Nova Ribbon](#trail-nova) | yes: `resources/ui/v2/icons/trail-nova-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
-| [Astra](#trail-astra) | yes: `resources/ui/v2/icons/trail-astra-v1.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Normal White](#trail-white) | yes: `resources/ui/v2/icons/trail-white-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Fern Drift](#trail-fern) | yes: `resources/ui/v2/icons/trail-fern-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Tidal Wake](#trail-tidal) | yes: `resources/ui/v2/icons/trail-tidal-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Ember Trail](#trail-ember) | yes: `resources/ui/v2/icons/trail-ember-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Violet Pulse](#trail-violet) | yes: `resources/ui/v2/icons/trail-violet-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Electric Arc](#trail-electric) | yes: `resources/ui/v2/icons/trail-electric-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Frost Comet](#trail-frost) | yes: `resources/ui/v2/icons/trail-frost-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Solar Flare](#trail-solar) | yes: `resources/ui/v2/icons/trail-solar-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Nova Ribbon](#trail-nova) | yes: `resources/ui/v2/icons/trail-nova-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
+| [Astra](#trail-astra) | yes: `resources/ui/v2/icons/trail-astra-v2.png` | bound | n/a | `src/shared/ProgressionConfig.luau` Trails |
 
 <a id="trail-white"></a>
 ### Normal White
 
 id: `white`
 
-<img src="../../resources/ui/v2/icons/trail-white-v1.png" alt="Normal White" width="96">
+<img src="../../resources/ui/v2/icons/trail-white-v2.png" alt="Normal White" width="96">
 
 - **Rarity:** Common
 - **Speed:** +0%
@@ -258,7 +260,7 @@ id: `white`
 
 id: `fern`
 
-<img src="../../resources/ui/v2/icons/trail-fern-v1.png" alt="Fern Drift" width="96">
+<img src="../../resources/ui/v2/icons/trail-fern-v2.png" alt="Fern Drift" width="96">
 
 - **Rarity:** Common
 - **Speed:** +2%
@@ -270,7 +272,7 @@ id: `fern`
 
 id: `tidal`
 
-<img src="../../resources/ui/v2/icons/trail-tidal-v1.png" alt="Tidal Wake" width="96">
+<img src="../../resources/ui/v2/icons/trail-tidal-v2.png" alt="Tidal Wake" width="96">
 
 - **Rarity:** Uncommon
 - **Speed:** +4%
@@ -282,7 +284,7 @@ id: `tidal`
 
 id: `ember`
 
-<img src="../../resources/ui/v2/icons/trail-ember-v1.png" alt="Ember Trail" width="96">
+<img src="../../resources/ui/v2/icons/trail-ember-v2.png" alt="Ember Trail" width="96">
 
 - **Rarity:** Uncommon
 - **Speed:** +6%
@@ -294,7 +296,7 @@ id: `ember`
 
 id: `violet`
 
-<img src="../../resources/ui/v2/icons/trail-violet-v1.png" alt="Violet Pulse" width="96">
+<img src="../../resources/ui/v2/icons/trail-violet-v2.png" alt="Violet Pulse" width="96">
 
 - **Rarity:** Rare
 - **Speed:** +8%
@@ -306,7 +308,7 @@ id: `violet`
 
 id: `electric`
 
-<img src="../../resources/ui/v2/icons/trail-electric-v1.png" alt="Electric Arc" width="96">
+<img src="../../resources/ui/v2/icons/trail-electric-v2.png" alt="Electric Arc" width="96">
 
 - **Rarity:** Rare
 - **Speed:** +10%
@@ -318,7 +320,7 @@ id: `electric`
 
 id: `frost`
 
-<img src="../../resources/ui/v2/icons/trail-frost-v1.png" alt="Frost Comet" width="96">
+<img src="../../resources/ui/v2/icons/trail-frost-v2.png" alt="Frost Comet" width="96">
 
 - **Rarity:** Epic
 - **Speed:** +12%
@@ -330,7 +332,7 @@ id: `frost`
 
 id: `solar`
 
-<img src="../../resources/ui/v2/icons/trail-solar-v1.png" alt="Solar Flare" width="96">
+<img src="../../resources/ui/v2/icons/trail-solar-v2.png" alt="Solar Flare" width="96">
 
 - **Rarity:** Epic
 - **Speed:** +14%
@@ -342,7 +344,7 @@ id: `solar`
 
 id: `nova`
 
-<img src="../../resources/ui/v2/icons/trail-nova-v1.png" alt="Nova Ribbon" width="96">
+<img src="../../resources/ui/v2/icons/trail-nova-v2.png" alt="Nova Ribbon" width="96">
 
 - **Rarity:** Legendary
 - **Speed:** +16%
@@ -354,7 +356,7 @@ id: `nova`
 
 id: `astra`
 
-<img src="../../resources/ui/v2/icons/trail-astra-v1.png" alt="Astra" width="96">
+<img src="../../resources/ui/v2/icons/trail-astra-v2.png" alt="Astra" width="96">
 
 - **Rarity:** Mythic
 - **Speed:** +18%

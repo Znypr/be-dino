@@ -32,12 +32,14 @@ SOURCES = [
     ("UI kit", "Shop kit 2", "resources/ui/v2/shopkit2/*.png", "Cards, buttons, headers of the approved Aura Shop look (BD-1287)."),
     ("UI kit", "Toybox kit", "resources/ui/v2/toybox/final/*.png", "Owner's Toybox kit pieces."),
     ("UI kit", "Hatch kit (proposal)", "build/hatch-mock/art/*.png", "Pieces of the hatch mock on the Design Board (not in the game yet)."),
-    ("UI kit", "Components", "resources/ui/v2/components/*.png", "Older code-era components."),
     ("UI kit", "Icons", "resources/ui/v2/icons/*.png", "Class, rarity, mutation, shop, station, HUD icons."),
     ("UI kit", "Items", "resources/ui/v2/items/*.png", "Auras, food, potions."),
     ("UI kit", "Hatch art", "resources/ui/v2/hatch/*.png", "Rays, paint pail and can."),
     ("UI kit", "Eggs", "resources/ui/v2/stage/eggs/*.png", "Condition egg renders."),
 ]
+
+# Superseded art lives here (BD-1305, tools/art_audit.py); never shown, whatever a SOURCES glob matches.
+EXCLUDE = ("resources/archive/", "assets/archive/")
 
 # docs/evidence folders -> (tab, group) by keyword; newest folders first, at most MAX_FOLDERS per group
 EVIDENCE = [
@@ -77,10 +79,18 @@ def title_of(p: Path) -> str:
     return t.replace("_", " ").replace("-", " ")
 
 
+def shown(f: Path) -> bool:
+    """False for archived art (BD-1305) and for a -512 upload copy whose full-size original sits next to it."""
+    r = rel(f)
+    if r.startswith(EXCLUDE):
+        return False
+    return not (f.stem.endswith("-512") and f.with_name(f.stem[:-4] + f.suffix).is_file())
+
+
 def items_for(files):
     out = []
     for f in files:
-        if f.suffix.lower() in IMG and f.is_file() and not f.name.startswith("."):
+        if f.suffix.lower() in IMG and f.is_file() and not f.name.startswith(".") and shown(f):
             out.append({"id": rel(f), "title": title_of(f), "src": rel(f)})
     return out
 

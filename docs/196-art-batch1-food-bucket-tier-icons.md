@@ -12,7 +12,7 @@ Three ChatGPT image sheets, made with the owner's ChatGPT account in his browser
 | Tier badges, 4 x 3: rows Emerald, Gold, Diamond; columns footprint, coin, shield, sparkles | `docs/reference/art-batch1-tiers-chatgpt-v1.png` | `...-labelled.png` | `40` |
 
 One contact sheet groups every candidate per item (with 64 px copies, flags): `docs/evidence/review-2026-10-17/37-art-batch1-contact-sheet.png`.
-The 44 cut pictures (transparent PNG, 512 px) are in `resources/ui/v2/candidates/art-batch1/`. Ids: `food-<berry|fruit|egg|amber>-<A-D>` (column letter on the food sheet), `bucket-<A-D><1-4>` (the cell on the bucket sheet), `tier-<emerald|gold|diamond>-<A-D>` (A = footprint alone, B = coin, C = shield, D = sparkles).
+The 44 cut pictures (transparent PNG, 512 px) are in `resources/archive/ui/v2/candidates/art-batch1/`. Ids: `food-<berry|fruit|egg|amber>-<A-D>` (column letter on the food sheet), `bucket-<A-D><1-4>` (the cell on the bucket sheet), `tier-<emerald|gold|diamond>-<A-D>` (A = footprint alone, B = coin, C = shield, D = sparkles).
 
 ## Prompts (sent in one chat, in this order; shortened here, the full text is in `docs/reference/art-batch1-prompts.txt`)
 1. Food: "one landscape sheet, clean 4 by 4 grid, cute chunky game icons of FOOD for a calm bubbly children's dinosaur game, round-ish chunky shapes, soft matte cartoon finish, thick dark-brown rounded outline, one object per cell, flat light-grey background, no text. Row 1 BERRY, row 2 FRUIT, row 3 EGG, row 4 AMBER, each column a different idea."

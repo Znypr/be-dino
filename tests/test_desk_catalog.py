@@ -46,6 +46,25 @@ class DeskCatalogTest(unittest.TestCase):
                     self.assertFalse(it["id"].startswith("/") or ":" in it["id"], it["id"])
         self.assertEqual(cat["menus"], [])
 
+    def test_archive_and_upload_copies_are_hidden(self):
+        old, old_sources = desk_catalog.ROOT, list(desk_catalog.SOURCES)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                for f in ("resources/ui/v2/icons/trail-ember-v2.png", "resources/archive/ui/v2/icons/trail-ember-v1.png",
+                          "resources/ui/v2/items/potion-lucky-sip.png", "resources/ui/v2/items/potion-lucky-sip-512.png",
+                          "resources/ui/v2/items/aura-tidal-512.png"):
+                    (root / f).parent.mkdir(parents=True, exist_ok=True)
+                    (root / f).write_bytes(PNG)
+                desk_catalog.SOURCES = [("UI kit", "Everything", "resources/**/*.png", "broad glob")]
+                cat = self.run_catalog(root)
+        finally:
+            desk_catalog.ROOT, desk_catalog.SOURCES = old, old_sources
+        group = next(g for t in cat["tabs"] for g in t["groups"] if g["name"] == "Everything")
+        self.assertEqual(sorted(i["id"] for i in group["items"]),
+                         ["resources/ui/v2/icons/trail-ember-v2.png", "resources/ui/v2/items/aura-tidal-512.png",
+                          "resources/ui/v2/items/potion-lucky-sip.png"])
+
     def test_menus_newest_check_per_screen(self):
         """BD-1301: one entry per docs/menu-specs/<screen>; the newest report.json from build/menu-check or docs/evidence."""
         old = desk_catalog.ROOT
