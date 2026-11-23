@@ -82,10 +82,29 @@ class DeskCatalogTest(unittest.TestCase):
         self.assertEqual(m["proposal_size"], [1, 1])
         self.assertEqual([e["id"] for e in m["elements"]], ["window", "card1", "card1.name"])
         self.assertEqual(next(e for e in m["elements"] if e["id"] == "card1.name")["pct"], [10.0, 20.0, 15.0, 20.0])
-        last = m["latest"]
-        self.assertEqual(last["report"], "docs/evidence/2026-11-23-potion-steps/step2/report.json")   # file date (now) beats 2001
-        self.assertEqual(last["shot"], "docs/evidence/2026-11-23-potion-steps/step2/capture.png")
-        rows = {r["id"]: r for r in last["rows"]}
+        # a report that records its own time wins over an undated older-format one: file dates change on every git checkout
+        # (2026-11-23: the Desk showed a stale "before step 3" report instead of the final full check)
+        self.assertEqual(m["latest"]["report"], "build/menu-check/potion-shop/report.json")
+        last = next(h for h in m["history"] if h["report"] == "docs/evidence/2026-11-23-potion-steps/step2/report.json")
+        self.assertEqual(last["misses"], 2)
+        # the older format is still read in full: capture and boxes from its folder
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            step = root / "docs/evidence/2026-11-23-potion-steps/step2"
+            step.mkdir(parents=True)
+            (step / "capture.png").write_bytes(PNG)
+            (step / "geom.json").write_text(json.dumps({"viewport": [100, 50], "elements": {"window": {"rect": [10, 5, 50, 25]}}}))
+            (step / "report.json").write_text(json.dumps({"misses": ["window: x 0.0 -> 2.0 %", "card1: MISSING in the build (no SpecId)"],
+                                                          "rows": [{"id": "window"}, {"id": "card1", "missing": True}]}))
+            old = desk_catalog.ROOT
+            try:
+                desk_catalog.ROOT = root
+                full = desk_catalog.read_report(step / "report.json", "potion-shop", {e["id"]: e for e in m["elements"]})
+            finally:
+                desk_catalog.ROOT = old
+        self.assertFalse(full["dated"])
+        self.assertEqual(full["shot"], "docs/evidence/2026-11-23-potion-steps/step2/capture.png")
+        rows = {r["id"]: r for r in full["rows"]}
         self.assertEqual(rows["window"]["status"], "miss")
         self.assertEqual(rows["window"]["pct_game"], [10.0, 10.0, 50.0, 50.0])
         self.assertEqual(rows["window"]["pct_ref"], [0.0, 0.0, 100.0, 100.0])
