@@ -50,6 +50,54 @@ def blender(stage: str, d: Path, *extra: str) -> int:
     return res.returncode
 
 
+def bleed_fill(crop, outline=6):
+    """Projection image without the drawing's black outline or background: background = light pixels CONNECTED TO THE BORDER (so an
+    eye's white highlight stays), the outline ring next to it is peeled off, then the figure's colours are grown outward over all of
+    it, so a 3D surface that sticks out past the drawing (a crest, a fluffier tail) picks up a body colour, not grey or black."""
+    import numpy as np
+    from PIL import Image
+    a = np.asarray(crop.convert("RGB")).astype(np.float32)
+    h, w = a.shape[:2]
+    edge = np.concatenate([a[:2].reshape(-1, 3), a[-2:].reshape(-1, 3), a[:, :2].reshape(-1, 3), a[:, -2:].reshape(-1, 3)])
+    bglike = np.abs(a - np.median(edge, axis=0)).sum(axis=2) <= 40
+
+    def grow(mask, allowed):
+        m = mask.copy()
+        n = np.zeros_like(m)
+        n[1:, :] |= m[:-1, :]
+        n[:-1, :] |= m[1:, :]
+        n[:, 1:] |= m[:, :-1]
+        n[:, :-1] |= m[:, 1:]
+        return (m | n) & allowed
+    bg = np.zeros((h, w), bool)
+    bg[0, :], bg[-1, :], bg[:, 0], bg[:, -1] = bglike[0, :], bglike[-1, :], bglike[:, 0], bglike[:, -1]
+    while True:                                   # flood fill from the border through background-like pixels
+        nb = grow(bg, bglike)
+        if (nb == bg).all():
+            break
+        bg = nb
+    outside = bg.copy()
+    for _ in range(outline):                      # the outline ring hugging the background goes too
+        outside = grow(outside, np.ones_like(outside))
+    have = ~outside
+    col = a.copy()
+    while not have.all():
+        acc = np.zeros_like(col)
+        cnt = np.zeros((h, w), np.float32)
+        for sl_from, sl_to in (((slice(None, -1), slice(None)), (slice(1, None), slice(None))),
+                               ((slice(1, None), slice(None)), (slice(None, -1), slice(None))),
+                               ((slice(None), slice(None, -1)), (slice(None), slice(1, None))),
+                               ((slice(None), slice(1, None)), (slice(None), slice(None, -1)))):
+            acc[sl_to] += col[sl_from] * have[sl_from][..., None]
+            cnt[sl_to] += have[sl_from]
+        new = (~have) & (cnt > 0)
+        if not new.any():
+            break
+        col[new] = acc[new] / cnt[new][:, None]
+        have |= new
+    return Image.fromarray(col.clip(0, 255).astype(np.uint8))
+
+
 def cmd_sheet(sheet: Path, d: Path) -> int:
     import numpy as np
     from PIL import Image
@@ -68,6 +116,11 @@ def cmd_sheet(sheet: Path, d: Path) -> int:
     for view, (x0, x1) in zip(VIEWS, cols):
         y0, y1 = lib.figure_rows(list(fg[:, x0:x1].sum(axis=1)))
         sub = fg[y0:y1, x0:x1]
+        # keep the widest column run only: a sliver of the neighbouring figure (a tail tip) must not reach Hunyuan or the projection
+        keep = max(lib.runs(list(sub.sum(axis=0) > 0), gap=3), key=lambda r: r[1] - r[0])
+        sub = sub.copy()
+        sub[:, :keep[0]] = False
+        sub[:, keep[1]:] = False
         ys, xs = np.where(sub)
         boxes[view] = (int(x0 + xs.min()), int(y0 + ys.min()), int(x0 + xs.max() + 1), int(y0 + ys.max() + 1))
         crop = im.crop(boxes[view])
@@ -77,7 +130,7 @@ def cmd_sheet(sheet: Path, d: Path) -> int:
             sq.paste(crop, ((side - crop.width) // 2, (side - crop.height) // 2))
             sq.resize((1100, 1100), Image.LANCZOS).save(d / "q34.png")
         else:
-            crop.save(d / f"proj-{view}.png")
+            bleed_fill(crop).save(d / f"proj-{view}.png")
     json.dump({"sheet": str(sheet), "boxes": boxes}, open(d / "sheet.json", "w"), indent=1)
     strip = Image.new("RGB", (1200, 300), (230, 230, 230))
     for i, view in enumerate(VIEWS):
@@ -89,11 +142,11 @@ def cmd_sheet(sheet: Path, d: Path) -> int:
     return 0
 
 
-def cmd_gen(d: Path) -> int:
+def cmd_gen(d: Path, seed: int = 1234) -> int:
     py = HUNYUAN / ".venv/Scripts/python.exe"
     flags = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
     t0 = time.time()
-    res = subprocess.run([str(py), "bedino_gen.py", str(d / "q34.png"), str(d / "out"), "--no-texture"], cwd=HUNYUAN,
+    res = subprocess.run([str(py), "bedino_gen.py", str(d / "q34.png"), str(d / "out"), "--no-texture", "--seed", str(seed)], cwd=HUNYUAN,
                          capture_output=True, text=True, creationflags=flags)
     ok = (d / "out/q34_shape.glb").exists()
     print(f"[gen] {time.time() - t0:.0f} s, shape {'ok' if ok else 'MISSING'}")
@@ -102,11 +155,14 @@ def cmd_gen(d: Path) -> int:
     return 0 if ok else 1
 
 
-def cmd_config(d: Path, name: str, plan: str) -> int:
-    if blender("measure", d, "--src", str(d / "out/q34_shape.glb")):
+def cmd_config(d: Path, name: str, plan: str, rot: float = 180) -> int:
+    if blender("measure", d, "--src", str(d / "out/q34_shape.glb"), "--rot", str(rot)):
         return 1
     a = json.load(open(d / "anatomy.json"))
-    (d / "cfg.py").write_text(lib.species_config(name, plan, a), encoding="utf-8")
+    text = lib.species_config(name, plan, a)
+    if rot != 180:
+        text += "ROT_DEG = %g  # Hunyuan turned this one: snout to +Y\n" % rot
+    (d / "cfg.py").write_text(text, encoding="utf-8")
     print("wrote", d / "cfg.py")
     return 0
 
@@ -175,6 +231,8 @@ def main(argv=None) -> int:
     ap.add_argument("--dir", required=True)
     ap.add_argument("--name")
     ap.add_argument("--plan", choices=lib.PLANS, default="quadruped")
+    ap.add_argument("--rot", type=float, default=180, help="config: degrees about Z so the snout points +Y (180 for most shapes)")
+    ap.add_argument("--seed", type=int, default=1234, help="gen: another seed gives another shape")
     ap.add_argument("--final", action="store_true", help="colour: Cycles renders instead of the quick EEVEE preview")
     a = ap.parse_args(argv)
     d = Path(a.dir).resolve()
@@ -184,9 +242,9 @@ def main(argv=None) -> int:
     for st in steps:
         if st == "sheet" and cmd_sheet(Path(a.sheet), d):
             return 2
-        if st == "gen" and not (d / "out/q34_shape.glb").exists() and cmd_gen(d):
+        if st == "gen" and (a.step == "gen" or not (d / "out/q34_shape.glb").exists()) and cmd_gen(d, a.seed):
             return 1
-        if st == "config" and (a.step == "config" or not (d / "cfg.py").exists()) and cmd_config(d, a.name, a.plan):
+        if st == "config" and (a.step == "config" or not (d / "cfg.py").exists()) and cmd_config(d, a.name, a.plan, a.rot):
             return 1
         if st == "parts" and blender("parts", d, "--src", str(d / "out/q34_shape.glb"), "--config", cfgp):
             return 1
