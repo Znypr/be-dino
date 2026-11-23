@@ -96,6 +96,7 @@ MovementGuard.start()
 require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
+require(script.Parent.BiomeService).start() -- BD-1314 (docs/250 S1): the biome clock and terrain colours; no-op while Config.BiomeRotationEnabled is false
 require(script.Parent.RareHatchService).start() -- BD-428
 require(script.Parent.FusionService).start(ProfileRepository)
 require(script.Parent.ObjectiveService).start(ProfileRepository) -- BD-073: returns at once (no remote, no profile access) while Config.ObjectivesEnabled is false

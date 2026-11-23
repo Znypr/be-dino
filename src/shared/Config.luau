@@ -253,6 +253,11 @@ return table.freeze({
     -- fitted into the kit boxes, so the food hosts stay put); the flat spiky grass tufts are gone and the ground cover is thinned (fewer parts).
     -- false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
     VegetationV2Enabled = false,
+    -- BD-1314 (docs/250 S1, owner 2026-11-23 "Yes, build S1"; decisions docs/250 s7): true = with WorldV3Enabled the whole island is one biome at a
+    -- time (Sunny Meadow, Jungle, Desert Canyon, Frozen Tundra, Volcano), 8 minutes each, changed by a short storm after a warning (Shared/BiomeRotation):
+    -- light, fog, colour grade and terrain colours per biome, a title card and the biome in the HUD banner. Client look and terrain colours only;
+    -- no gameplay, save or economy change. false = exactly as before. Pinned off in the default profile, ON in the playtest profile (docs/157). Free, no Robux.
+    BiomeRotationEnabled = false,
     -- BD-1244 (owner 2026-11-16 "game still looks empty"): true = with WorldV3Enabled the island has calm ambient life, client-only
     -- (Shared/IslandLife, client/IslandLife.client.luau): butterfly flocks beside the paths, dragonflies at the water, gulls circling high and
     -- 2-3 small wild baby dinos grazing near the paths in every zone (herbivore V3 low-poly dinos with the BD-1217 clips). Pooled, shown only

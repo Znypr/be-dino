@@ -27,6 +27,11 @@ local SkyProps=require(script.Parent.WeatherSky)
 local Strikes=require(script.Parent.WeatherStrikes)
 local Quake=require(script.Parent.WeatherQuake)
 local Title=require(script.Parent.WeatherTitle)
+-- BD-1314 (docs/250 S1): with Config.BiomeRotationEnabled the island's biome (Shared/BiomeRotation) is the BASE the weather blends from: light,
+-- sky shift, fog, grade and atmosphere follow the biome every frame, a storm (an existing weather look) brings each new biome in, and title cards
+-- say "STORM INCOMING!" and "JUNGLE TIME!". Flag off: biomeOn is false and every line below runs exactly as before.
+local Biome=require(Shared.BiomeRotation)
+local biomeOn=Biome.enabled(require(Shared.Config))
 
 local folder=Instance.new("Folder") folder.Name="LocalWeatherFX" folder.Parent=workspace
 
@@ -70,6 +75,9 @@ do
     if far then seaClear=table.clone(CLEAR) seaClear.fogStart,seaClear.vis=far.fogStart,far.fogEnd CLEAR=seaClear fogCap=math.max(fogCap,far.fogEnd) end
 end
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
+-- BD-1314: the place's own light, kept so a biome look is a measured step away from it (ambient half way, sun shift 60 %; Studio-tuned later)
+local placeAmbient,placeOutdoor,placeShiftTop=baseAmbient,baseOutdoor,baseShiftTop
+local biomePhaseKey=""
 
 -- ---------------------------------------------------------------- weather parts (docs/153); the flash / shake / pulse the one-shots raise are shared through fx
 local fx={flash=0,shake=0,pulse=0}
@@ -108,6 +116,22 @@ end
 RunService.Heartbeat:Connect(function(dt)
     local now=os.clock()
     local id=workspace:GetAttribute("WeatherId") or "clear"
+    -- BD-1314: the biome storm shows locally over whatever the server weather is; the biome look becomes this frame's base
+    local biomeNow=if biomeOn then Biome.clock(workspace:GetServerTimeNow(),workspace:GetAttribute("BiomeTestOffset"),RunService:IsStudio()) else 0
+    local biomeStorm=if biomeOn then Biome.storm(biomeNow) else nil
+    if biomeStorm then id=biomeStorm end
+    local biomeClear:any=nil
+    if biomeOn then
+        local bl=Biome.look(biomeNow)
+        local function rgb(t:{number}):Color3 return Color3.fromRGB(t[1],t[2],t[3]) end
+        baseAmbient=placeAmbient:Lerp(rgb(bl.ambient),.5) baseOutdoor=placeOutdoor:Lerp(rgb(bl.ambient),.5)
+        baseShiftTop=placeShiftTop:Lerp(rgb(bl.sun),.6)
+        baseAtmo.density,baseAtmo.haze,baseAtmo.color,baseAtmo.decay=bl.density,bl.haze,rgb(bl.horizon),rgb(bl.skyTop)
+        biomeClear=table.clone(CLEAR)
+        biomeClear.fog,biomeClear.fogStart,biomeClear.vis,biomeClear.sat,biomeClear.contrast=bl.fog,bl.fogStart,bl.fogEnd,bl.sat,bl.contrast
+        biomeClear.tint,biomeClear.bloom,biomeClear.density,biomeClear.haze,biomeClear.decay=bl.tint,bl.bloom,bl.density,bl.haze,bl.skyTop
+    end
+    local C=biomeClear or CLEAR
     local c=player.Character
     local rootPart=if c then c:FindFirstChild("HumanoidRootPart") else nil
     local root:Vector3?=if rootPart and rootPart:IsA("BasePart") then (rootPart::BasePart).Position else nil
@@ -119,11 +143,25 @@ RunService.Heartbeat:Connect(function(dt)
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k<=0 then activeId=id columnAnchors=nil end end
     if activeId~=shownId and id==activeId and id~="clear" then
         shownId=activeId
-        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall) -- inside the cave only the small soft toast (text, not an effect; BD-398)
+        if not biomeStorm then showTitle(id,workspace:GetAttribute("WeatherName") or id,hall) end -- inside the cave only the small soft toast (text, not an effect; BD-398); BD-1314: a biome storm has its own cards
     elseif id=="clear" then shownId="clear" end
+    -- BD-1314: biome title cards, once per phase change (never on the first frame after joining)
+    if biomeOn then
+        local bs=Biome.state(biomeNow)
+        local key=bs.phase..":"..bs.arriving
+        if key~=biomePhaseKey then
+            local was=biomePhaseKey biomePhaseKey=key
+            if was~="" and bs.phase=="warning" then
+                showTitle(Biome.StormFor[bs.arriving],"Storm incoming",hall,"Next: "..Biome.Names[bs.arriving])
+            elseif was~="" and bs.phase=="calm" and string.sub(was,1,5)=="storm" then
+                showTitle(Biome.StormFor[bs.id],Biome.Names[bs.id].." time",hall,"New biome!")
+            end
+        end
+    end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
     if seaClear and look==WL.Looks.clear then look=seaClear end -- BD-1220: the same clear look with the far fog
+    if biomeClear and (look==WL.Looks.clear or look==seaClear) then look=biomeClear end -- BD-1314: clear weather shows the biome look
     local outside=1-Cave.amount() -- BD-383: weather grade, bloom, rays, haze, exposure and lamps fade to nothing inside the cave hall
     local t=WL.strength(k,Theme.MotionEnabled)*outside
     local animT=if Theme.MotionEnabled then now else 0
@@ -136,7 +174,7 @@ RunService.Heartbeat:Connect(function(dt)
         amb=WL.scale(WL.aurora(animT,.1),.55) tint=WL.mix(WHITE,WL.aurora(animT,.35),.5) glowRgb=WL.aurora(animT,.7)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))
-    grade.Saturation=lerpNum(0,look.sat,t)+CLEAR.sat*outside*(1-t) grade.Contrast=lerpNum(0,look.contrast,t)+CLEAR.contrast*outside*(1-t)
+    grade.Saturation=lerpNum(0,look.sat,t)+C.sat*outside*(1-t) grade.Contrast=lerpNum(0,look.contrast,t)+C.contrast*outside*(1-t)
     grade.Brightness=lerpNum(0,look.bright,t)+(fx.flash*.5+fx.pulse*.12)*outside
     bloom.Intensity=lerpNum(0,look.bloom,t)+fx.flash*1.5*outside
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)
@@ -146,8 +184,8 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Offset=lerpNum(baseAtmo.offset,look.offset,t)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,look.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,look.glare),t)
-    local fogStart,fogEnd=WL.fog(look,t,CLEAR,fogCap)
-    local fogColor=c3(CLEAR.fog):Lerp(c3(fog),t)
+    local fogStart,fogEnd=WL.fog(look,t,C,fogCap)
+    local fogColor=c3(C.fog):Lerp(c3(fog),t)
     Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)
     atmosphere.Decay=baseAtmo.decay:Lerp(c3(decay),t)
