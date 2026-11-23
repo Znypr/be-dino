@@ -251,6 +251,9 @@ function LowPoly.clone(speciesId: string, genes: any?): Model?
         part:SetAttribute("LPSide", if part.Position.X < box.Position.X then -1 else 1)
         part:SetAttribute("LPLead", part.Position.Z < bodyZ)
         part.CanCollide, part.CanTouch, part.CanQuery, part.Massless = false, false, false, true
+        -- BD-1307: the model's own joint (PivotOffset from the Blender origin), as a fraction of the part size so it survives the scale below
+        local po = part.PivotOffset.Position
+        if po.Magnitude > 1e-3 then part:SetAttribute("LPJoint", Vector3.new(po.X / part.Size.X, po.Y / part.Size.Y, po.Z / part.Size.Z)) end
         part.Size *= k
         part.CFrame = CFrame.new((part.Position - origin) * k) * part.CFrame.Rotation
     end

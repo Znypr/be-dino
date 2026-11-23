@@ -148,7 +148,7 @@ Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated fro
 <!-- scale-ladder:begin -->
 All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
 
-**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 20 of 22 species, BD-471 and BD-232, 2026-10-17, the rest are ESTIMATES).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), Armored by bulk too, and the T-Rex one growth step above the top tier so it is the biggest and tallest dino (BD-992, owner 2026-10-18; the Ankylosaurus and T-Rex boxes are scaled from the Studio boxes, not re-read; C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).
+**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 21 of 22 species, BD-471 and BD-232, 2026-10-17, the rest are ESTIMATES).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), Armored by bulk too, and the T-Rex one growth step above the top tier so it is the biggest and tallest dino (BD-992, owner 2026-10-18; the Ankylosaurus and T-Rex boxes are scaled from the Studio boxes, not re-read; C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).
 
 | Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | run height x1.52 | mid height x2 | long height x3 | max height x4 | bigMax height x4.8 |
 | --- | ---: | --- | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -157,7 +157,7 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | tyrannosaurus | 5 | height | 10.63 | 3.81 | 5.83 x 10.62 x 11.43 | ESTIMATE | 16.1 | 21.2 | 31.9 | 42.5 | 51.0 |
 | raptor | 1 | height | 6.60 | 1.65 | 3.49 x 6.60 x 7.74 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
 | stegosaurus | 2 | height | 7.26 | 3.9 | 5.25 x 7.25 x 11.70 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
-| ankylosaurus | 4 | bulk | 7.38 | 2.67 | 5.77 x 6.51 x 10.68 | ESTIMATE | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
+| ankylosaurus | 4 | bulk | 7.38 | 1.82 | 6.95 x 5.88 x 9.90 | MEASURED | 8.9 | 11.8 | 17.6 | 23.5 | 28.2 |
 | archaeopteryx | 2 | bulk | 6.10 | 1.77 | 7.17 x 5.31 x 5.92 | MEASURED | 8.1 | 10.6 | 15.9 | 21.2 | 25.5 |
 | baryonyx | 3 | height | 7.99 | 3.11 | 3.99 x 7.99 x 9.33 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
 | brachiosaurus | 3 | height | 7.99 | 2.91 | 3.73 x 8.00 x 8.73 | MEASURED | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
@@ -165,10 +165,10 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | elasmosaurus | 4 | height | 8.78 | 3.58 | 3.95 x 8.78 x 10.74 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
 | gallimimus | 1 | height | 6.60 | 3.89 | 2.42 x 6.61 x 7.78 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
 | ichthyosaurus | 3 | bulk | 6.71 | 3.71 | 4.89 x 5.57 x 11.13 | MEASURED | 8.5 | 11.1 | 16.7 | 22.3 | 26.7 |
-| microraptor | 1 | bulk | 5.55 | 1.52 | 7.11 x 4.56 x 5.29 | MEASURED | 6.9 | 9.1 | 13.7 | 18.2 | 21.9 |
+| microraptor | 1 | bulk | 5.55 | 2.05 | 3.71 x 6.15 x 7.52 | MEASURED | 9.3 | 12.3 | 18.5 | 24.6 | 29.5 |
 | mosasaurus | 5 | bulk | 8.12 | 5.64 | 5.48 x 5.77 x 16.92 | MEASURED | 8.8 | 11.5 | 17.3 | 23.1 | 27.7 |
 | pachycephalosaurus | 2 | height | 7.26 | 2.81 | 4.51 x 7.25 x 8.43 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
-| parasaurolophus | 2 | height | 7.26 | 3.03 | 5.30 x 7.27 x 9.09 | MEASURED | 11.1 | 14.5 | 21.8 | 29.1 | 34.9 |
+| parasaurolophus | 2 | height | 7.26 | 2.42 | 3.15 x 7.26 x 9.70 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
 | plesiosaurus | 3 | bulk | 6.71 | 2.78 | 4.66 x 7.74 x 8.34 | MEASURED | 11.8 | 15.5 | 23.2 | 31.0 | 37.2 |
 | pteranodon | 2 | bulk | 6.10 | 1.54 | 7.07 x 4.62 x 6.89 | MEASURED | 7.0 | 9.2 | 13.9 | 18.5 | 22.2 |
 | quetzalcoatlus | 4 | bulk | 7.38 | 2.04 | 8.20 x 6.12 x 8.04 | MEASURED | 9.3 | 12.2 | 18.4 | 24.5 | 29.4 |
@@ -184,7 +184,7 @@ All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verif
 | dodo | 1 | height | 6.60 | 3.46 | 3.81 x 6.61 x 6.92 | MEASURED |
 | duck | 1 | height | 6.60 | 3.03 | 4.39 x 6.61 x 6.06 | MEASURED |
 | penguin | 1 | bulk | 5.55 | 2.38 | 5.81 x 6.19 x 4.76 | MEASURED |
-| budgiesaurus | 1 | bulk | 5.55 | 0.9 | 3.60 x 6.60 x 7.12 | MEASURED |
+| budgiesaurus | 1 | bulk | 5.55 | 2.03 | 4.61 x 6.09 x 6.09 | MEASURED |
 | foxosaurus | 1 | height | 6.60 | 0.79 | 3.00 x 6.64 x 6.32 | MEASURED |
 | cockatoosaurus | 1 | bulk | 5.55 | 1.11 | 3.80 x 6.66 x 6.74 | MEASURED |
 | eaglesaurus | 1 | bulk | 5.55 | 1 | 4.00 x 5.52 x 7.75 | MEASURED |

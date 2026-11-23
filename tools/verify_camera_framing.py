@@ -40,10 +40,8 @@ STUDIO = {
     'elasmosaurus': {1: (16.51, 47, 260), 2: (33.02, 46, 219), 4: (66.05, 46, 196)},
     'gallimimus': {1: (12.13, 43, 282), 2: (24.27, 42, 231), 4: (48.54, 41, 201)},
     'ichthyosaurus': {1: (13.44, 39, 345), 2: (26.89, 36, 267), 4: (53.78, 37, 235)},
-    'microraptor': {1: (12.0, 31, 416), 2: (24.0, 26, 372), 4: (48.0, 27, 373)},
     'mosasaurus': {1: (18.17, 26, 355), 2: (36.33, 26, 300), 4: (72.66, 28, 263)},
     'pachycephalosaurus': {1: (13.41, 45, 267), 2: (26.82, 44, 226), 4: (53.64, 44, 198)},
-    'parasaurolophus': {1: (13.57, 43, 267), 2: (27.13, 42, 223), 4: (54.27, 42, 201)},
     'plesiosaurus': {1: (13.92, 44, 294), 2: (27.84, 42, 230), 4: (55.68, 41, 207)},
     'pteranodon': {1: (12.0, 37, 352), 2: (24.0, 35, 290), 4: (48.0, 39, 266)},
     'quetzalcoatlus': {1: (12.0, 46, 302), 2: (24.0, 44, 247), 4: (48.0, 44, 220)},
@@ -60,7 +58,10 @@ STUDIO = {
 # BD-992 (owner 2026-10-18, "T-Rex must be the biggest"): the T-Rex (scale 3.47 -> 3.81) and the Ankylosaurus (3.6 -> 2.67, now sized by bulk) changed size, so
 # their 2026-10-17 sweep rows no longer apply (old rows: ankylosaurus 1 18.84/44%/266, 2 37.68/42%/241, 4 75.0/41%/222; tyrannosaurus 1 17.28/46%/242, 2 34.57/45%/204,
 # 4 69.14/45%/184). The module numbers below are the pure size rule on the scaled boxes; the Studio sweep of both is still to do.
-PENDING_SWEEP = ('tyrannosaurus', 'ankylosaurus')
+# BD-1307 (owner 2026-11-23 "Yes, wire them in"): the V5 Microraptor (scale 1.52 -> 2.05) and Parasaurolophus (3.03 -> 2.42) are new models with new
+# boxes, so their 2026-10-17 rows no longer apply (old rows: microraptor 1 12.0/31%/416, 2 24.0/26%/372, 4 48.0/27%/373; parasaurolophus 1 13.57/43%/267,
+# 2 27.13/42%/223, 4 54.27/42%/201). The V5 Ankylosaurus is already pending above; the Studio sweep of all four is still to do.
+PENDING_SWEEP = ('tyrannosaurus', 'ankylosaurus', 'microraptor', 'parasaurolophus')
 
 BODY = r'''
 local sizes = {SIZES}
