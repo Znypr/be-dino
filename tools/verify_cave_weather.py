@@ -36,7 +36,7 @@ def main():
     assert 'flash*.9*outside' in loop and 'flash*1.5*outside' in loop and 'flash*3*outside' in loop
     for token in ('rays.Intensity=lerpNum(0,look.rays,t)', 'dof.FarIntensity=lerpNum(0,look.dof,t)', 'lamp.Brightness=look.lamp*t',
                   'Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)', 'Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)',
-                  'grade.Saturation=lerpNum(0,look.sat,t)', 'WL.fog(look,t,CLEAR,fogCap)'):
+                  'grade.Saturation=lerpNum(0,look.sat,t)', 'WL.fog(look,t,C,fogCap)'):  # BD-1314: C = the biome look or CLEAR
         assert token in loop, 'effect must be driven by t: ' + token
     assert 'CelestialBodiesShown=activeId=="clear" or k<=0 or hall' in loop, 'event sun/moon sky state hidden inside'
     assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in loop, 'inside the hall only the soft text toast (no big card)'

@@ -336,7 +336,7 @@ def scan():
     assert 'emitter(nearSky,id,"near"' in src and 'WL.Aurora.baseY' in src and 'QuakeCrackDecal' in src and 'QuakeFeetDust' in src
     assert 'weatherFactor' in src and 'on=motion and weatherId==activeId' in src and 'item.e.Enabled=on and weatherFactor>0' in src, 'Weather Off / Calm turn the particles off'
     assert 'if motion then feetHolder.CFrame' in src, 'no feet puff with Reduce Motion'
-    assert 'WL.fog(look,t,CLEAR,fogCap)' in src and 'WorldCulling' in src, 'fog end must be capped by the device cull radius'
+    assert 'WL.fog(look,t,C,fogCap)' in src and 'local C=biomeClear or CLEAR' in src and 'WorldCulling' in src, 'fog end must be capped by the device cull radius'
     assert 'CelestialBodiesShown' in src, 'default sun and moon hidden during events (one moon only)'
     # BD-131 reader: every texture is read through WeatherTextures; an empty slot changes nothing (no plan = props returned untouched, no extra Instance)
     wt = (ROOT / 'src/shared/WeatherTextures.luau').read_text(encoding='utf-8')

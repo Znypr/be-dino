@@ -644,6 +644,8 @@ local function rebuildTimers(buffs: any, now: number)
     end
 end
 
+local Biome = require(ReplicatedStorage.Shared.BiomeRotation) -- BD-1314
+local biomeOn = Biome.enabled(require(ReplicatedStorage.Shared.Config))
 local lastEggs: number? = nil
 local lastGrowth = -1
 local lastLeapWord = ""
@@ -657,6 +659,8 @@ task.spawn(function()
         local id = workspace:GetAttribute("WeatherId") or "clear"
         local endsAt = if id == "clear" then workspace:GetAttribute("NextWeatherAt") else workspace:GetAttribute("WeatherEndsAt")
         local line, timer = L.bannerWords(id, workspace:GetAttribute("WeatherName"), (if typeof(endsAt) == "number" then endsAt else now) - now)
+        -- BD-1314 (docs/250 S1): with the biome rotation on, clear weather shows the biome and when the next one comes ("Jungle!", "Desert Canyon in 3 min")
+        if biomeOn and (id == "clear" or id == "") then line, timer = Biome.bannerWords(Biome.clock(now, workspace:GetAttribute("BiomeTestOffset"), game:GetService("RunService"):IsStudio()), L.duration) end
         if bannerLine.Text ~= line or bannerTimer.Text ~= timer then
             bannerLine.Text, bannerTimer.Text = line, timer
             placeBanner()
