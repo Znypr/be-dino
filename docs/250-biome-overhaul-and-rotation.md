@@ -4,7 +4,7 @@ Owner 2026-11-23:
 - "research different bioms and how popular roblox experiences show them, then plan different bioms and work with chatgpt to create a dashboard with a biome overhall, where different vegetation and atomosphere is created"
 - Earlier the same day: "instead of having differnet biomes on the map, how about every few minutes - similar to steal an egg where there is night and everything is closed up and reset - we have an event where the map is updated from 1 biome to another, which mean during biome events different dinos are hatchable or so. like we go from a desert biome, to a quick storm, which updates the map to a jungle biome or so."
 
-Status: PLAN. Every number below is PROVISIONAL until the owner picks the open questions (section 7). Board: the Design Board, Map page ("Biome overhaul").
+Status: PLAN, owner picks done (section 7). Colours, timings and boosts stay PROVISIONAL until Studio tuning. Board: the Design Board, Map page ("Biome overhaul").
 
 ## 1. What popular Roblox games do (research 2026-11-23)
 Sources were web guides and wikis. Numbers they disagreed on are left out.
@@ -70,8 +70,8 @@ ChatGPT proposed hex colours, fog, grade, bloom, particles and sound per biome. 
 4. **S4, polish (BD-1317)**: storm sound and music per biome, biome food skins, landmark variants (snow-capped volcano, desert arch).
 5. **S5, rare special (BD-1318)**: the Misty Swamp as a surprise biome with its own dino.
 
-## 7. Open questions for the owner
-1. **Whole map vs zones.** The plan is the whole island in one biome at a time (owner idea). Today's five zones would go.
-2. **Length:** 8 min per biome (proposal), or 5, or 10.
-3. **Dinos:** boost only (proposal, kid-safe) or exclusive biome dinos.
-4. **Night cycle like Steal an Egg (everyone reset to the plaza):** yes or no. The plan says no reset, the storm only reskins.
+## 7. Owner decisions (2026-11-23, all four picked as recommended)
+1. **Whole island** in one biome at a time. Today's five side-by-side zones go away once S1 ships.
+2. **8 minutes** per biome.
+3. **Featured dinos get a boost** (about x2 chance). Every dino stays hatchable in every biome.
+4. **No reset:** the storm only reskins the island, and players keep playing where they are.
