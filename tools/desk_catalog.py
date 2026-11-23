@@ -193,7 +193,8 @@ def read_report(p: Path, screen: str, elems: dict):
         return None
     if not isinstance(r, dict) or not isinstance(r.get("rows"), list) or r.get("screen", screen) != screen:
         return None
-    at =r.get("at") or datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")
+    at = r.get("at") or datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")
+    dated = bool(r.get("at"))  # a report that records its own time; file dates change on every git checkout
     misses = [m for m in r.get("misses", []) if isinstance(m, str)]
     ids = {row.get("id") for row in r["rows"]}
     shot = r.get("shot")
@@ -218,7 +219,7 @@ def read_report(p: Path, screen: str, elems: dict):
         if crop_pair.is_file():
             row["pair"] = rel(crop_pair)
         rows.append(row)
-    return {"report": rel(p), "at": at, "step": r.get("step"), "self_test": bool(r.get("self_test")), "misses": misses,
+    return {"report": rel(p), "at": at, "dated": dated, "step": r.get("step"), "self_test": bool(r.get("self_test")), "misses": misses,
             "shot": shot, "shot_size": r.get("shot_size") or (image_size(ROOT / shot) if shot else None),
             "owner_pins": r.get("owner_pins", []), "rows": rows}
 
@@ -237,7 +238,9 @@ def menus():
         by_id = {e["id"]: e for e in elems}
         found = {f for pat in MENU_REPORTS for f in ROOT.glob(pat.format(screen=screen, key=screen.split("-")[0]))}
         checks = [c for c in (read_report(f, screen, by_id) for f in found) if c]
-        checks.sort(key=lambda c: c["at"], reverse=True)
+        # newest first by the time each report records inside itself; reports without one (older format: only a file date, which a git
+        # checkout resets) rank after every dated report, and a full check (no step) beats a single step at the same time
+        checks.sort(key=lambda c: (c.get("dated", False), c["at"], c.get("step") is None), reverse=True)
         sample = None
         if not checks and screen in MENU_SAMPLE_BUILDS:
             pics = sorted(ROOT.glob(MENU_SAMPLE_BUILDS[screen]), key=lambda f: f.stat().st_mtime, reverse=True)
