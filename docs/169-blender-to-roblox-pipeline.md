@@ -164,3 +164,34 @@ Roblox **multiplies vertex colour by texture** on a MeshPart. The baked dino bui
 ## 7. Files (this PR)
 
 `tools/roblox_asset_upload.py`, `tools/blender_export_roblox.py` (+ `--faces`, rest pose), `tools/blender/make_acceptance_cube.py`, `tools/studio/insert_uploaded_model.luau`, `tools/studio/render_insert_snippet.py`, `tests/test_roblox_asset_upload.py`, this page, the BD-659 kanban row, a pointer in [160](160-agent-brief.md), and two ignored folders in `.gitignore` (`build/pipeline-test/`, `build/blender-export/`).
+
+## 8. Sheet to game dino in about 10 minutes (BD-1304, 2026-11-23)
+
+One tool per step, so a colour tweak reruns only the colour step. Proven on Pachy V5 and Anky V5 (see [77](77-asset-registry.md)).
+
+| Step | Command | Time |
+|---|---|---|
+| Cut the sheet into views | `python tools/hy_dino.py sheet <sheet.jpg> --dir build/hy-<name>` | 1 s |
+| Shape (local GPU, low priority) | `python tools/hy_dino.py gen --dir build/hy-<name>` | ~1 min |
+| Measure and write the config | `python tools/hy_dino.py config --dir build/hy-<name> --name <Name>_V5 --plan quadruped\|biped\|flyer` | 3 s |
+| Cut, cap, decimate (+ spike candidates) | `python tools/hy_dino.py parts --dir build/hy-<name>` | 5 s |
+| Colours + preview renders (`--final` = Cycles) | `python tools/hy_dino.py colour --dir build/hy-<name>` | 4 s |
+| Rig + the game's 8 clips + GIFs | `python tools/hy_dino.py anim --dir build/hy-<name> --name <Title>` | 30 s |
+| Game file | `python tools/blender_export_roblox.py build/hy-<name>/<Name>_V5.blend --out ... --embed-textures` | 5 s |
+
+- **Shape:** Hunyuan3D-2 mini (shape only; the texture stage is not installed here) from the sheet's 3/4 view, turned to face +Y, 3 studs tall, mirrored for exact symmetry.
+- **Parts:** cut planes and labels come from the plan template and the measured anatomy (`tools/hy_dino_lib.py species_config`). The names follow the animator's roles: four `Leg??` parts for quadrupeds, `Arm`/`Wing` for bipeds and flyers. Origins sit at the animator's pivots.
+- **Colours:** the sheet's front, side and back drawings are projected onto each part, weighted by which way each face points, then baked into one texture per part (no vertex colours, section 6). Optional extras in `cfg.py`:
+  - `TOP`: a flat colour for up-facing faces that no drawing shows.
+  - `SPIKES`: faceted cones in `BUMP_COLOUR` at the N strongest stand-out points of the detailed mesh. No threshold tuning: set `count`, and exclude parts or boxes.
+  - `REGIONS`: forced colour by part and y range.
+  - `CLASS = "Armored"`: shorter steps in the animations.
+- **Animation:** one bone per part. The actions use the keys of `src/shared/LowPolyClips.luau` and the phase rules of `LowPolyGait` (left and right half a stride apart, back legs another half), so the GIFs show what the game plays.
+- **Species configs:** they live in `tools/blender/dino_species/`, starting with `ankylosaurus.py`.
+
+**Sheets that cut cleanly** (ask ChatGPT for exactly this):
+- One row of four views: FRONT, 3/4, SIDE (snout to the right), BACK, at the same scale and in the same neutral pose.
+- A plain light-grey background, with at least 20 px of empty space between figures and above the labels.
+- **No black outline** on the figures: outlines bleed dark onto edges when projected.
+- Extra poses go in a second row.
+
