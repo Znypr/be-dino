@@ -34,6 +34,13 @@ class SheetTests(unittest.TestCase):
         self.assertEqual(len(got), 4)
         self.assertEqual(got[0], (5, 42), "the spike 2 px away joins the first figure")
 
+    def test_touching_figures_are_split_at_the_thinnest_column(self):
+        # Parasaurolophus sheet: the side view's tail touches the 3/4 view, so the row shows 3 ranges for 4 figures
+        cols = [0] * 5 + [9] * 30 + [0] * 10 + [9] * 40 + [3] * 3 + [1] + [3] * 3 + [9] * 50 + [0] * 10 + [9] * 30
+        got = lib.panels_from_columns(cols, want=4)
+        self.assertEqual(len(got), 4)
+        self.assertEqual(got[1][1], 88, "split at the 1-pixel column between the two figures")
+
     def test_label_pill_is_not_part_of_the_figure(self):
         rows = [0] * 10 + [5] * 80 + [0] * 8 + [5] * 12 + [0] * 10
         self.assertEqual(lib.figure_rows(rows), (10, 90))

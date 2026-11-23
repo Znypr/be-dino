@@ -68,6 +68,13 @@ def panels_from_columns(col_counts, want=4, min_width=20):
         gaps = [(r[i + 1][0] - r[i][1], i) for i in range(len(r) - 1)]
         _, i = min(gaps)
         r[i:i + 2] = [(r[i][0], r[i + 1][1])]
+    while 0 < len(r) < want:
+        # two figures touch (a tail reaching the next view): split the widest range at its thinnest column in the middle half
+        i = max(range(len(r)), key=lambda k: r[k][1] - r[k][0])
+        a, b = r[i]
+        lo, hi = a + (b - a) // 4, b - (b - a) // 4
+        cut = min(range(lo, hi), key=lambda x: (col_counts[x], abs(x - (a + b) / 2)))
+        r[i:i + 1] = [(a, cut), (cut + 1, b)]
     return [x for x in r if x[1] - x[0] >= min_width]
 
 
