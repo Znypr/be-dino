@@ -54,4 +54,6 @@ $main = ((& git -C $root worktree list --porcelain) | Select-Object -First 1) -r
 $cfg = Join-Path $env:APPDATA 'Be Dino Desk'
 New-Item -ItemType Directory -Force $cfg | Out-Null
 Set-Content -LiteralPath (Join-Path $cfg 'repo.txt') -Value ($main -replace '/', '\') -Encoding ASCII
+# a second copy next to the app (the app checks both; owner 2026-11-23: a shortcut-started app once ignored the app-data one)
+Set-Content -LiteralPath (Join-Path $dest 'repo.txt') -Value ($main -replace '/', '\') -Encoding ASCII
 Write-Output "Installed: $exe (shows $main)"
