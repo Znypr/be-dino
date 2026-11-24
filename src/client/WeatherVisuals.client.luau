@@ -34,6 +34,8 @@ local Biome=require(Shared.BiomeRotation)
 local biomeOn=Biome.enabled(require(Shared.Config))
 
 local folder=Instance.new("Folder") folder.Name="LocalWeatherFX" folder.Parent=workspace
+-- BD-1319: with the biome looks on, a soft fog-coloured band at the fog distance hides the crisp sky line (classic fog never touches the sky)
+local skirt=if biomeOn then require(script.Parent.HorizonSkirt).new(folder) else nil
 
 -- ---------------------------------------------------------------- post effects, atmosphere, sky
 local grade=Instance.new("ColorCorrectionEffect") grade.Name="WeatherGrade" grade.Parent=Lighting
@@ -187,6 +189,7 @@ RunService.Heartbeat:Connect(function(dt)
     local fogStart,fogEnd=WL.fog(look,t,C,fogCap)
     local fogColor=c3(C.fog):Lerp(c3(fog),t)
     Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
+    if skirt then local cam=workspace.CurrentCamera skirt.update(if cam then cam.CFrame.Position else Vector3.zero,fogColor,fogEnd,cam~=nil and not hall) end
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)
     atmosphere.Decay=baseAtmo.decay:Lerp(c3(decay),t)
     -- sky treatment: colour shift on the sky dome and horizon, darker exposure, more stars

@@ -88,3 +88,25 @@ Every kit piece gets a close-up Studio check before it is wired:
 
 Pots and plinths belong only to shop decoration (the tree-variety notes, docs/evidence/2026-11-23-tree-variety/README.md).
 
+## 9. Depth and the horizon (owner 2026-11-23, BD-1319)
+The owner said: "its cool that we see this mist or fog which gives depth for the world, however the horizon is perfectly visible between trees, which doesnt make sense. study how depth is handled in games to give bigger scale of map and immersion".
+
+What we found:
+- Roblox classic fog (FogStart, FogEnd, FogColor) colours parts and terrain but never the sky. The sky line stayed crisp behind fogged trees (Studio red-fog test, 2026-11-23).
+- The Atmosphere object barely changes anything at this island's scale (Density 0.8 showed no visible change at 250 studs).
+
+How games handle depth (research 2026-11-23):
+- aerial perspective (far things paler and cooler);
+- fog colour matched to the horizon colour;
+- layered silhouettes (near, mid and far bands; Breath of the Wild's triangle hills);
+- a painted horizon band in the skybox;
+- a ring of far islands or mountains;
+- sightlines blocked by ridges and tree belts;
+- tall landmarks as scale cues.
+
+What we do:
+1. **Built (BD-1319):** a soft fog band (`src/client/HorizonSkirt.luau`). Twenty-four bands stand at 0.9 x FogEnd around the camera in the live fog colour. They are solid below eye level and fade out up to 12 degrees above it, so land and sea dissolve into haze and the sky line disappears. Client only; no collisions or shadows.
+2. **Next:** a skybox per biome with a horizon band in the fog colour (one texture set each).
+3. **Next:** a ring of far island and mountain silhouettes beyond the coast, each layer paler than the one in front (low-poly, flat colour).
+4. **Later (layout):** ridges and tree belts at the rim to block long sightlines, plus one tall landmark per biome as a scale cue.
+

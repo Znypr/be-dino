@@ -6,7 +6,8 @@
 -- title cards), PhoneHud (banner words) and tools/verify_biome_rotation.py all read this module.
 -- Active only while Config.WorldV3Enabled and Config.BiomeRotationEnabled are both true; off = nothing changes anywhere.
 -- Every colour and timing is PROVISIONAL (docs/250); the looks come from ChatGPT's preset table (docs/evidence/2026-11-23-biome-overhaul),
--- with fog and haze pushed back after the first Studio pass (2026-11-23: ChatGPT's distances hid the island beyond about 150 studs).
+-- with fog and haze pushed back after the first Studio pass (2026-11-23: ChatGPT's distances hid the island beyond about 150 studs), then the fog end
+-- brought in to 370-620 studs with the horizon band (BD-1319) so far trees fully dissolve into the haze instead of cutting against the sky.
 local BiomeRotation = {}
 
 BiomeRotation.Order = {"meadow", "jungle", "desert", "tundra", "volcano"}
@@ -34,15 +35,15 @@ export type Look = {sun: {number}, horizon: {number}, skyTop: {number}, ambient:
     tint: {number}, sat: number, contrast: number, bloom: number, density: number, haze: number}
 BiomeRotation.Looks = {
     meadow = {sun = {255, 240, 184}, horizon = {216, 244, 255}, skyTop = {90, 174, 255}, ambient = {166, 201, 179}, fog = {198, 233, 216},
-        fogStart = 160, fogEnd = 900, tint = {255, 252, 242}, sat = .1, contrast = .02, bloom = .15, density = .25, haze = .3},
+        fogStart = 100, fogEnd = 620, tint = {255, 252, 242}, sat = .1, contrast = .02, bloom = .15, density = .25, haze = .3},
     jungle = {sun = {184, 255, 242}, horizon = {188, 235, 221}, skyTop = {19, 127, 134}, ambient = {57, 122, 104}, fog = {123, 185, 168},
-        fogStart = 90, fogEnd = 520, tint = {232, 255, 246}, sat = .08, contrast = .04, bloom = .15, density = .3, haze = .7},
+        fogStart = 60, fogEnd = 390, tint = {232, 255, 246}, sat = .08, contrast = .04, bloom = .15, density = .3, haze = .7},
     desert = {sun = {255, 224, 161}, horizon = {255, 207, 141}, skyTop = {101, 156, 218}, ambient = {220, 167, 120}, fog = {231, 176, 120},
-        fogStart = 120, fogEnd = 700, tint = {255, 236, 210}, sat = -.04, contrast = .06, bloom = 0, density = .3, haze = .6},
+        fogStart = 90, fogEnd = 500, tint = {255, 236, 210}, sat = -.04, contrast = .06, bloom = 0, density = .3, haze = .6},
     tundra = {sun = {226, 245, 255}, horizon = {232, 248, 255}, skyTop = {121, 195, 245}, ambient = {156, 199, 232}, fog = {213, 236, 250},
-        fogStart = 110, fogEnd = 620, tint = {236, 246, 255}, sat = -.08, contrast = .02, bloom = .15, density = .3, haze = .5},
+        fogStart = 80, fogEnd = 450, tint = {236, 246, 255}, sat = -.08, contrast = .02, bloom = .15, density = .3, haze = .5},
     volcano = {sun = {255, 148, 91}, horizon = {242, 105, 54}, skyTop = {87, 52, 79}, ambient = {117, 80, 87}, fog = {144, 93, 84},
-        fogStart = 80, fogEnd = 460, tint = {255, 226, 214}, sat = -.1, contrast = .08, bloom = .35, density = .36, haze = 1},
+        fogStart = 60, fogEnd = 370, tint = {255, 226, 214}, sat = -.1, contrast = .08, bloom = .35, density = .36, haze = 1},
 }
 -- Terrain colours per biome over the toon flat map (WorldToon.Palette keys; meadow = the toon palette itself). Paths and the plaza (Limestone)
 -- stay a readable warm sand in every biome (ChatGPT rule: keep the sandy path). Channels stay <= 245 (the soft-colour rule, verify_world_look).
