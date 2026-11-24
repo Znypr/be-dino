@@ -7,6 +7,7 @@ local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local Sea = require(ReplicatedStorage.Shared.WorldSea)
 local Toon = require(ReplicatedStorage.Shared.WorldToon)
 local Fill = require(ReplicatedStorage.Shared.WorldFill) -- BD-1245
+local Patches = require(ReplicatedStorage.Shared.GroundPatches) -- BD-1320
 local IslandTerrain = {}
 -- World v2: the surface material per column comes from the sub-biome map (BiomeMap) dithered with multi-octave noise, so a
 -- single grass material no longer tiles flat across the map: Grass/LeafyGrass/Mud/Ground/Sand/Sandstone/Slate/Basalt mix in
@@ -126,7 +127,8 @@ function IslandTerrain.build(beforeReady: (() -> ())?)
                 if V3 then
                     local fixed = V3.surface(wx, wz, height)
                     -- BD-1245 (Config.GroundDetailEnabled): grass lip along the paths, soft darker grass and earth patches (0 parts)
-                    if not fixed and fillGround then fixed = Fill.surface(V3, wx, wz, height, name) end
+                    -- BD-1320 (same flag): worn soil at path junctions, grove floors, beach fingers and slope rock first (docs/251 s5)
+                    if not fixed and fillGround then fixed = Patches.surface(V3, wx, wz, height, slope, name) or Fill.surface(V3, wx, wz, height, name) end
                     name = fixed or name
                 end
                 local surface = (Enum.Material :: any)[name] :: Enum.Material

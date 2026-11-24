@@ -206,7 +206,8 @@ def source_checks():
         errors.append('Arena must lower the ground cover share only with GroundDetailEnabled')
     if 'local ground, things = Fill.groundEnabled(Config), Fill.thingsEnabled(Config)' not in arena or 'if not V3 or not (ground or things) then return end' not in arena:
         errors.append('Arena must place the world fill only with the flags')
-    if 'if not fixed and fillGround then fixed = Fill.surface(V3, wx, wz, height, name) end' not in read('src/server/IslandTerrain.luau'):
+    # BD-1320: the ground patches run first on the same flag line (Patches.surface(...) or Fill.surface(...))
+    if 'if not fixed and fillGround then fixed = Patches.surface(V3, wx, wz, height, slope, name) or Fill.surface(V3, wx, wz, height, name) end' not in read('src/server/IslandTerrain.luau'):
         errors.append('IslandTerrain must paint the fill surface only with GroundDetailEnabled')
     if 'if layer and text == nil and v3 and thingsOn() then' not in read('src/shared/FoodLayer.luau'):
         errors.append('FoodLayer must move food only for the game map with ThingsToDoEnabled')
