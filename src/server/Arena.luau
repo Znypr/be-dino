@@ -406,6 +406,8 @@ local function biomeKit(parent: Instance)
             made = if isNewProp then propProp(p.id)
                 else generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), p.layer) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
+            -- BD-1315: what the client biome-kit swap (BiomeKits.client) needs to re-skin this slot: scale, layer and the same roll as above
+            if made and veg2On then made:SetAttribute("KitScale", p.scale) made:SetAttribute("KitLayer", p.layer) made:SetAttribute("KitRoll", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) end
             -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
             if made and made.PrimaryPart and p.layer ~= "landmark" and not (isNewProp and (data.family == "flowers" or data.family == "ground_mushrooms")) then
                 local tr, tg, tb = Biome.tint(p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 91), Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 92))

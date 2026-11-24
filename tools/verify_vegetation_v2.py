@@ -181,6 +181,19 @@ def source_checks():
     loader = read('src/server/ImportedResources.luau')
     if 'if Veg2.enabled(require(ReplicatedStorage.Shared.Config)) then for key,asset in Veg2.Assets do if Veg2.ready(key)' not in loader:
         errors.append('the loader must fetch the v2 family only with the flag on')
+    # BD-1315: the client biome-kit swap (BiomeKits.client) is gated on both features, re-skins only through kitVisual / kitHidden, hides
+    # the original with LocalTransparencyModifier (never deletes or moves a server object), skips logs, batches its frames, and Arena stamps
+    # the slot attributes it reads only with vegetation v2 on.
+    kits = read('src/client/BiomeKits.client.luau')
+    for needle in ('if not Veg.enabled(Config) or not Rotation.enabled(Config) then return end', 'Veg.kitVisual(biome, slot.id, slot.roll, slot.layer)',
+                   'Veg.kitHidden(biome, slot.id, slot.roll, slot.layer)', 'LocalTransparencyModifier', 'layer == "log"', 'task.wait()',
+                   'GetAttributeChangedSignal("CurrentBiome")', 'mesh.CanCollide, mesh.CanTouch, mesh.CanQuery'):
+        if needle not in kits:
+            errors.append('BiomeKits.client must contain: ' + needle)
+    if ':Destroy()' in kits.replace('old:Destroy()', '') or '.Parent = nil' in kits:
+        errors.append('BiomeKits.client may only remove its own kit mesh')
+    if 'if made and veg2On then made:SetAttribute("KitScale", p.scale) made:SetAttribute("KitLayer", p.layer) made:SetAttribute("KitRoll"' not in arena:
+        errors.append('Arena must stamp KitScale / KitLayer / KitRoll on placed props (vegetation v2 only)')
     if 'Veg2' in read('src/client/Bootstrap.client.luau') or 'Vegetation' in read('src/client/Bootstrap.client.luau'):
         errors.append('Bootstrap.client must not change')
     plaza = read('src/server/PlazaHub.luau')
