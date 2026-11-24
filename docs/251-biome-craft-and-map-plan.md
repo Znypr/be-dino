@@ -151,6 +151,7 @@ First batch: 1, 2, 5, 8 plus the terrain patches. The tree root flare (3) goes i
 ## 8. Plan (board rows)
 Order: systems before meshes (ChatGPT and the research agree: terrain and placement beat 30 more props).
 1. **BD-1320 Ground patches:** baked soil / gravel / sand / slope-rock masks and path shoulders on the World V3 island, mapped to 3 materials per biome; test whether `SetMaterialColor` tints custom slots. Before/after from the three docs/241 cameras.
+   - 2026-11-24 slice 1 built (`GroundPatches.luau`, behind GroundDetailEnabled): worn soil at junctions and spoke-end clearings, grove floors with a deeper-green ring, slope rock; LeafyGrass #69D94B -> #50BE3E so the two greens read. Evidence `docs/evidence/2026-11-24-ground-patches`. Beach fingers dropped (no effect). Custom terrain slots not needed: the patches use the existing materials, which the rotation already recolours.
 2. **BD-1321 Cluster placement:** hero + satellite rule in odd groups, per-biome open share and slot occupancy (with colliders and food hosts), 3-tint variants per placement. Food maps regenerated. Phone part count before/after.
 3. **BD-1322 Shared core kit batch 1:** outcrop, low cliff, grass tuft cluster, pebble group (section 6 items 1, 2, 5, 8) from a ChatGPT sheet via the generate_mesh / Hunyuan routes, close-up check per piece (owner art rule).
 4. **BD-1323 Horizon:** sea stacks and distant ridge silhouettes around the island, static, low detail.

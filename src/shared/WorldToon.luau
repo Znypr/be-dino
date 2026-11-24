@@ -14,7 +14,7 @@ WorldToon.VariantPrefix = "BeDinoToon_" -- the authored variants (resources/visu
 -- paths, warm earth, and grey-violet volcano rock. Values are the terrain colour multipliers over the white map.
 WorldToon.Palette = {
     Grass = {110, 227, 66}, -- v7 (owner 2026-11-21 "too cool and boring", ChatGPT target #6EE342; was 126,188,86)
-    LeafyGrass = {105, 217, 75}, -- #69D94B (was 102,164,74)
+    LeafyGrass = {80, 190, 62}, -- #50BE3E BD-1320: a deeper warm green so the forest floor, grove rings and the BD-1245 blotches read (was #69D94B, too close to Grass)
     Sand = {245, 200, 125}, -- v8: the warmest the soft-colour rule allows (channels <= 245, verify_world_look) toward the mock's #FCD18C (252,209,140 rendered khaki #E2CD8A; was 240,222,168)
     Limestone = {245, 195, 118}, -- plaza and paths: v8 peach-gold within the soft-colour rule (v7 252,204,128 rendered khaki; was 230,202,146)
     Ground = {180, 136, 92},

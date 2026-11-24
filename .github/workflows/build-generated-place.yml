@@ -217,6 +217,7 @@ jobs:
             python tools/verify_island_life.py --runner /tmp/luau/luau
             python tools/verify_warm_light.py --runner /tmp/luau/luau
             python tools/verify_world_fill.py --runner /tmp/luau/luau
+            python tools/verify_ground_patches.py --runner /tmp/luau/luau
             python tools/verify_plaza_shops.py --runner /tmp/luau/luau
             python tools/verify_blob_shadow.py --runner /tmp/luau/luau
             python tools/verify_colossal_lod.py --runner /tmp/luau/luau
