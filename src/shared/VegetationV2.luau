@@ -24,6 +24,47 @@ VegetationV2.Assets = {
     veg2_tree_oak = {assetId = "93533177854872", tris = 1200, ref = "tree_oak", what = "wide umbrella oak with a bent trunk and three round cloud crowns"},
     veg2_palm_coconut = {assetId = "87978584265482", tris = 1200, ref = "palm_coconut", what = "coconut palm with a hibiscus at the foot"},
     veg2_palm_flower = {assetId = "131648210939538", tris = 1200, ref = "palm_flower", what = "flower palm with a vine and a pink bloom"},
+    -- BD-1315 jungle kit (biome overhaul docs/250 S2): shown only through kitVisual("jungle", ...) once the S1 biome clock swaps kits. Roblox
+    -- generate_mesh in the toy style of the Jungle panel (docs/evidence/2026-11-23-biome-overhaul/biome-grid-chatgpt.jpg); reference = a
+    -- Studio picture of the mesh in docs/evidence/2026-11-23-jungle-kit/refs. Ferns and mossy rocks reuse the approved veg2 ones.
+    veg2_jungle_canopy = {assetId = "139306681391247", tris = 1500, ref = "jungle_canopy", what = "jungle canopy tree, buttress roots, two leaf layers, hanging vines"},
+    veg2_jungle_elephant_ear = {assetId = "136970222010366", tris = 800, ref = "jungle_elephant_ear", what = "wide clump of big heart-shaped elephant ear leaves"},
+    veg2_jungle_monstera = {assetId = "80843788267545", tris = 900, ref = "jungle_monstera", what = "mound of split monstera leaves"},
+    veg2_jungle_hibiscus = {assetId = "139247532251059", tris = 500, ref = "jungle_hibiscus", what = "two red hibiscus blooms in dark leaves"},
+    veg2_jungle_stump = {assetId = "80638240272132", tris = 800, ref = "jungle_stump", what = "mossy stump wrapped in a vine, orange mushrooms"},
+    -- BD-1315 biome kits (docs/250 S2): desert, tundra and volcano for the same slots, plus a jungle rock ledge. Roblox generate_mesh with
+    -- prompts written from ChatGPT style sheets in the approved toy style (docs/evidence/2026-11-23-biome-kits); shown only through kitVisual.
+    veg2_desert_saguaro = {assetId = "88215990023102", tris = 1190, ref = "kit_desert", what = "tall round-armed saguaro cactus with pink flowers"},
+    veg2_desert_acacia = {assetId = "98055641929016", tris = 1500, ref = "kit_desert", what = "acacia tree with a wide flat umbrella canopy"},
+    veg2_desert_cactus_cluster = {assetId = "73356820925066", tris = 1000, ref = "kit_desert", what = "three fat round cacti with yellow flowers"},
+    veg2_desert_barrel = {assetId = "73501662599786", tris = 798, ref = "kit_desert", what = "squat barrel cactus with pink flowers"},
+    veg2_desert_fruit_cactus = {assetId = "104357785768075", tris = 896, ref = "kit_desert", what = "small cactus with red fruits"},
+    veg2_desert_grass = {assetId = "137246578898278", tris = 400, ref = "kit_desert", what = "dry golden grass tuft"},
+    veg2_desert_flowers = {assetId = "94345384129402", tris = 500, ref = "kit_desert", what = "pink and yellow desert flowers"},
+    veg2_desert_bones = {assetId = "96210042686377", tris = 700, ref = "kit_desert", what = "bleached dino rib bones in a sand mound"},
+    veg2_desert_spire = {assetId = "133332310281004", tris = 1198, ref = "kit_desert", what = "red striped mesa rock spire"},
+    veg2_desert_ledge = {assetId = "78999617003904", tris = 1000, ref = "kit_desert", what = "low sandstone ledge with a small cactus"},
+    veg2_tundra_pine = {assetId = "119655066986735", tris = 1198, ref = "kit_tundra", what = "snowy pine with soft snow caps"},
+    veg2_tundra_frost_tree = {assetId = "94552299953576", tris = 1500, ref = "kit_tundra", what = "frosted tree, white trunk, snowy teal crown"},
+    veg2_tundra_berry_bush = {assetId = "84346387380367", tris = 900, ref = "kit_tundra", what = "snowy holly bush with red berries"},
+    veg2_tundra_snow_mound = {assetId = "123505817236731", tris = 600, ref = "kit_tundra", what = "soft snow mound with a green sprout"},
+    veg2_tundra_ice_crystals = {assetId = "101643348157940", tris = 700, ref = "kit_tundra", what = "pale blue ice crystals in snow"},
+    veg2_tundra_grass = {assetId = "125854880822565", tris = 400, ref = "kit_tundra", what = "frosty grass tuft"},
+    veg2_tundra_snowdrops = {assetId = "132615553392343", tris = 500, ref = "kit_tundra", what = "white and lilac snowdrops"},
+    veg2_tundra_tusk = {assetId = "118081433288326", tris = 600, ref = "kit_tundra", what = "old tusks sticking out of snow"},
+    veg2_tundra_boulder = {assetId = "82576923565628", tris = 700, ref = "kit_tundra", what = "grey boulder with a snow cap"},
+    veg2_tundra_ice_spire = {assetId = "100307921925448", tris = 998, ref = "kit_tundra", what = "tall ice spire of rounded blocks"},
+    veg2_tundra_ledge = {assetId = "88617261219663", tris = 1000, ref = "kit_tundra", what = "low snowy rock outcrop with icicles"},
+    veg2_volcano_charred_tree = {assetId = "136574200915810", tris = 1500, ref = "kit_volcano", what = "regrowing tree with a dark trunk and fresh green leaves"},
+    veg2_volcano_red_tree = {assetId = "99058049156741", tris = 1500, ref = "kit_volcano", what = "slender twisty tree with a round crown of red leaves"},
+    veg2_volcano_boulder = {assetId = "93625416188101", tris = 700, ref = "kit_volcano", what = "ash-dusted pumice boulder with a fern sprout"},
+    veg2_volcano_stump = {assetId = "99559384947949", tris = 798, ref = "kit_volcano", what = "charcoal stump with a green sprout"},
+    veg2_volcano_fire_fern = {assetId = "117623704015728", tris = 900, ref = "kit_volcano", what = "fire-coloured fern shrub"},
+    veg2_volcano_crystals = {assetId = "107214976859144", tris = 700, ref = "kit_volcano", what = "amber crystals on dark rocks"},
+    veg2_volcano_ash_grass = {assetId = "90131431323706", tris = 400, ref = "kit_volcano", what = "ash grass with warm tips"},
+    veg2_volcano_fire_flowers = {assetId = "87669606566547", tris = 500, ref = "kit_volcano", what = "red-orange fire flowers"},
+    veg2_volcano_ledge = {assetId = "129149613550662", tris = 1000, ref = "kit_volcano", what = "cooled lava rock ledge with ash and a red-leaf plant"},
+    veg2_jungle_ledge = {assetId = "79977803283463", tris = 1000, ref = "jungle_ledge", what = "mossy jungle rock ledge with vines"},
     veg2_bush_red = {assetId = "77978853272967", tris = 900, ref = "bush_berry_red", what = "green dome with small red berries"},
     veg2_bush_blue = {assetId = "99690382623326", tris = 900, ref = "bush_berry_blue", what = "green dome with small blueberries"},
     veg2_bush_grape = {assetId = "139210058341686", tris = 900, ref = "bush_grape_purple", what = "green dome with small purple grape bunches"},
@@ -97,6 +138,113 @@ function VegetationV2.visualFor(id: string, biome: string, roll: number): string
     end
     if id == "world_boulder_mossy_s" then return "veg2_rock_mossy" end
     if id == "world_boulder_mossy_m" or id == "world_boulder_mossy_l" then return choose(roll, "veg2_rock_spiral", "veg2_rock_mossy", .3) end
+    return nil
+end
+
+-- BD-1315 (docs/250, contract with S1 BD-1314): the visual key for a placed slot in a whole-island biome kit, or nil = keep today's
+-- visualFor(id, subBiome, roll). Pure: S1's BiomeClock / client swap reads CurrentBiome and calls this; placements, colliders and food
+-- hosts never change. "meadow" is today's map (nil everywhere). layer (optional): "log" slots (a dead tree lying down) keep today's look.
+-- BD-1315 desert, tundra and volcano kits: the same slots, one table per biome. Each entry maps a slot group to weighted picks
+-- {key, share, ...}; the last share is implied. Groups: tree (every standing tree), bush (round bushes), small (mushroom clumps),
+-- leafy (ferns, horsetail), flowers, grass, boulder_s / boulder (small / medium-large boulders), spire, ledge.
+local KITS = {
+    desert = {
+        tree = {"veg2_desert_acacia", .65, "veg2_desert_saguaro"}, -- groves read as acacia savanna with lone saguaros
+        bush = {"veg2_desert_barrel", .4, "veg2_desert_fruit_cactus", .35, "veg2_desert_cactus_cluster"},
+        small = {"veg2_desert_bones", .15, "veg2_desert_barrel", .5, "veg2_desert_grass"},
+        leafy = {"veg2_desert_grass", .6, "veg2_desert_flowers"},
+        flowers = {"veg2_desert_flowers"}, grass = {"veg2_desert_grass"},
+        boulder_s = {"veg2_desert_bones"}, boulder = {"veg2_desert_ledge"},
+        spire = {"veg2_desert_spire"}, ledge = {"veg2_desert_ledge"},
+    },
+    tundra = {
+        tree = {"veg2_tundra_pine", .6, "veg2_tundra_frost_tree"},
+        bush = {"veg2_tundra_berry_bush", .65, "veg2_tundra_ice_crystals", .2, "veg2_tundra_snow_mound"},
+        small = {"veg2_tundra_ice_crystals", .45, "veg2_tundra_snow_mound", .4, "veg2_tundra_tusk"},
+        leafy = {"veg2_tundra_grass", .6, "veg2_tundra_snowdrops"},
+        flowers = {"veg2_tundra_snowdrops"}, grass = {"veg2_tundra_grass"},
+        boulder_s = {"veg2_tundra_boulder"}, boulder = {"veg2_tundra_boulder", .7, "veg2_tundra_ledge"},
+        spire = {"veg2_tundra_ice_spire"}, ledge = {"veg2_tundra_ledge"},
+    },
+    volcano = { -- owner 2026-11-23: no painted fire, embers, glow or lava in meshes (flat and static); cooled volcanic land instead
+        tree = {"veg2_volcano_red_tree", .7, "veg2_volcano_charred_tree"},
+        bush = {"veg2_volcano_fire_fern", .6, "veg2_volcano_crystals"},
+        small = {"veg2_volcano_stump", .5, "veg2_volcano_crystals", .3, "veg2_volcano_fire_fern"},
+        leafy = {"veg2_volcano_ash_grass", .6, "veg2_volcano_fire_flowers"},
+        flowers = {"veg2_volcano_fire_flowers"}, grass = {"veg2_volcano_ash_grass"},
+        boulder_s = {"veg2_volcano_boulder"}, boulder = {"veg2_volcano_boulder", .7, "veg2_volcano_ledge"},
+        ledge = {"veg2_volcano_ledge"}, -- spires keep today's grey rock pillar
+    },
+}
+VegetationV2.Kits = KITS
+
+local function slotGroup(id: string): string?
+    if string.sub(id, 1, 11) == "world_tree_" then return "tree" end
+    if id == "world_bush_a" or id == "world_bush_b" then return "bush" end
+    if id == "world_mushrooms_a" then return "small" end
+    if id == "world_fern_a" or id == "world_fern_b" or id == "world_horsetail_a" then return "leafy" end
+    if id == "world_flowers_a" then return "flowers" end
+    if id == "world_grass_a" or id == "world_grass_b" then return "grass" end
+    if string.sub(id, 1, 14) == "world_boulder_" then return if string.sub(id, -2) == "_s" then "boulder_s" else "boulder" end
+    if id == "world_rocks_spires" then return "spire" end
+    if id == "world_rocks_ledge" then return "ledge" end
+    return nil
+end
+
+local function weighted(list: {any}, roll: number): string
+    local acc = 0
+    for i = 1, #list - 1, 2 do
+        acc += list[i + 1]
+        if roll < acc then return list[i] end
+    end
+    return list[#list]
+end
+
+-- BD-1315 natural density (owner 2026-11-23: "think about ... how plants are naturally planted normally in biomes"): the share of the
+-- collider-free small slots (bushes, mushroom clumps, ferns, flowers, grass) each kit keeps; the rest show nothing in that biome. Desert
+-- and volcano are sparse with rare flowers, the tundra keeps pine stands but few flowers, the jungle stays dense. Trees, boulders, spires
+-- and ledges always show (they have colliders, so hiding them would leave invisible walls).
+VegetationV2.KitDensity = table.freeze({
+    jungle = table.freeze({bush = 1, small = 1, leafy = 1, flowers = 1, grass = 1}),
+    desert = table.freeze({bush = .55, small = .45, leafy = .35, flowers = .2, grass = .5}),
+    tundra = table.freeze({bush = .8, small = .6, leafy = .6, flowers = .25, grass = .7}),
+    volcano = table.freeze({bush = .45, small = .5, leafy = .3, flowers = .15, grass = .35}),
+})
+
+-- True when this slot shows nothing in that biome (only the collider-free groups above). roll = the same per-slot roll kitVisual gets;
+-- a second value is derived from it so the hidden slots do not follow the visual picks.
+function VegetationV2.kitHidden(biomeId: string, kitId: string, roll: number, layer: string?): boolean
+    local density = VegetationV2.KitDensity[biomeId]
+    local group = slotGroup(kitId)
+    local keep = density and group and density[group]
+    if keep == nil or layer == "log" then return false end
+    local u = (roll * 7.31 + .137) % 1
+    return u >= keep
+end
+
+function VegetationV2.kitVisual(biomeId: string, kitId: string, roll: number, layer: string?): string?
+    if layer == "log" then return nil end
+    local kit = KITS[biomeId]
+    if kit then
+        local group = slotGroup(kitId)
+        local list = group and kit[group]
+        return if list then weighted(list, roll) else nil
+    end
+    if biomeId ~= "jungle" then return nil end
+    local id = kitId
+    if id == "world_rocks_ledge" then return "veg2_jungle_ledge" end
+    if string.sub(id, 1, 11) == "world_tree_" then
+        -- every standing tree is jungle: mostly the buttress canopy tree, some twisty vine trees and flower palms for variety
+        return pick3(roll, "veg2_jungle_canopy", .6, "veg2_tree_twisty", .25, "veg2_palm_flower")
+    end
+    if id == "world_bush_a" or id == "world_bush_b" then return choose(roll, "veg2_jungle_elephant_ear", "veg2_jungle_monstera", .5) end
+    -- the mushroom slots grow to 4-12 studs (SmallBand): mostly leafy plants, a mossy stump only now and then
+    if id == "world_mushrooms_a" then return pick3(roll, "veg2_jungle_elephant_ear", .5, "veg2_fern_a", .3, "veg2_jungle_stump") end
+    if id == "world_fern_a" or id == "world_horsetail_a" then return choose(roll, "veg2_fern_a", "veg2_jungle_elephant_ear", .7) end
+    if id == "world_fern_b" then return "veg2_fern_b" end
+    if id == "world_flowers_a" then return choose(roll, "veg2_jungle_hibiscus", "veg2_flowers_hibiscus", .6) end
+    if id == "world_grass_a" or id == "world_grass_b" then return choose(roll, "veg2_fern_a", "veg2_fern_b", .55) end
+    if string.sub(id, 1, 14) == "world_boulder_" then return choose(roll, "veg2_rock_mossy", "veg2_rock_spiral", .65) end
     return nil
 end
 

@@ -30,6 +30,8 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import world_colliders  # noqa: E402
 EVIDENCE = ROOT / 'docs/evidence/2026-11-16-vegetation-v2'
 TREES = ROOT / 'docs/evidence/2026-11-23-tree-variety'  # BD-1311: tree variants (generated-trees.json, refs/)
+JUNGLE = ROOT / 'docs/evidence/2026-11-23-jungle-kit'  # BD-1315: jungle kit (generated-jungle.json, refs/)
+KITS = ROOT / 'docs/evidence/2026-11-23-biome-kits'  # BD-1315: desert, tundra, volcano kits (generated-biome-kits.json, refs/)
 
 
 def read(path):
@@ -80,6 +82,50 @@ for _, roll in {0, .2, .4, .6, .8, .99} do
         end
     end
 end
+-- BD-1315 biome kits (kitVisual): meadow keeps today's map, a log keeps its look, every jungle answer is a real key, the jungle covers
+-- every tree, bush, fern, flower, grass and boulder slot the island places (no burnt or kit look left standing in the jungle).
+local junglePlain = {}
+for i, p in placed do
+    local roll = (i * 0.618) % 1
+    check(Veg.kitVisual("meadow", p.id, roll, p.layer) == nil, "meadow kit = today's map: " .. p.id)
+    check(Veg.kitVisual("swamp", p.id, roll, p.layer) == nil, "a kit not built yet keeps today's map: " .. p.id)
+    for _, biome in {"desert", "tundra", "volcano"} do
+        local k = Veg.kitVisual(biome, p.id, roll, p.layer)
+        if p.layer == "log" then check(k == nil, "a log keeps its look in the " .. biome)
+        elseif p.layer ~= "landmark" and not (biome == "volcano" and p.id == "world_rocks_spires") then
+            check(k ~= nil and Veg.Assets[k] ~= nil, biome .. " kit covers slot " .. p.id .. " with a real key")
+            if k then used[k] = true end
+        end
+    end
+    local key = Veg.kitVisual("jungle", p.id, roll, p.layer)
+    if p.layer == "log" then check(key == nil, "a log keeps its look in the jungle") end
+    if key then check(Veg.Assets[key] ~= nil, "jungle key exists: " .. key) used[key] = true
+    elseif p.layer ~= "log" and p.layer ~= "landmark" and string.sub(p.id, 1, 12) ~= "world_rocks_" then junglePlain[p.id] = true end
+end
+for _, roll in {0, .3, .62, .9, .99} do
+    for _, id in {"world_tree_canopy_l", "world_tree_dead_m", "world_bush_a", "world_bush_b", "world_mushrooms_a", "world_fern_a", "world_flowers_a", "world_grass_b", "world_boulder_bare_s", "world_rocks_spires", "world_rocks_ledge", "world_horsetail_a", "world_fern_b"} do
+        for _, biome in {"jungle", "desert", "tundra", "volcano"} do
+            local key = Veg.kitVisual(biome, id, roll)
+            if key then used[key] = true end
+        end
+    end
+end
+for id in junglePlain do check(false, "jungle slot keeps a non-jungle look: " .. id) end
+-- natural density: only collider-free slots may be hidden, the share hidden matches KitDensity, the jungle hides nothing
+for biome, density in Veg.KitDensity do
+    local seen, hidden = 0, 0
+    for i, p in placed do
+        local roll = (i * 0.618) % 1
+        if Veg.kitHidden(biome, p.id, roll, p.layer) then
+            check(Kit[p.id] and #Kit[p.id].colliders == 0, "only collider-free slots are hidden: " .. p.id)
+            hidden += 1
+        end
+        if p.layer == "shrub" or p.layer == "groundcover" then seen += 1 end
+    end
+    if biome == "jungle" then check(hidden == 0, "the jungle stays dense") end
+    if biome == "desert" or biome == "volcano" then check(hidden > seen * .3, biome .. " is sparse (" .. hidden .. " of " .. seen .. " small slots hidden)") end
+end
+check(not Veg.kitHidden("meadow", "world_bush_a", .9) and not Veg.kitHidden("volcano", "world_tree_canopy_m", .99), "meadow and trees never hide")
 for key in Veg.Assets do check(used[key], "v2 key is used: " .. key) end
 -- BD-1239 follow-up: berry bushes no taller than the bush rule allows (kit height x scale), lower domes
 for _, p in placed do
@@ -148,12 +194,14 @@ def source_checks():
         errors.append('distinct published ids expected (%d items, %d ids)' % (len(items), len(set(ids))))
     evidence = json.loads((EVIDENCE / 'generated-vegetation.json').read_text(encoding='utf-8'))['items']
     evidence.update(json.loads((TREES / 'generated-trees.json').read_text(encoding='utf-8'))['items'])
+    evidence.update(json.loads((JUNGLE / 'generated-jungle.json').read_text(encoding='utf-8'))['items'])
+    evidence.update(json.loads((KITS / 'generated-biome-kits.json').read_text(encoding='utf-8'))['items'])
     for key, aid, ref in items:
         if f'| world_gen_{key} |' not in registry or f'| {aid} |' not in registry:
             errors.append(f'docs/77 line missing for {key} ({aid})')
         if evidence.get(key, {}).get('asset') != int(aid):
             errors.append(f'generated-vegetation.json / generated-trees.json does not match {key}')
-        if not any((d / 'refs' / f'ref-{ref}.png').is_file() for d in (EVIDENCE, TREES)):
+        if not any((d / 'refs' / f'ref-{ref}.png').is_file() for d in (EVIDENCE, TREES, JUNGLE, KITS)):
             errors.append(f'reference picture missing: refs/ref-{ref}.png')
     return errors
 
