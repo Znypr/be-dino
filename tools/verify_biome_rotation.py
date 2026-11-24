@@ -147,6 +147,14 @@ def static_checks():
     for needle in ('local biomeOn=Biome.enabled(', 'if biomeOn then Biome.storm(', 'local C=biomeClear or CLEAR', 'if not biomeStorm then showTitle(', 'Biome.clock(workspace:GetServerTimeNow(),workspace:GetAttribute("BiomeTestOffset"),RunService:IsStudio())'):
         if needle not in wv:
             errors.append('WeatherVisuals is missing ' + needle)
+    if 'local skirt=if biomeOn then require(script.Parent.HorizonSkirt).new(folder) else nil' not in wv or 'skirt.update(' not in wv:
+        errors.append('WeatherVisuals does not drive the horizon skirt (BD-1319) behind the flag')
+    sk = read('src/client/HorizonSkirt.luau')
+    for needle in ('p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false', 'gui.LightInfluence = 0'):
+        if needle not in sk:
+            errors.append('HorizonSkirt is missing ' + needle)
+    if 'Instance.new' in sk.split('local function update(')[1]:
+        errors.append('HorizonSkirt must not create Instances in update() (per frame)')
     hud = read('src/client/PhoneHud.client.luau')
     if 'if biomeOn and (id == "clear" or id == "") then line, timer = Biome.bannerWords(Biome.clock(' not in hud:
         errors.append('PhoneHud does not gate the biome banner on the flag')
