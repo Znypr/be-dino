@@ -4,6 +4,8 @@ Owner 2026-11-23:
 - "research different bioms and how popular roblox experiences show them, then plan different bioms and work with chatgpt to create a dashboard with a biome overhall, where different vegetation and atomosphere is created"
 - Earlier the same day: "instead of having differnet biomes on the map, how about every few minutes - similar to steal an egg where there is night and everything is closed up and reset - we have an event where the map is updated from 1 biome to another, which mean during biome events different dinos are hatchable or so. like we go from a desert biome, to a quick storm, which updates the map to a jungle biome or so."
 
+Craft layer (what each biome kit needs, placement, ground patches, shared core kit): [251](251-biome-craft-and-map-plan.md).
+
 Status: PLAN, owner picks done (section 7). Colours, timings and boosts stay PROVISIONAL until Studio tuning. Board: the Design Board, Map page ("Biome overhaul").
 
 ## 1. What popular Roblox games do (research 2026-11-23)
